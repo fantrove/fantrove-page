@@ -15,7 +15,7 @@ const dataManager = {
         // โฟลเดอร์ฐานข้อมูลแบบใหม่
         API_DATABASE_PATH: '/assets/db/con-data/',
         BUTTONS_CONFIG_PATH: '/assets/json/buttons.min.json',
-        // รายการประเภทที่ระบบคาดว่าจะมี (สามารถขยายเพิ่มได้)
+        // รายการประ���ภทที่ระบบคาดว่าจะมี (สามารถขยายเพิ่มได้)
         KNOWN_TOP_CATEGORIES: ['emoji', 'symbol', 'fancy-text', 'unicode']
     },
 
@@ -152,6 +152,10 @@ const dataManager = {
                         { cache: 'force-cache' },
                         9
                     ).catch(()=>{});
+                    // Additionally, prefetch top categories indexes in background to warm caches / SW
+                    try {
+                        this.prefetchTopCategories(9).catch(()=>{});
+                    } catch (e) {}
                 } finally {
                     resolve();
                 }
@@ -501,6 +505,29 @@ const dataManager = {
 
         await this._jsonDbIndexPromise;
         return this._jsonDbIndex;
+    },
+
+    // New: prefetch top categories indexes and optionally first N subcategories
+    // This is non-blocking and used to warm SW/cache for con-data files.
+    async prefetchTopCategories(priority = 8, subPerCategory = 2) {
+        try {
+            const known = this.constants.KNOWN_TOP_CATEGORIES || [];
+            for (const cat of known) {
+                // load category index (low priority)
+                (async () => {
+                    try {
+                        const idx = await this._enqueueFetch(`${this.constants.API_DATABASE_PATH}${cat}.min.json`, {}, priority).catch(()=>null);
+                        if (!idx || !Array.isArray(idx.categories)) return;
+                        // enqueue first subPerCategory subcategory files
+                        for (let i = 0; i < Math.min(subPerCategory, idx.categories.length); i++) {
+                            const entry = idx.categories[i];
+                            const path = entry && entry.file ? entry.file : `${this.constants.API_DATABASE_PATH}${cat}/${entry.id}.min.json`;
+                            this._enqueueFetch(path, {}, priority + 1).catch(()=>null);
+                        }
+                    } catch (e) {}
+                })();
+            }
+        } catch (e) {}
     }
 };
 
