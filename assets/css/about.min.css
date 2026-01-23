@@ -125,18 +125,6 @@ h2.title::before{
   transition: transform var(--trans-fast) var(--trans-ease), opacity var(--trans-fast);
 }
 
-/* subtle lift on section hover — only for pointer devices */
-@media (hover: hover) and (pointer: fine) {
-  .section:hover{
-    transform: translateY(-10px);
-    border-color: rgba(19,180,127,0.12);
-    box-shadow: 0 30px 70px rgba(19,180,127,0.06);
-  }
-  .section:hover h2.title::before{
-    transform: scaleY(1.06);
-  }
-}
-
 /* Content paragraphs: readable measure */
 p.content{
   margin: 0;
