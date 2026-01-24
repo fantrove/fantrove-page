@@ -1,0 +1,117 @@
+:root{
+  --ft-bg: #ffffff;
+  --ft-surface: rgba(255,255,255,0.96);
+  --ft-border: rgba(0,0,0,0.06);
+  --ft-shadow: 0 8px 28px rgba(6,20,24,0.06);
+  --ft-radius: 20px;
+
+  --ft-accent: #00CEB0;
+  --ft-accent-2: #b58cff;
+  --ft-muted: #7a8b9a;
+  --ft-head: #0f1720;
+}
+
+/* Base: keep footer in normal document flow and non-intrusive */
+footer.footer-minimal {
+  display: block !important;
+  position: relative !important;    /* ensure it's in flow */
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  background: var(--ft-surface) !important;
+  border-radius: var(--ft-radius) !important;
+  border: 1px solid var(--ft-border) !important;
+  box-shadow: var(--ft-shadow) !important;
+  padding: 2rem 1.25rem !important; /* reduced and consistent padding */
+  margin: 2rem 0 !important;        /* avoid huge 6rem margin that caused layout shifts */
+  z-index: 0 !important;            /* low z-index so it doesn't overlay content */
+  clear: both !important;
+  flex: 0 0 auto !important;        /* defensive for flex parents */
+  min-width: 0 !important;
+}
+
+/* Make sure children don't use absolute/fixed positioning that pull footer out of flow */
+footer.footer-minimal *,
+footer.footer-minimal > .footer-inner,
+footer.footer-minimal > .footer-bottom {
+  position: static !important;
+}
+
+/* Container */
+.footer-inner {
+  max-width: 1110px; /* match site layout width */
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.6fr 0.9fr 0.9fr 0.9fr;
+  gap: 1.6rem 1.6rem;
+  align-items: start;
+}
+
+/* Reduce heavy spacing and keep responsive */
+.footer-grid { width: 100%; }
+
+/* Brand area */
+.footer-brand .footer-logo {
+  font-weight: 900;
+  font-size: 1.05rem !important;
+  letter-spacing: 0.04em;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.footer-desc {
+  color: var(--ft-muted);
+  margin-top: 0.5rem;
+  font-size: 0.95rem !important;
+  line-height: 1.6;
+  max-width: 48ch;
+}
+
+/* Links & lists */
+.footer-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:0.5rem; }
+.footer-link { color: var(--ft-accent); text-decoration:none; font-weight:500; }
+.footer-link::after{ content:""; position:absolute; bottom:-2px; left:0; width:0%; height:2px; background:var(--ft-accent-2); transition:all .2s; }
+.footer-link:hover::after{ width:100%; }
+
+/* Socials */
+.footer-socials { display:flex; gap:0.6rem; flex-wrap:wrap; margin-top:0.4rem; }
+.footer-social { display:inline-flex; align-items:center; justify-content:center; padding:0 14px; height:38px; border-radius:999px; background:linear-gradient(135deg, rgba(181,140,255,0.08), rgba(24,228,161,0.08)); color:var(--ft-head); border: 1px solid rgba(0,0,0,0); }
+
+/* Footer bottom (single row) */
+.footer-bottom {
+  border-top: 1px solid rgba(0,0,0,0.04);
+  padding-top: 1rem;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:1rem;
+  flex-wrap:wrap;
+  font-size:0.95rem;
+  color:var(--ft-muted);
+}
+
+/* Responsive rules */
+@media (max-width: 900px) {
+  .footer-inner { grid-template-columns: 1fr 1fr; gap: 1rem; }
+  footer.footer-minimal { padding: 1.2rem 1rem; margin: 1.2rem 0; }
+}
+@media (max-width: 560px) {
+  .footer-inner { grid-template-columns: 1fr; }
+  .footer-bottom { flex-direction: column; align-items:flex-start; gap:.6rem; }
+}
+
+/* Defensive overrides against external styles that may force fixed/absolute footer */
+footer.footer-minimal[style*="position:fixed"],
+footer.footer-minimal[style*="position:absolute"] {
+  position: relative !important;
+}
+
+/* If site uses a flex parent that tries to layout children row-wise, force footer to occupy a new row */
+@media (min-width: 900px) {
+  footer.footer-minimal {
+    flex-basis: 100% !important;
+    order: 9999 !important;
+  }
+}
