@@ -194,35 +194,36 @@ section.mn {
 }
 .button-secondary,
 .btn-secondary {
-  border: 1px solid rgba(181,140,255,0.15);
   font-weight: 700;
-
-  background-image:
-    /* พื้นหลัง */
-    linear-gradient(
-      135deg,
-      rgba(181,140,255,0.15),
-      rgba(24,228,161,0.15)
-    ),
-
-    /* ตัวอักษร */
-    linear-gradient(135deg, #9B6EFF 0%, #11C291 100%);
-
-  color: transparent;
-  -webkit-background-clip: border-box, text;
-  background-clip: border-box, text;
-}
-.btn-icon {
+  
+  background-color: #E9ECFF;
+  color: #5FC7C1;
+  text-decoration: none;
+  border: 1px solid #7FD8D2;
+  
+  /* จัดกึ่งกลางแนวเดียวกันทั้งหมด (text + span + emoji) */
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  gap: 0.35em;
+  
+  /* ลด layout shift + render cost */
+  line-height: 1;
+  vertical-align: middle;
+  
+  /* GPU-friendly (ไม่สร้าง layer ใหม่ถ้าไม่จำเป็น) */
+  transform: translateZ(0);
+}
+.btn-icon {
+  display: inline-block;
+  line-height: 0;
+  vertical-align: middle;
+  margin-top: -2px;
 }
 .im {
   height: 13px !important;
   width: auto;
   display: block;
-}
-.btn-secondary {
-  background: linear-gradient(135deg, rgba(181,140,255,0.15), rgba(24,228,161,0.15));
 }
 
 .hio {
@@ -511,133 +512,59 @@ section.o:has(.faq-toggle:checked) {
   color: #222b45;
   line-height: 2;
 }
+/* Clean, no-click-animation styles for .text-h button */
 .text-h button {
-  font-size: 0.9em;
-  font-weight: bold;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 0.95em;
   padding: 0.6em 1.15em;
   border-radius: 25px;
   background: #FFFFFF;
-  color: #4C4C4C; /* สีข้อความกลาง ๆ สบายตา */
-  border: 0px solid #18E4A1;
-  position: relative;
+  color: #4C4C4C;
+  border: 0px solid transparent;
   cursor: pointer;
-  transition: transform 100ms;
-
-  /* สร้างขอบ gradient */
-  --border-gradient: radial-gradient(circle at 30% 30%, rgba(181, 140, 255, 0.35) 0%, transparent 60%),
-                     radial-gradient(circle at 70% 70%, rgba(24, 228, 161, 0.35) 0%, transparent 60%),
-                     linear-gradient(135deg, #B58CFF 0%, #18E4A1 100%);
+  position: relative;
   overflow: hidden;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: none;       /* ไม่มี transition/animation */
+  will-change: auto;
 }
-
-.text-h button::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1.4px;
-  background: var(--border-gradient);
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
-
-/*.text-h button:hover {
-  background: #FAFFFD;
-  box-shadow: 0 0 10px rgba(181, 140, 255, 0.25), 0 0 15px rgba(24, 228, 161, 0.25);
-  transform: translateY(-1px);
-}*/
 
 .text-h button:active {
-  transform: scale(0.98);
-}
-/*.text-h button:active {
   transform: scale(0.97);
-}*/
-/* ====== ANIMATION (ARROW & TRAIL & OVERLAY) FOR .text-h button ====== */
+}
+
+/*
+.text-h button:hover {
+  outline: 2px solid rgba(19, 180, 127, 0.12);
+  outline-offset: 0px;
+}
+*/
+
+/* Inner content container (text) — inert to pointer events */
 .text-h button .btn-content {
   position: relative;
   z-index: 2;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
+  pointer-events: none;
   letter-spacing: 0.05em;
-  transition: opacity 0.19s;
 }
 
-.text-h button .full-overlay {
-  pointer-events: none;
-  position: absolute;
-  left: 0; top: 0; height: 100%;
-  width: 0%;
-  z-index: 3;
-  background: radial-gradient(circle at 30% 30%, rgba(181, 140, 255, 0.35) 0%, transparent 60%), radial-gradient(circle at 70% 70%, rgba(24, 228, 161, 0.35) 0%, transparent 60%), linear-gradient(135deg, #B58CFF 0%, #18E4A1 100%);
-  border-radius: inherit;
-  transition: width 0.68s cubic-bezier(.65,.05,.19,.99);
-}
-
-.text-h button.animating .full-overlay {
-  width: 100%;
-}
-.text-h button.animating .btn-content {
-  opacity: 0;
-  transition: opacity 0.17s 0s;
-}
-
-.text-h button .arrow-trail-group {
-  position: absolute;
-  left: 0; top: 0;
-  width: 100%; height: 100%;
-  pointer-events: none;
-  z-index: 6;
-  display: flex;
-  align-items: center;
-}
-
-.text-h button .arrow-trail {
-  position: absolute;
-  left: 0; top: 50%;
-  height: 9px; width: 0;
-  transform: translateY(-50%);
-  background: linear-gradient(90deg, rgba(255,255,255,0.16) 0%, rgba(19,180,127,0.13) 60%, rgba(19,180,127,0.01) 100%);
-  border-radius: 6px;
-  filter: blur(7px);
-  opacity: 0.7;
-  transition: none;
-  z-index: 4;
-  display: block;
-  will-change: width, opacity;
-}
-
+/* If you have decorative children they should be static / hidden by default */
+.text-h button .full-overlay,
+.text-h button .arrow-trail-group,
+.text-h button .arrow-trail,
 .text-h button .btn-arrow {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  width: 28px; height: 28px;
-  transform: translateY(-50%) translateX(-40px); /* ซ่อนออกนอกซ้าย */
-  opacity: 0;
-  z-index: 7;
-  transition: none;
-  pointer-events: none;
-  filter: drop-shadow(0 2px 6px rgba(19,180,127,0.45));
-  will-change: transform, opacity;
+  display: none !important;
+  visibility: hidden !important;
 }
-.text-h button.animating .btn-arrow {
-  opacity: 1;
-}
-
-/* Responsive */
-/*@media (max-width: 600px) {
-  .text-h button { font-size: 0.8em !important; padding: 0.85em 1.2em; border-radius: 25px; }
-  .text-h button .btn-arrow { width: 22px; height: 22px;}
-  .text-h button .arrow-trail { height: 6px; }
-}
-*/
-/* ... (โค้ดเดิม) ... */
 
 /* ---------- APP CATEGORY SECTION ---------- */
 .category-section {
