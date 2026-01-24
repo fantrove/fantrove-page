@@ -192,23 +192,25 @@ section.mn {
 .button-primary:active, .btn-primary:active {
   background: linear-gradient(to right, #13b47f 0%, #11c3ec 100%);
 }
-.button-secondary, .btn-secondary {
-  position: relative;
-  border-color: var(--brand-2);
-  font-weight: 700;
-  overflow: hidden;
-  z-index: 1;
+.button-secondary,
+.btn-secondary {
   border: 1px solid rgba(181,140,255,0.15);
-  background: transparent;
-  
-  /* Gradient ข้อความ */
-  background-image: radial-gradient(circle at 30% 30%, rgba(181, 140, 255, 0.75) 0%, transparent 60%),
-  radial-gradient(circle at 70% 70%, rgba(24, 228, 161, 0.75) 0%, transparent 60%),
-  linear-gradient(135deg, #9B6EFF 0%, #11C291 100%);
+  font-weight: 700;
+
+  background-image:
+    /* พื้นหลัง */
+    linear-gradient(
+      135deg,
+      rgba(181,140,255,0.15),
+      rgba(24,228,161,0.15)
+    ),
+
+    /* ตัวอักษร */
+    linear-gradient(135deg, #9B6EFF 0%, #11C291 100%);
+
   color: transparent;
-  /* ทำให้ text เห็น background */
-  -webkit-background-clip: text;
-  background-clip: text;
+  -webkit-background-clip: border-box, text;
+  background-clip: border-box, text;
 }
 .btn-icon {
   display: inline-flex;
@@ -219,17 +221,8 @@ section.mn {
   width: auto;
   display: block;
 }
-.button-secondary::before, .btn-secondary::before {
-  content: "";
-  position: absolute;
-  inset: 0;
+.btn-secondary {
   background: linear-gradient(135deg, rgba(181,140,255,0.15), rgba(24,228,161,0.15));
-  z-index: -1;
-  pointer-events: none;
-}
-
-.button-secondary:hover, .btn-secondary:hover {
-  border-color: rgba(181,140,255,0.4);
 }
 
 .hio {
@@ -525,8 +518,7 @@ section.o:has(.faq-toggle:checked) {
   border-radius: 25px;
   background: #FFFFFF;
   color: #4C4C4C; /* สีข้อความกลาง ๆ สบายตา */
-  border: 0px solid transparent;
-  background-clip: padding-box;
+  border: 0px solid #18E4A1;
   position: relative;
   cursor: pointer;
   transition: transform 100ms;
