@@ -67,25 +67,27 @@
       --radius-pill: 999px;
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #FFFFFF;
+      background: var(--bg-main);
       color: var(--text);
-      
     }
 
     main {
-      min-height: 90vh;
+      min-height: 100svh;
       display: flex;
       align-items: center;
       justify-content: center;
       text-align: center;
       padding: 28px;
+    }
+
+    .wrap {
+      max-width: 640px;
+      width: 100%;
     }
 
     .badge {
@@ -104,8 +106,8 @@
     }
 
     h1 {
-      font-size: 76px;
-      margin: 0 0 12px;
+      font-size: 68px;
+      margin: 0 0 10px;
       line-height: 1;
       background: linear-gradient(135deg, var(--purple), var(--mint));
       -webkit-background-clip: text;
@@ -115,22 +117,29 @@
 
     h2 {
       margin: 0 0 14px;
-      font-size: 26px;
+      font-size: 24px;
       font-weight: 800;
       letter-spacing: -0.02em;
       color: #111827;
     }
 
     p {
-      margin: 0 0 32px;
+      margin: 0 auto 26px;
       color: var(--muted);
       font-size: 16px;
       line-height: 1.65;
       max-width: 520px;
     }
 
-    /* ---------- BUTTON (CAPSULE · FLAT · NO SHADOW) ---------- */
-    .btn-primary {
+    .actions {
+      display: flex;
+      gap: 14px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary,
+    .btn-secondary {
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -142,15 +151,10 @@
       font-size: 0.95em;
       letter-spacing: 0.015em;
 
-      padding: 1.35em 2.1em; /* เพิ่มความสูงให้ดูสบายตา */
+      padding: 1.15em 2em;
       border-radius: var(--radius-pill);
 
-      background: rgba(255, 255, 255, 1);          /* flat + soft */
-      color: #2CEBC2;
       text-decoration: none;
-
-      border: 1.5px solid rgba(0, 255, 184, 0.45);
-
       line-height: 1;
       vertical-align: middle;
 
@@ -164,28 +168,46 @@
         filter 0.14s ease;
     }
 
+    .btn-primary {
+      background: rgba(255, 255, 255, 1);
+      color: #2CEBC2;
+      border: 1.5px solid rgba(0, 255, 184, 0.45);
+    }
+
     .btn-primary:hover {
       background: rgba(243, 255, 252, 1);
     }
 
+    .btn-secondary {
+      background: transparent;
+      color: var(--muted);
+      border: 1.5px solid rgba(203, 213, 225, 0.8);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(241, 245, 249, 0.9);
+    }
+
     .note {
-      margin-top: 28px;
+      margin-top: 22px;
       font-size: 13px;
       color: #9ca3af;
     }
 
     @media (max-width: 480px) {
-      h1 { font-size: 60px; }
-      h2 { font-size: 22px; }
+      h1 { font-size: 58px; }
+      h2 { font-size: 21px; }
       p  { font-size: 15px; }
 
-      .btn-primary {
+      .btn-primary,
+      .btn-secondary {
         font-size: 0.92em;
-        padding: 1.25em 1.9em;
+        padding: 1.05em 1.85em;
       }
     }
   </style>
 </head>
+
 <body>
   <!-- Google Tag Manager (noscript) -->
   <noscript>
@@ -194,28 +216,31 @@
   </noscript>
   <!-- End Google Tag Manager (noscript) -->
 
-<main>
-  <div>
-    <div class="badge">Fantrove</div>
+  <main>
+    <div class="wrap">
+      <div class="badge">Fantrove</div>
 
-    <h1>404</h1>
-    <h2>Page Not Found</h2>
+      <h1>404</h1>
+      <h2>Page Not Found</h2>
 
-    <p>
-      The page you’re looking for doesn’t exist, may have been moved,
-      or is temporarily unavailable.
-    </p>
+      <p>
+        The page you’re looking for doesn’t exist, may have been moved,
+        or is temporarily unavailable.
+      </p>
 
-    <a wave href="/home" class="btn-primary">Go back to Home</a>
+      <div class="actions">
+        <a wave href="/home" class="btn-primary">Go back to Home</a>
+        <a wave href="/data/verse/discover/?type=symbols__&page=1" class="btn-secondary">Explore Fantrove</a>
+      </div>
 
-    <div class="note">
-      If you believe this is an error, please try again later.
+      <div class="note">
+        If you believe this is an error, please try again later.
+      </div>
     </div>
-  </div>
-</main>
+  </main>
 
+  <!-- Scripts เดิมของแก -->
   <script src="/assets/js/language.min.js"></script>
-
   <script src="/assets/js/version.min.js" type="text/javascript" charset="utf-8"></script>
   <script defer src="/assets/js/footer-template.js"></script>
   <script src="https://marcumat-js.pages.dev/dist/wave-effect.js" type="text/javascript" charset="utf-8"></script>
