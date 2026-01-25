@@ -14,8 +14,8 @@
   --site-footer-border: #e6edf1;
   --site-footer-accent: #13b47f;
   --site-footer-max-width: 1100px;
-  --site-footer-padding-vertical: 22px;
-  --site-footer-padding-horizontal: 14px;
+  --site-footer-padding-vertical: 12px; /* reduced to avoid excessive spacing */
+  --site-footer-padding-horizontal: 12px;
   --site-footer-font-size: 14px;
   --footer-transition: 180ms ease;
 }
@@ -135,7 +135,8 @@
 
 /* footer bottom */
 .footer-minimal .footer-bottom {
-  margin-top:16px; display:flex; justify-content:space-between; gap:12px; align-items:center;
+  margin-top:8px; /* reduced to tighten vertical spacing */
+  display:flex; justify-content:space-between; gap:12px; align-items:center;
   color:var(--site-footer-muted); font-size:0.92rem;
 }
 @media (max-width:560px) {
@@ -143,7 +144,7 @@
 }
 
 /* buttons */
-.footer-btn { display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:8px; background:var(--site-footer-accent); color:#fff; text-decoration:none; box-shadow:0 6px 18px rgba(19,180,127,0.12); border: none; }
+.footer-btn { display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:8px; background:var(--site-footer-accent); color:#fff; text-decoration:none; box-shadow:0 6px 18px rgba(0,0,0,0.06); }
 .footer-btn.secondary { background:transparent; color:var(--site-footer-ink); border:1px solid var(--site-footer-border); box-shadow:none; }
 
 /* small & accessibility helpers */
@@ -165,10 +166,10 @@
 }
 @media (max-width:560px) {
   .footer-minimal .footer-grid { grid-template-columns: 1fr; gap:12px; }
-  .footer-minimal { padding:16px 12px; font-size:13px; }
+  .footer-minimal { padding:12px 12px; font-size:13px; }
 }
 
 /* compact variant */
-.footer-minimal.compact { padding:12px; font-size:13px; }
+.footer-minimal.compact { padding:10px; font-size:13px; }
 
 /* end */

@@ -41,7 +41,7 @@
 /* Fallback minimal rules (non-invasive) */
 .site-root[data-fantrove-layout="column"]{ display:flex; flex-direction:column; min-height:100vh; }
 .site-root[data-fantrove-layout="column"] > .site-content-wrapper { flex:1 1 auto; min-height:0; }
-.footer-minimal{ box-sizing:border-box; width:100%; background:#fff; color:#111; border-top:1px solid #eee; padding:16px 12px; z-index:1; clear:both; flex-shrink:0; position:relative !important; left:0 !important; right:0 !important; bottom:auto !important; }
+.footer-minimal{ box-sizing:border-box; width:100%; background:#fff; color:#111; border-top:1px solid #eee; padding:12px 12px; z-index:1; clear:both; flex-shrink:0; position:relative !important; left:0 !important; right:0 !important; transform:none !important; }
 .footer-minimal .footer-inner{ max-width:1100px; margin:0 auto; }
 `;
     const s = document.createElement('style');
@@ -174,52 +174,31 @@
       enableDesktopRootLayout(siteRoot);
     }
 
-    // Ensure content wrapper has safety padding equal to footer height (so footer never overlaps content)
+    // IMPORTANT: per user request, REMOVE automatic spacing adjustments.
+    // Clear any previously-set paddingBottom so the script doesn't add extra gap.
     const contentWrapper = (siteRoot && siteRoot.querySelector('.site-content-wrapper')) || null;
-    if (contentWrapper) trackFooterSpacing(footerEl, contentWrapper);
-    else { /* fallback: do nothing */ }
+    if (contentWrapper) {
+      try { contentWrapper.style.paddingBottom = ''; } catch (e) {}
+      // do NOT call trackFooterSpacing anymore (disabled).
+    } else { /* fallback: do nothing */ }
 
     return footerEl;
   }
 
   /* -------------------------
-     Spacing: set padding on content wrapper (not on body)
+     Spacing: DISABLED (no-op) to avoid inserting extra gap
      ------------------------- */
-  function trackFooterSpacing(footer, contentWrapper) {
-    if (!footer || !contentWrapper) return;
-
-    function recompute() {
-      try {
-        const height = footer.offsetHeight || Math.round(footer.getBoundingClientRect().height) || 0;
-        if (height > 0) {
-          contentWrapper.style.paddingBottom = height + 'px';
-        } else {
-          contentWrapper.style.paddingBottom = '';
-        }
-      } catch (e) {}
-    }
-
-    recompute();
-    setTimeout(recompute, 200);
-    setTimeout(recompute, 800);
-
-    if (window.ResizeObserver) {
-      try {
-        const ro = new ResizeObserver(recompute);
-        ro.observe(footer);
-      } catch (e) {}
-    } else {
-      let last = footer.offsetHeight;
-      setInterval(() => {
-        if (!document.body.contains(footer)) return;
-        if (footer.offsetHeight !== last) {
-          last = footer.offsetHeight;
-          recompute();
-        }
-      }, 700);
-    }
-
-    window.addEventListener('resize', recompute);
+  function trackFooterSpacing(/* footer, contentWrapper */) {
+    // Intentionally disabled per request: do not compute or set padding-bottom.
+    // However, if any previous paddingBottom exists, clear it as a safety measure.
+    try {
+      const siteRoot = document.querySelector('.site-root');
+      const contentWrapper = siteRoot && siteRoot.querySelector('.site-content-wrapper');
+      if (contentWrapper && contentWrapper.style && contentWrapper.style.paddingBottom) {
+        contentWrapper.style.paddingBottom = '';
+      }
+    } catch (e) {}
+    return;
   }
 
   /* -------------------------
@@ -269,6 +248,9 @@
             // attempt to ensure existing footer is relocated under siteRoot
             const footerEl = document.querySelector('footer.footer-minimal');
             if (footerEl && siteRoot) placeFooterNode(footerEl, siteRoot);
+            // ensure no padding is added
+            const cw = siteRoot && siteRoot.querySelector('.site-content-wrapper');
+            if (cw) try { cw.style.paddingBottom = ''; } catch(e) {}
           } else {
             // When shrinking, we keep structure intact (no unwrap) to avoid moving nodes repeatedly.
           }
