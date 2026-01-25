@@ -138,7 +138,7 @@ body{
   display: flex;
   flex-direction: column;
   gap: 20px;
-  background:linear-gradient(135deg, rgba(251,255,255,.55), rgba(246,251,249,.35));
+  background:linear-gradient(135deg, rgba(251, 255, 255, 0.55), rgba(246, 251, 249, 0.35));
   border: 1px solid rgba(226,230,236,.6);
   border-radius: 32px;
   padding: 24px;
@@ -254,170 +254,6 @@ body{
   margin:0;
 }
 
-/* Result card - Very rounded */
-.result-item{
-  /*background:var(--white);
-  border:1px solid rgba(227,232,238,.75);*/
-  border-radius:28px;
-  padding:20px 20px 20px 26px;
-  margin-bottom:18px;
-  position:relative;
-  min-height:84px;
-  transition:all var(--transition);
-  /*box-shadow:0 2px 12px rgba(6,14,30,.05);*/
-  overflow:hidden;
-}
-
-/* .result-item:hover{
-  border-color:rgba(19,180,127,.3);
-} */
-
-.result-content-area{
-  margin-left:12px;
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-}
-
-.result-text-area{
-  display:flex;
-  align-items:flex-start;
-  gap:14px;
-  justify-content:space-between;
-  flex-wrap:wrap;
-}
-
-.result-text{
-  font-size:1.14rem;
-  font-weight:850;
-  color:var(--primary-light);
-  letter-spacing:.01em;
-  line-height:1.36;
-  flex:1;
-  min-width:0;
-  word-break:break-word;
-  font-family:inherit;
-}
-
-/* API badge - Rounded */
-.result-api{
-  font-family:'Consolas','Menlo','Monaco',monospace;
-  font-size:.92rem;
-  font-weight:750;
-  color:#6b4f00;
-  background:linear-gradient(135deg, #fff9e6, #fbf5e0);
-  padding:7px 14px;
-  border-radius:16px;
-  border:1px solid rgba(243,231,194,.8);
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  flex-shrink:0;
-  box-shadow:0 2px 8px rgba(155,120,45,.06);
-  letter-spacing:.3px;
-}
-
-.result-names{
-  color:var(--text-secondary);
-  font-size:.97rem;
-  font-weight:650;
-  opacity:.92;
-  word-break:break-word;
-  line-height:1.52;
-  letter-spacing:.2px;
-}
-
-/* Metadata pills - Rounded */
-.result-meta{
-  display:flex;
-  flex-wrap:wrap;
-  gap:12px;
-  align-items:center;
-  margin-top:4px;
-  font-size:.92rem;
-  font-weight:750;
-}
-
-.result-meta-label{
-  padding:7px 13px;
-  border-radius:18px 0 0 18px;
-  background:rgba(37,95,139,.07);
-  color:var(--text-secondary);
-  border:1px solid rgba(37,95,139,.09);
-  border-right:0;
-  letter-spacing:.2px;
-  user-select: none;
-}
-
-.result-meta-label+.result-meta-value{
-  padding:7px 13px;
-  border-radius:0 18px 18px 0;
-  color:var(--text-main);
-  background:rgba(37,95,139,.07);
-  border:1px solid rgba(37,95,139,.09);
-  border-left:0;
-  letter-spacing:.2px;
-}
-
-.result-meta-value:not(.result-meta-label+.result-meta-value){
-  padding:7px 13px;
-  border-radius:18px;
-  color:var(--text-main);
-  background:rgba(37,95,139,.07);
-  border:1px solid rgba(37,95,139,.09);
-  letter-spacing:.2px;
-}
-
-/* Copy button - Very rounded */
-.result-copy-btn{
-  position:absolute;
-  right:18px;
-  top:18px;
-  background:linear-gradient(135deg, #f8fbfd, #f1faf5);
-  border:1.5px solid rgba(205,215,228,.65);
-  color:var(--primary-light);
-  border-radius:16px;
-  font-size:.97rem;
-  padding:9px 14px;
-  cursor:pointer;
-  transition:all var(--transition);
-  display:inline-flex;
-  align-items:center;
-  gap:7px;
-  font-weight:850;
-  z-index:10;
-  font-family:inherit;
-  box-shadow:0 2px 8px rgba(6,14,30,.06);
-  letter-spacing:.2px;
-  user-select: none;
-}
-
-.result-copy-btn:hover{
-  background:linear-gradient(135deg, var(--primary), var(--primary-dark));
-  color:var(--white);
-  border-color:var(--primary-dark);
-  box-shadow:0 10px 28px rgba(12,140,94,.18);
-  transform:translateY(-2px);
-}
-
-.result-copy-btn:active{
-  transform:translateY(0);
-}
-
-/* Empty states - Rounded */
-.no-result{
-  text-align:center;
-  color:var(--text-muted);
-  font-size:1.08rem;
-  margin-top:60px;
-  padding:40px 28px;
-  background:linear-gradient(135deg, rgba(127,139,155,.04), rgba(127,139,155,.01));
-  border-radius:28px;
-  font-weight:650;
-  border:1.5px dashed rgba(127,139,155,.11);
-  line-height:1.64;
-  letter-spacing:.3px;
-}
 
 .search-result-here{
   text-align:center;
@@ -651,12 +487,6 @@ body{
     padding:7px 11px;
     font-size:.92rem;
     border-radius:12px;
-  }
-
-  .result-copy-btn:hover{
-    background:linear-gradient(135deg, var(--primary), var(--primary-dark));
-    color:var(--white);
-    box-shadow:0 8px 20px rgba(12,140,94,.14);
   }
 
   .result-text-area{
