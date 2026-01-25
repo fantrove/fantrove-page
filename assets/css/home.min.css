@@ -166,6 +166,9 @@ section.mn {
   border: none;
   outline: none;
   gap: 1em;
+  font-size: 0.9em;
+  padding: 1.5em 1.3em;
+  border-radius: 40px;
   background: linear-gradient(to right, #E6F7FF 0%, #f1fff8 100%);
   color: var(--brand-1);
   box-shadow: 0 6px 20px rgba(8,20,40,0.06);
