@@ -77,34 +77,6 @@
     gtag("set", "ads_data_redaction", true);
     gtag("set", "url_passthrough", false);
   </script>
-
-  <!-- LAYOUT FIX: reserve left space when header/nav is a left-side pane -->
-  <style>
-    :root { --left-nav-offset: 0px; }
-
-    /* Apply left offset on larger screens. Adjust breakpoint if needed. */
-    @media (min-width: 900px) {
-      /* main content */
-      main {
-        transition: margin-left 0.22s ease;
-        margin-left: var(--left-nav-offset);
-      }
-
-      /* intro container (template area) */
-      #introContainer {
-        transition: margin-left 0.22s ease;
-        margin-left: var(--left-nav-offset);
-      }
-
-      /* any sub panels near left side */
-      #sub-buttons-container {
-        transition: margin-left 0.22s ease;
-        margin-left: var(--left-nav-offset);
-      }
-    }
-  </style>
-  <!-- End LAYOUT FIX -->
-
 </head>
 
 <body style="opacity:0">
@@ -140,66 +112,6 @@
   <!-- โหลดไฟล์ระบบภาษา (language.min.js) ก่อน เพื่อให้คำแปลพร้อมตั้งแต่ต้น -->
   <script src="/assets/js/language.min.js"></script>
   <script src="/assets/js/intelligent-system.min.js" type="text/javascript" charset="utf-8"></script>
-
-  <!-- Layout adjust script: measure header/nav width and update --left-nav-offset -->
-  <script>
-    (function () {
-      // Heuristic breakpoint for "desktop where nav sinks to left"
-      const BREAKPOINT_PX = 900;
-
-      function computeAndApplyOffset() {
-        try {
-          const headerEl = document.querySelector('header');
-          if (!headerEl) {
-            document.documentElement.style.setProperty('--left-nav-offset', '0px');
-            return;
-          }
-
-          // Use bounding box width as reserved left space
-          const rect = headerEl.getBoundingClientRect();
-          let offset = '0px';
-
-          if (window.innerWidth >= BREAKPOINT_PX && rect.width > 0) {
-            offset = rect.width + 'px';
-          }
-
-          document.documentElement.style.setProperty('--left-nav-offset', offset);
-        } catch (e) {
-          // fail silently but log for debugging
-          console.warn('Layout offset update failed:', e);
-        }
-      }
-
-      // Observe header size changes (if header uses responsive content)
-      function observeHeader() {
-        const headerEl = document.querySelector('header');
-        if (!headerEl) return null;
-        if ('ResizeObserver' in window) {
-          const ro = new ResizeObserver(computeAndApplyOffset);
-          ro.observe(headerEl);
-          return ro;
-        }
-        return null;
-      }
-
-      // Observe DOM changes in case header/nav is injected asynchronously
-      const mo = new MutationObserver(() => {
-        computeAndApplyOffset();
-      });
-      mo.observe(document.body, { childList: true, subtree: true });
-
-      // Recompute on resize and initial load
-      window.addEventListener('resize', computeAndApplyOffset);
-      document.addEventListener('DOMContentLoaded', () => {
-        computeAndApplyOffset();
-        observeHeader();
-      });
-
-      // Run once immediately (helps when script is inlined)
-      computeAndApplyOffset();
-    })();
-  </script>
-  <!-- End layout adjust script -->
 
   <!-- โหลดไฟล์ JavaScript อื่นๆ แบบ defer ให้โหลดพร้อม DOM แต่รันหลัง DOM โหลดเสร็จ -->
   <script defer src="/assets/js/version.min.js"></script>
