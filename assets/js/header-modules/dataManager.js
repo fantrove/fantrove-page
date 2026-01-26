@@ -1,5 +1,5 @@
 // dataManager.js
-// ปรับปรุง: รองรับโครงสร้างฐานข้อมูลแบบแยกไฟล์ (con-data/*)
+// ปรับปรุง: รองรับโครงสร้างฐานข้อมูลแบบแยกไฟล�� (con-data/*)
 // - ยังคงรักษาฟังก์ชันเดิม (loadApiDatabase, fetchApiContent, fetchCategoryGroup, fetchWithRetry ฯลฯ)
 // - โหลด index ของแต่ละ category แล้วโหลด subcategory (data) แบบควบคุม (concurrent queue + cache)
 // - หากไฟล์ใดไม่พบ จะข้ามไป (fail-safe)
@@ -15,7 +15,7 @@ const dataManager = {
         // โฟลเดอร์ฐานข้อมูลแบบใหม่
         API_DATABASE_PATH: '/assets/db/con-data/',
         BUTTONS_CONFIG_PATH: '/assets/json/buttons.min.json',
-        // รายการประ���ภทที่ระบบคาดว่าจะมี (สามารถขยายเพิ่มได้)
+        // รายการประเภทที่ระบบคาดว่าจะมี (สามารถขยายเพิ่มได้)
         KNOWN_TOP_CATEGORIES: ['emoji', 'symbol', 'fancy-text', 'unicode']
     },
 
@@ -166,6 +166,7 @@ const dataManager = {
         return this._warmupPromise;
     },
 
+    // Robust fetch: read text, guard JSON.parse, include snippet on failure to avoid Unexpected token '<'
     async _performFetch(url, options = {}) {
         const key = `${url}-${JSON.stringify(options)}`;
         const cached = this.getCached(key);
@@ -184,20 +185,50 @@ const dataManager = {
             });
 
             clearTimeout(timeoutId);
-            if (!response.ok) throw new Error(`Fetch error: ${response.status} ${response.statusText}`);
 
-            const data = await response.json();
+            // read as text first to detect non-JSON (HTML 404 pages cause Unexpected token '<' when json() is called)
+            const respText = await response.text().catch(() => null);
+            const contentType = (response.headers && response.headers.get && response.headers.get('content-type')) || '';
+
+            if (!response.ok) {
+                const snippet = typeof respText === 'string' ? respText.slice(0, 300) : '';
+                throw new Error(`Fetch error: ${response.status} ${response.statusText} ${snippet ? '- ' + snippet : ''}`);
+            }
+
+            // If content-type doesn't claim JSON, still try parse but surface clear error
+            let data;
+            if (contentType.toLowerCase().includes('application/json') || typeof respText === 'string') {
+                try {
+                    data = respText ? JSON.parse(respText) : null;
+                } catch (parseErr) {
+                    // If it's not valid JSON, surface snippet to help debug (likely HTML)
+                    const snippet = typeof respText === 'string' ? respText.slice(0, 400) : '';
+                    throw new Error(`Invalid JSON response from ${url}. Response snippet: ${snippet}`);
+                }
+            } else {
+                // unknown content-type, attempt parse but otherwise throw
+                try {
+                    data = respText ? JSON.parse(respText) : null;
+                } catch (parseErr) {
+                    const snippet = typeof respText === 'string' ? respText.slice(0, 400) : '';
+                    throw new Error(`Unexpected non-JSON response for ${url}. Snippet: ${snippet}`);
+                }
+            }
+
             if (options.cache !== false) {
                 this.setCache(key, data);
             }
             return data;
         } catch (err) {
-            window._headerV2_utils.errorManager.showError(key, err, {
-                duration: 1200,
-                type: 'error',
-                dismissible: true,
-                position: 'top-right'
-            });
+            // keep old behavior of showing an error but include our new error message
+            try {
+                window._headerV2_utils.errorManager.showError(key, err, {
+                    duration: 1200,
+                    type: 'error',
+                    dismissible: true,
+                    position: 'top-right'
+                });
+            } catch (e) {}
             throw err;
         }
     },
