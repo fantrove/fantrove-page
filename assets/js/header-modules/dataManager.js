@@ -1,9 +1,9 @@
 // dataManager.js
-// ปรับปรุง: รองรับโครงสร้างฐานข้อมูลแบบแยกไฟล�� (con-data/*)
-// - ยังคงรักษาฟังก์ชันเดิม (loadApiDatabase, fetchApiContent, fetchCategoryGroup, fetchWithRetry ฯลฯ)
-// - โหลด index ของแต่ละ category แล้วโหลด subcategory (data) แบบควบคุม (concurrent queue + cache)
-// - หากไฟล์ใดไม่พบ จะข้ามไป (fail-safe)
-// - เก็บ cache ในหน่วยความจำเพื่อลดการเรียกซ้ำ
+// ปรับปรุง: อ่าน top-level index.json ของ /assets/db/con-data/ ก่อนประกอบรายการ category
+// - ถ้า index.json มี จะใช้ไฟล์ที่ระบุใน index.json (รองรับ absolute/relative path)
+// - ถ้าไม่มี จะ fallback ไปยัง KNOWN_TOP_CATEGORIES (เดิม)
+// - ปรับการจัดการข้อผิดพลาดเพื่อหลีกเลี่ยง "Unexpected token '<'"
+// - เก็บ caches เพื่อลด fetch ที่ซ้ำซ้อน
 import { _headerV2_utils } from './utils.js';
 
 const dataManager = {
@@ -14,23 +14,25 @@ const dataManager = {
         CACHE_DURATION: 2 * 60 * 60 * 1000,
         // โฟลเดอร์ฐานข้อมูลแบบใหม่
         API_DATABASE_PATH: '/assets/db/con-data/',
+        TOP_INDEX_FILE: 'index.json', // file that lists top-level categories
         BUTTONS_CONFIG_PATH: '/assets/json/buttons.min.json',
-        // รายการประเภทที่ระบบคาดว่าจะมี (สามารถขยายเพิ่มได้)
-        KNOWN_TOP_CATEGORIES: ['emoji', 'symbol', 'fancy-text', 'unicode']
+        // รายการประเภทที่ระบบคาดว่าจะมี (fallback)
+        KNOWN_TOP_CATEGORIES: ['emoji', 'symbol', 'unicode']
     },
 
     // memory caches
-    cache: new Map(),               // generic cache for fetch results
-    apiCache: null,                 // full assembled DB (virtual)
+    cache: new Map(),
+    apiCache: null,
     apiCacheTimestamp: 0,
-    _categoryIndexes: new Map(),    // category => index object (emoji.min.json content)
-    _subcategoryCache: new Map(),   // `${category}-${subcategoryId}` => subcategory full data
+    _categoryIndexes: new Map(),
+    _subcategoryCache: new Map(),
     _dbPromise: null,
     _jsonDbIndex: null,
     _jsonDbIndexReady: false,
     _jsonDbIndexPromise: null,
+    _topLevelIndex: null, // cached top-level index.json
+    _topLevelIndexPromise: null,
 
-    // fetch queue / concurrency control
     _fetchQueue: [],
     _fetchInProgress: new Map(),
     _queueProcessing: false,
@@ -53,7 +55,7 @@ const dataManager = {
             const task = {
                 url,
                 options,
-                priority: typeof priority === 'number' ? priority : 5, // 1=highest, 10=lowest
+                priority: typeof priority === 'number' ? priority : 5,
                 resolve,
                 reject,
                 timestamp: Date.now()
@@ -107,12 +109,11 @@ const dataManager = {
     },
 
     async _getFromIndexedDB(key) {
-        // Not used currently. Keep placeholder for future persistence.
         return null;
     },
 
     async _setToIndexedDB(key, data) {
-        // placeholder — do nothing
+        // placeholder
     },
 
     getCached(key) {
@@ -138,6 +139,8 @@ const dataManager = {
         this._jsonDbIndexPromise = null;
         this._categoryIndexes.clear();
         this._subcategoryCache.clear();
+        this._topLevelIndex = null;
+        this._topLevelIndexPromise = null;
     },
 
     _warmupPromise: null,
@@ -152,7 +155,6 @@ const dataManager = {
                         { cache: 'force-cache' },
                         9
                     ).catch(()=>{});
-                    // Additionally, prefetch top categories indexes in background to warm caches / SW
                     try {
                         this.prefetchTopCategories(9).catch(()=>{});
                     } catch (e) {}
@@ -166,7 +168,7 @@ const dataManager = {
         return this._warmupPromise;
     },
 
-    // Robust fetch: read text, guard JSON.parse, include snippet on failure to avoid Unexpected token '<'
+    // Robust fetch: read text first and provide helpful error snippets
     async _performFetch(url, options = {}) {
         const key = `${url}-${JSON.stringify(options)}`;
         const cached = this.getCached(key);
@@ -186,7 +188,6 @@ const dataManager = {
 
             clearTimeout(timeoutId);
 
-            // read as text first to detect non-JSON (HTML 404 pages cause Unexpected token '<' when json() is called)
             const respText = await response.text().catch(() => null);
             const contentType = (response.headers && response.headers.get && response.headers.get('content-type')) || '';
 
@@ -195,18 +196,15 @@ const dataManager = {
                 throw new Error(`Fetch error: ${response.status} ${response.statusText} ${snippet ? '- ' + snippet : ''}`);
             }
 
-            // If content-type doesn't claim JSON, still try parse but surface clear error
             let data;
             if (contentType.toLowerCase().includes('application/json') || typeof respText === 'string') {
                 try {
                     data = respText ? JSON.parse(respText) : null;
                 } catch (parseErr) {
-                    // If it's not valid JSON, surface snippet to help debug (likely HTML)
                     const snippet = typeof respText === 'string' ? respText.slice(0, 400) : '';
                     throw new Error(`Invalid JSON response from ${url}. Response snippet: ${snippet}`);
                 }
             } else {
-                // unknown content-type, attempt parse but otherwise throw
                 try {
                     data = respText ? JSON.parse(respText) : null;
                 } catch (parseErr) {
@@ -220,7 +218,6 @@ const dataManager = {
             }
             return data;
         } catch (err) {
-            // keep old behavior of showing an error but include our new error message
             try {
                 window._headerV2_utils.errorManager.showError(key, err, {
                     duration: 1200,
@@ -233,44 +230,77 @@ const dataManager = {
         }
     },
 
-    // Public API: priority-aware fetch
     async fetchWithRetry(url, options = {}, priority = 5) {
         return this._enqueueFetch(url, options, priority);
     },
 
-    // Internal: load a top-level category index (e.g., /con-data/emoji.min.json)
+    // Load top-level index.json (e.g., /assets/db/con-data/index.json) which lists available top categories
+    async _loadTopLevelIndex() {
+        if (this._topLevelIndex) return this._topLevelIndex;
+        if (this._topLevelIndexPromise) return this._topLevelIndexPromise;
+
+        this._topLevelIndexPromise = (async () => {
+            const path = this.constants.API_DATABASE_PATH + this.constants.TOP_INDEX_FILE;
+            try {
+                const idx = await this._enqueueFetch(path, {}, 4).catch(()=>null);
+                if (idx && Array.isArray(idx.categories)) {
+                    this._topLevelIndex = idx;
+                    return idx;
+                }
+            } catch (e) {}
+            // if failed or not present, leave _topLevelIndex null and return null
+            this._topLevelIndex = null;
+            return null;
+        })();
+
+        return this._topLevelIndexPromise;
+    },
+
     async _loadCategoryIndex(category) {
         if (this._categoryIndexes.has(category)) return this._categoryIndexes.get(category);
-        const path = `${this.constants.API_DATABASE_PATH}${category}.min.json`;
+        // If top-level index exists, try to find matching entry first
+        let path = null;
+        try {
+            const topIndex = await this._loadTopLevelIndex();
+            if (topIndex && Array.isArray(topIndex.categories)) {
+                const entry = topIndex.categories.find(c => c.id === category);
+                if (entry) {
+                    // entry.file may be absolute (starts with /) or relative
+                    if (entry.file) {
+                        path = entry.file.startsWith('/') ? entry.file : (this.constants.API_DATABASE_PATH + entry.file);
+                    } else {
+                        path = `${this.constants.API_DATABASE_PATH}${category}.min.json`;
+                    }
+                }
+            }
+        } catch (e) {}
+        if (!path) path = `${this.constants.API_DATABASE_PATH}${category}.min.json`;
         try {
             const idx = await this._enqueueFetch(path, {}, 3);
-            // normalize if needed: ensure categories is array
-            if (idx && Array.isArray(idx.categories) === false && Array.isArray(idx.category)) {
-                idx.categories = idx.category;
+            if (idx && (Array.isArray(idx.categories) || Array.isArray(idx.category) || Array.isArray(idx.data))) {
+                // normalize shape for category index files
+                this._categoryIndexes.set(category, idx);
+                return idx;
             }
-            this._categoryIndexes.set(category, idx);
-            return idx;
+            this._categoryIndexes.set(category, null);
+            return null;
         } catch (err) {
-            // missing index - treat as absent
             this._categoryIndexes.set(category, null);
             return null;
         }
     },
 
-    // Internal: load subcategory file (e.g., /con-data/emoji/smileys_emotion.min.json)
     async _loadSubcategoryFile(category, subcat) {
         const cacheKey = `${category}-${subcat}`;
         if (this._subcategoryCache.has(cacheKey)) return this._subcategoryCache.get(cacheKey);
 
-        // try to get file path from category index if present
         let filePath;
         const catIndex = this._categoryIndexes.get(category);
         if (catIndex && Array.isArray(catIndex.categories)) {
             const entry = catIndex.categories.find(c => c.id === subcat);
-            if (entry && entry.file) filePath = entry.file;
+            if (entry && entry.file) filePath = entry.file.startsWith('/') ? entry.file : (this.constants.API_DATABASE_PATH + entry.file);
         }
         if (!filePath) {
-            // fallback path convention
             filePath = `${this.constants.API_DATABASE_PATH}${category}/${subcat}.min.json`;
         }
 
@@ -279,36 +309,73 @@ const dataManager = {
             this._subcategoryCache.set(cacheKey, data);
             return data;
         } catch (err) {
-            // missing subcategory - cache null to avoid repeated failing fetches
             this._subcategoryCache.set(cacheKey, null);
             return null;
         }
     },
 
-    // Build a combined virtual DB object similar shape to previous single-file db:
-    // { type: [ { id, name, category: [ { id, name, data: [...] }, ... ] }, ... ] }
     async _assembleFullDatabase() {
         if (this.apiCache && Date.now() - this.apiCacheTimestamp < this.constants.CACHE_DURATION) {
             return this.apiCache;
         }
 
-        // ensure category indexes are loaded (try known categories)
-        const categories = this.constants.KNOWN_TOP_CATEGORIES || [];
+        // Determine top-level categories: prefer index.json, otherwise fallback to known list
+        let topList = null;
+        try {
+            const topIndex = await this._loadTopLevelIndex();
+            if (topIndex && Array.isArray(topIndex.categories)) {
+                topList = topIndex.categories.map(c => ({
+                    categoryKey: c.id,
+                    idxFile: c.file ? (c.file.startsWith('/') ? c.file : (this.constants.API_DATABASE_PATH + c.file)) : `${this.constants.API_DATABASE_PATH}${c.id}.min.json`,
+                    rawEntry: c
+                }));
+            }
+        } catch (e) {
+            topList = null;
+        }
+
+        if (!topList) {
+            // fallback: attempt to load known categories
+            topList = (this.constants.KNOWN_TOP_CATEGORIES || []).map(cat => ({
+                categoryKey: cat,
+                idxFile: `${this.constants.API_DATABASE_PATH}${cat}.min.json`
+            }));
+        }
+
+        // Load each top category index (but only those we found)
         const loadedTop = [];
-        for (const cat of categories) {
+        for (const top of topList) {
             try {
-                const idx = await this._loadCategoryIndex(cat);
+                // try to fetch the index file
+                const potentialPath = top.idxFile;
+                // attempt to fetch and normalize
+                let idx = null;
+                try {
+                    idx = await this._enqueueFetch(potentialPath, {}, 3).catch(()=>null);
+                } catch (e) { idx = null; }
+                if (!idx) {
+                    // also try categoryKey based fallback path if different
+                    const altPath = `${this.constants.API_DATABASE_PATH}${top.categoryKey}.min.json`;
+                    try { idx = await this._enqueueFetch(altPath, {}, 4).catch(()=>null); } catch (e) { idx = null; }
+                }
                 if (idx) {
-                    // normalize shape to have id, name, categories array
-                    const normalized = { id: idx.id || cat, name: idx.name || idx.title || {}, categories: idx.categories || idx.category || [] };
-                    loadedTop.push({ categoryKey: cat, idx: normalized });
+                    const normalized = {
+                        id: idx.id || top.categoryKey,
+                        name: idx.name || idx.title || (top.rawEntry && top.rawEntry.name) || {},
+                        categories: idx.categories || idx.category || (idx.data ? [{ id: idx.id || top.categoryKey, data: idx.data }] : [])
+                    };
+                    loadedTop.push({ categoryKey: top.categoryKey, idx: normalized });
+                    this._categoryIndexes.set(top.categoryKey, idx);
+                } else {
+                    // mark as missing to avoid repeated attempts
+                    this._categoryIndexes.set(top.categoryKey, null);
                 }
             } catch (e) {
-                // ignore
+                this._categoryIndexes.set(top.categoryKey, null);
             }
         }
 
-        // For each top category, load all its subcategory files in parallel (with enqueue)
+        // Parallel fetch subcategories (enqueue)
         const subFetchPromises = [];
         for (const top of loadedTop) {
             const cat = top.categoryKey;
@@ -316,10 +383,8 @@ const dataManager = {
             if (!Array.isArray(idx.categories)) continue;
             for (const sub of idx.categories) {
                 const subId = sub.id;
-                // push promise but do not await here to allow parallel queueing
                 subFetchPromises.push((async () => {
                     const subData = await this._loadSubcategoryFile(cat, subId).catch(()=>null);
-                    // attach data array into the category entry if present
                     return { topCat: cat, subId, subIndexEntry: sub, subData };
                 })());
             }
@@ -331,16 +396,11 @@ const dataManager = {
         const finalTypes = [];
         for (const top of loadedTop) {
             const idx = top.idx;
-            // clone categories entries and attach data where available
             const cats = (idx.categories || []).map(c => {
-                // find matching fetched data
                 const match = allSubResults.find(r => r.topCat === top.categoryKey && r.subId === c.id);
                 const data = match && match.subData ? (match.subData.data || match.subData.items || match.subData) : c.data || [];
-                // keep file property if present
-                const entry = { ...c, data };
-                return entry;
+                return { ...c, data };
             });
-            // final type object
             finalTypes.push({
                 id: idx.id || top.categoryKey,
                 name: idx.name || {},
@@ -349,15 +409,12 @@ const dataManager = {
         }
 
         const assembled = { type: finalTypes };
-        // cache
         this.apiCache = assembled;
         this.apiCacheTimestamp = Date.now();
-        // try build index for searching
         try { await this._buildJsonDbIndex(assembled); } catch {}
         return assembled;
     },
 
-    // loadApiDatabase: return assembled DB object (loads indexes + subcategory data)
     async loadApiDatabase() {
         this._warmup();
         if (this.apiCache && Date.now() - this.apiCacheTimestamp < this.constants.CACHE_DURATION) {
@@ -374,13 +431,11 @@ const dataManager = {
     },
 
     async fetchApiContent(apiCode) {
-        // try to use index first
         if (this._jsonDbIndexReady && this._jsonDbIndex && this._jsonDbIndex.apiMap && this._jsonDbIndex.apiMap.has(apiCode)) {
             const node = this._jsonDbIndex.apiMap.get(apiCode);
             return node.text || node;
         }
 
-        // fallback: ensure full DB loaded and search
         const db = await this.loadApiDatabase();
         function findApiValue(obj, targetApi) {
             if (Array.isArray(obj)) {
@@ -404,10 +459,8 @@ const dataManager = {
         return content;
     },
 
-    // fetchCategoryGroup: given categoryId (e.g., 'smileys_emotion' or 'smileys_emotion_category'), return {id, name, data, header}
     async fetchCategoryGroup(categoryId) {
         const idRaw = categoryId.replace(/_category$/, '');
-        // ensure full DB assembled (this will attempt to load indexes and subcategory files)
         const db = await this.loadApiDatabase();
         const idx = this._jsonDbIndexReady ? this._jsonDbIndex : (await this._buildJsonDbIndex(db));
         let found = null, typeName = "", typeId = "";
@@ -419,7 +472,6 @@ const dataManager = {
                 typeName = typeObj.name;
             }
         }
-        // fallback search through assembled db.type
         if (!found && Array.isArray(db?.type)) {
             for (const typeObj of db.type) {
                 typeId = typeObj.id;
@@ -524,7 +576,6 @@ const dataManager = {
             if (rawText) {
                 tryWorker();
             } else {
-                // if rawText not provided, generate text from JSON string of assembled db
                 try {
                     const text = JSON.stringify(db || {});
                     tryWorker(text);
@@ -538,21 +589,22 @@ const dataManager = {
         return this._jsonDbIndex;
     },
 
-    // New: prefetch top categories indexes and optionally first N subcategories
-    // This is non-blocking and used to warm SW/cache for con-data files.
     async prefetchTopCategories(priority = 8, subPerCategory = 2) {
         try {
-            const known = this.constants.KNOWN_TOP_CATEGORIES || [];
+            const topIndex = await this._loadTopLevelIndex();
+            const known = (topIndex && Array.isArray(topIndex.categories))
+                ? topIndex.categories.map(c => ({ id: c.id, file: c.file }))
+                : (this.constants.KNOWN_TOP_CATEGORIES || []).map(c => ({ id: c, file: `${this.constants.API_DATABASE_PATH}${c}.min.json` }));
+
             for (const cat of known) {
-                // load category index (low priority)
                 (async () => {
                     try {
-                        const idx = await this._enqueueFetch(`${this.constants.API_DATABASE_PATH}${cat}.min.json`, {}, priority).catch(()=>null);
+                        const filePath = (cat.file && cat.file.startsWith('/')) ? cat.file : (this.constants.API_DATABASE_PATH + (typeof cat.file === 'string' ? cat.file.replace(this.constants.API_DATABASE_PATH, '') : `${cat.id}.min.json`));
+                        const idx = await this._enqueueFetch(filePath, {}, priority).catch(()=>null);
                         if (!idx || !Array.isArray(idx.categories)) return;
-                        // enqueue first subPerCategory subcategory files
                         for (let i = 0; i < Math.min(subPerCategory, idx.categories.length); i++) {
                             const entry = idx.categories[i];
-                            const path = entry && entry.file ? entry.file : `${this.constants.API_DATABASE_PATH}${cat}/${entry.id}.min.json`;
+                            const path = entry && entry.file ? (entry.file.startsWith('/') ? entry.file : (this.constants.API_DATABASE_PATH + entry.file)) : `${this.constants.API_DATABASE_PATH}${cat.id}/${entry.id}.min.json`;
                             this._enqueueFetch(path, {}, priority + 1).catch(()=>null);
                         }
                     } catch (e) {}
