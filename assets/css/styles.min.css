@@ -20,7 +20,7 @@
   --app-card-padding: 15px;
   --app-card-radius: 15px;
   --app-button-radius: 12px;
-  --app-pill-radius: 100px;
+  --app-pill-radius: 20px;
 }
 
 /* ---------- BASE ---------- */
@@ -28,106 +28,130 @@ main { margin-top: 30px; }
 
 .button-sub {
   margin: 0;
-  padding: 12px 16px;
+  padding: 11px 22px;
   background: var(--app-surface-primary);
   color: var(--text-color);
-  border: 0.5px solid var(--app-border-subtle);
+  border: 0.5px solid var(--app-theme-indigo-border);
   border-radius: var(--app-pill-radius);
   font-size: 0.9em;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
-  transition: background var(--app-motion-quick), border-color var(--app-motion-quick), color var(--app-motion-quick);
   letter-spacing: 0.01em;
-  font-weight: 600;
-
-  /* hint ให้ browser เตรียม compositing สำหรับปุ่มที่มี transition */
-  will-change: background, color, border-color;
-  backface-visibility: hidden;
+  transition:
+    background var(--app-motion-quick),
+    border-color var(--app-motion-quick),
+    color var(--app-motion-quick);
 }
-.button-sub:hover {
-  border-color: var(--app-theme-indigo-border);
+
+.button-sub:hover,
+.button-sub.active {
   color: var(--text-primary);
 }
 
 .button-sub.active {
-  color: var(--text-primary);
   border-color: var(--app-theme-indigo-light);
 }
 
-.hi { padding: 0 10px 0 10px; }
-.hj { border-radius: 30px;background: #FFFFFF; border: 0.5px solid rgba(0, 0, 0, 0.1); }
+.hi { padding: 0 10px; }
+.hj {
+  border-radius: 25px;
+  background: #FFFFFF;
+  border: 0.5px solid rgba(0, 0, 0, 0.1);
+}
 
-.button-content {
+/* ===================================================== */
+/* 🔥 BUTTON CONTENT — HOT PATH, ULTRA OPTIMIZED */
+/* ===================================================== */
+
+:where(.button-content) {
   box-sizing: border-box;
   width: 60px !important;
   padding: 13px 19px !important;
   margin: 8px 0;
+
+  /* 🔒 ล็อกความสูงจริงของปุ่ม (กันเพี้ยนทุกกรณี) */
+  height: 60px;
+  min-height: 60px;
+
   display: flex;
   align-items: center;
   justify-content: center;
+
   border-radius: 23px;
   font-size: 19px;
+  line-height: 1;
+
   background: var(--app-surface-primary, #fff);
   color: var(--app-theme-indigo, #10B981);
   border: 1px solid var(--app-theme-indigo-border, #54CBAB);
+
   cursor: pointer;
   text-align: center;
-  transition:
-    border-color 0.18s,
-    box-shadow 0.18s,
-    transform 200ms cubic-bezier(0.4,0,0.2,1),
-    color 0.18s;
   -webkit-tap-highlight-color: transparent;
 
-  will-change: transform, border-color;
-  transform: translateZ(0); /* สร้าง GPU layer สำหรับ smooth transform */
-  backface-visibility: hidden;
+  /* cheap-only transitions */
+  transition:
+    transform 200ms cubic-bezier(0.4,0,0.2,1),
+    border-color 0.18s,
+    color 0.18s;
+
+  /* 🚀 render เฉพาะเมื่อเข้า viewport */
+  content-visibility: auto;
+
+  /* 🎯 จำกัด repaint แค่ตัวปุ่ม */
+  contain: paint;
 }
 
-.button-content:hover {
+:where(.button-content:hover) {
   border-color: var(--app-theme-indigo-border-strong, #54CBAB);
   transform: translateY(-1px) scale(1.008);
 }
 
-.button-content > * {
+:where(.button-content > *) {
   position: relative;
   z-index: 1;
 }
 
-/* ---------- CARD ---------- */
-.card {
+/* ===================================================== */
+/* 🔥 CARD — OPTIMIZED แต่หน้าตาเหมือนเดิม 100% */
+/* ===================================================== */
+
+:where(.card) {
   display: flex;
   flex-direction: column;
   align-items: stretch;
   width: 160px;
-  height: auto;
   max-height: 222px;
   max-width: 400px;
   padding: 0;
   border-radius: 30px;
   overflow: hidden;
+
   background: #FFFFFF;
   border: 1px solid var(--app-theme-indigo-border);
+
   transition:
     border-color var(--app-motion-natural),
     box-shadow var(--app-motion-natural),
     transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* จำกัดการ repaint ให้แคบลงเฉพาะการ์ดนี้ */
+  /* 🚀 ไม่ render card นอก viewport */
+  content-visibility: auto;
+
+  /* 🎯 จำกัดผลกระทบ paint */
   contain: paint;
-  will-change: border-color, transform;
-  backface-visibility: hidden;
 }
-.card > * {
+
+:where(.card > *) {
   position: relative;
   z-index: 1;
 }
-.card::before {
+
+:where(.card)::before {
   content: "";
   pointer-events: none;
   position: absolute;
-  z-index: 0;
   inset: 0;
   opacity: 0;
   transition: opacity 0.28s cubic-bezier(0.4,0,0.2,1);
@@ -138,9 +162,13 @@ main { margin-top: 30px; }
   );
   border-radius: inherit;
 }
-.card:hover {
+
+:where(.card:hover) {
   border-color: var(--app-theme-indigo-border-strong);
 }
+
+/* ---------- CARD INNER ---------- */
+
 .card-image {
   width: 100%;
   height: auto;
@@ -148,13 +176,10 @@ main { margin-top: 30px; }
   border-radius: 0;
   box-shadow: none;
   transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
-
-  /* ปรับปรุงการแสดงภาพบนบางเบราว์เซอร์ */
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
-  will-change: transform;
-  transform: translateZ(0);
 }
+
 .card-content {
   margin-top: 5px;
   padding: 12px;
@@ -162,16 +187,16 @@ main { margin-top: 30px; }
   flex-direction: column;
   justify-content: flex-start;
   transition: opacity 200ms cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: opacity;
 }
+
 .card-title {
   font-size: 13px;
   font-weight: bold;
   color: var(--app-text-heading);
   margin-bottom: 4px;
-  letter-spacing: 0;
   line-height: 1.5;
 }
+
 .card-description {
   font-size: 11.3px;
   color: var(--app-text-body);
@@ -179,7 +204,8 @@ main { margin-top: 30px; }
   letter-spacing: 0.01em;
 }
 
-/* ---------- HORIZONTAL BUTTON CONTAINERS (ปรับ UX การเลื่อน) ---------- */
+/* ---------- HORIZONTAL BUTTON CONTAINERS ---------- */
+
 #main-buttons-container,
 #sub-buttons-container {
   display: flex;
@@ -187,17 +213,22 @@ main { margin-top: 30px; }
   white-space: nowrap;
   scrollbar-width: none;
   -ms-overflow-style: none;
-
-  overscroll-behavior-x: contain; /* ป้องกันการ chain เลื่อนขึ้นไปยัง body */
-  -webkit-overflow-scrolling: touch; /* เพิ่มความนุ่มบน iOS */
-  scrollbar-gutter: stable;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 #main-buttons-container { gap: 8px; padding: 4px; }
+#sub-buttons-container { gap: 2px; padding: 8px; border-radius: 25px; }
+
 #main-buttons-container::-webkit-scrollbar,
-#sub-buttons-container::-webkit-scrollbar { display: none; }
-#sub-buttons-container { gap: 8px; padding: 5px; border-radius: 25px; }
-.group-header { padding: 10px 10px; width: 100%; }
+#sub-buttons-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* ---------- GROUP HEADER ---------- */
+
+.group-header { padding: 10px; width: 100%; }
+
 .group-header-text {
   font-size: 1.2rem;
   font-weight: 600;
@@ -210,68 +241,51 @@ main { margin-top: 30px; }
   color: var(--app-text-heading);
 }
 
-.card-content-container, 
+/* ---------- CONTENT CONTAINERS ---------- */
+
+.card-content-container,
 .button-content-container {
   display: flex !important;
   flex-wrap: wrap !important;
   margin: 0 0 40px 0 !important;
   padding: 1rem 0 !important;
-  background: rgba(255, 255, 255, 1);
+  background: #fff;
   justify-content: center !important;
   align-items: center !important;
   border-radius: 25px;
 }
+
 .button-content-container { gap: 12px !important; }
 .card-content-container { gap: 6px !important; }
+
+/* ---------- FADE ---------- */
 
 .fade-in {
   opacity: 0;
   animation: fadeIn 0.25s ease-out forwards;
 }
+
 .fade-out {
   opacity: 1;
   animation: fadeOut 0.25s ease-out forwards;
 }
+
 @keyframes fadeIn {
-  from { opacity: 0;}
+  from { opacity: 0; }
   to   { opacity: 1; }
 }
+
 @keyframes fadeOut {
-  from { opacity: 1;}
-  to   { opacity: 0;}
+  from { opacity: 1; }
+  to   { opacity: 0; }
 }
+
+/* ---------- RESPONSIVE ---------- */
 
 @media screen and (max-width: 600px) {
   .card-content-container { justify-content: center; gap: 12px; }
-  .card { margin: 8px 4px;}
+  .card { margin: 8px 4px; }
   .card-content { padding-left: 10px; padding-top: 4px; }
-}
-
-/* ---------- Motion preference: ลดแอนิเมชันถ้าผู้ใช้ต้องการ ---------- */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-    scroll-behavior: auto !important;
-    will-change: auto !important;
-  }
-}
-
-/* ---------- SCROLLBAR ---------- */
-::-webkit-scrollbar {
-  height: 7px;
-  width: 7px;
-  background: #f6f7fb;
-  border-radius: 6px;
-}
-::-webkit-scrollbar-thumb {
-  background: #e0e7f2;
-  border-radius: 6px;
-  transition: background 0.10s;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #c8d0e7;
 }
 
 @media (max-width: 450px) {
@@ -282,21 +296,56 @@ main { margin-top: 30px; }
   }
 }
 
+/* ---------- REDUCED MOTION ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------- SCROLLBAR ---------- */
+
+::-webkit-scrollbar {
+  height: 7px;
+  width: 7px;
+  background: #f6f7fb;
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #e0e7f2;
+  border-radius: 6px;
+  transition: background 0.10s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #c8d0e7;
+}
+
 /* ---------- IMAGE WRAPPER ---------- */
+
 .img-d1 {
-  padding: 0 30px 0 30px;
+  padding: 0 30px;
   z-index: -2;
 }
+
 .img-d1 img {
   width: 100%;
   border-radius: 25px;
-
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
   contain: paint;
 }
 
-/* ---------- SAFETY NOTE ----------
-   - ใส่ will-change / contain เฉพาะจุดสำคัญเพื่อลด memory overhead
-   - การปรับปรุงทั้งหมดนี้ไม่เปลี่ยนสี, ขนาด, layout หรือ visual design ขององค์ประกอบใด ๆ
-*/
+/* ---------- FALLBACK (Browser เก่า) ---------- */
+
+@supports not (content-visibility: auto) {
+  .button-content,
+  .card {
+    content-visibility: visible;
+  }
+}

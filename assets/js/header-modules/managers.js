@@ -12,8 +12,9 @@ export const scrollManager = {
         styleSheet.textContent = `
 header { position: relative; z-index: ${headerZ}; contain: layout style paint; }
 #sub-nav { position: sticky; top: ${this.constants.SUB_NAV_TOP_SPACING}px; left: 0; right: 0; z-index: ${this.constants.Z_INDEX.SUB_NAV}; transition: background ${this.constants.ANIMATION_DURATION}ms ease; }
-#sub-nav.fixed { background: rgba(255, 255, 255, 1); border-bottom: 0.5px solid rgba(19, 180, 127, 0.18); border-radius: 0 0 40px 40px; }
-#sub-nav.fixed #sub-buttons-container { padding: 5px !important; }
+#sub-nav.fixed { background: rgba(255, 255, 255, 1); border-bottom: 0.5px solid rgba(19, 180, 127, 0.18); border-radius: 0 0 30px 30px; }
+#sub-nav.fixed #sub-buttons-container { padding: 8px 18px !important; border-radius: 0 0 30px 30px; }
+#sub-nav.fixed.hi {padding: 0!important;}
 #sub-nav.fixed .hj { border-color: rgba(0, 0, 0, 0); background: transparent; }
         `;
         document.head.appendChild(styleSheet);
