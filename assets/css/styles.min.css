@@ -66,7 +66,16 @@ main { margin-top: 30px; margin-bottom: 80px; }
 
 :where(.button-content) {
   box-sizing: border-box;
-  width: 60px !important;
+
+  /* ✅ เอาความกว้างตายตัวออก */
+  width: auto !important;
+
+  /* 🎯 ความกว้างตั้งต้น + กันปุ่มเล็กเกิน */
+  min-width: 60px;
+
+  /* 🎯 กันปุ่มยาวเวอร์ (เลือกเปิดได้) */
+  max-width: 100%;
+
   padding: 13px 19px !important;
   margin: 8px 0;
 
@@ -74,7 +83,7 @@ main { margin-top: 30px; margin-bottom: 80px; }
   height: 60px;
   min-height: 60px;
 
-  display: flex;
+  display: inline-flex; /* ⬅ สำคัญ: ให้ขนาดตาม content */
   align-items: center;
   justify-content: center;
 
@@ -90,16 +99,12 @@ main { margin-top: 30px; margin-bottom: 80px; }
   text-align: center;
   -webkit-tap-highlight-color: transparent;
 
-  /* cheap-only transitions */
   transition:
     transform 200ms cubic-bezier(0.4,0,0.2,1),
     border-color 0.18s,
     color 0.18s;
 
-  /* 🚀 render เฉพาะเมื่อเข้า viewport */
   content-visibility: auto;
-
-  /* 🎯 จำกัด repaint แค่ตัวปุ่ม */
   contain: paint;
 }
 
@@ -248,14 +253,14 @@ main { margin-top: 30px; margin-bottom: 80px; }
   display: flex !important;
   flex-wrap: wrap !important;
   margin: 0 0 40px 0 !important;
-  padding: 1rem 0 !important;
+  padding: 1rem 5px !important;
   background: #fff;
   justify-content: center !important;
   align-items: center !important;
   border-radius: 25px;
 }
 
-.button-content-container { gap: 12px !important; }
+.button-content-container { gap: 5px !important; }
 .card-content-container { gap: 6px !important; }
 
 /* ---------- FADE ---------- */
