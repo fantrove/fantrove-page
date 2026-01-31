@@ -11,7 +11,7 @@ No more wasting time searching across different sources—we make it easy and fa
 
 
 <div align="center">
-<a href="https://ledp-aero-wings.github.io/"><img alt="Visit the website" height="56" src="https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/documentation/website_vector.svg"></a>
+<a href="https://rowingsco-official.vercel.app/"><img alt="Visit the website" height="56" src="https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/documentation/website_vector.svg"></a>
 <a href="https://discord.gg/MMxQSZB3y3"><img alt="Discord Server" height="56" src="https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/social/discord-plural_vector.svg"></a>
 </div>
 
@@ -22,7 +22,7 @@ No more wasting time searching across different sources—we make it easy and fa
 FanTrove is developed without any funding, and the developer has taken on the entire project independently.  
 If you find this website useful or appreciate the work being done, you can show your support here:  
 
-<a href="https://www.patreon.com/LedpAeroWings"><img alt="Support me on Patron" height="56" src="https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/donate/patreon-singular_vector.svg"></a>  
+<a href="https://www.patreon.com/rowingsco"><img alt="Support me on Patron" height="56" src="https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/donate/patreon-singular_vector.svg"></a>  
 
 Every bit of support helps keep this project running and growing! 🚀  
 
