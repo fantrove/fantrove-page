@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmitOnError": false,
+    "declaration": false,
+    "sourceMap": true,
+    "outDir": "./assets/js/header-modules/",
+    "rootDir": "./trc/src/",
+    "incremental": true,
+    "emitDeclarationOnly": false,
+    "preserveValueImports": false
+  },
+  "include": ["trc/src/**/*"]
+}

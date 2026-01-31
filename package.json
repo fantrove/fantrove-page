@@ -1,0 +1,13 @@
+{
+  "name": "fantrove-header-trc",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "watch": "tsc -p tsconfig.build.json --watch",
+    "clean": "node ./trc/scripts/clean-dist.js"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0"
+  }
+}
