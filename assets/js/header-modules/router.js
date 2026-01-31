@@ -1,6 +1,14 @@
 // router.js
 // Core router / navigation: normalization, history, validation, single-source navigation flow
 // This module is designed to be the single authoritative navigation system for header V2.
+//
+// Updates:
+// - Make router the single source of truth for URL/history operations.
+// - Router now controls whether to pushState or replaceState during initial automatic navigation
+//   to avoid duplicate history entries when the app bootstraps.
+// - Exposes clear APIs and internal flagging so other modules can ask router to only update UI
+//   without mutating history, or to navigate (and let router decide push vs replace).
+// - Maintains backward-compatible public surface to minimize changes elsewhere.
 
 const DEFAULT_STATE = {
   isNavigating: false,
@@ -12,6 +20,11 @@ const DEFAULT_STATE = {
 
 const router = {
   state: { ...DEFAULT_STATE },
+
+  // internal flag: true until the router performs the first canonical navigation changeURL
+  // This ensures initial automatic navigation uses replaceState (not pushState),
+  // avoiding duplicate history entries when bootstrapping.
+  _initialNavigation: true,
 
   // Normalize a route into canonical query-string form used by the app
   normalizeUrl(input) {
@@ -97,17 +110,58 @@ const router = {
   },
 
   // Change browser URL + history state (canonical)
-  async changeURL(url, force = false) {
+  // Options:
+  //  - forcePush (boolean): when true force pushState even during initial navigation
+  //  - replace (boolean): explicit replaceState (overrides initial navigation preference)
+  async changeURL(url, forcePush = false, opts = {}) {
     try {
       if (!url) return;
       const normalized = this.normalizeUrl(url);
-      if (force || window.location.search !== normalized) {
-        window.history.pushState({ url: normalized, scrollPosition: this.state.lastScrollPosition }, '', normalized);
+      if (!normalized) return;
+
+      // If location already equals normalized, no history change needed.
+      const currentSearch = window.location.search || '';
+      if (currentSearch === normalized) {
+        // Still update internal previousUrl, dispatch event for consistency
         this.state.previousUrl = normalized;
         window.dispatchEvent(new CustomEvent('urlChanged', {
           detail: { url: normalized, mainRoute: this.state.currentMainRoute, subRoute: this.state.currentSubRoute }
         }));
+        // Mark that initial navigation has been handled (if it was)
+        this._initialNavigation = false;
+        return;
       }
+
+      // Determine replace vs push:
+      // - If caller explicitly asks for replace -> use replaceState
+      // - Else if this is still initial navigation and caller did not forcePush -> replaceState
+      // - Otherwise pushState
+      let useReplace = false;
+      if (opts.replace === true) useReplace = true;
+      else if (this._initialNavigation && !forcePush) useReplace = true;
+      else useReplace = false;
+
+      if (useReplace) {
+        try {
+          window.history.replaceState({ url: normalized, scrollPosition: this.state.lastScrollPosition }, '', normalized);
+        } catch (e) {
+          // fallback to push if replaceState fails
+          try { window.history.pushState({ url: normalized, scrollPosition: this.state.lastScrollPosition }, '', normalized); } catch (e2) {}
+        }
+      } else {
+        try {
+          window.history.pushState({ url: normalized, scrollPosition: this.state.lastScrollPosition }, '', normalized);
+        } catch (e) {
+          // fallback to replace if pushState fails
+          try { window.history.replaceState({ url: normalized, scrollPosition: this.state.lastScrollPosition }, '', normalized); } catch (e2) {}
+        }
+      }
+
+      this._initialNavigation = false;
+      this.state.previousUrl = normalized;
+      window.dispatchEvent(new CustomEvent('urlChanged', {
+        detail: { url: normalized, mainRoute: this.state.currentMainRoute, subRoute: this.state.currentSubRoute }
+      }));
     } catch (err) {
       console.error('router.changeURL error', err);
       try { window._headerV2_utils && window._headerV2_utils.showNotification('เปลี่ยน URL ไม่สำเร็จ', 'error'); } catch {}
@@ -170,9 +224,11 @@ const router = {
 
   // Core navigateTo: single place to implement navigation flow used by the whole app.
   // Options:
-  //  - skipUrlUpdate: if true, do not push history
+  //  - skipUrlUpdate: if true, do not push/replace history (only update UI & load content)
   //  - isPopState: if true, navigation triggered by popstate (back/forward)
   //  - maintainScroll: keep current scroll (default false -> scroll to top)
+  //  - forcePush: force pushState even if this looks like initial navigation
+  //  - replace: explicitly perform replaceState
   async navigateTo(route, options = {}) {
     if (this.state.isNavigating) return;
     this.state.isNavigating = true;
@@ -200,7 +256,12 @@ const router = {
       const lang = localStorage.getItem('selectedLang') || 'en';
 
       // update history (unless skip)
-      if (!options.skipUrlUpdate) await this.changeURL({ type: main, page: sub });
+      if (!options.skipUrlUpdate) {
+        // Decide replace vs push:
+        // - If caller explicitly set replace, honor it
+        // - Else let changeURL decide (it will replace when router._initialNavigation is true)
+        await this.changeURL({ type: main, page: sub }, !!options.forcePush, { replace: !!options.replace });
+      }
 
       // find button config
       const cfg = (window._headerV2_buttonManager && window._headerV2_buttonManager.buttonConfig);
@@ -313,6 +374,24 @@ const router = {
     } catch (e) {
       console.error('router.init error', e);
     }
+  },
+
+  // Utility: allow other modules to request activation of UI without touching history.
+  // e.g., buttonManager can call router.activateUiOnly('main', 'sub') during initial rendering.
+  activateUiOnly(main, sub) {
+    try {
+      this.state.currentMainRoute = main;
+      this.state.currentSubRoute = sub || '';
+      this.setActiveButtons(main, sub);
+    } catch (e) {
+      console.error('router.activateUiOnly error', e);
+    }
+  },
+
+  // Utility: mark the router that initial automatic navigation has already been handled externally.
+  // Useful if some bootstrap behavior has already done an initial replaceState.
+  markInitialNavigationHandled() {
+    this._initialNavigation = false;
   }
 };
 
