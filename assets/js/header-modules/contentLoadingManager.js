@@ -1,186 +1,336 @@
 // contentLoadingManager.js
-// ✅ ปรับปรุง: Lazy overlay setup, memoization
-import { showInstantLoadingOverlay, removeInstantLoadingOverlay } from './overlay.js';
+// Centralized loading overlay manager (single source of truth).
+// Responsibilities:
+// - Only this module creates, shows, hides and updates the global loading overlay.
+// - Other modules should call window._headerV2_contentLoadingManager.show/hide/updateMessage
+//   (or the global helpers window.showInstantLoadingOverlay / window.removeInstantLoadingOverlay
+//   which are proxied to this manager).
+// - Options callers may pass:
+//     { message, zIndex, autoHideAfterMs, behindSubNav }
+//   If zIndex is not provided the manager will choose sensible defaults.
+// - Show/hide/update are idempotent and safe to call repeatedly.
+// - Manager will not implicitly change history or do unrelated side-effects.
 
-const LOADING_CONTAINER_ID = 'content-loading';
-const SPINNER_ID = 'headerv2-spinner';
+const LOADING_ID = 'content-loading-overlay';
+const STYLE_ID = 'content-loading-overlay-styles';
+const DEFAULT_ZINDEX = 15000;
+const FADE_MS = 360;
 
-export const contentLoadingManager = {
- LOADING_CONTAINER_ID,
- spinnerElement: null,
- _messageCache: {}, // ✅ NEW: cache for default messages
- 
- createSpinner(message = '') {
-  if (this.spinnerElement && document.body.contains(this.spinnerElement)) {
-   this.updateMessage(message);
-   return this.spinnerElement;
-  }
-  const spinner = document.createElement('div');
-  spinner.id = SPINNER_ID;
-  spinner.className = 'content-loading-spinner';
-  spinner.style.pointerEvents = 'none';
-  spinner.innerHTML = `
-      <div aria-hidden="true" class="spinner-svg" style="width:48px;height:48px;display:inline-block">
-        <svg viewBox="0 0 48 48" width="48" height="48" focusable="false">
-          <circle cx="24" cy="24" r="20" stroke="#eee" stroke-width="5" fill="none"></circle>
-          <circle class="spinner-svg-fg" cx="24" cy="24" r="20" stroke="#4285f4" stroke-width="5" stroke-linecap="round" stroke-dasharray="90 125" style="animation:rotate 1s linear infinite"></circle>
-        </svg>
-      </div>
-      <div class="loading-message" style="margin-top:8px;font-weight:500;color:#2196f3">${message || this.getDefaultMessage()}</div>
-    `;
-  // minimal style (only if not present)
-  if (!document.getElementById('headerv2-loading-styles')) {
-   const s = document.createElement('style');
-   s.id = 'headerv2-loading-styles';
-   s.textContent = `
-        @keyframes rotate{from{transform:rotate(0)}to{transform:rotate(360deg)}}
-        .content-loading-spinner{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px}
-      `;
-   document.head.appendChild(s);
-  }
-  this.spinnerElement = spinner;
-  return spinner;
- },
- 
- show(messageOrOptions = '') {
-  try {
-   let message = '';
-   let opts = {};
-   if (typeof messageOrOptions === 'string') {
-    message = messageOrOptions;
-   } else if (typeof messageOrOptions === 'object' && messageOrOptions !== null) {
-    message = messageOrOptions.message || '';
-    opts = messageOrOptions;
-   }
-   
-   let useOverlay = typeof showInstantLoadingOverlay === 'function';
-   let computedZ = undefined;
-   
-   if (useOverlay) {
-    let behindSubNav = !!opts.behindSubNav;
-    // Auto-detect if sub-nav is present and visible
-    if (opts.behindSubNav === undefined) {
-     try {
-      const subNav = document.getElementById('sub-nav');
-      if (subNav) {
-       const style = window.getComputedStyle(subNav);
-       const visible = style.display !== 'none' && style.visibility !== 'hidden' && subNav.offsetHeight > 0;
-       const container = subNav.querySelector('#sub-buttons-container');
-       const hasSubButtons = container && container.childNodes && container.childNodes.length > 0;
-       if (visible && hasSubButtons) behindSubNav = true;
-      }
-     } catch (e) {}
+const contentLoadingManager = {
+  // public constants (for external use)
+  LOADING_CONTAINER_ID: 'content-loading',
+  spinnerElement: null,
+
+  // internal state
+  _autoHideTimer: null,
+  _currentOptions: null,
+
+  // Ensure overlay CSS exists (idempotent)
+  _ensureStyles() {
+    if (document.getElementById(STYLE_ID)) return;
+    const s = document.createElement('style');
+    s.id = STYLE_ID;
+    s.textContent = `
+#${LOADING_ID} {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.94);
+  transition: opacity ${FADE_MS}ms cubic-bezier(.7,0,.7,1);
+  opacity: 1;
+  z-index: ${DEFAULT_ZINDEX};
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  will-change: opacity;
+  contain: strict;
+}
+#${LOADING_ID}.hidden {
+  opacity: 0 !important;
+  pointer-events: none;
+}
+#${LOADING_ID} .content-loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  animation: content-loading-fade-in 240ms ease-in;
+}
+#${LOADING_ID} .spinner-svg {
+  margin-bottom: 12px;
+  width: 56px;
+  height: 56px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+#${LOADING_ID} .spinner-svg svg { width: 100%; height: 100%; }
+#${LOADING_ID} .spinner-svg-fg {
+  stroke: #4285f4;
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 90 125;
+  animation: instant-spinner-rotate 1s linear infinite;
+  fill: none;
+}
+#${LOADING_ID} .spinner-svg-bg {
+  stroke: #eee;
+  stroke-width: 5;
+  fill: none;
+}
+#${LOADING_ID} .loading-message {
+  font-size: 1.06rem;
+  color: #2196f3;
+  text-align: center;
+  margin-top: 6px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  opacity: 0.94;
+}
+@keyframes content-loading-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes instant-spinner-rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+`;
+    document.head.appendChild(s);
+  },
+
+  // Build overlay DOM (idempotent w.r.t. existing element)
+  _buildOverlay(message = '') {
+    let overlay = document.getElementById(LOADING_ID);
+    if (overlay) {
+      // update message if needed
+      const msgEl = overlay.querySelector('.loading-message');
+      if (msgEl) msgEl.textContent = message || msgEl.textContent;
+      return overlay;
     }
-    
-    // Compute z-index
+
+    overlay = document.createElement('div');
+    overlay.id = LOADING_ID;
+    overlay.setAttribute('role', 'status');
+    overlay.setAttribute('aria-live', 'polite');
+    overlay.classList.add('hidden'); // start hidden; show() will remove class
+
+    const spinnerWrap = document.createElement('div');
+    spinnerWrap.className = 'content-loading-spinner';
+
+    const spinnerSvgWrap = document.createElement('div');
+    spinnerSvgWrap.className = 'spinner-svg';
+    spinnerSvgWrap.setAttribute('aria-hidden', 'true');
+    spinnerSvgWrap.innerHTML = `
+<svg viewBox="0 0 48 48" focusable="false" aria-hidden="true" role="img">
+    <circle class="spinner-svg-bg" cx="24" cy="24" r="20" />
+    <circle class="spinner-svg-fg" cx="24" cy="24" r="20" />
+</svg>`.trim();
+
+    const messageEl = document.createElement('div');
+    messageEl.className = 'loading-message';
+    messageEl.textContent = message || this.getDefaultMessage();
+
+    spinnerWrap.appendChild(spinnerSvgWrap);
+    spinnerWrap.appendChild(messageEl);
+    overlay.appendChild(spinnerWrap);
+
+    document.body.appendChild(overlay);
+    // force style recalc so transition works
+    // eslint-disable-next-line no-unused-expressions
+    overlay.offsetHeight;
+
+    return overlay;
+  },
+
+  // Default messages per language
+  getDefaultMessage() {
+    const lang = (typeof localStorage !== 'undefined' && localStorage.getItem('selectedLang')) || 'en';
+    return lang === 'th' ? 'กำลังโหลดเนื้อหา...' : 'Loading content...';
+  },
+
+  // Compute a sensible z-index if none provided. Honor behindSubNav if requested.
+  _computeZIndex(opts = {}) {
+    if (typeof opts.zIndex === 'number') return Math.max(0, Math.floor(opts.zIndex));
     try {
-     let headerZ = 0;
-     try {
-      const headerEl = document.querySelector('header');
-      if (headerEl) {
-       const hStyle = window.getComputedStyle(headerEl);
-       headerZ = parseInt(hStyle.zIndex, 10) || 0;
+      let headerZ = 0, subZ = 0;
+      try {
+        const headerEl = document.querySelector('header');
+        if (headerEl) {
+          const s = window.getComputedStyle(headerEl);
+          headerZ = parseInt(s.zIndex, 10) || 0;
+        }
+      } catch (e) { headerZ = 0; }
+
+      try {
+        const subEl = document.getElementById('sub-nav');
+        if (subEl) {
+          const s = window.getComputedStyle(subEl);
+          subZ = parseInt(s.zIndex, 10) || 0;
+        }
+      } catch (e) { subZ = 0; }
+
+      if (opts.behindSubNav) {
+        // If caller requested behindSubNav, attempt to sit just below subNav/header if possible.
+        const target = subZ || headerZ || DEFAULT_ZINDEX;
+        return Math.max(0, target - 1);
       }
-     } catch (e) { headerZ = 0; }
-     
-     let subZ = 0;
-     try {
-      const subNav = document.getElementById('sub-nav');
-      if (subNav) {
-       const sStyle = window.getComputedStyle(subNav);
-       subZ = parseInt(sStyle.zIndex, 10) || 0;
-      }
-     } catch (e) { subZ = 0; }
-     
-     try {
-      if (!subZ && window._headerV2_scrollManager && window._headerV2_scrollManager.constants && window._headerV2_scrollManager.constants.Z_INDEX)
-       subZ = window._headerV2_scrollManager.constants.Z_INDEX.SUB_NAV || subZ;
-     } catch (e) {}
-     
-     let targetZ = 0;
-     if (behindSubNav) {
-      targetZ = subZ || headerZ || 1000;
-     } else {
-      targetZ = headerZ || subZ || 1000;
-     }
-     
-     if (opts.zIndex != null) {
-      const provided = Number(opts.zIndex);
-      if (!isNaN(provided)) {
-       computedZ = provided >= targetZ ? Math.max(0, targetZ - 1) : Math.max(0, provided);
-      }
-     } else {
-      computedZ = Math.max(0, targetZ - 1);
-     }
+
+      // default: place overlay above everything (use DEFAULT_ZINDEX)
+      return DEFAULT_ZINDEX;
     } catch (e) {
-     computedZ = undefined;
+      return DEFAULT_ZINDEX;
     }
-    
-    showInstantLoadingOverlay({
-     lang: undefined,
-     message: message,
-     zIndex: computedZ,
-     autoHideAfterMs: opts.autoHideAfterMs
-    });
-    return;
-   }
-  } catch (err) {
-   console.error('contentLoadingManager overlay show error', err);
-  }
-  
-  // Fallback: legacy in-container spinner
-  const container = document.getElementById(this.LOADING_CONTAINER_ID);
-  if (!container) return;
-  const existing = container.querySelector('#' + SPINNER_ID);
-  if (existing) {
-   this.updateMessage(messageOrOptions && messageOrOptions.message ? messageOrOptions.message : (typeof messageOrOptions === 'string' ? messageOrOptions : ''));
-   return;
-  }
-  const spinner = this.createSpinner(typeof messageOrOptions === 'string' ? messageOrOptions : (messageOrOptions && messageOrOptions.message ? messageOrOptions.message : ''));
-  container.appendChild(spinner);
- },
- 
- hide() {
-  try {
-   try {
-    if (typeof removeInstantLoadingOverlay === 'function') {
-     removeInstantLoadingOverlay();
+  },
+
+  // Show overlay. Accepts string or options object.
+  // options: { message, zIndex, autoHideAfterMs, behindSubNav }
+  show(messageOrOptions = '') {
+    try {
+      let message = '';
+      let opts = {};
+      if (typeof messageOrOptions === 'string') {
+        message = messageOrOptions;
+      } else if (typeof messageOrOptions === 'object' && messageOrOptions !== null) {
+        message = messageOrOptions.message || '';
+        opts = { ...messageOrOptions };
+      }
+
+      this._ensureStyles();
+
+      const z = this._computeZIndex(opts);
+      const overlay = this._buildOverlay(message);
+
+      // set z-index and message
+      overlay.style.zIndex = String(z);
+      const msgEl = overlay.querySelector('.loading-message');
+      if (msgEl) msgEl.textContent = message || this.getDefaultMessage();
+
+      // ensure visible
+      overlay.classList.remove('hidden');
+
+      // store state
+      this.spinnerElement = overlay;
+      this._currentOptions = { ...opts, zIndex: z, message: msgEl ? msgEl.textContent : '' };
+
+      // auto-hide handling
+      if (this._autoHideTimer) {
+        clearTimeout(this._autoHideTimer);
+        this._autoHideTimer = null;
+      }
+      if (opts.autoHideAfterMs && Number(opts.autoHideAfterMs) > 0) {
+        this._autoHideTimer = setTimeout(() => {
+          try { this.hide(); } catch (e) {}
+        }, Number(opts.autoHideAfterMs));
+      }
+
+      // Expose convenience globals (proxied to manager) so legacy code calling
+      // window.showInstantLoadingOverlay/removeInstantLoadingOverlay works but still
+      // routs through this manager (single source of truth).
+      try {
+        window.__removeInstantLoadingOverlay = () => this.hide();
+        window.__instantLoadingOverlayShown = true;
+        // Also add short global helpers (non-destructive)
+        window.showInstantLoadingOverlay = (o) => this.show(o);
+        window.removeInstantLoadingOverlay = () => this.hide();
+      } catch (e) {}
+
+      return overlay;
+    } catch (err) {
+      console.error('contentLoadingManager.show error', err);
+      return null;
     }
-   } catch (e) {}
-   
-   const container = document.getElementById(this.LOADING_CONTAINER_ID);
-   if (!container) return;
-   const spinner = container.querySelector('#' + SPINNER_ID);
-   if (spinner && spinner.parentNode) {
-    spinner.parentNode.removeChild(spinner);
-   }
-   this.spinnerElement = null;
-  } catch (e) {
-   this.spinnerElement = null;
+  },
+
+  // Hide overlay (idempotent)
+  hide() {
+    try {
+      if (!this.spinnerElement) {
+        // try to find element in DOM (in case created elsewhere)
+        const existing = document.getElementById(LOADING_ID);
+        if (!existing) {
+          this._clearAutoHide();
+          this._currentOptions = null;
+          try { window.__instantLoadingOverlayShown = false; } catch (e) {}
+          return;
+        }
+        this.spinnerElement = existing;
+      }
+      const overlay = this.spinnerElement;
+      overlay.classList.add('hidden');
+
+      // remove after transition
+      setTimeout(() => {
+        try {
+          const el = document.getElementById(LOADING_ID);
+          if (el && el.parentNode) el.parentNode.removeChild(el);
+        } catch (e) {}
+      }, FADE_MS + 40);
+
+      this._clearAutoHide();
+      this._currentOptions = null;
+      this.spinnerElement = null;
+      try { window.__instantLoadingOverlayShown = false; } catch (e) {}
+    } catch (err) {
+      console.error('contentLoadingManager.hide error', err);
+      this._clearAutoHide();
+      this._currentOptions = null;
+      this.spinnerElement = null;
+      try { window.__instantLoadingOverlayShown = false; } catch (e) {}
+    }
+  },
+
+  // Update message of existing overlay without touching z-index or timers
+  updateMessage(message = '') {
+    try {
+      const overlay = this.spinnerElement || document.getElementById(LOADING_ID);
+      if (!overlay) return;
+      const msgEl = overlay.querySelector('.loading-message');
+      if (msgEl) msgEl.textContent = message || this.getDefaultMessage();
+      if (!this._currentOptions) this._currentOptions = {};
+      this._currentOptions.message = msgEl ? msgEl.textContent : '';
+    } catch (e) {
+      console.error('contentLoadingManager.updateMessage error', e);
+    }
+  },
+
+  // Return true if overlay exists & visible
+  isShown() {
+    try {
+      const overlay = document.getElementById(LOADING_ID);
+      return !!overlay && !overlay.classList.contains('hidden');
+    } catch (e) {
+      return false;
+    }
+  },
+
+  // Set default z-index for future overlays (not retroactive)
+  setDefaultZIndex(n) {
+    if (typeof n === 'number' && !Number.isNaN(n)) {
+      try {
+        // mutate constant by storing override on object
+        this._defaultZIndexOverride = Math.max(0, Math.floor(n));
+      } catch (e) {}
+    }
+  },
+
+  // Internal: clear any auto-hide timer
+  _clearAutoHide() {
+    if (this._autoHideTimer) {
+      try { clearTimeout(this._autoHideTimer); } catch (e) {}
+      this._autoHideTimer = null;
+    }
   }
- },
- 
- updateMessage(message = '') {
-  try {
-   const overlayMsg = document.querySelector('#instant-loading-overlay .loading-message');
-   if (overlayMsg) {
-    overlayMsg.textContent = message || this.getDefaultMessage();
-    return;
-   }
-  } catch (e) {}
-  if (!this.spinnerElement) return;
-  const msg = this.spinnerElement.querySelector('.loading-message');
-  if (msg) msg.textContent = message || this.getDefaultMessage();
- },
- 
- getDefaultMessage() {
-  const lang = localStorage.getItem('selectedLang') || 'en';
-  const cacheKey = `msg-${lang}`;
-  if (this._messageCache[cacheKey]) return this._messageCache[cacheKey];
-  const msg = lang === 'th' ? 'กำลังโหลดเนื้อหา...' : 'Loading content...';
-  this._messageCache[cacheKey] = msg;
-  return msg;
- }
 };
 
+// Expose manager globally as canonical controller
+try {
+  if (!window) {
+    // noop in SSR
+  } else {
+    if (!window._headerV2_contentLoadingManager) window._headerV2_contentLoadingManager = contentLoadingManager;
+    // Proxy legacy global functions to the manager to enforce single source
+    window.showInstantLoadingOverlay = (opts) => window._headerV2_contentLoadingManager.show(opts);
+    window.removeInstantLoadingOverlay = () => window._headerV2_contentLoadingManager.hide();
+  }
+} catch (e) { /* ignore in restricted env */ }
+
+export { contentLoadingManager as contentLoadingManager };
 export default contentLoadingManager;

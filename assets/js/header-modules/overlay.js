@@ -1,5 +1,9 @@
 // overlay.js
-// ✅ ปรับปรุง: Lazy initialization, optimized performance
+// Backward-compatible wrapper that proxies to window._headerV2_contentLoadingManager if available.
+// If manager is not yet present, fallback to a local lightweight overlay implementation.
+// This allows legacy imports of showInstantLoadingOverlay/removeInstantLoadingOverlay to keep working
+// while enforcing contentLoadingManager as the canonical controller.
+
 const OVERLAY_ID = 'instant-loading-overlay';
 const STYLE_ID = 'instant-loading-styles';
 const DEFAULT_ZINDEX = 15000;
@@ -8,7 +12,6 @@ const FADE_DURATION_MS = 360;
 function ensureStyles() {
   let style = document.getElementById(STYLE_ID);
   if (style) return style;
-  
   style = document.createElement('style');
   style.id = STYLE_ID;
   style.textContent = `
@@ -78,52 +81,47 @@ function ensureStyles() {
   return style;
 }
 
-function buildOverlayElement(message, zIndex) {
+function buildOverlayElement(message = '', zIndex = DEFAULT_ZINDEX) {
   const overlay = document.createElement('div');
   overlay.id = OVERLAY_ID;
   overlay.setAttribute('role', 'status');
   overlay.setAttribute('aria-live', 'polite');
   overlay.style.zIndex = String(zIndex ?? DEFAULT_ZINDEX);
-  
+  overlay.className = '';
   const spinnerWrap = document.createElement('div');
   spinnerWrap.className = 'content-loading-spinner';
-  
   const spinnerSvgWrap = document.createElement('div');
   spinnerSvgWrap.className = 'spinner-svg';
   spinnerSvgWrap.setAttribute('aria-hidden', 'true');
-  
   spinnerSvgWrap.innerHTML = `
 <svg viewBox="0 0 48 48" focusable="false" aria-hidden="true" role="img">
     <circle class="spinner-svg-bg" cx="24" cy="24" r="20" />
     <circle class="spinner-svg-fg" cx="24" cy="24" r="20" />
 </svg>`.trim();
-  
   const messageEl = document.createElement('div');
   messageEl.className = 'loading-message';
-  messageEl.textContent = message || '';
-  
+  messageEl.textContent = message || (localStorage.getItem('selectedLang') === 'th' ? 'กำลังโหลดเนื้อหา...' : 'Loading content...');
   spinnerWrap.appendChild(spinnerSvgWrap);
   spinnerWrap.appendChild(messageEl);
   overlay.appendChild(spinnerWrap);
-  
   return overlay;
 }
 
-function defaultMessageForLang(lang) {
-  if (lang === 'th') return 'กำลังโหลดเนื้อหา...';
-  return 'Loading content...';
-}
-
+// Primary exported helpers: proxy to contentLoadingManager if present.
 export function showInstantLoadingOverlay(options = {}) {
   try {
-    ensureStyles();
+    // If canonical manager exists, delegate call
+    if (typeof window !== 'undefined' && window._headerV2_contentLoadingManager && typeof window._headerV2_contentLoadingManager.show === 'function') {
+      return window._headerV2_contentLoadingManager.show(options);
+    }
     
+    // Fallback: local lightweight implementation (legacy)
+    ensureStyles();
     const lang = options.lang || localStorage.getItem('selectedLang') || 'en';
     const message = typeof options.message === 'string' && options.message.length > 0 ?
       options.message :
-      defaultMessageForLang(lang);
+      (lang === 'th' ? 'กำลังโหลดเนื้อหา...' : 'Loading content...');
     const zIndex = options.zIndex ?? DEFAULT_ZINDEX;
-    
     let overlay = document.getElementById(OVERLAY_ID);
     if (overlay) {
       const msgEl = overlay.querySelector('.loading-message');
@@ -133,19 +131,19 @@ export function showInstantLoadingOverlay(options = {}) {
     } else {
       overlay = buildOverlayElement(message, zIndex);
       document.body.appendChild(overlay);
+      // force repaint
+      // eslint-disable-next-line no-unused-expressions
       overlay.offsetHeight;
       overlay.classList.remove('hidden');
     }
-    
     if (options.autoHideAfterMs && Number(options.autoHideAfterMs) > 0) {
       setTimeout(() => {
         removeInstantLoadingOverlay();
       }, Number(options.autoHideAfterMs));
     }
-    
+    // expose global helpers for compatibility
     window.__removeInstantLoadingOverlay = removeInstantLoadingOverlay;
     window.__instantLoadingOverlayShown = true;
-    
     return overlay;
   } catch (err) {
     console.error('showInstantLoadingOverlay error', err);
@@ -155,6 +153,9 @@ export function showInstantLoadingOverlay(options = {}) {
 
 export function removeInstantLoadingOverlay() {
   try {
+    if (typeof window !== 'undefined' && window._headerV2_contentLoadingManager && typeof window._headerV2_contentLoadingManager.hide === 'function') {
+      return window._headerV2_contentLoadingManager.hide();
+    }
     const overlay = document.getElementById(OVERLAY_ID);
     if (!overlay) {
       const style = document.getElementById(STYLE_ID);
@@ -181,8 +182,16 @@ export function removeInstantLoadingOverlay() {
 }
 
 export function isOverlayShown() {
-  const overlay = document.getElementById(OVERLAY_ID);
-  return !!overlay && !overlay.classList.contains('hidden');
+  // If manager present, ask it; otherwise fallback to DOM check
+  try {
+    if (typeof window !== 'undefined' && window._headerV2_contentLoadingManager && typeof window._headerV2_contentLoadingManager.isShown === 'function') {
+      return window._headerV2_contentLoadingManager.isShown();
+    }
+    const overlay = document.getElementById(OVERLAY_ID);
+    return !!overlay && !overlay.classList.contains('hidden');
+  } catch (e) {
+    return false;
+  }
 }
 
 export default {

@@ -1,6 +1,5 @@
 // init.js
 // ✅ ปรับปรุง: Deferred initialization, phase-based loading, performance monitoring
-import { showInstantLoadingOverlay } from './overlay.js';
 import { _headerV2_utils, ErrorManager, showNotification } from './utils.js';
 import dataManagerDefault from './dataManager.js';
 import { contentLoadingManager } from './contentLoadingManager.js';
@@ -24,6 +23,9 @@ export async function init() {
  // Bootstrapping flag: indicates initial app bootstrap / canonical navigation phase.
  // Other modules should avoid mutating history while this flag is true.
  if (typeof window !== 'undefined') window._headerV2_bootstrapping = true;
+ 
+ // Expose contentLoadingManager early as canonical manager
+ try { if (!window._headerV2_contentLoadingManager) window._headerV2_contentLoadingManager = contentLoadingManager; } catch (e) {}
  
  // ✅ Phase 1: Critical path initialization (synchronous binding)
  window._headerV2_utils = _headerV2_utils;
@@ -77,8 +79,8 @@ export async function init() {
   } catch (e) {}
  } catch (e) {}
  
- // ✅ Show overlay early
- try { showInstantLoadingOverlay(); } catch {}
+ // ✅ Show overlay early via canonical manager
+ try { window._headerV2_contentLoadingManager && window._headerV2_contentLoadingManager.show(); } catch {}
  
  // ✅ Phase 2: Setup core managers (critical for functionality)
  try {
