@@ -7,6 +7,7 @@ import { contentLoadingManager } from './contentLoadingManager.js';
 import { contentManager } from './contentManager.js';
 import { scrollManager, performanceOptimizer, navigationManager, buttonManager, subNavManager } from './managers.js';
 import unifiedCopy from './unifiedCopyToClipboard.js';
+import router from './router.js';
 
 // Optional runtime adapter (may have already been loaded by header.min.js)
 // This provides window._headerV2_runtime with poolManager/createVirtualScroller etc.
@@ -28,10 +29,17 @@ export async function init() {
  window._headerV2_contentManager = contentManager;
  window._headerV2_scrollManager = scrollManager;
  window._headerV2_performanceOptimizer = performanceOptimizer;
- window._headerV2_navigationManager = navigationManager;
+ window._headerV2_navigationManager = navigationManager; // temporary shim (will be overwritten by router below)
  window._headerV2_buttonManager = buttonManager;
  window._headerV2_subNavManager = subNavManager;
  window.unifiedCopyToClipboard = unifiedCopy;
+ 
+ // Expose router as the canonical navigation core
+ try {
+  if (!window._headerV2_router) window._headerV2_router = router;
+  // Also set navigationManager global pointer to router for compatibility
+  window._headerV2_navigationManager = window._headerV2_router;
+ } catch (e) {}
  
  // ✅ Ensure DOM elements exist
  function ensureElement(selector, tag = 'div', id = '') {
@@ -84,11 +92,11 @@ export async function init() {
    window._headerV2_utils.showNotification('ขาดการเชื่อมต่ออินเทอร์เน็ต', 'warning');
   }, { passive: true });
   
-  // History events
+  // History popstate is handled by router core; keep a fallback listener for legacy consumers
   window.addEventListener('popstate', async () => {
    try {
     const url = window.location.search;
-    const navMgr = window._headerV2_navigationManager;
+    const navMgr = window._headerV2_router || window._headerV2_navigationManager;
     if (!navMgr) throw new Error('navigationManager missing');
     if (!url || url === '?') {
      const defaultRoute = await navMgr.getDefaultRoute();
@@ -137,6 +145,13 @@ export async function init() {
    console.error('loadConfig error', e);
   }
   
+  // Initialize router after button config loaded to ensure validate/getDefaultRoute work
+  try {
+   if (window._headerV2_router && typeof window._headerV2_router.init === 'function') {
+    window._headerV2_router.init();
+   }
+  } catch (e) {}
+  
   // Runtime prewarm: pre-create pooled DOM nodes (if runtime adapter present)
   try {
    const rt = window._headerV2_runtime;
@@ -168,9 +183,9 @@ export async function init() {
    }
   } catch (e) {}
   
-  // ✅ Initial navigation
+  // ✅ Initial navigation via router (router will pick default route if needed)
   try {
-   const navMgr = window._headerV2_navigationManager;
+   const navMgr = window._headerV2_router || window._headerV2_navigationManager;
    const url = window.location.search;
    if (!url || url === '?') {
     const defaultRoute = await navMgr.getDefaultRoute();
