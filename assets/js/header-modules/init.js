@@ -21,6 +21,10 @@ try {
 } catch (e) {}
 
 export async function init() {
+ // Bootstrapping flag: indicates initial app bootstrap / canonical navigation phase.
+ // Other modules should avoid mutating history while this flag is true.
+ if (typeof window !== 'undefined') window._headerV2_bootstrapping = true;
+ 
  // ✅ Phase 1: Critical path initialization (synchronous binding)
  window._headerV2_utils = _headerV2_utils;
  window._headerV2_errorManager = _headerV2_utils.errorManager;
@@ -187,15 +191,23 @@ export async function init() {
   try {
    const navMgr = window._headerV2_router || window._headerV2_navigationManager;
    const url = window.location.search;
+   
+   // At this point we are still bootstrapping; ensure router knows to use replaceState for first canonical navigation
    if (!url || url === '?') {
     const defaultRoute = await navMgr.getDefaultRoute();
-    await navMgr.navigateTo(defaultRoute, { skipUrlUpdate: true });
+    await navMgr.navigateTo(defaultRoute, { skipUrlUpdate: false, replace: false });
    } else {
-    await navMgr.navigateTo(url, { skipUrlUpdate: true });
+    await navMgr.navigateTo(url, { skipUrlUpdate: false, replace: false });
    }
+   
+   // Mark that bootstrapping is done and let router finalize initial navigation behavior
+   window._headerV2_bootstrapping = false;
+   try { window._headerV2_router && window._headerV2_router.markInitialNavigationHandled && window._headerV2_router.markInitialNavigationHandled(); } catch (e) {}
   } catch (e) {
    window._headerV2_utils.showNotification('เกิดข้อผิดพลาดในการนำทางเริ่มต้น', 'error');
    console.error('initial navigation error', e);
+   // ensure bootstrapping flag cleared on error path too
+   window._headerV2_bootstrapping = false;
   }
  } catch (error) {
   console.error('init error', error);
@@ -210,6 +222,8 @@ export async function init() {
     window.__instantLoadingOverlayShown = false;
    }
   } catch {}
+  // Ensure bootstrapping flag cleared in any case
+  if (typeof window !== 'undefined') window._headerV2_bootstrapping = false;
  }
 }
 

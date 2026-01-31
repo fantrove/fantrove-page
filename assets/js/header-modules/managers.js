@@ -14,7 +14,7 @@ export const scrollManager = {
         const headerZ = (this.constants.Z_INDEX.SUB_NAV || 999) + 2;
         styleSheet.textContent = `
 header { position: relative; z-index: ${headerZ}; contain: layout style paint; }
-#sub-nav { position: sticky; top: ${this.constants.SUB_NAV_TOP_SPACING}px; left: 0; right: 0; z-index: ${this.constants.Z_INDEX.SUB_NAV}; transition: background ${this.constants.ANIMATION_DURATION}ms; }
+#sub-nav { position: sticky; top: ${this.constants.SUB_NAV_TOP_SPACING}px; left: 0; right: 0; z-index: ${this.constants.Z_INDEX.SUB_NAV}; transition: background ${this.constants.ANIMATION_DURATION}ms;[...]
 #sub-nav.fixed { background: rgba(255, 255, 255, 1); border-bottom: 0.5px solid rgba(19, 180, 127, 0.18); border-radius: 0 0 30px 30px; }
 #sub-nav.fixed #sub-buttons-container { padding: 8px 18px !important; border-radius: 0 0 30px 30px; }
 #sub-nav.fixed.hi {padding: 0!important;}
@@ -344,10 +344,10 @@ export const buttonManager = {
                         this.state.currentMainButtonUrl = buttonUrl;
                     } catch (e) {}
 
-                    // Central navigation
+                    // Central navigation: pass skipUrlUpdate when bootstrapping to avoid unwanted push
                     const router = window._headerV2_router || window._headerV2_navigationManager;
                     if (router && typeof router.navigateTo === 'function') {
-                        await router.navigateTo(buttonUrl, { skipUrlUpdate: false });
+                        await router.navigateTo(buttonUrl, { skipUrlUpdate: !!window._headerV2_bootstrapping });
                     } else {
                         // fallback: previous behavior (best-effort)
                         await window._headerV2_contentManager.clearContent();
@@ -376,8 +376,21 @@ export const buttonManager = {
 
         navList.appendChild(fragment);
 
-        let initialUrl = window.location.search;
-        await this.handleInitialUrl(initialUrl, this.state.buttonMap, defaultButton);
+        // Important: during bootstrapping we skip initiating navigation from here.
+        // The init() routine is the single canonical place to perform the first navigation.
+        if (!window._headerV2_bootstrapping) {
+            let initialUrl = window.location.search;
+            await this.handleInitialUrl(initialUrl, this.state.buttonMap, defaultButton);
+        } else {
+            // Provide minimal UI state while bootstrapping (so nav shows quickly)
+            try {
+                if (defaultButton && defaultButton.button) {
+                    defaultButton.button.classList.add('active');
+                    this.state.currentMainButton = defaultButton.button;
+                    this.state.currentMainButtonUrl = defaultButton.config && (defaultButton.config.url || defaultButton.config.jsonFile);
+                }
+            } catch (e) {}
+        }
     },
 
     async handleInitialUrl(url, buttonMap, defaultButton) {
@@ -475,7 +488,9 @@ export const buttonManager = {
             const defaultSubButton = mainConfig.subButtons.find(btn => btn.isDefault);
             if (defaultSubButton) {
                 const fullUrl = `${mainRoute}-${defaultSubButton.url || defaultSubButton.jsonFile}`;
-                await (window._headerV2_router || window._headerV2_navigationManager).navigateTo(fullUrl, { skipUrlUpdate: false });
+                const router = window._headerV2_router || window._headerV2_navigationManager;
+                // During bootstrapping avoid modifying history; router will be invoked by init's canonical navigation.
+                await router.navigateTo(fullUrl, { skipUrlUpdate: !!window._headerV2_bootstrapping });
             }
         } else {
             window._headerV2_subNavManager.hideSubNav();
@@ -497,7 +512,7 @@ export const buttonManager = {
                 this.state.currentMainButton = button;
                 this.state.currentMainButtonUrl = buttonUrl;
             } catch (e) {}
-            await router.navigateTo(buttonUrl, { skipUrlUpdate: false });
+            await router.navigateTo(buttonUrl, { skipUrlUpdate: !!window._headerV2_bootstrapping });
         } catch (e) {
             console.error('triggerMainButtonClick failed', e);
         }
@@ -516,7 +531,9 @@ export const buttonManager = {
                 this.state.currentSubButton = button;
             } catch (e) {}
             const buttonUrl = button.getAttribute('data-url');
-            await router.navigateTo(buttonUrl, { skipUrlUpdate: false });
+            // Ensure navigation uses canonical router path (router will update history).
+            // During app bootstrap, avoid pushing history.
+            await router.navigateTo(buttonUrl, { skipUrlUpdate: !!window._headerV2_bootstrapping });
         } catch (e) {
             console.error('triggerSubButtonClick failed', e);
         }
@@ -565,7 +582,7 @@ export const buttonManager = {
                 // central navigation
                 const router = window._headerV2_router || window._headerV2_navigationManager;
                 if (router && typeof router.navigateTo === 'function') {
-                    await router.navigateTo(fullUrl, { skipUrlUpdate: false });
+                    await router.navigateTo(fullUrl, { skipUrlUpdate: !!window._headerV2_bootstrapping });
                 } else {
                     // fallback behavior
                     this.updateButtonState(subButton, true);
@@ -585,7 +602,26 @@ export const buttonManager = {
         });
         container.appendChild(frag);
         const needsDefault = !activeSubUrl || !container.querySelector('.button-sub.active');
-        if (needsDefault && defaultSubButton) await this.triggerSubButtonClick(defaultSubButton);
+
+        // FIX: When programmatically choosing a default sub-button (not user click),
+        // ensure we trigger navigation asynchronously to avoid races with surrounding
+        // bootstrap/navigation flows. Doing it in next tick makes router.update/changeURL
+        // reliably update the address bar. During bootstrapping router.navigateTo will be
+        // called with skipUrlUpdate=true (no history mutation).
+        if (needsDefault && defaultSubButton) {
+            try {
+                setTimeout(() => {
+                    try {
+                        this.triggerSubButtonClick(defaultSubButton);
+                    } catch (e) {
+                        console.error('auto-select default sub button failed', e);
+                    }
+                }, 0);
+            } catch (e) {
+                console.error('scheduling default sub button failed', e);
+            }
+        }
+
         container.classList.remove('fade-out');
         container.classList.add('fade-in');
     },
