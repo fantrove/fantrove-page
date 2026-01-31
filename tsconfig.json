@@ -11,7 +11,7 @@
     "resolveJsonModule": true,
     "allowJs": false,
     "isolatedModules": false,
-    "noEmit": true
+    "noEmit": false
   },
   "include": ["trc/src/**/*"]
 }
