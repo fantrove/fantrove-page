@@ -1,10 +1,9 @@
 /*
-  search-engine.fuse.js
+  search-engine.fuse.js (updated)
   - Modern replacement using Fuse.js for flexible fuzzy/full-text search
-  - Keeps the same public API: init({data, options}), generateAllKeywords(), querySuggestions(q,maxCount), search(q,typeFilter)
-  - _internals exposes fuse instance and helper utils for debugging/tests
-  - Auto-loads Fuse.js from CDN if not present (can be removed if bundling)
-  - Optionally you can build the index in a Web Worker for large datasets (not inlined here)
+  - Keeps the same public API: init(data, options), generateAllKeywords(), querySuggestions(q,maxCount), search(q,typeFilter)
+  - generateAllKeywords() now returns keyword entries compatible with search-ui.ready-mode expectations
+  - Auto-loads Fuse.js from CDN if not present (remove loader if bundling)
 */
 (function (global) {
   'use strict';
@@ -35,7 +34,6 @@
   function ensureFuseLoaded() {
     return new Promise((resolve, reject) => {
       if (global.Fuse) return resolve(global.Fuse);
-      // Load from CDN (unpkg). If you bundle, remove this loader.
       const src = 'https://unpkg.com/fuse.js@6.6.2/dist/fuse.min.js';
       const s = document.createElement('script');
       s.src = src;
@@ -50,7 +48,7 @@
   }
 
   // ---------- Flatten dataset into documents for Fuse ----------
-  // Each doc: { id, typeKey, categoryKey, name, api, text, extra, rawItem }
+  // Each doc: { id, typeKey, categoryKey, name, api, text, combined, rawItem, typeObj, category }
   function flattenDataToDocs(data, normalizeFn) {
     const docs = [];
     const keywords = [];
@@ -89,13 +87,11 @@
           const item = items[x];
           // Build a combined searchable text that includes all language variants + api + text
           let combinedParts = [];
-          // names per language
           if (item.name && typeof item.name === 'object') {
             for (const lg of langs) {
               if (item.name[lg]) combinedParts.push(String(item.name[lg]));
             }
           } else if (item.name) combinedParts.push(String(item.name));
-          // other *_name fields
           for (const k in item) {
             if (/_name$/.test(k) && typeof item[k] === 'object') {
               for (const lg of langs) if (item[k][lg]) combinedParts.push(String(item[k][lg]));
@@ -103,7 +99,6 @@
           }
           if (item.api) combinedParts.push(String(item.api));
           if (item.text) combinedParts.push(String(item.text));
-          // category/type names
           for (const lg of langs) {
             if (typeNames[lg]) combinedParts.push(String(typeNames[lg]));
             if (catNames[lg]) combinedParts.push(String(catNames[lg]));
@@ -125,7 +120,7 @@
 
           // push relevant keywords (for suggestions)
           const kw = (doc.name || '') || (doc.api || '');
-          if (kw) keywords.push({ raw: kw, normalized: normalizeFn ? normalizeFn(kw) : kw, docId: doc.id });
+          if (kw) keywords.push({ raw: kw, normalized: normalizeFn ? normalizeFn(kw) : kw, docId: doc.id, item: item, itemName: doc.name, typeObj: typeObj, typeName: doc.typeKey, catName: doc.categoryKey });
         }
       }
     }
@@ -146,18 +141,26 @@
       _options = Object.assign({}, _options, options);
       _data = data || null;
       _normalize = options.normalizeFn || defaultNormalizeText;
-      // ensure Fuse is loaded
       const Fuse = await ensureFuseLoaded();
-      // flatten data
       const { docs, keywords } = flattenDataToDocs(_data || {}, _normalize);
       _docs = docs;
-      _keywords = keywords;
+      // Keep keywords as richer entries (include item/type metadata) for UI ready-mode compatibility
+      _keywords = keywords.map(k => {
+        return {
+          item: k.item || null,
+          itemName: k.itemName || (k.item && k.item.name ? (typeof k.item.name === 'string' ? k.item.name : JSON.stringify(k.item.name)) : ''),
+          typeObj: k.typeObj || null,
+          typeName: k.typeName || '',
+          catName: k.catName || '',
+          key: k.normalized || (k.raw || ''),
+          raw: k.raw || ''
+        };
+      });
 
-      // default Fuse options tuned for flexible fuzzy matching
       const defaultFuseOpts = {
         includeScore: true,
-        threshold: 0.38,         // lower => stricter; 0.38 is fairly flexible but not too noisy
-        ignoreLocation: true,    // allow matches anywhere
+        threshold: 0.38,
+        ignoreLocation: true,
         minMatchCharLength: 2,
         useExtendedSearch: false,
         keys: [
@@ -168,7 +171,6 @@
         ]
       };
       const fuseOpts = Object.assign({}, defaultFuseOpts, _options.fuseOptions || {});
-      // create Fuse index
       try {
         _fuse = new Fuse(_docs, fuseOpts);
       } catch (e) {
@@ -178,28 +180,25 @@
       return true;
     }
 
+    // generateAllKeywords now returns entries compatible with original UI's expectations
     function generateAllKeywords() {
-      // return shallow copy of normalized keywords (display raw)
-      return _keywords.map(k => ({ raw: k.raw, normalized: k.normalized, docId: k.docId }));
+      return _keywords.map(k => Object.assign({}, k));
     }
 
-    // Query suggestions: use fuse.search but short-circuit to keywords for short queries
     function querySuggestions(rawQuery, maxCount) {
       maxCount = maxCount || 8;
       const q = String(rawQuery || '').trim();
       if (!q) return [];
       const nq = _normalize ? _normalize(q) : q;
-
-      // Prefer direct keyword prefix matches first
       const out = [];
       const seen = new Set();
-      // 1) keyword prefix search (fast linear scan on keywords)
+      // 1) keyword prefix matches
       for (let i=0;i<_keywords.length && out.length < maxCount;i++){
         const k = _keywords[i];
-        if (!k || !k.normalized) continue;
-        if (k.normalized.indexOf(nq) === 0) {
-          const display = k.raw;
-          const norm = k.normalized;
+        if (!k || !k.key) continue;
+        if (k.key.indexOf(nq) === 0) {
+          const display = k.raw || k.itemName || '';
+          const norm = k.key;
           if (seen.has(norm)) continue;
           seen.add(norm);
           out.push({ display, raw: display, highlightedHtml: display, source: 'keyword' });
@@ -207,7 +206,7 @@
       }
       if (out.length >= maxCount) return out.slice(0, maxCount);
 
-      // 2) Fuse based suggestions (docs)
+      // 2) Fuse-based doc suggestions
       if (_fuse && q.length >= 1) {
         try {
           const fuseRes = _fuse.search(q, { limit: Math.max(12, maxCount) });
@@ -236,7 +235,6 @@
         const r = fuseResults[i];
         const doc = r.item || r;
         if (typeFilter && typeFilter !== 'all') {
-          // try to match typeKey (case-insensitive compare)
           if ((doc.typeKey || '').toLowerCase() !== String(typeFilter || '').toLowerCase()) continue;
         }
         results.push({
@@ -255,13 +253,10 @@
       return { results, keywords: generateAllKeywords() };
     }
 
-    // small helper for escaping
     function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
     return {
-      init: function(data, options) {
-        return init(data, options);
-      },
+      init: function(data, options) { return init(data, options); },
       generateAllKeywords: function() { return generateAllKeywords(); },
       querySuggestions: function(q, maxCount) { return querySuggestions(q, maxCount); },
       search: function(q, typeFilter) { return search(q, typeFilter); },
@@ -275,7 +270,6 @@
     };
   })();
 
-  // expose global for compatibility
   global.SearchEngine = SearchEngine;
 
 })(window);
