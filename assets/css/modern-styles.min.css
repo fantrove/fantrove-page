@@ -38,6 +38,8 @@
   inset: auto 0 0 0;
   z-index: 16000;
 
+  -webkit-tap-highlight-color: transparent;
+
   display: flex;
   justify-content: space-evenly;
   align-items: center;
