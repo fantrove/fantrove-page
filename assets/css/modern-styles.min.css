@@ -1,274 +1,210 @@
-/* Modern UI v4 - Core Design System */
+/* =========================================================
+   NAVIGATION – ULTRA LOW RESOURCE CORE
+   Visual: IDENTICAL
+   ========================================================= */
+
+/* ---------------- CSS Layer (ลด cost การ cascade) ---------------- */
+@layer nav {
+
+/* ---------------- Design Tokens (static, shared once) ---------------- */
 :root {
-  /* Color System - Enhanced for v4 */
-  --primary-50: rgba(119, 255, 221, 0.2);
-  --primary-100: #E6F3FF;
-  --primary-200: #BAE8FF;
-  --primary-300: #7DD5FF;
-  --primary-400: #38B6FF;
-  --primary-500: #0095FF;
-  --primary-600: #00CEB0;
-  --primary-700: #005CB3;
-  --primary-800: #004280;
-  --primary-900: #002952;
+  --nav-bg: #fff;
+  --nav-border: rgba(0,0,0,.04);
 
-  /* Neutral Colors - Refined Palette */
-  --neutral-50: #FAFBFC;
-  --neutral-100: #F3F4F6;
-  --neutral-200: #E5E7EB;
-  --neutral-300: #D1D5DB;
-  --neutral-400: #9CA3AF;
-  --neutral-500: #575e6d; /* #6B7280 */
-  --neutral-600: #4B5563;
-  --neutral-700: #374151;
-  --neutral-800: #1F2937;
-  --neutral-900: #111827;
+  --nav-primary: #00CEB0;
+  --nav-neutral: #575e6d;
 
-  /* Success, Warning, Error Colors */
-  --success: #10B981;
-  --warning: #F59E0B;
-  --error: #EF4444;
+  --nav-radius: 40px;
+  --nav-item-radius: 12px;
 
-  /* System Variables - Optimized */
-  --nav-height: 64px;
-  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
-  --page-max-width: 1280px;
-  --header-height: 60px;
+  --nav-item-w: 50px;
+  --nav-item-h: 40px;
 
-  /* Left rail sizes (overrideable by JS) */
-  --left-rail-width: 88px;
-  --left-rail-width-collapsed: 72px;
-  
-  /* Border Radius - Consistent System */
-  --radius-xs: 4px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
-  --radius-full: 9999px;
-
-  /* Transitions - Performance Optimized */
-  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
-
-  /* Shadows - Refined & Lightweight */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  --shadow-elevated: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-  
-  /* Typography - System Font Stack */
-  --font-primary: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --t-fast: 150ms cubic-bezier(.4,0,.2,1);
 }
 
-/* Reset & Base Styles */
-*, *::before, *::after {
+/* ---------------- Scope reset (no global selector pollution) ---------------- */
+.bottom-nav,
+.bottom-nav * {
   box-sizing: border-box;
-  -webkit-tap-highlight-color: transparent;
 }
 
-/* Bottom Navigation - Refined & Efficient (mobile default) */
+/* =========================================================
+   NAV CONTAINER
+   ========================================================= */
+
 .bottom-nav {
   position: fixed;
-  border-radius: 40px 40px 0 0;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: auto;
-  background: rgba(255, 255, 255, 1);
+  inset: auto 0 0 0;
+  z-index: 16000;
+
   display: flex;
   justify-content: space-evenly;
   align-items: center;
-  padding: 8px max(env(safe-area-inset-left), 0px) calc(var(--safe-area-bottom) + 10px) max(env(safe-area-inset-right), 0px);
-  z-index: 16000;
-  border-top: 1px solid rgba(0, 0, 0, 0.04);
-  transition: transform var(--transition-normal);
-  touch-action: none;
-  will-change: transform;
+
+  padding: 8px 0 calc(env(safe-area-inset-bottom,0px) + 10px);
+
+  background: var(--nav-bg);
+  border-top: 1px solid var(--nav-border);
+  border-radius: var(--nav-radius) var(--nav-radius) 0 0;
+
+  /* 🔥 isolate EVERYTHING */
+  contain: layout paint style;
+
+  /* promote once, never change */
   transform: translateZ(0);
 }
 
-/* Navigation Items - Enhanced */
+/* =========================================================
+   NAV ITEM – STATIC GEOMETRY
+   ========================================================= */
+
 .nav-item {
-  position: relative;
+  background: none;
+  border: 0;
+  padding: 0;
+
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  border-radius: var(--radius-md);
   gap: 4px;
+
+  border-radius: var(--nav-item-radius);
+  cursor: pointer;
   user-select: none;
   text-decoration: none;
+
+  /* no transform animation = no composite cost */
+  transition: color var(--t-fast);
 }
 
-.nav-item svg {
-  width: auto;
-  height: 22px !important;
-  margin-bottom: 0px;
-  display: block;
-  transition: transform var(--transition-fast);
-  stroke: var(--neutral-500) !important;
-  stroke-width: 1.6 !important;
-}
+/* =========================================================
+   ICON WRAPPER – NO LAYOUT SHIFT EVER
+   ========================================================= */
 
-/* --- SVG Wrapper Ripple & Centering Fix --- */
 .svg-wrapper {
   position: relative;
-  display: flex;
-  align-items: center;    /* Vertical centering */
-  justify-content: center;/* Horizontal centering */
-  width: 50px;
-  height: 40px;
+  width: var(--nav-item-w);
+  height: var(--nav-item-h);
   border-radius: 50px;
   overflow: hidden;
 }
-/* Center svg absolutely in svg-wrapper (fix vertical/horizontal centering always) */
+
+/* SVG – cheap paint only */
 .svg-wrapper > svg {
-  display: block;
-  margin: 0;
   position: absolute;
-  left: 50%;
-  top: 50%;
+  inset: 50% auto auto 50%;
   transform: translate(-50%, -50%);
-  z-index: 1;
+  height: 22px;
+
+  stroke: var(--nav-neutral);
+  stroke-width: 1.6;
   pointer-events: none;
-  height: 22px !important;
-  width: auto;
+
+  transition: stroke var(--t-fast);
 }
 
-/* Make sure ripple and before are always centered and under the svg */
-.svg-wrapper::before,
-.svg-wrapper .ripple {
-  position: absolute !important;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
+/* highlight – opacity only */
+.svg-wrapper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+
+  background: rgba(24,228,161,.08);
+  border: 1px solid rgba(24,228,161,.3);
+  border-radius: inherit;
+
+  opacity: 0;
   pointer-events: none;
-  z-index: 0;
 }
+
+/* =========================================================
+   LABEL – TEXT ONLY (cheap)
+   ========================================================= */
 
 .nav-item .label {
   font-size: 11.5px;
-  color: var(--neutral-500);
-  transition: color var(--transition-fast);
-  white-space: nowrap;
-  letter-spacing: 0.01em;
   font-weight: 600;
+  letter-spacing: .01em;
+  white-space: nowrap;
+
+  color: var(--nav-neutral);
+  transition: color var(--t-fast);
 }
 
-.svg-wrapper:hover+.label, .nav-item .label:hover {
-  color: var(--primary-600);
-}
-
-.nav-item.active-1 {
- transition: all var(--transition-fast);
-}
+/* =========================================================
+   ACTIVE STATE – ZERO LAYOUT / ZERO REFLOW
+   ========================================================= */
 
 .nav-item.active-1 svg {
- stroke: var(--primary-600) !important;
- transition: transform var(--transition-fast), color var(--transition-fast);
-}
-.nav-item.active-1 .svg-wrapper::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 30px;
-  height: 40px;
-  background: rgba(24,228,161,0.08) !important;
-  border-radius: 50px;
-  z-index: 0;
-  transform: translate(-50%, -50%) scale(1);
-  opacity: 0;
-  border: 1px solid rgba(24,228,161,0.3);
-  transition: 
-    width 1.8s cubic-bezier(.7,-.56,.3,1.55),
-    transform 1.2s cubic-bezier(.7,-.56,.3,1.55),
-    opacity 0.5s ease-in-out;
-}
-.nav-item.active-1 .svg-wrapper.animate::before {
-  width: 50px;
-  opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
-}
-.nav-item.active-1 .label {
- letter-spacing: 0.02em;
- transition: color var(--transition-fast);
- color: var(--primary-600);
+  stroke: var(--nav-primary);
 }
 
-/* Tablet and up (>=768px) -> left-side vertical navigation (tablet + desktop) */
+.nav-item.active-1 .svg-wrapper::before {
+  opacity: 1;
+}
+
+.nav-item.active-1 .label {
+  color: var(--nav-primary);
+  letter-spacing: .02em;
+}
+
+/* =========================================================
+   TABLET / DESKTOP – LEFT RAIL
+   ========================================================= */
+
 @media (min-width: 768px) {
+
   body.has-left-rail {
     display: flex;
-    flex-direction: row;
-    align-items: stretch;
     min-height: 100vh;
   }
+
   .bottom-nav {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: var(--left-rail-width);
+    inset: 0 auto 0 0;
+    width: 88px;
     height: 100vh;
-    border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
-    margin: 0;
-    transform: none;
-    display: flex;
+
     flex-direction: column;
     justify-content: flex-start;
-    align-items: center;
-    padding: max(env(safe-area-inset-top), 12px) 0px max(env(safe-area-inset-bottom), 12px) 0px;
+    padding: 12px 0;
+
+    border-radius: 0 16px 16px 0;
     border-top: 0;
-    border-right: 1px solid rgba(0, 0, 0, 0.05);
-    box-shadow: none;
-    z-index: 1000;
-    flex: 0 0 auto;
-    transition: width var(--transition-normal), left var(--transition-normal);
-    overflow: visible;
+    border-right: 1px solid rgba(0,0,0,.05);
   }
-  .site-main {
-    flex: 1 1 auto;
-    min-width: 0;
-    box-sizing: border-box;
-  }
-  .bottom-nav.collapsed {
-    width: var(--left-rail-width-collapsed);
-    flex: 0 0 auto;
-  }
-  .bottom-nav.collapsed ~ .site-main,
-  body.has-left-rail .site-main.collapsed {
-    margin-left: var(--left-rail-width-collapsed);
-  }
-  .bottom-nav.collapsed:hover {
-    width: var(--left-rail-width);
-  }
-  .bottom-nav.collapsed:hover .label {
-    display: block;
-  }
-  .bottom-nav .nav-item {
+
+  .nav-item {
     width: 100%;
-    padding: 10px 0px;
-    justify-content: center;
+    padding: 10px 0;
   }
-  .bottom-nav .nav-item svg {
-    height: 20px !important;
+
+  .svg-wrapper > svg {
+    height: 20px;
   }
-  .bottom-nav .nav-item .label {
+
+  .nav-item .label {
     font-size: 12px;
-    white-space: normal;
     text-align: center;
-    display: block;
     line-height: 1;
   }
-  .bottom-nav {
-    box-shadow: 0 0 0 1px rgba(0,0,0,0.01), var(--shadow-sm);
+
+  .site-main {
+    flex: 1;
+    min-width: 0;
   }
 }
+
+/* =========================================================
+   ACCESSIBILITY / SYSTEM OPT
+   ========================================================= */
+
+/* ถ้าระบบขอ reduce motion → ตัด animation อัตโนมัติ */
+@media (prefers-reduced-motion: reduce) {
+  .bottom-nav *,
+  .bottom-nav *::before {
+    transition: none !important;
+  }
+}
+
+} /* end layer */
