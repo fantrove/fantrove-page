@@ -139,7 +139,7 @@
   transform: translate(-50%, -50%);
   z-index: 1;
   pointer-events: none;
-  height: 24px !important;
+  height: 22px !important;
   width: auto;
 }
 
