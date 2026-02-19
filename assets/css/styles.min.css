@@ -23,14 +23,20 @@
   --app-pill-radius: 25px;
 }
 
-/* ---------- BASE ---------- */
-main { margin-top: 30px; margin-bottom: 80px; }
+/* ========== BASE ========== */
+
+main {
+  margin-top: 30px;
+  margin-bottom: 80px;
+}
+
+/* ========== BUTTON SUB ========== */
 
 .button-sub {
   margin: 0;
   padding: 9px 16px;
   background: var(--app-surface-primary);
-  color: var(--text-color);
+  color: var(--app-text-body);
   border: 1px solid transparent;
   border-radius: var(--app-pill-radius);
   font-size: 0.9em;
@@ -42,49 +48,49 @@ main { margin-top: 30px; margin-bottom: 80px; }
     background var(--app-motion-quick),
     border-color var(--app-motion-quick),
     color var(--app-motion-quick);
+
+  /* hint performance */
+  contain: paint layout;
 }
 
 .button-sub:hover,
 .button-sub.active {
-  color: var(--text-primary);
+  color: var(--app-theme-indigo);
 }
 
 .button-sub.active {
-    background: rgba(248, 255, 253, 1);
-    border: 1px solid #00CEB082;
+  background: rgba(248, 255, 253, 1);
+  border: 1px solid #00CEB082;
 }
 
-.hi { padding: 0 10px; }
+/* ========== HI / HJ ========== */
+
+.hi {
+  padding: 0 10px;
+}
+
 .hj {
   border-radius: 40px;
   background: #FFFFFF;
   border: 0.5px solid rgba(0, 0, 0, 0.1);
 }
 
-/* ===================================================== */
-/* 🔥 BUTTON CONTENT — HOT PATH, ULTRA OPTIMIZED */
-/* ===================================================== */
+/* ========== BUTTON CONTENT ========== */
 
 :where(.button-content) {
   box-sizing: border-box;
 
-  /* ✅ เอาความกว้างตายตัวออก */
   width: auto !important;
-
-  /* 🎯 ความกว้างตั้งต้น + กันปุ่มเล็กเกิน */
   min-width: 60px;
-
-  /* 🎯 กันปุ่มยาวเวอร์ (เลือกเปิดได้) */
   max-width: 100%;
 
   padding: 13px 17px !important;
   margin: 8px 0;
 
-  /* 🔒 ล็อกความสูงจริงของปุ่ม (กันเพี้ยนทุกกรณี) */
   height: 60px;
   min-height: 60px;
 
-  display: inline-flex; /* ⬅ สำคัญ: ให้ขนาดตาม content */
+  display: inline-flex;
   align-items: center;
   justify-content: center;
 
@@ -92,25 +98,27 @@ main { margin-top: 30px; margin-bottom: 80px; }
   font-size: 21px;
   line-height: 1;
 
-  background: var(--app-surface-primary, #fff);
-  color: var(--app-theme-indigo, #10B981);
-  border: 1px solid var(--app-theme-indigo-border, #54CBAB);
+  background: var(--app-surface-primary);
+  color: var(--app-theme-indigo);
+  border: 1px solid var(--app-theme-indigo-border);
 
   cursor: pointer;
   text-align: center;
   -webkit-tap-highlight-color: transparent;
 
   transition:
-    transform 200ms cubic-bezier(0.4,0,0.2,1),
+    transform 200ms cubic-bezier(0.4, 0, 0.2, 1),
     border-color 0.18s,
     color 0.18s;
 
+  /* 🚀 performance */
   content-visibility: auto;
+  contain-intrinsic-size: 60px 60px;
   contain: paint;
 }
 
 :where(.button-content:hover) {
-  border-color: var(--app-theme-indigo-border-strong, #54CBAB);
+  border-color: var(--app-theme-indigo-border-strong);
   transform: translateY(-1px) scale(1.008);
 }
 
@@ -119,17 +127,17 @@ main { margin-top: 30px; margin-bottom: 80px; }
   z-index: 1;
 }
 
-/* ===================================================== */
-/* 🔥 CARD — OPTIMIZED แต่หน้าตาเหมือนเดิม 100% */
-/* ===================================================== */
+/* ========== CARD ========== */
 
 :where(.card) {
   display: flex;
   flex-direction: column;
   align-items: stretch;
+
   width: 160px;
   max-height: 222px;
   max-width: 400px;
+
   padding: 0;
   border-radius: 30px;
   overflow: hidden;
@@ -142,11 +150,10 @@ main { margin-top: 30px; margin-bottom: 80px; }
     box-shadow var(--app-motion-natural),
     transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* 🚀 ไม่ render card นอก viewport */
+  /* 🚀 performance */
   content-visibility: auto;
-
-  /* 🎯 จำกัดผลกระทบ paint */
-  contain: paint;
+  contain-intrinsic-size: 160px 220px;
+  contain: paint layout;
 }
 
 :where(.card > *) {
@@ -160,11 +167,11 @@ main { margin-top: 30px; margin-bottom: 80px; }
   position: absolute;
   inset: 0;
   opacity: 0;
-  transition: opacity 0.28s cubic-bezier(0.4,0,0.2,1);
+  transition: opacity 0.28s cubic-bezier(0.4, 0, 0.2, 1);
   background: linear-gradient(
     120deg,
-    rgba(247,248,255,0.13) 75%,
-    rgba(96,81,255,0.10) 100%
+    rgba(247, 248, 255, 0.13) 75%,
+    rgba(96, 81, 255, 0.10) 100%
   );
   border-radius: inherit;
 }
@@ -173,8 +180,7 @@ main { margin-top: 30px; margin-bottom: 80px; }
   border-color: var(--app-theme-indigo-border-strong);
 }
 
-/* ---------- CARD INNER ---------- */
-
+/* CARD INNER */
 .card-image {
   width: 100%;
   height: auto;
@@ -210,7 +216,7 @@ main { margin-top: 30px; margin-bottom: 80px; }
   letter-spacing: 0.01em;
 }
 
-/* ---------- HORIZONTAL BUTTON CONTAINERS ---------- */
+/* ========== BUTTON / CARD CONTAINERS ========== */
 
 #main-buttons-container,
 #sub-buttons-container {
@@ -223,17 +229,26 @@ main { margin-top: 30px; margin-bottom: 80px; }
   -webkit-overflow-scrolling: touch;
 }
 
-#main-buttons-container { gap: 8px; padding: 4px; }
-#sub-buttons-container { gap: 5px; padding: 6px; border-radius: 25px; }
+#main-buttons-container {
+  gap: 8px;
+  padding: 4px;
+}
+
+#sub-buttons-container {
+  gap: 5px;
+  padding: 6px;
+  border-radius: 25px;
+}
 
 #main-buttons-container::-webkit-scrollbar,
 #sub-buttons-container::-webkit-scrollbar {
   display: none;
 }
 
-/* ---------- GROUP HEADER ---------- */
-
-.group-header { padding: 10px; width: 100%; }
+.group-header {
+  padding: 10px;
+  width: 100%;
+}
 
 .group-header-text {
   font-size: 1.2rem;
@@ -247,8 +262,6 @@ main { margin-top: 30px; margin-bottom: 80px; }
   color: var(--app-text-heading);
 }
 
-/* ---------- CONTENT CONTAINERS ---------- */
-
 .card-content-container,
 .button-content-container {
   display: flex !important;
@@ -261,10 +274,15 @@ main { margin-top: 30px; margin-bottom: 80px; }
   border-radius: 25px;
 }
 
-.button-content-container { gap: 5px !important; }
-.card-content-container { gap: 6px !important; }
+.button-content-container {
+  gap: 5px !important;
+}
 
-/* ---------- FADE ---------- */
+.card-content-container {
+  gap: 6px !important;
+}
+
+/* ========== FADE EFFECT ========== */
 
 .fade-in {
   opacity: 0;
@@ -286,7 +304,7 @@ main { margin-top: 30px; margin-bottom: 80px; }
   to   { opacity: 0; }
 }
 
-/* ---------- RESPONSIVE ---------- */
+/* ========== RESPONSIVE ========== */
 
 @media screen and (max-width: 600px) {
   .card-content-container { justify-content: center; gap: 12px; }
@@ -302,7 +320,7 @@ main { margin-top: 30px; margin-bottom: 80px; }
   }
 }
 
-/* ---------- REDUCED MOTION ---------- */
+/* ========== REDUCED MOTION ========== */
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -313,7 +331,7 @@ main { margin-top: 30px; margin-bottom: 80px; }
   }
 }
 
-/* ---------- SCROLLBAR ---------- */
+/* ========== SCROLLBAR ========== */
 
 ::-webkit-scrollbar {
   height: 7px;
@@ -332,7 +350,7 @@ main { margin-top: 30px; margin-bottom: 80px; }
   background: #c8d0e7;
 }
 
-/* ---------- IMAGE WRAPPER ---------- */
+/* ========== IMAGE WRAPPER ========== */
 
 .img-d1 {
   padding: 0 30px;
@@ -344,11 +362,10 @@ main { margin-top: 30px; margin-bottom: 80px; }
   border-radius: 25px;
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
-  contain: paint;
+  contain: paint layout;
 }
 
-/* ---------- FALLBACK (Browser เก่า) ---------- */
-
+/* ========== FALLBACK FOR OLD BROWSERS ========== */
 @supports not (content-visibility: auto) {
   .button-content,
   .card {

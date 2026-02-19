@@ -1,333 +1,357 @@
-@import url(variables.min.css);
-@import url('nav.min.css');
+/* ---------- FONT ---------- */
 @font-face {
   font-family: 'FoglihtenNo07calt';
-  src: url('/assets/fonts/FoglihtenNo07calt.ttf') format('truetype');;
+  src: url('/assets/fonts/FoglihtenNo07calt.ttf') format('truetype');
+  font-display: swap; /* ให้ browser render ก่อนพิมพ์ฟอนต์ */
 }
 
-/* ---------- Rendering & Performance Hints ---------- */
+/* ---------- ROOT VARIABLES ---------- */
 :root {
-    --primary-color: #FFFFFF;
-    --hover-color: rgba(19, 180, 127, 0.08);
-    --background-color: #FFFFFF;
-    --text-color: #52638a;
-    --active-border-color: #E5FFF6;
-    --shadow-color: rgba(0, 0, 0, 0.05); /* ลดความเข้มของ shadow */
-    --nav-bg-color: var(--background-color);
-    --text-primary: #00CEB0;
-    --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    --text-secondary: #52638a;
-    --nav-hover-bg: rgba(255, 255, 255, 0.12);
-    --nav-active-bg:  #FFFFFF;
-    --nav-active-glow:
-        0 0 5px rgba(19, 180, 127, 0.18),
-        0 0 2px rgba(19, 180, 127, 0.1);
+  /* Colors */
+  --primary-color: #FFFFFF;
+  --background-color: #FFFFFF;
+  --text-color: #52638a;
+  --text-primary: #00CEB0;
+  --text-secondary: #52638a;
+
+  /* Nav */
+  --hover-color: rgba(19, 180, 127, 0.08);
+  --nav-bg-color: var(--background-color);
+  --nav-hover-bg: rgba(255, 255, 255, 0.12);
+  --nav-active-bg: #FFFFFF;
+  --nav-active-glow:
+    0 0 5px rgba(19, 180, 127, 0.18),
+    0 0 2px rgba(19, 180, 127, 0.1);
+  --nav-text-default: #FFFFFF;
+  --nav-text-hover: #FFFFFF;
+  --nav-text-active: #ffffff;
+  --nav-underline-color: #ffffff;
+  --nav-button-radius: 25px;
+
+  /* Transition */
+  --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Shadow */
+  --shadow-color: rgba(0, 0, 0, 0.05);
+
+  /* Loading */
+  --loading-bg: #fff;
+  --spinner-primary: #4285f4;
+  --spinner-secondary: #eee;
 }
 
+/* ---------- GLOBAL ---------- */
 body {
- margin: 0;
- padding: 0;
+  margin: 0;
+  padding: 0;
 }
 
 /* ---------- HEADER ---------- */
 header {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    width: 100%;
-    top: 0;
-    left: 0;
-    background: #FFFFFF;
-    touch-action: none;
-    margin-bottom: 30px;
-    border-radius: 0 0 0px 0px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  background: var(--background-color);
+  margin-bottom: 30px;
 
-    will-change: box-shadow, background;
-    /* แยกการ repaint ของ header ออกจาก context หลัก */
-    contain: layout paint;
+  /* Performance hint */
+  contain: layout paint;
 }
 
 .logo {
-    --logo-padding: 9px;
-    font-family: 'FoglihtenNo07calt', monospace;
-    font-size: 26px;
-    padding: 20px 0 0 0;
-    white-space: nowrap;
-    color: #00CEB0;
-    text-shadow: 0 0 3px rgba(0, 255, 171, 0.5);
-    pointer-events: none;
-    margin-left: 10px;
-    align-self: flex-start;
-    display: flex;
-    align-items: center;
+  font-family: 'FoglihtenNo07calt', monospace;
+  font-size: 26px;
+  padding: 20px 0 0;
+  color: var(--text-primary);
+  text-shadow: 0 0 3px rgba(0, 255, 171, 0.5);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  margin-left: 10px;
+  pointer-events: none;
 
-    will-change: color, text-shadow;
-    backface-visibility: hidden;
+  /* Performance hint */
+  will-change: color, text-shadow;
+  backface-visibility: hidden;
 }
+
 .logo span {
-    pointer-events: auto;
-    user-select: text;
+  pointer-events: auto;
+  user-select: text;
 }
 
 .logo img {
-    width: auto;
-    height: var(--height);
-    margin-left: 5px;
-    will-change: height;
-    transform: translateZ(0);
+  height: var(--height);
+  margin-left: 5px;
+
+  /* Performance hint */
+  will-change: height;
+  transform: translateZ(0);
 }
 
 /* ---------- NAV ---------- */
+/* Container */
 nav {
-    --nav-spacing: 7px;
-    width: 100%;
-    overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
-    background: none;
-    margin-top: var(--nav-spacing);
-    will-change: margin-top;
+  width: 100%;
+  background: none;
+  margin-top: 7px;
+  overflow-x: hidden;
+
+  /* Performance hint */
+  will-change: margin-top;
 }
 
+/* List */
 nav ul {
-    display: flex;
-    list-style-type: none;
-    margin: 0;
-    padding: var(--nav-spacing) var(--nav-spacing) 0 var(--nav-spacing);
-    justify-content: flex-start;
-    overflow-x: auto;
-    white-space: nowrap;
-    scrollbar-width: none;
-    border-bottom: 0.8px solid rgba(19, 180, 127, 0.3);
-    touch-action: pan-x;
-    will-change: border-top;
+  display: flex;
+  list-style-type: none;
+  margin: 0;
+  padding: 7px 7px 0;
+  justify-content: flex-start;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+  border-bottom: 0.8px solid rgba(19, 180, 127, 0.3);
 
-    /* ปรับ UX การเลื่อนบนมือถือ ไม่ให้ chain ไปยัง body */
-    overscroll-behavior-x: contain;
-    scrollbar-gutter: stable;
+  /* UX improvement */
+  overscroll-behavior-x: contain;
+  scrollbar-gutter: stable;
+
+  /* Performance hint */
+  will-change: border-top;
 }
-
 nav ul::-webkit-scrollbar {
-    display: none;
+  display: none;
 }
 
+/* Items */
 nav ul li {
-    flex: none;
+  flex: none;
 }
 
+/* Buttons */
 nav ul li button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 11px 13px;
-    border-radius: 25px;
-    color: var(--text-secondary);
-    font-size: 0.9em;
-    background: transparent;
-    border: 1px solid transparent;
-    cursor: pointer;
-    transition: all var(--transition-fast);
-    position: relative;
-    overflow: hidden;
-    white-space: nowrap;
-    -webkit-tap-highlight-color: transparent;
-    user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 11px 13px;
+  border-radius: var(--nav-button-radius);
+  font-size: 0.9em;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+  user-select: none;
 
-    will-change: color, background, transform, border;
-    backface-visibility: hidden;
+  /* UX */
+  -webkit-tap-highlight-color: transparent;
+
+  /* Transitions */
+  transition: all var(--transition-fast);
+
+  /* Performance hint */
+  will-change: color, background, transform, border;
+  backface-visibility: hidden;
 }
 
+/* Hover states */
 nav ul li button:hover {
-    background: rgba(0, 0, 0, 0.05);
-    will-change: color, transform;
+  background: rgba(0, 0, 0, 0.05);
 }
-
 nav ul li button:hover::before {
-    opacity: 1;
+  opacity: 1;
 }
 
+/* Active (selected) */
 nav ul li button.active {
-    color: var(--text-primary);
-    background: rgba(248, 255, 253, 1);
-    border: 1px solid #00CEB082;
+  color: var(--text-primary);
+  background: rgba(248, 255, 253, 1);
+  border: 1px solid #00CEB082;
 }
-
 nav ul li button.active::after {
-    content: '';
-    position: absolute;
-    left: 50%;
-    bottom: 0px;
-    width: 40%;
-    height: 3px;
-    background: currentColor;
-    border-radius: 10px 10px 0 0;
-    transform: translateX(-50%);
-    transition: all var(--transition-fast);
-    will-change: opacity, transform;
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 40%;
+  height: 3px;
+  background: currentColor;
+  border-radius: 10px 10px 0 0;
+  transform: translateX(-50%);
+  transition: all var(--transition-fast);
+
+  /* Performance hint */
+  will-change: opacity, transform;
 }
 
-:root {
-    --nav-text-default: #FFFFFF;
-    --nav-text-hover: #FFFFFF;
-    --nav-text-active: #ffffff;
-    --nav-hover-bg: rgba(255, 255, 255, 0.1);
-    --nav-underline-color: #ffffff;
-    --nav-button-radius: 25px;
-}
-
-/* ---------- Reduced motion preference ---------- */
+/* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
-    nav ul li button {
-        transition: none;
-    }
-    nav ul li button.active::after {
-        animation: none;
-    }
+  nav ul li button {
+    transition: none;
+  }
+  nav ul li button.active::after {
+    animation: none;
+  }
 }
 
 /* ---------- NAVBAR TOGGLE ---------- */
 .navbar-toggle {
-    display: flex;
-    flex-direction: column;
-    cursor: pointer;
-    gap: 4px;
-    outline: none;
-    box-shadow: none;
-    -webkit-tap-highlight-color: transparent;
-    transition: transform 0.3s ease, opacity 0.3s ease;
-    position: fixed;
-    left: 16px;
-    top: 25.3px;
-    transform: translateY(-50%);
-    padding: 5px;
-    z-index: 10008;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+  outline: none;
+  box-shadow: none;
 
-    will-change: transform, opacity;
-    backface-visibility: hidden;
+  /* UX */
+  -webkit-tap-highlight-color: transparent;
+
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  position: fixed;
+  left: 16px;
+  top: 25.3px;
+  padding: 5px;
+  z-index: 10008;
+
+  /* Performance hint */
+  will-change: transform, opacity;
+  backface-visibility: hidden;
 }
 
-/* ---------- ERROR MESSAGE & LOADING (contain เพื่อประสิทธิภาพ) ---------- */
+/* ---------- ERROR MESSAGE ---------- */
 .error-message {
-    position: fixed;
-    top: 50%;
-    right: 20px;
-    background-color: #ff4444;
-    color: white;
-    padding: 15px 20px;
-    border-radius: 5px;
-    z-index: 1000;
-    animation: fadeIn 0.3s ease-in-out;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  position: fixed;
+  top: 50%;
+  right: 20px;
+  background-color: #ff4444;
+  color: white;
+  padding: 15px 20px;
+  border-radius: 5px;
+  z-index: 1000;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  animation: fadeIn 0.3s ease-in-out;
 
-    will-change: opacity, transform;
-    contain: paint; /* ลด repaint ของส่วนอื่นเมื่อ error ปรากฏ */
+  /* Performance hint */
+  will-change: opacity, transform;
+  contain: paint;
 }
 
+/* FadeIn Animation */
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-:root {
-    --loading-bg: #fff;
-    --spinner-primary: #4285f4;
-    --spinner-secondary: #eee;
-}
-
-.content-loading-spinner {
-    position: fixed;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: var(--loading-bg);
-    z-index: 1000;
-    width: 100%;
-    height: 100%;
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
     opacity: 1;
-    visibility: visible;
-    transition: opacity 0.28s ease, visibility 0.28s ease;
+    transform: translateY(0);
+  }
+}
 
-    /* ป้องกันการ repaint ใหญ่ ๆ ขณะโหลด */
-    contain: strict;
+/* ---------- LOADING SPINNER ---------- */
+.content-loading-spinner {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--loading-bg);
+  z-index: 1000;
+  width: 100%;
+  height: 100%;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.28s ease, visibility 0.28s ease;
+
+  /* Performance hint */
+  contain: strict;
 }
 
 .content-loading-fade-in {
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
 }
-
 .content-loading-fade-out {
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .spinner-svg {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
 }
-
 .spinner-svg svg {
-    width: 48px;
-    height: 48px;
-    display: block;
+  width: 48px;
+  height: 48px;
 }
-
 .spinner-svg-bg {
-    stroke: var(--spinner-secondary);
-    stroke-width: 6;
+  stroke: var(--spinner-secondary);
+  stroke-width: 6;
 }
-
 .spinner-svg-fg {
-    stroke: var(--spinner-primary);
-    stroke-width: 6;
-    stroke-linecap: round;
-    fill: none;
-    transform-origin: 50% 50%;
+  stroke: var(--spinner-primary);
+  stroke-width: 6;
+  stroke-linecap: round;
+  transform-origin: 50% 50%;
 }
 
 .loading-message {
-    font-size: 0.82rem;
-    color: #444;
-    font-weight: 500;
-    text-align: center;
-    margin-top: 0;
+  font-size: 0.82rem;
+  color: #444;
+  font-weight: 500;
+  text-align: center;
+  margin-top: 0;
 }
 
-/* Media Queries */
+/* ---------- RESPONSIVE FONT SIZES ---------- */
 @media (min-width: 600px) {
-    body { font-size: 16px; }
-    .navbar-toggle { left: 16px; top: 25.3px; }
-    nav { margin-top: 5px; }
-}
-@media (min-width: 768px) {
-    body { font-size: 18px; }
-    .navbar-toggle { left: 16px; top: 25.3px; }
-}
-@media (min-width: 1024px) {
-    body { font-size: 20px; }
-    .navbar-toggle { left: 16px; top: 25.3px; }
-    nav { margin-top: 5px; }
-}
-@media (min-width: 1280px) {
-    body { font-size: 22px; }
-    .navbar-toggle { left: 16px; top: 25.3px; }
-}
-@media (min-width: 1440px) {
-    body { font-size: 24px; }
-    .navbar-toggle { left: 16px; top: 25.3px; }
-}
-@media (min-width: 1920px) {
-    body { font-size: 26px; }
-    .navbar-toggle { left: 16px; top: 25.3px; }
+  body {
+    font-size: 16px;
+  }
+  nav {
+    margin-top: 5px;
+  }
 }
 
-/* ---------- SAFETY NOTE ----------
-   - การปรับปรุงในไฟล์นี้เพิ่มเฉพาะ hint สำหรับ browser (font-display, will-change, contain, overscroll-behavior)
-   - ไม่ได้เปลี่ยนสี ขนาด หรือ layout ของ header/nav ใด ๆ — ออกแบบมาให้คง visual เดิม 100%
-*/
+@media (min-width: 768px) {
+  body {
+    font-size: 18px;
+  }
+} /* ปิดให้ชัด */
+
+@media (min-width: 1024px) {
+  body {
+    font-size: 20px;
+  }
+  nav {
+    margin-top: 5px;
+  }
+} /* ปิดให้ชัด */
+
+@media (min-width: 1280px) {
+  body {
+    font-size: 22px;
+  }
+} /* ปิดให้ชัด */
+
+@media (min-width: 1440px) {
+  body {
+    font-size: 24px;
+  }
+} /* ปิดให้ชัด */
+
+@media (min-width: 1920px) {
+  body {
+    font-size: 26px;
+  }
+} /* ปิดให้ชัด */
