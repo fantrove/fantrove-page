@@ -2,9 +2,7 @@
 @import url('nav.min.css');
 @font-face {
   font-family: 'FoglihtenNo07calt';
-  src: url('/assets/fonts/FoglihtenNo07calt.ttf') format('truetype');
-  /* ป้องกัน layout shift ขณะโหลดฟอนต์ */
-  font-display: swap;
+  src: url('/assets/fonts/FoglihtenNo07calt.ttf') format('truetype');;
 }
 
 /* ---------- Rendering & Performance Hints ---------- */
