@@ -53,7 +53,7 @@ header {
 .logo {
     --logo-padding: 9px;
     font-family: 'FoglihtenNo07calt', monospace;
-    font-size: 24px;
+    font-size: 26px;
     padding: 20px 0 0 0;
     white-space: nowrap;
     color: #00CEB0;
@@ -121,11 +121,12 @@ nav ul li button {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 14px 22px;
+    padding: 11px 13px;
+    border-radius: 25px;
     color: var(--text-secondary);
     font-size: 0.9em;
     background: transparent;
-    border: none;
+    border: 1px solid transparent;
     cursor: pointer;
     transition: all var(--transition-fast);
     position: relative;
@@ -149,6 +150,8 @@ nav ul li button:hover::before {
 
 nav ul li button.active {
     color: var(--text-primary);
+    background: rgba(248, 255, 253, 1);
+    border: 1px solid #00CEB082;
 }
 
 nav ul li button.active::after {
