@@ -3,10 +3,12 @@
    - Load deferred (after DOM ready)
    - Prefixes only applied to internal navigational links (not assets/APIs)
    - Observes DOM mutations to update dynamically-inserted links
+   - Intercepts clicks to ensure navigation always goes to a prefixed URL when possible
 */
 (function() {
   const SKIP_PREFIXES = ['/assets/', '/static/', '/api/', '/_next/', '/favicon.ico', '/robots.txt', '/sitemap.xml'];
   const LANG_KEY = 'selectedLang';
+  const CLICK_INTERCEPT_KEY = 'fv-links-intercept-done';
   
   function isInternalHref(href) {
     if (!href) return false;
@@ -64,12 +66,74 @@
     });
   }
   
+  // Intercept clicks on internal links that would navigate to non-prefixed paths,
+  // and redirect to a prefixed variant when a selectedLang is available.
+  function interceptClicks(lang) {
+    // Attach single capture-phase listener
+    if (window[CLICK_INTERCEPT_KEY]) return;
+    window[CLICK_INTERCEPT_KEY] = true;
+    document.addEventListener('click', function(ev) {
+      try {
+        const a = ev.target && ev.target.closest ? ev.target.closest('a[href]') : null;
+        if (!a) return;
+        const raw = a.getAttribute('href') || '';
+        if (/^(mailto:|tel:|javascript:|#)/i.test(raw)) return;
+        if (!isInternalHref(raw)) return;
+        const url = new URL(raw, location.origin);
+        if (!shouldPrefix(url.pathname)) return;
+        // If link already has language prefix, allow default
+        if (url.pathname.match(/^\/(en|th)(\/|$)/)) return;
+        // If selectedLang available, navigate to prefixed URL
+        if (lang) {
+          ev.preventDefault();
+          const newHref = prefixHref(raw, lang);
+          // Use location.assign so history is natural for users
+          try { window.location.assign(newHref); } catch (e) { location.href = newHref; }
+        }
+      } catch (e) {
+        // swallow
+      }
+    }, true);
+  }
+  
+  function ensureSelectedLang() {
+    try {
+      let lang = null;
+      try { lang = localStorage.getItem(LANG_KEY); } catch (e) { lang = null; }
+      if (lang) return lang;
+      // try detect from current pathname (/en/... or /th/...)
+      try {
+        const m = location.pathname.match(/^\/(en|th)(\/|$)/);
+        if (m) {
+          lang = m[1];
+          localStorage.setItem(LANG_KEY, lang);
+          return lang;
+        }
+      } catch (e) {}
+      // fallback to browser prefs if available
+      try {
+        const bros = navigator.languages || [navigator.language || navigator.userLanguage];
+        if (bros && bros.length) {
+          const first = bros[0].split('-')[0];
+          if (first) {
+            // only set to en/th by default to avoid unexpected prefixes for unknown langs
+            if (['en', 'th'].includes(first)) {
+              lang = first;
+              localStorage.setItem(LANG_KEY, lang);
+              return lang;
+            }
+          }
+        }
+      } catch (e) {}
+      return null;
+    } catch (e) { return null; }
+  }
+  
   function runOnce() {
-    const lang = (function() {
-      try { return localStorage.getItem(LANG_KEY); } catch (e) { return null; }
-    })();
+    const lang = ensureSelectedLang();
     if (!lang) return;
     updateLinksIn(document, lang);
+    interceptClicks(lang);
     
     // observe mutations
     const mo = new MutationObserver(muts => {
