@@ -34,7 +34,7 @@ main {
 
 .button-sub {
   margin: 0;
-  padding: 9px 16px;
+  padding: 11px 13px;
   background: var(--app-surface-primary);
   color: var(--app-text-body);
   border: 1px solid transparent;
@@ -48,9 +48,6 @@ main {
     background var(--app-motion-quick),
     border-color var(--app-motion-quick),
     color var(--app-motion-quick);
-
-  /* hint performance */
-  contain: paint layout;
 }
 
 .button-sub:hover,
@@ -110,16 +107,14 @@ main {
     transform 200ms cubic-bezier(0.4, 0, 0.2, 1),
     border-color 0.18s,
     color 0.18s;
-
-  /* 🚀 performance */
-  content-visibility: auto;
-  contain-intrinsic-size: 60px 60px;
-  contain: paint;
 }
 
 :where(.button-content:hover) {
   border-color: var(--app-theme-indigo-border-strong);
-  transform: translateY(-1px) scale(1.008);
+}
+
+:where(.button-content:active) {
+  transform: scale(0.98);
 }
 
 :where(.button-content > *) {
@@ -149,11 +144,6 @@ main {
     border-color var(--app-motion-natural),
     box-shadow var(--app-motion-natural),
     transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
-
-  /* 🚀 performance */
-  content-visibility: auto;
-  contain-intrinsic-size: 160px 220px;
-  contain: paint layout;
 }
 
 :where(.card > *) {
@@ -178,6 +168,10 @@ main {
 
 :where(.card:hover) {
   border-color: var(--app-theme-indigo-border-strong);
+}
+
+:where(.card:active) {
+  transform: scale(0.98);
 }
 
 /* CARD INNER */
@@ -235,7 +229,7 @@ main {
 }
 
 #sub-buttons-container {
-  gap: 5px;
+  gap: 0px;
   padding: 6px;
   border-radius: 25px;
 }
@@ -362,7 +356,6 @@ main {
   border-radius: 25px;
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
-  contain: paint layout;
 }
 
 /* ========== FALLBACK FOR OLD BROWSERS ========== */

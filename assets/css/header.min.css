@@ -2,7 +2,7 @@
 @font-face {
   font-family: 'FoglihtenNo07calt';
   src: url('/assets/fonts/FoglihtenNo07calt.ttf') format('truetype');
-  font-display: swap; /* ให้ browser render ก่อนพิมพ์ฟอนต์ */
+  font-display: swap;
 }
 
 /* ---------- ROOT VARIABLES ---------- */
@@ -29,7 +29,7 @@
   --nav-button-radius: 25px;
 
   /* Transition */
-  --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast: 0.2s ease;
 
   /* Shadow */
   --shadow-color: rgba(0, 0, 0, 0.05);
@@ -55,9 +55,6 @@ header {
   width: 100%;
   background: var(--background-color);
   margin-bottom: 30px;
-
-  /* Performance hint */
-  contain: layout paint;
 }
 
 .logo {
@@ -71,10 +68,6 @@ header {
   align-items: center;
   margin-left: 10px;
   pointer-events: none;
-
-  /* Performance hint */
-  will-change: color, text-shadow;
-  backface-visibility: hidden;
 }
 
 .logo span {
@@ -85,25 +78,16 @@ header {
 .logo img {
   height: var(--height);
   margin-left: 5px;
-
-  /* Performance hint */
-  will-change: height;
-  transform: translateZ(0);
 }
 
 /* ---------- NAV ---------- */
-/* Container */
 nav {
   width: 100%;
   background: none;
   margin-top: 7px;
   overflow-x: hidden;
-
-  /* Performance hint */
-  will-change: margin-top;
 }
 
-/* List */
 nav ul {
   display: flex;
   list-style-type: none;
@@ -114,24 +98,16 @@ nav ul {
   white-space: nowrap;
   scrollbar-width: none;
   border-bottom: 0.8px solid rgba(19, 180, 127, 0.3);
-
-  /* UX improvement */
-  overscroll-behavior-x: contain;
-  scrollbar-gutter: stable;
-
-  /* Performance hint */
-  will-change: border-top;
 }
+
 nav ul::-webkit-scrollbar {
   display: none;
 }
 
-/* Items */
 nav ul li {
   flex: none;
 }
 
-/* Buttons */
 nav ul li button {
   display: flex;
   align-items: center;
@@ -147,32 +123,19 @@ nav ul li button {
   overflow: hidden;
   white-space: nowrap;
   user-select: none;
-
-  /* UX */
   -webkit-tap-highlight-color: transparent;
-
-  /* Transitions */
-  transition: all var(--transition-fast);
-
-  /* Performance hint */
-  will-change: color, background, transform, border;
-  backface-visibility: hidden;
 }
 
-/* Hover states */
 nav ul li button:hover {
   background: rgba(0, 0, 0, 0.05);
 }
-nav ul li button:hover::before {
-  opacity: 1;
-}
 
-/* Active (selected) */
 nav ul li button.active {
   color: var(--text-primary);
   background: rgba(248, 255, 253, 1);
   border: 1px solid #00CEB082;
 }
+
 nav ul li button.active::after {
   content: '';
   position: absolute;
@@ -183,20 +146,6 @@ nav ul li button.active::after {
   background: currentColor;
   border-radius: 10px 10px 0 0;
   transform: translateX(-50%);
-  transition: all var(--transition-fast);
-
-  /* Performance hint */
-  will-change: opacity, transform;
-}
-
-/* Reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  nav ul li button {
-    transition: none;
-  }
-  nav ul li button.active::after {
-    animation: none;
-  }
 }
 
 /* ---------- NAVBAR TOGGLE ---------- */
@@ -207,20 +156,12 @@ nav ul li button.active::after {
   cursor: pointer;
   outline: none;
   box-shadow: none;
-
-  /* UX */
   -webkit-tap-highlight-color: transparent;
-
-  transition: transform 0.3s ease, opacity 0.3s ease;
   position: fixed;
   left: 16px;
   top: 25.3px;
   padding: 5px;
   z-index: 10008;
-
-  /* Performance hint */
-  will-change: transform, opacity;
-  backface-visibility: hidden;
 }
 
 /* ---------- ERROR MESSAGE ---------- */
@@ -235,13 +176,8 @@ nav ul li button.active::after {
   z-index: 1000;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
   animation: fadeIn 0.3s ease-in-out;
-
-  /* Performance hint */
-  will-change: opacity, transform;
-  contain: paint;
 }
 
-/* FadeIn Animation */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -267,10 +203,6 @@ nav ul li button.active::after {
   height: 100%;
   opacity: 1;
   visibility: visible;
-  transition: opacity 0.28s ease, visibility 0.28s ease;
-
-  /* Performance hint */
-  contain: strict;
 }
 
 .content-loading-fade-in {
@@ -278,6 +210,7 @@ nav ul li button.active::after {
   visibility: visible;
   pointer-events: auto;
 }
+
 .content-loading-fade-out {
   opacity: 0;
   visibility: hidden;
@@ -290,14 +223,17 @@ nav ul li button.active::after {
   justify-content: center;
   margin-bottom: 14px;
 }
+
 .spinner-svg svg {
   width: 48px;
   height: 48px;
 }
+
 .spinner-svg-bg {
   stroke: var(--spinner-secondary);
   stroke-width: 6;
 }
+
 .spinner-svg-fg {
   stroke: var(--spinner-primary);
   stroke-width: 6;
@@ -325,33 +261,148 @@ nav ul li button.active::after {
 
 @media (min-width: 768px) {
   body {
-    font-size: 18px;
+    font-size: 16px;
   }
-} /* ปิดให้ชัด */
+}
 
 @media (min-width: 1024px) {
   body {
-    font-size: 20px;
+    font-size: 16px;
   }
   nav {
     margin-top: 5px;
   }
-} /* ปิดให้ชัด */
+}
 
 @media (min-width: 1280px) {
   body {
-    font-size: 22px;
+    font-size: 16px;
   }
-} /* ปิดให้ชัด */
+}
 
 @media (min-width: 1440px) {
   body {
-    font-size: 24px;
+    font-size: 16px;
   }
-} /* ปิดให้ชัด */
+}
 
 @media (min-width: 1920px) {
   body {
-    font-size: 26px;
+    font-size: 16px;
   }
-} /* ปิดให้ชัด */
+}
+
+/* ---------- ULTRA LOW-END OPTIMIZATIONS ---------- */
+
+/* ปิดทุก transition บนอุปกรณ์ที่ตั้งค่าไม่เอา animation */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  .error-message {
+    animation: none !important;
+    opacity: 1;
+  }
+}
+
+/* ปิดทุก effect บนอุปกรณ์สเปคต่ำ */
+@media (update: slow), (max-device-pixel-ratio: 1.5) {
+  .logo {
+    text-shadow: none !important;
+  }
+  
+  nav ul li button {
+    transition: none !important;
+  }
+  
+  .error-message {
+    animation: none !important;
+    opacity: 1;
+  }
+  
+  .content-loading-spinner {
+    transition: none !important;
+  }
+}
+
+/* ปรับสำหรับหน้าจอเล็กสุด */
+@media (max-width: 320px), (max-height: 480px) {
+  .logo {
+    font-size: 20px;
+    padding: 15px 0 0;
+  }
+  
+  nav ul li button {
+    padding: 8px 10px;
+    font-size: 0.85em;
+  }
+  
+  .navbar-toggle {
+    left: 12px;
+    top: 20px;
+  }
+  
+  .error-message {
+    right: 10px;
+    padding: 10px 15px;
+    font-size: 0.9em;
+  }
+}
+
+/* ปรับสำหรับ Android รุ่นเก่าและ RAM น้อย */
+@media (hover: none) and (pointer: coarse) {
+  nav ul li button {
+    transition: none !important;
+  }
+  
+  nav ul li button:active {
+    opacity: 0.8;
+  }
+  
+  .navbar-toggle:active {
+    opacity: 0.7;
+  }
+}
+
+/* ปิด text-shadow บนอุปกรณ์ที่มีปัญหา rendering */
+@supports not (text-shadow: 0 0 3px rgba(0, 255, 171, 0.5)) {
+  .logo {
+    text-shadow: none;
+  }
+}
+
+/* ปรับสำหรับ e-ink devices และ monochrome */
+@media (monochrome: 1), (prefers-contrast: high) {
+  .logo {
+    text-shadow: none;
+    color: #000;
+  }
+  
+  nav ul li button.active {
+    border-width: 2px;
+    border-color: #000;
+  }
+}
+
+/* ปรับสำหรับ print mode */
+@media print {
+  header,
+  nav,
+  .navbar-toggle,
+  .content-loading-spinner {
+    display: none !important;
+  }
+  
+  .error-message {
+    position: static;
+    box-shadow: none;
+    border: 1px solid #000;
+    animation: none !important;
+  }
+}
