@@ -9,9 +9,20 @@
    - Uses sessionStorage 'fv-proxy-done' to avoid infinite loops
    - EXTENDED: If current URL does NOT have a lang prefix but localStorage.selectedLang is set,
      the proxy will aggressively try to locate and navigate to a prefixed version of the current page.
+   - NEW: Aggressive promotion is disabled on local/dev hosts (localhost, 127.0.0.1, *.local, 0.0.0.0)
 */
 (function() {
   try {
+    function isLocalDev() {
+      try {
+        const host = location.hostname || '';
+        if (!host) return false;
+        if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0') return true;
+        if (host.endsWith('.local')) return true;
+        return false;
+      } catch (e) { return false; }
+    }
+    
     const m = location.pathname.match(/^\/(en|th)(\/.*|$)/);
     const sessionKey = 'fv-proxy-done';
     // If there's an explicit lang prefix in path -> proxy for that prefix
@@ -71,6 +82,9 @@
       let sel = null;
       try { sel = localStorage.getItem('selectedLang'); } catch (e) { sel = null; }
       if (!sel) return;
+      
+      // If running on local dev host, don't try aggressive promotion
+      if (isLocalDev()) return;
       
       // Avoid looping: store a per-path+lang marker for this session
       const markKey = 'fv-proxy-done:' + sel + ':' + location.pathname;

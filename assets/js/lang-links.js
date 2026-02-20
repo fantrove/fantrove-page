@@ -4,6 +4,7 @@
    - Prefixes only applied to internal navigational links (not assets/APIs)
    - Observes DOM mutations to update dynamically-inserted links
    - Intercepts clicks to ensure navigation always goes to a prefixed URL when possible
+   - Now: disabled aggressive intercept/prefix in local development hosts (localhost, 127.0.0.1, *.local, 0.0.0.0)
 */
 (function() {
   const SKIP_PREFIXES = ['/assets/', '/static/', '/api/', '/_next/', '/favicon.ico', '/robots.txt', '/sitemap.xml'];
@@ -66,9 +67,22 @@
     });
   }
   
+  // Detect local/dev hosts where aggressive behavior should be disabled
+  function isLocalDev() {
+    try {
+      const host = location.hostname || '';
+      if (!host) return false;
+      if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0') return true;
+      if (host.endsWith('.local')) return true;
+      return false;
+    } catch (e) { return false; }
+  }
+  
   // Intercept clicks on internal links that would navigate to non-prefixed paths,
   // and redirect to a prefixed variant when a selectedLang is available.
   function interceptClicks(lang) {
+    // If running on a dev host, do not intercept aggressively
+    if (isLocalDev()) return;
     // Attach single capture-phase listener
     if (window[CLICK_INTERCEPT_KEY]) return;
     window[CLICK_INTERCEPT_KEY] = true;
