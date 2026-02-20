@@ -1,0 +1,20 @@
+# Root maps to home/index.html (ถ้าคุณต้องการให้ / ชี้ไปที่ /home/)
+# Serve as internal rewrite (status 200) so URL remains / or /en/whatever
+/ /home/index.html 200
+/index.html /home/index.html 200
+
+# Language prefix rewrite: map /en/* -> /<splat>, /th/* -> /<splat>
+    # :splat คือส่วนที่เหลือของ path (e.g. /en/info/about -> /info/about)
+    /en /home/index.html 200
+    /en/* /:splat 200
+    
+    /th /home/index.html 200
+    /th/* /:splat 200
+    
+    # Optional: ensure sitemap/robots and favicon available without prefix issues
+    /robots.txt /robots.txt 200
+    /sitemap.xml /sitemap.xml 200
+    /favicon.ico /assets/images/fantrove-hub360.ico 200
+    
+    # (Optional) Add any explicit asset passthrough rules if necessary
+    /assets/* /assets/:splat 200
