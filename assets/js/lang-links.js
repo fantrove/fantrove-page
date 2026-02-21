@@ -80,6 +80,7 @@
   
   // Intercept clicks on internal links that would navigate to non-prefixed paths,
   // and redirect to a prefixed variant when a selectedLang is available.
+  // Also record a session mapping target path -> lang so popstate can predict language.
   function interceptClicks(lang) {
     // If running on a dev host, do not intercept aggressively
     if (isLocalDev()) return;
@@ -99,6 +100,14 @@
         if (url.pathname.match(/^\/(en|th)(\/|$)/)) return;
         // If selectedLang available, navigate to prefixed URL
         if (lang) {
+          // Record mapping for the target path -> lang in sessionStorage
+          try {
+            const key = url.pathname + (url.search || '');
+            const rawMap = sessionStorage.getItem('fv-nav-lang-map') || '{}';
+            const map = JSON.parse(rawMap || '{}');
+            map[key] = { lang: lang, ts: Date.now(), evidence: 'click' };
+            sessionStorage.setItem('fv-nav-lang-map', JSON.stringify(map));
+          } catch (e) {}
           ev.preventDefault();
           const newHref = prefixHref(raw, lang);
           // Use location.assign so history is natural for users

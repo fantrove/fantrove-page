@@ -32,6 +32,16 @@
       if (sessionStorage.getItem(sessionKey) === lang) return;
       sessionStorage.setItem(sessionKey, lang);
       try { localStorage.setItem('selectedLang', lang); } catch (e) {}
+      
+      // Record mapping of the current (prefixed) URL -> lang so popstate / heuristics can use it
+      try {
+        const key = location.pathname + (location.search || '');
+        const rawMap = sessionStorage.getItem('fv-nav-lang-map') || '{}';
+        const map = JSON.parse(rawMap || '{}');
+        map[key] = { lang: lang, ts: Date.now(), evidence: 'proxy' };
+        sessionStorage.setItem('fv-nav-lang-map', JSON.stringify(map));
+      } catch (e) {}
+      
       // compute target path by stripping the language prefix
       let target = m[2] || '/';
       if (!target) target = '/';
