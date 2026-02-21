@@ -10,8 +10,8 @@
    - EXTENDED: If current URL does NOT have a lang prefix but localStorage.selectedLang is set,
      the proxy will aggressively try to locate and navigate to a prefixed version of the current page.
    - NEW: Aggressive promotion is disabled on local/dev hosts (localhost, 127.0.0.1, *.local, 0.0.0.0)
-   - COORDINATION: Uses a small reload protocol (fv-forcereload / fv-reload-inflight / fv-reload-ack)
-     so that only one actor performs the actual navigation/reload and others acknowledge it.
+   - NEW: When proxy performs a navigation or document.write resulting in mismatch between URL and in-memory DOM,
+     it sets a sessionStorage marker (fv-forcereload) and triggers a navigation/reload to force a clean fetch from the host.
 */
 (function() {
   try {
@@ -23,26 +23,6 @@
         if (host.endsWith('.local')) return true;
         return false;
       } catch (e) { return false; }
-    }
-    
-    function genReloadId() {
-      return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9);
-    }
-    
-    function setForceReloadMarker(source) {
-      try {
-        const id = genReloadId();
-        const marker = { id: id, ts: Date.now(), source: source || 'proxy' };
-        sessionStorage.setItem('fv-forcereload', JSON.stringify(marker));
-        return marker;
-      } catch (e) { return null; }
-    }
-    
-    function setInflight(id) {
-      try {
-        if (!id) return;
-        sessionStorage.setItem('fv-reload-inflight', id);
-      } catch (e) {}
     }
     
     const m = location.pathname.match(/^\/(en|th)(\/.*|$)/);
@@ -97,14 +77,11 @@
             try {
               history.replaceState({}, '', location.pathname + location.search + location.hash);
             } catch (e) {}
-            // Create a marker and mark inflight before performing the navigation (replace),
-            // so the landing page can acknowledge instead of issuing another reload.
+            // Set a session marker to force a clean reload once after the proxied document.write.
+            // This reduces UI inconsistency on hosts that rewrite paths (Cloudflare Pages, etc.)
+            try { sessionStorage.setItem('fv-forcereload', String(Date.now())); } catch (e) {}
             try {
-              const marker = setForceReloadMarker('proxy');
-              if (marker && marker.id) setInflight(marker.id);
-            } catch (e) {}
-            try {
-              // replace to the same prefixed URL so the host serves the correct (prefixed) variant normally
+              // force navigation to same URL so the host serves the correct (prefixed) variant normally
               location.replace(location.pathname + location.search + location.hash);
             } catch (e) {
               try { location.reload(); } catch (e2) {}
@@ -167,19 +144,13 @@
                 const urlObj = new URL(c, location.origin);
                 urlObj.search = location.search || '';
                 urlObj.hash = location.hash || '';
-                // set marker + inflight so the landing page knows to ACK instead of reloading again
-                try {
-                  const marker = setForceReloadMarker('proxy');
-                  if (marker && marker.id) setInflight(marker.id);
-                } catch (e) {}
+                // set marker so the landing page can perform a single clean reload if necessary
+                try { sessionStorage.setItem('fv-forcereload', String(Date.now())); } catch (e) {}
                 location.replace(urlObj.toString());
                 return;
               } catch (e) {
                 try {
-                  try {
-                    const marker = setForceReloadMarker('proxy');
-                    if (marker && marker.id) setInflight(marker.id);
-                  } catch (e2) {}
+                  try { sessionStorage.setItem('fv-forcereload', String(Date.now())); } catch (e2) {}
                   location.replace(c);
                   return;
                 } catch (e2) {}
