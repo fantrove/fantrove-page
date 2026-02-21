@@ -5,6 +5,7 @@
    - Observes DOM mutations to update dynamically-inserted links
    - Intercepts clicks to ensure navigation always goes to a prefixed URL when possible
    - Now: disabled aggressive intercept/prefix in local development hosts (localhost, 127.0.0.1, *.local, 0.0.0.0)
+   - LISTENS: storage / BroadcastChannel('fv-lang') / window 'fv-language-updated' / popstate -> to re-sync prefixes
 */
 (function() {
   const SKIP_PREFIXES = ['/assets/', '/static/', '/api/', '/_next/', '/favicon.ico', '/robots.txt', '/sitemap.xml'];
@@ -50,6 +51,7 @@
   }
   
   function updateLinksIn(root, lang) {
+    if (!root || !lang) return;
     const anchors = root.querySelectorAll('a[href]');
     anchors.forEach(a => {
       const raw = a.getAttribute('href');
@@ -81,7 +83,8 @@
   // Intercept clicks on internal links that would navigate to non-prefixed paths,
   // and redirect to a prefixed variant when a selectedLang is available.
   // Also record a session mapping target path -> lang so popstate can predict language.
-  function interceptClicks(lang) {
+  // NOTE: reads current selectedLang dynamically so it reacts to language changes mid-session.
+  function interceptClicks() {
     // If running on a dev host, do not intercept aggressively
     if (isLocalDev()) return;
     // Attach single capture-phase listener
@@ -99,19 +102,26 @@
         // If link already has language prefix, allow default
         if (url.pathname.match(/^\/(en|th)(\/|$)/)) return;
         // If selectedLang available, navigate to prefixed URL
-        if (lang) {
-          // Record mapping for the target path -> lang in sessionStorage
-          try {
-            const key = url.pathname + (url.search || '');
-            const rawMap = sessionStorage.getItem('fv-nav-lang-map') || '{}';
-            const map = JSON.parse(rawMap || '{}');
-            map[key] = { lang: lang, ts: Date.now(), evidence: 'click' };
-            sessionStorage.setItem('fv-nav-lang-map', JSON.stringify(map));
-          } catch (e) {}
-          ev.preventDefault();
-          const newHref = prefixHref(raw, lang);
-          // Use location.assign so history is natural for users
-          try { window.location.assign(newHref); } catch (e) { location.href = newHref; }
+        try {
+          // read selectedLang dynamically
+          let lang = null;
+          try { lang = localStorage.getItem(LANG_KEY); } catch (e) { lang = null; }
+          if (lang) {
+            // Record mapping for the target path -> lang in sessionStorage
+            try {
+              const key = url.pathname + (url.search || '');
+              const rawMap = sessionStorage.getItem('fv-nav-lang-map') || '{}';
+              const map = JSON.parse(rawMap || '{}');
+              map[key] = { lang: lang, ts: Date.now(), evidence: 'click' };
+              sessionStorage.setItem('fv-nav-lang-map', JSON.stringify(map));
+            } catch (e) {}
+            ev.preventDefault();
+            const newHref = prefixHref(raw, lang);
+            // Use location.assign so history is natural for users
+            try { window.location.assign(newHref); } catch (e) { location.href = newHref; }
+          }
+        } catch (e) {
+          // swallow
         }
       } catch (e) {
         // swallow
@@ -154,9 +164,13 @@
   
   function runOnce() {
     const lang = ensureSelectedLang();
-    if (!lang) return;
+    if (!lang) {
+      // still attach intercept so if user selects language later, clicks will use dynamic read
+      interceptClicks();
+      return;
+    }
     updateLinksIn(document, lang);
-    interceptClicks(lang);
+    interceptClicks();
     
     // observe mutations
     const mo = new MutationObserver(muts => {
@@ -171,6 +185,39 @@
       });
     });
     mo.observe(document.body || document.documentElement, { childList: true, subtree: true });
+    
+    // LISTEN for language changes from other modules/tabs
+    try {
+      window.addEventListener('storage', (e) => {
+        if (e.key === LANG_KEY) {
+          const newLang = ensureSelectedLang();
+          if (newLang) updateLinksIn(document, newLang);
+        }
+      });
+    } catch (e) {}
+    try {
+      const bc = (typeof BroadcastChannel !== 'undefined') ? new BroadcastChannel('fv-lang') : null;
+      if (bc) {
+        bc.onmessage = (msg) => {
+          const newLang = ensureSelectedLang();
+          if (newLang) updateLinksIn(document, newLang);
+        };
+      }
+    } catch (e) {}
+    // custom event dispatched by languageManager when language changed
+    try {
+      window.addEventListener('fv-language-updated', (ev) => {
+        const newLang = (ev && ev.detail && ev.detail.language) ? ev.detail.language : ensureSelectedLang();
+        if (newLang) updateLinksIn(document, newLang);
+      });
+    } catch (e) {}
+    // popstate -> try to re-run update (helps when user navigates back)
+    try {
+      window.addEventListener('popstate', () => {
+        const newLang = ensureSelectedLang();
+        if (newLang) updateLinksIn(document, newLang);
+      });
+    } catch (e) {}
   }
   
   if (document.readyState === 'loading') {
