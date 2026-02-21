@@ -1,120 +1,144 @@
-/**
- * Language Proxy - State-Driven Version
- * - ทำงานร่วมกับ language.min.js แบบ state-driven
- * - ไม่ทำ aggressive redirect ใน production อีกต่อไป
- * - ปล่อยให้ language.min.js จัดการ history state เอง
- */
-
+/* assets/js/lang-proxy.js
+   Dynamic language prefix proxy for /en/ and /th/
+   - Place this script as early as possible in <head>
+   - If URL starts with /en or /th, it will:
+     1. set localStorage.selectedLang
+     2. fetch the "real" HTML (stripping the lang prefix)
+     3. document.write() the fetched HTML so existing language.min.js runs
+     4. keep the URL with the lang prefix in the address bar
+   - Uses sessionStorage 'fv-proxy-done' to avoid infinite loops
+   - EXTENDED: If current URL does NOT have a lang prefix but localStorage.selectedLang is set,
+     the proxy will aggressively try to locate and navigate to a prefixed version of the current page.
+   - NEW: Aggressive promotion is disabled on local/dev hosts (localhost, 127.0.0.1, *.local, 0.0.0.0)
+*/
 (function() {
   try {
-    const isLocalDev = () => {
-      const host = location.hostname || '';
-      return !host || host === 'localhost' || host === '127.0.0.1' || 
-             host === '0.0.0.0' || host.endsWith('.local') ||
-             ['3000','5173','7700','8080','3001'].includes(String(location.port));
-    };
-
-    // ถ้าเป็น local dev → ไม่ทำอะไรเลย
-    if (isLocalDev()) return;
-
-    const path = location.pathname;
-    const langMatch = path.match(/^\/(en|th)(\/|$)/i);
-    
-    // กรณีมี lang prefix ใน URL → บันทึกลง localStorage และ session
-    if (langMatch) {
-      const lang = langMatch[1].toLowerCase();
-      
-      // บันทึกภาษา
+    function isLocalDev() {
       try {
-        localStorage.setItem('selectedLang', lang);
-        sessionStorage.setItem('fv-initial-lang', lang);
-      } catch (e) {}
+        const host = location.hostname || '';
+        if (!host) return false;
+        if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0') return true;
+        if (host.endsWith('.local')) return true;
+        return false;
+      } catch (e) { return false; }
+    }
+    
+    const m = location.pathname.match(/^\/(en|th)(\/.*|$)/);
+    const sessionKey = 'fv-proxy-done';
+    // If there's an explicit lang prefix in path -> proxy for that prefix
+    if (m) {
+      const lang = m[1];
+      // Avoid repeating proxy when we've already proxied for this language in this session
+      if (sessionStorage.getItem(sessionKey) === lang) return;
+      sessionStorage.setItem(sessionKey, lang);
+      try { localStorage.setItem('selectedLang', lang); } catch (e) {}
+      // compute target path by stripping the language prefix
+      let target = m[2] || '/';
+      if (!target) target = '/';
+      if (!target.startsWith('/')) target = '/' + target;
       
-      // ตรวจสอบว่าเคย proxy แล้วหรือยัง (ป้องกัน loop)
-      const sessionKey = 'fv-proxy-done:' + lang + ':' + path;
-      if (sessionStorage.getItem(sessionKey)) return;
-      sessionStorage.setItem(sessionKey, '1');
+      // Build candidate fetch paths to try (common mapping patterns in this repo)
+      function buildCandidates(t) {
+        const candidates = [];
+        if (t === '/' || t === '') {
+          candidates.push('/home/index.html', '/index.html', '/home/');
+        } else {
+          if (t.endsWith('/')) {
+            candidates.push(t + 'index.html', t);
+          } else {
+            candidates.push(t + '/index.html', t);
+          }
+        }
+        return candidates.map(c => (c.startsWith('/') ? c : '/' + c));
+      }
       
-      // Strip prefix และ fetch เนื้อหาจริง
-      const targetPath = path.substring(lang.length + 1) || '/';
-      
-      // ลอง fetch หลาย candidate
-      const candidates = [
-        targetPath,
-        targetPath + (targetPath.endsWith('/') ? '' : '/') + 'index.html',
-        '/index.html'
-      ];
-      
-      (async function fetchContent() {
-        for (const url of candidates) {
+      (async function tryFetch() {
+        const candidates = buildCandidates(target);
+        for (const c of candidates) {
           try {
-            const res = await fetch(url, { cache: 'no-store' });
-            if (!res.ok) continue;
-            
-            const html = await res.text();
-            
-            // Inject ตัวจัดการภาษาเข้าไปใน HTML ก่อนเขียน
-            const modifiedHtml = html.replace(
-              '</head>',
-              `<script>window.__INITIAL_LANG__ = '${lang}';</script></head>`
-            );
-            
+            const resp = await fetch(c, { cache: 'no-store' });
+            if (!resp.ok) continue;
+            const text = await resp.text();
             document.open();
-            document.write(modifiedHtml);
+            document.write(text);
             document.close();
-            
-            // บันทึก history state เริ่มต้น
             try {
-              history.replaceState({
-                language: lang,
-                previousLanguage: lang,
-                timestamp: Date.now(),
-                path: path
-              }, '', location.pathname + location.search + location.hash);
+              history.replaceState({}, '', location.pathname + location.search + location.hash);
             } catch (e) {}
-            
             return;
           } catch (e) {}
         }
-        
-        // ถ้า fetch ไม่ได้ → redirect ไปหน้าต้นฉบับ
-        location.replace(targetPath);
+        try {
+          const fallback = target === '/' ? '/' : target;
+          location.replace(fallback);
+        } catch (e) {}
       })();
-      
       return;
     }
     
-    // กรณีไม่มี lang prefix → ตรวจสอบ localStorage
-    (function checkStoredLang() {
-      let storedLang = null;
-      try {
-        storedLang = localStorage.getItem('selectedLang');
-      } catch (e) {}
+    // If there's no lang prefix in path, try to proactively find prefixed variant
+    (function tryPromoteToPrefixed() {
+      // Do nothing early if no selectedLang present
+      let sel = null;
+      try { sel = localStorage.getItem('selectedLang'); } catch (e) { sel = null; }
+      if (!sel) return;
       
-      if (!storedLang || storedLang === 'en') return;
+      // If running on local dev host, don't try aggressive promotion
+      if (isLocalDev()) return;
       
-      // ป้องกัน redirect loop
-      const checkKey = 'fv-check-prefix:' + storedLang + ':' + path;
-      if (sessionStorage.getItem(checkKey)) return;
-      sessionStorage.setItem(checkKey, '1');
+      // Avoid looping: store a per-path+lang marker for this session
+      const markKey = 'fv-proxy-done:' + sel + ':' + location.pathname;
+      if (sessionStorage.getItem(markKey)) return;
+      sessionStorage.setItem(markKey, '1');
       
-      // ตรวจสอบว่ามี prefixed version หรือไม่
-      const prefixedPath = '/' + storedLang + (path === '/' ? '' : path);
-      
-      fetch(prefixedPath, { method: 'HEAD', cache: 'no-store' })
-        .then(res => {
-          if (res.ok) {
-            // มี prefixed version → redirect ไปที่นั่น
-            const newUrl = prefixedPath + location.search + location.hash;
-            location.replace(newUrl);
+      // Build candidate prefixed paths for current location.pathname
+      function buildPrefixedCandidatesForCurrent(selLang) {
+        const t = location.pathname || '/';
+        const base = t.endsWith('/') || t === '/' ? t : t;
+        const candidates = [];
+        const pref = '/' + selLang;
+        // prefixed direct
+        if (base === '/' || base === '') {
+          candidates.push(pref + '/', pref + '/home/', pref + '/home/index.html', pref + '/index.html');
+        } else {
+          if (base.endsWith('/')) {
+            candidates.push(pref + base, pref + base + 'index.html');
+          } else {
+            candidates.push(pref + base, pref + base + '/index.html');
           }
-        })
-        .catch(() => {
-          // ไม่มี prefixed version → อยู่หน้านี้ต่อ ให้ language.min.js จัดการ
-        });
+        }
+        // also try with /home variants
+        candidates.push(pref + '/home/', pref + '/home/index.html');
+        return candidates;
+      }
+      
+      (async function tryFetchPrefixed() {
+        const candidates = buildPrefixedCandidatesForCurrent(sel);
+        for (const c of candidates) {
+          try {
+            const resp = await fetch(c, { method: 'HEAD', cache: 'no-store', credentials: 'same-origin' });
+            if (resp && resp.ok) {
+              // Found a prefixed page: navigate user there (preserve search/hash)
+              try {
+                const urlObj = new URL(c, location.origin);
+                urlObj.search = location.search || '';
+                urlObj.hash = location.hash || '';
+                location.replace(urlObj.toString());
+                return;
+              } catch (e) {
+                try { location.replace(c); return; } catch (e2) {}
+              }
+            }
+          } catch (e) {
+            // try next
+          }
+        }
+        // nothing found -> do nothing and allow unprefixed page to continue loading
+      })();
     })();
     
   } catch (err) {
-    console.error('lang-proxy error:', err);
+    // fail silently; do not block page
+    console.error('lang-proxy error', err);
   }
 })();
