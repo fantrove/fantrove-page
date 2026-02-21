@@ -10,6 +10,8 @@
    - EXTENDED: If current URL does NOT have a lang prefix but localStorage.selectedLang is set,
      the proxy will aggressively try to locate and navigate to a prefixed version of the current page.
    - NEW: Aggressive promotion is disabled on local/dev hosts (localhost, 127.0.0.1, *.local, 0.0.0.0)
+   - NEW: When proxy performs a navigation or document.write resulting in mismatch between URL and in-memory DOM,
+     it sets a sessionStorage marker (fv-forcereload) and triggers a navigation/reload to force a clean fetch from the host.
 */
 (function() {
   try {
@@ -75,6 +77,15 @@
             try {
               history.replaceState({}, '', location.pathname + location.search + location.hash);
             } catch (e) {}
+            // Set a session marker to force a clean reload once after the proxied document.write.
+            // This reduces UI inconsistency on hosts that rewrite paths (Cloudflare Pages, etc.)
+            try { sessionStorage.setItem('fv-forcereload', String(Date.now())); } catch (e) {}
+            try {
+              // force navigation to same URL so the host serves the correct (prefixed) variant normally
+              location.replace(location.pathname + location.search + location.hash);
+            } catch (e) {
+              try { location.reload(); } catch (e2) {}
+            }
             return;
           } catch (e) {}
         }
@@ -133,10 +144,16 @@
                 const urlObj = new URL(c, location.origin);
                 urlObj.search = location.search || '';
                 urlObj.hash = location.hash || '';
+                // set marker so the landing page can perform a single clean reload if necessary
+                try { sessionStorage.setItem('fv-forcereload', String(Date.now())); } catch (e) {}
                 location.replace(urlObj.toString());
                 return;
               } catch (e) {
-                try { location.replace(c); return; } catch (e2) {}
+                try {
+                  try { sessionStorage.setItem('fv-forcereload', String(Date.now())); } catch (e2) {}
+                  location.replace(c);
+                  return;
+                } catch (e2) {}
               }
             }
           } catch (e) {
