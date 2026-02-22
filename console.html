@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fantrove Console Pro</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --bg-hover: #30363d;
+            --border-color: #30363d;
+            --text-primary: #c9d1d9;
+            --text-secondary: #8b949e;
+            --accent-blue: #58a6ff;
+            --accent-green: #238636;
+            --accent-yellow: #d29922;
+            --accent-red: #da3633;
+            --accent-purple: #8957e5;
+            --accent-cyan: #39c5cf;
+            --accent-orange: #e3b341;
+            --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Fira Code', monospace;
+            --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .brand-icon {
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn:hover {
+            background: var(--bg-hover);
+            border-color: var(--text-secondary);
+        }
+
+        .btn.active {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+            color: white;
+        }
+
+        .btn.danger:hover {
+            background: rgba(218, 54, 51, 0.2);
+            color: var(--accent-red);
+        }
+
+        /* Connection Status */
+        .connection-bar {
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 6px 16px;
+            font-size: 11px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-green);
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.warning { background: var(--accent-yellow); }
+        .status-dot.error { background: var(--accent-red); animation: none; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* Filters */
+        .toolbar {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 8px 16px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 4px;
+        }
+
+        .filter-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s;
+        }
+
+        .filter-btn:hover { color: var(--text-primary); }
+        .filter-btn.active { background: var(--bg-tertiary); color: var(--text-primary); }
+
+        .filter-btn[data-level="error"].active { color: var(--accent-red); border-color: var(--accent-red); }
+        .filter-btn[data-level="warn"].active { color: var(--accent-yellow); border-color: var(--accent-yellow); }
+        .filter-btn[data-level="info"].active { color: var(--accent-blue); border-color: var(--accent-blue); }
+        .filter-btn[data-level="log"].active { color: var(--text-primary); border-color: var(--text-primary); }
+        .filter-btn[data-level="debug"].active { color: var(--accent-purple); border-color: var(--accent-purple); }
+
+        .badge {
+            background: var(--bg-primary);
+            padding: 1px 5px;
+            border-radius: 10px;
+            font-size: 10px;
+            min-width: 16px;
+            text-align: center;
+        }
+
+        .search-box {
+            margin-left: auto;
+            position: relative;
+        }
+
+        .search-box input {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 4px 10px 4px 28px;
+            border-radius: 4px;
+            font-size: 12px;
+            width: 200px;
+            font-family: inherit;
+        }
+
+        .search-box::before {
+            content: '🔍';
+            position: absolute;
+            left: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 11px;
+            opacity: 0.5;
+        }
+
+        /* Console Output */
+        .console-container {
+            flex: 1;
+            overflow-y: auto;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .console-container::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        .console-container::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        .console-container::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 5px;
+            border: 2px solid var(--bg-primary);
+        }
+
+        .log-entry {
+            padding: 6px 16px;
+            border-left: 3px solid transparent;
+            display: flex;
+            gap: 12px;
+            animation: slideIn 0.15s ease;
+            position: relative;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-5px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .log-entry:hover {
+            background: rgba(48, 54, 61, 0.5);
+        }
+
+        .log-entry.error { 
+            border-left-color: var(--accent-red); 
+            background: rgba(218, 54, 51, 0.05);
+        }
+        .log-entry.warn { border-left-color: var(--accent-yellow); }
+        .log-entry.info { border-left-color: var(--accent-blue); }
+        .log-entry.log { border-left-color: var(--text-secondary); }
+        .log-entry.debug { border-left-color: var(--accent-purple); }
+        .log-entry.success { border-left-color: var(--accent-green); }
+
+        .log-meta {
+            display: flex;
+            gap: 8px;
+            color: var(--text-secondary);
+            font-size: 11px;
+            user-select: none;
+            white-space: nowrap;
+        }
+
+        .log-time { opacity: 0.7; }
+        .log-source { 
+            color: var(--accent-cyan); 
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .log-type {
+            text-transform: uppercase;
+            font-size: 9px;
+            padding: 1px 4px;
+            border-radius: 3px;
+            background: var(--bg-tertiary);
+        }
+
+        .log-content {
+            flex: 1;
+            word-break: break-word;
+            white-space: pre-wrap;
+        }
+
+        .log-content .error-name { color: var(--accent-red); font-weight: 600; }
+        .log-content .error-message { color: #ff6b6b; }
+        .log-content .stack-trace {
+            margin-top: 4px;
+            padding-left: 16px;
+            color: var(--text-secondary);
+            font-size: 11px;
+            border-left: 2px solid var(--border-color);
+        }
+
+        /* Object Preview */
+        .object-preview {
+            color: var(--accent-blue);
+            cursor: pointer;
+            text-decoration: underline;
+            text-decoration-style: dotted;
+        }
+
+        .object-preview:hover {
+            color: var(--accent-cyan);
+        }
+
+        .expanded-object {
+            margin-top: 6px;
+            padding: 8px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+
+        .expanded-object .key { color: var(--accent-blue); }
+        .expanded-object .string { color: var(--accent-green); }
+        .expanded-object .number { color: var(--accent-yellow); }
+        .expanded-object .boolean { color: var(--accent-purple); }
+        .expanded-object .null { color: var(--accent-red); }
+
+        /* Empty State */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-secondary);
+            gap: 12px;
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            opacity: 0.3;
+        }
+
+        /* Input Area */
+        .input-section {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            padding: 12px 16px;
+        }
+
+        .input-header {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 8px;
+            align-items: flex-start;
+        }
+
+        .input-prompt {
+            color: var(--accent-green);
+            font-family: var(--font-mono);
+            font-size: 14px;
+            margin-top: 8px;
+        }
+
+        .console-input {
+            flex: 1;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            resize: vertical;
+            min-height: 36px;
+            max-height: 120px;
+            outline: none;
+        }
+
+        .console-input:focus {
+            border-color: var(--accent-blue);
+        }
+
+        /* Footer */
+        .footer {
+            background: var(--bg-tertiary);
+            border-top: 1px solid var(--border-color);
+            padding: 6px 16px;
+            font-size: 11px;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .footer-stats {
+            display: flex;
+            gap: 16px;
+        }
+
+        .stat { display: flex; gap: 4px; }
+        .stat-value { color: var(--text-primary); font-weight: 600; }
+        .stat-value.error { color: var(--accent-red); }
+        .stat-value.warn { color: var(--accent-yellow); }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            animation: slideUp 0.3s ease;
+            z-index: 1000;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="brand">
+            <div class="brand-icon">◉</div>
+            <span>Fantrove Console Pro</span>
+        </div>
+        <div class="header-actions">
+            <button class="btn" onclick="consolePro.toggleCapture()" id="capture-btn">
+                <span id="capture-icon">⏸</span> Pause
+            </button>
+            <button class="btn" onclick="consolePro.exportLogs()">📥 Export</button>
+            <button class="btn danger" onclick="consolePro.clear()">🗑 Clear</button>
+        </div>
+    </div>
+
+    <div class="connection-bar">
+        <div class="status-indicator">
+            <span class="status-dot" id="status-dot"></span>
+            <span id="status-text">Listening for logs...</span>
+        </div>
+        <div>
+            <span style="opacity: 0.7;">Session: <span id="session-id">--</span></span>
+        </div>
+    </div>
+
+    <div class="toolbar">
+        <div class="filter-group">
+            <button class="filter-btn active" data-level="all" onclick="consolePro.setFilter('all')">
+                All <span class="badge" id="count-all">0</span>
+            </button>
+        </div>
+        <div class="filter-group">
+            <button class="filter-btn active" data-level="error" onclick="consolePro.setFilter('error')">
+                Errors <span class="badge" id="count-error">0</span>
+            </button>
+            <button class="filter-btn active" data-level="warn" onclick="consolePro.setFilter('warn')">
+                Warnings <span class="badge" id="count-warn">0</span>
+            </button>
+            <button class="filter-btn active" data-level="info" onclick="consolePro.setFilter('info')">
+                Info <span class="badge" id="count-info">0</span>
+            </button>
+            <button class="filter-btn active" data-level="log" onclick="consolePro.setFilter('log')">
+                Logs <span class="badge" id="count-log">0</span>
+            </button>
+            <button class="filter-btn active" data-level="debug" onclick="consolePro.setFilter('debug')">
+                Debug <span class="badge" id="count-debug">0</span>
+            </button>
+        </div>
+        <div class="search-box">
+            <input type="text" id="search-input" placeholder="Search logs..." oninput="consolePro.search(this.value)">
+        </div>
+    </div>
+
+    <div class="console-container" id="console-output">
+        <div class="empty-state">
+            <div class="empty-icon">📡</div>
+            <div>Waiting for logs from your application...</div>
+            <div style="font-size: 11px; opacity: 0.6; margin-top: 8px;">
+                Use FantroveConsole.log() or standard console.log() in your app
+            </div>
+        </div>
+    </div>
+
+    <div class="input-section">
+        <div class="input-header">
+            <span>Execute JavaScript (Enter to run)</span>
+            <span style="opacity: 0.6;">Auto-clear: 7 days</span>
+        </div>
+        <div class="input-wrapper">
+            <span class="input-prompt">❯</span>
+            <textarea class="console-input" id="js-input" rows="1" 
+                placeholder="console.log('test') or any JS code..."
+                onkeydown="consolePro.handleInput(event)"
+                oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="footer-stats">
+            <span class="stat">Total: <span class="stat-value" id="stat-total">0</span></span>
+            <span class="stat">Errors: <span class="stat-value error" id="stat-errors">0</span></span>
+            <span class="stat">Warnings: <span class="stat-value warn" id="stat-warns">0</span></span>
+        </div>
+        <div class="footer-stats">
+            <span id="storage-info">Storage: --</span>
+            <span id="uptime">00:00:00</span>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * Fantrove Console Pro
+         * Advanced logging system with dual API support
+         */
+        class FantroveConsolePro {
+            constructor() {
+                this.logs = [];
+                this.activeFilters = new Set(['error', 'warn', 'info', 'log', 'debug']);
+                this.searchQuery = '';
+                this.isCapturing = true;
+                this.sessionId = this.generateId();
+                this.startTime = Date.now();
+                this.maxLogs = 1000;
+                this.originalConsole = {};
+                
+                this.init();
+            }
+
+            init() {
+                // Setup UI
+                document.getElementById('session-id').textContent = this.sessionId;
+                
+                // Setup storage with 7-day TTL
+                this.setupStorage();
+                
+                // Hijack native console
+                this.hijackNativeConsole();
+                
+                // Setup error catching
+                this.setupErrorHandling();
+                
+                // Setup cross-tab communication
+                this.setupMessageHandling();
+                
+                // Start timers
+                this.startUptimeTimer();
+                this.updateStorageInfo();
+                
+                // Load existing logs
+                this.loadPersistedLogs();
+                
+                // Welcome message
+                this.system('Fantrove Console Pro initialized');
+                this.system(`Session: ${this.sessionId}`);
+            }
+
+            generateId() {
+                return Math.random().toString(36).substring(2, 10).toUpperCase();
+            }
+
+            /* Storage Management (7-day TTL) */
+            setupStorage() {
+                this.storageKey = `fantrove_pro_${this.sessionId}`;
+                this.cleanupExpiredLogs();
+                
+                // Auto-cleanup every hour
+                setInterval(() => this.cleanupExpiredLogs(), 3600000);
+            }
+
+            cleanupExpiredLogs() {
+                const sevenDays = 7 * 24 * 60 * 60 * 1000;
+                const now = Date.now();
+                
+                // Clean old sessions
+                Object.keys(localStorage).forEach(key => {
+                    if (key.startsWith('fantrove_pro_')) {
+                        try {
+                            const data = JSON.parse(localStorage.getItem(key));
+                            if (data.timestamp && (now - data.timestamp > sevenDays)) {
+                                localStorage.removeItem(key);
+                            }
+                        } catch (e) {
+                            localStorage.removeItem(key);
+                        }
+                    }
+                });
+            }
+
+            persistLogs() {
+                const data = {
+                    timestamp: Date.now(),
+                    logs: this.logs.slice(-100) // Keep last 100 only
+                };
+                try {
+                    localStorage.setItem(this.storageKey, JSON.stringify(data));
+                } catch (e) {
+                    this.warn('Storage full, clearing old logs');
+                    localStorage.clear();
+                }
+                this.updateStorageInfo();
+            }
+
+            loadPersistedLogs() {
+                const data = localStorage.getItem(this.storageKey);
+                if (data) {
+                    try {
+                        const parsed = JSON.parse(data);
+                        if (parsed.logs) {
+                            parsed.logs.forEach(log => this.addLog(log, false));
+                        }
+                    } catch (e) {
+                        // Ignore corrupted data
+                    }
+                }
+            }
+
+            /* Native Console Hijacking */
+            hijackNativeConsole() {
+                const methods = ['log', 'info', 'warn', 'error', 'debug'];
+                
+                methods.forEach(method => {
+                    this.originalConsole[method] = console[method];
+                    
+                    console[method] = (...args) => {
+                        // Call original
+                        this.originalConsole[method].apply(console, args);
+                        
+                        // Capture if enabled
+                        if (this.isCapturing) {
+                            this.processNativeLog(method, args);
+                        }
+                    };
+                });
+
+                // Special handling for console.error with stack traces
+                console.error = (...args) => {
+                    this.originalConsole.error.apply(console, args);
+                    if (this.isCapturing) {
+                        const error = args.find(arg => arg instanceof Error);
+                        if (error) {
+                            this.processNativeLog('error', args, error.stack);
+                        } else {
+                            this.processNativeLog('error', args);
+                        }
+                    }
+                };
+            }
+
+            processNativeLog(level, args, stackTrace = null) {
+                const message = args.map(arg => this.stringifyArg(arg)).join(' ');
+                const source = this.detectSource();
+                
+                this.addLog({
+                    level,
+                    message,
+                    source: `Console.${level}`,
+                    stackTrace,
+                    timestamp: Date.now(),
+                    type: 'native'
+                });
+            }
+
+            /* Error Handling */
+            setupErrorHandling() {
+                // Global error handler
+                window.onerror = (message, source, lineno, colno, error) => {
+                    this.addLog({
+                        level: 'error',
+                        message: `${message}`,
+                        source: `${source}:${lineno}:${colno}`,
+                        stackTrace: error?.stack,
+                        timestamp: Date.now(),
+                        type: 'exception'
+                    });
+                    return false;
+                };
+
+                // Unhandled promise rejections
+                window.onunhandledrejection = (event) => {
+                    this.addLog({
+                        level: 'error',
+                        message: `Unhandled Promise Rejection: ${event.reason}`,
+                        source: 'Promise',
+                        stackTrace: event.reason?.stack,
+                        timestamp: Date.now(),
+                        type: 'promise'
+                    });
+                };
+
+                // Network errors (optional)
+                window.addEventListener('error', (e) => {
+                    if (e.target.tagName === 'IMG' || e.target.tagName === 'SCRIPT') {
+                        this.addLog({
+                            level: 'error',
+                            message: `Failed to load ${e.target.tagName.toLowerCase()}: ${e.target.src}`,
+                            source: 'Resource',
+                            timestamp: Date.now(),
+                            type: 'resource'
+                        });
+                    }
+                }, true);
+            }
+
+            /* Message Handling (Cross-tab & PostMessage) */
+            setupMessageHandling() {
+                // Listen for postMessage
+                window.addEventListener('message', (e) => {
+                    if (e.data && e.data.type === 'FANTROVE_LOG') {
+                        this.receiveExternalLog(e.data.payload);
+                    }
+                });
+
+                // Listen for storage events (cross-tab)
+                window.addEventListener('storage', (e) => {
+                    if (e.key === 'fantrove_broadcast') {
+                        try {
+                            const data = JSON.parse(e.newValue);
+                            if (data && data.session !== this.sessionId) {
+                                this.receiveExternalLog(data);
+                            }
+                        } catch (err) {}
+                    }
+                });
+            }
+
+            receiveExternalLog(data) {
+                this.addLog({
+                    level: data.level || 'info',
+                    message: data.message,
+                    source: data.source || 'External',
+                    meta: data.meta,
+                    timestamp: Date.now(),
+                    type: 'external'
+                });
+            }
+
+            /* Core Logging */
+            addLog(log, render = true) {
+                log.id = Date.now() + Math.random();
+                this.logs.push(log);
+                
+                // Limit max logs
+                if (this.logs.length > this.maxLogs) {
+                    this.logs.shift();
+                }
+                
+                if (render && this.shouldDisplay(log)) {
+                    this.renderLog(log);
+                    this.persistLogs();
+                }
+                
+                this.updateStats();
+            }
+
+            shouldDisplay(log) {
+                if (!this.activeFilters.has(log.level)) return false;
+                if (!this.searchQuery) return true;
+                
+                const query = this.searchQuery.toLowerCase();
+                return (log.message || '').toLowerCase().includes(query) ||
+                       (log.source || '').toLowerCase().includes(query);
+            }
+
+            renderLog(log) {
+                const output = document.getElementById('console-output');
+                
+                // Remove empty state
+                if (output.querySelector('.empty-state')) {
+                    output.innerHTML = '';
+                }
+
+                const entry = document.createElement('div');
+                entry.className = `log-entry ${log.level}`;
+                
+                const time = new Date(log.timestamp).toLocaleTimeString('en-GB', {
+                    hour12: false,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+
+                // Format message with syntax highlighting
+                let messageHtml = this.formatMessage(log.message);
+                
+                // Add stack trace if exists
+                let stackHtml = '';
+                if (log.stackTrace) {
+                    const cleanStack = log.stackTrace
+                        .split('\n')
+                        .slice(1, 6) // Limit stack lines
+                        .map(line => line.trim())
+                        .join('<br>');
+                    stackHtml = `<div class="stack-trace">${cleanStack}</div>`;
+                }
+
+                // Type badge
+                const typeColors = {
+                    native: '',
+                    exception: 'background:' + getComputedStyle(document.documentElement).getPropertyValue('--accent-red'),
+                    promise: 'background:' + getComputedStyle(document.documentElement).getPropertyValue('--accent-purple'),
+                    external: 'background:' + getComputedStyle(document.documentElement).getPropertyValue('--accent-cyan')
+                };
+
+                entry.innerHTML = `
+                    <div class="log-meta">
+                        <span class="log-time">${time}</span>
+                        <span class="log-source" title="${log.source}">${log.source}</span>
+                        ${log.type !== 'native' ? `<span class="log-type" style="${typeColors[log.type] || ''}">${log.type}</span>` : ''}
+                    </div>
+                    <div class="log-content">
+                        ${messageHtml}
+                        ${stackHtml}
+                    </div>
+                `;
+
+                output.appendChild(entry);
+                output.scrollTop = output.scrollHeight;
+            }
+
+            formatMessage(msg) {
+                if (typeof msg !== 'string') msg = String(msg);
+                
+                // Highlight common patterns
+                return msg
+                    .replace(/Error:?\s*([^\n]+)/gi, '<span class="error-name">Error: $1</span>')
+                    .replace(/(https?:\/\/[^\s]+)/g, '<span style="color:var(--accent-blue);text-decoration:underline">$1</span>')
+                    .replace(/\b(undefined|null)\b/g, '<span style="color:var(--accent-red)">$1</span>')
+                    .replace(/\b(true|false)\b/g, '<span style="color:var(--accent-purple)">$1</span>')
+                    .replace(/\b(\d+)\b/g, '<span style="color:var(--accent-yellow)">$1</span>');
+            }
+
+            stringifyArg(arg) {
+                if (arg === null) return 'null';
+                if (arg === undefined) return 'undefined';
+                if (typeof arg === 'object') {
+                    try {
+                        return JSON.stringify(arg);
+                    } catch (e) {
+                        return '[Object]';
+                    }
+                }
+                if (typeof arg === 'function') return arg.toString().slice(0, 50) + '...';
+                return String(arg);
+            }
+
+            detectSource() {
+                try {
+                    const err = new Error();
+                    const stack = err.stack.split('\n');
+                    const caller = stack[3] || stack[2];
+                    const match = caller?.match(/at\s+(.+?):(\d+):(\d+)/);
+                    return match ? match[1].split('/').pop() : 'Unknown';
+                } catch (e) {
+                    return 'Unknown';
+                }
+            }
+
+            /* Public API Methods */
+            log(message, meta) { this.externalLog('log', message, meta); }
+            info(message, meta) { this.externalLog('info', message, meta); }
+            warn(message, meta) { this.externalLog('warn', message, meta); }
+            error(message, meta) { this.externalLog('error', message, meta); }
+            debug(message, meta) { this.externalLog('debug', message, meta); }
+            success(message, meta) { this.externalLog('success', message, meta); }
+            system(message) { this.externalLog('info', message, null, 'System'); }
+
+            externalLog(level, message, meta, source) {
+                this.addLog({
+                    level,
+                    message: typeof message === 'object' ? JSON.stringify(message) : message,
+                    source: source || 'API',
+                    meta,
+                    timestamp: Date.now(),
+                    type: 'external'
+                });
+
+                // Broadcast to other tabs
+                this.broadcast({
+                    level,
+                    message,
+                    source: source || 'API',
+                    meta,
+                    session: this.sessionId
+                });
+            }
+
+            broadcast(data) {
+                try {
+                    localStorage.setItem('fantrove_broadcast', JSON.stringify(data));
+                } catch (e) {}
+            }
+
+            /* UI Controls */
+            setFilter(level) {
+                if (level === 'all') {
+                    const allActive = this.activeFilters.size === 5;
+                    const newSet = allActive ? new Set() : new Set(['error', 'warn', 'info', 'log', 'debug']);
+                    this.activeFilters = newSet;
+                    
+                    document.querySelectorAll('.filter-btn[data-level]').forEach(btn => {
+                        btn.classList.toggle('active', !allActive);
+                    });
+                } else {
+                    const btn = document.querySelector(`[data-level="${level}"]`);
+                    if (this.activeFilters.has(level)) {
+                        this.activeFilters.delete(level);
+                        btn.classList.remove('active');
+                    } else {
+                        this.activeFilters.add(level);
+                        btn.classList.add('active');
+                    }
+                }
+                this.refreshDisplay();
+            }
+
+            search(query) {
+                this.searchQuery = query;
+                this.refreshDisplay();
+            }
+
+            refreshDisplay() {
+                const output = document.getElementById('console-output');
+                output.innerHTML = '';
+                
+                const filtered = this.logs.filter(log => this.shouldDisplay(log));
+                
+                if (filtered.length === 0) {
+                    output.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">🔍</div>
+                            <div>No matching logs</div>
+                        </div>
+                    `;
+                } else {
+                    filtered.forEach(log => this.renderLog(log));
+                }
+            }
+
+            handleInput(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    const input = document.getElementById('js-input');
+                    const code = input.value.trim();
+                    
+                    if (code) {
+                        this.executeCode(code);
+                        input.value = '';
+                        input.style.height = 'auto';
+                    }
+                }
+            }
+
+            executeCode(code) {
+                this.system(`> ${code}`);
+                
+                try {
+                    const result = eval(code);
+                    if (result !== undefined) {
+                        this.system(`< ${this.stringifyArg(result)}`);
+                    }
+                } catch (err) {
+                    this.error(`✖ ${err.message}`);
+                }
+            }
+
+            toggleCapture() {
+                this.isCapturing = !this.isCapturing;
+                const btn = document.getElementById('capture-btn');
+                const icon = document.getElementById('capture-icon');
+                
+                if (this.isCapturing) {
+                    btn.classList.remove('active');
+                    icon.textContent = '⏸';
+                    btn.innerHTML = '<span id="capture-icon">⏸</span> Pause';
+                    this.system('Log capture resumed');
+                } else {
+                    btn.classList.add('active');
+                    btn.innerHTML = '<span id="capture-icon">▶</span> Resume';
+                    this.warn('Log capture paused');
+                }
+            }
+
+            clear() {
+                this.logs = [];
+                localStorage.removeItem(this.storageKey);
+                document.getElementById('console-output').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">🧹</div>
+                        <div>Console cleared</div>
+                    </div>
+                `;
+                this.updateStats();
+                this.showToast('Console cleared');
+            }
+
+            exportLogs() {
+                const data = {
+                    exported: new Date().toISOString(),
+                    session: this.sessionId,
+                    url: location.href,
+                    logs: this.logs
+                };
+                
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `fantrove-logs-${this.sessionId}-${Date.now()}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                this.showToast('Logs exported');
+            }
+
+            updateStats() {
+                const counts = { all: this.logs.length, error: 0, warn: 0, info: 0, log: 0, debug: 0 };
+                this.logs.forEach(log => {
+                    if (counts[log.level] !== undefined) counts[log.level]++;
+                });
+
+                Object.keys(counts).forEach(key => {
+                    const el = document.getElementById(`count-${key}`);
+                    if (el) el.textContent = counts[key];
+                });
+
+                document.getElementById('stat-total').textContent = counts.all;
+                document.getElementById('stat-errors').textContent = counts.error;
+                document.getElementById('stat-warns').textContent = counts.warn;
+            }
+
+            updateStorageInfo() {
+                let total = 0;
+                Object.keys(localStorage).forEach(key => {
+                    if (key.startsWith('fantrove_')) {
+                        total += localStorage.getItem(key).length;
+                    }
+                });
+                document.getElementById('storage-info').textContent = `Storage: ${(total/1024).toFixed(1)}KB`;
+            }
+
+            startUptimeTimer() {
+                setInterval(() => {
+                    const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
+                    const h = Math.floor(elapsed / 3600).toString().padStart(2, '0');
+                    const m = Math.floor((elapsed % 3600) / 60).toString().padStart(2, '0');
+                    const s = (elapsed % 60).toString().padStart(2, '0');
+                    document.getElementById('uptime').textContent = `${h}:${m}:${s}`;
+                }, 1000);
+            }
+
+            showToast(msg) {
+                const toast = document.createElement('div');
+                toast.className = 'toast';
+                toast.textContent = msg;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+            }
+        }
+
+        // Initialize
+        window.consolePro = new FantroveConsolePro();
+
+        // Global API for external use
+        window.FantroveConsole = {
+            log: (m, meta) => consolePro.log(m, meta),
+            info: (m, meta) => consolePro.info(m, meta),
+            warn: (m, meta) => consolePro.warn(m, meta),
+            error: (m, meta) => consolePro.error(m, meta),
+            debug: (m, meta) => consolePro.debug(m, meta),
+            success: (m, meta) => consolePro.success(m, meta)
+        };
+    </script>
+</body>
+</html>
