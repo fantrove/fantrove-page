@@ -1,29 +1,24 @@
 /**
- * lang-coordinator.js v1.0
+ * lang-coordinator.js v1.1
  *
- * จุดประสานกลางสำหรับการจัดการภาษา / URL prefix / history navigation
+ * Coordinator ปรับปรุง: บันทึก 'last language change' (fv-last-lang-change)
+ * และใช้ข้อมูลนี้เป็นเกณฑ์ในการตัดสินเมื่อ navigation แบบย้อนกลับ
  *
- * หน้าที่หลัก:
- *  - ดักจับ history.pushState / replaceState แล้วส่ง event 'fv:history'
- *  - ฟัง popstate / pageshow / storage events
- *  - เมื่อตรวจพบ navigation แบบย้อนกลับ (popstate) ให้ดู mapping (sessionStorage 'fv-nav-lang-map')
- *    แล้วแก้ URL ให้มี prefix ที่สอดคล้องกับภาษาใน mapping (replaceState)
- *  - ฟัง event 'languageChange' ที่ language manager ส่งมา (หรือ localStorage change)
- *    เพื่อบันทึก mapping ของ URL ปัจจุบัน -> language และปรับ URL ให้มี prefix ถ้าจำเป็น
- *  - บังคับ: ถ้า URL ปัจจุบันไม่มี prefix ให้เติม prefix จาก selectedLang และ replaceState (ไม่ reload)
- *
- * ติดตั้ง: ให้โหลดไฟล์นี้ใน <head> หลัง lang-proxy.js และ lang-sync.js แต่ก่อน language.min.js
+ * โหลดไฟล์นี้หลัง lang-proxy.js/lang-sync.js แต่ก่อน language.min.js
  */
 
 (function() {
   "use strict";
 
   const LS_KEY = 'selectedLang';
+  const LAST_CHANGE_KEY = 'fv-last-lang-change'; // localStorage: { lang, ts, source }
   const NAV_MAP_KEY = 'fv-nav-lang-map'; // sessionStorage map: { "<path+search>": {lang, ts, source} }
   const SUPPORTED_LANGS = ['en', 'th'];
   const DEFAULT_LANG = 'en';
 
-  // Helper: parse lang from path
+  function nowTs() { return Date.now(); }
+
+  // Helpers
   function getLangFromPath(path) {
     const m = path.match(/^\/(en|th)(\/|$)/);
     return m ? m[1] : null;
@@ -35,7 +30,6 @@
 
   function shouldPrefixPath(path) {
     if (!path.startsWith('/')) return false;
-    // reuse same skip list as lang-links if present
     const SKIP_PATHS = window.FVLangLinks ? ['/assets/', '/static/', '/api/', '/_next/', '/favicon.ico', '/robots.txt', '/sitemap.xml', '/sw.js', '/manifest.json', '/.well-known/'] : ['/assets/'];
     for (const skip of SKIP_PATHS) {
       if (path.startsWith(skip)) return false;
@@ -43,100 +37,97 @@
     return true;
   }
 
-  function addLangPrefixToHref(href, lang) {
-    if (!window.FVLangLinks) return href;
-    return window.FVLangLinks.addLangPrefix(href, lang);
-  }
-
   function getStoredLang() {
     try {
       const l = localStorage.getItem(LS_KEY);
       return SUPPORTED_LANGS.includes(l) ? l : null;
-    } catch (e) {
-      return null;
-    }
+    } catch (e) { return null; }
   }
 
-  function setStoredLang(lang) {
+  function setStoredLang(lang, source='coordinator-set') {
     try {
       if (!SUPPORTED_LANGS.includes(lang)) return;
       localStorage.setItem(LS_KEY, lang);
-      // Also broadcast an event for same-tab listeners
-      window.dispatchEvent(new CustomEvent('languageChange', { detail: { language: lang } }));
+      // dispatch languageChange in-tab
+      window.dispatchEvent(new CustomEvent('languageChange', { detail: { language: lang, source } }));
+    } catch (e) {}
+  }
+
+  function getLastChange() {
+    try {
+      return JSON.parse(localStorage.getItem(LAST_CHANGE_KEY) || 'null');
+    } catch (e) { return null; }
+  }
+
+  function setLastChange(lang, source='user') {
+    try {
+      if (!SUPPORTED_LANGS.includes(lang)) return;
+      const payload = { lang: lang, ts: nowTs(), source: source };
+      localStorage.setItem(LAST_CHANGE_KEY, JSON.stringify(payload));
     } catch (e) {}
   }
 
   function loadNavMap() {
-    try {
-      return JSON.parse(sessionStorage.getItem(NAV_MAP_KEY) || '{}');
-    } catch (e) {
-      return {};
-    }
+    try { return JSON.parse(sessionStorage.getItem(NAV_MAP_KEY) || '{}'); } catch (e) { return {}; }
   }
-
   function saveNavMap(map) {
-    try {
-      sessionStorage.setItem(NAV_MAP_KEY, JSON.stringify(map));
-    } catch (e) {}
+    try { sessionStorage.setItem(NAV_MAP_KEY, JSON.stringify(map)); } catch (e) {}
   }
-
   function recordNavLangForPath(pathKey, lang, source='coordinator') {
     try {
       const map = loadNavMap();
-      map[pathKey] = { lang: lang, ts: Date.now(), source };
+      map[pathKey] = { lang: lang, ts: nowTs(), source };
       saveNavMap(map);
     } catch (e) {}
   }
-
   function pathKeyForLocation(loc) {
     return (loc.pathname || '') + (loc.search || '');
   }
 
-  // Monkeypatch history methods to emit event
+  // Monkeypatch history to emit 'fv:history'
   (function() {
     const origPush = history.pushState;
     history.pushState = function(state, title, url) {
-      const result = origPush.apply(this, arguments);
+      const res = origPush.apply(this, arguments);
       try {
         window.dispatchEvent(new CustomEvent('fv:history', { detail: { method: 'pushState', state: state, url: url } }));
       } catch (e) {}
-      return result;
+      return res;
     };
     const origReplace = history.replaceState;
     history.replaceState = function(state, title, url) {
-      const result = origReplace.apply(this, arguments);
+      const res = origReplace.apply(this, arguments);
       try {
         window.dispatchEvent(new CustomEvent('fv:history', { detail: { method: 'replaceState', state: state, url: url } }));
       } catch (e) {}
-      return result;
+      return res;
     };
   })();
 
-  // Replace current URL path to include lang prefix (without reload)
   function ensureUrlHasPrefix(lang) {
     try {
       const loc = location;
-      if (!shouldPrefixPath(loc.pathname)) return; // don't touch
+      if (!shouldPrefixPath(loc.pathname)) return;
       const currentLang = getLangFromPath(loc.pathname);
-      if (currentLang === lang) return; // already OK
-
-      // Build new pathname
+      if (currentLang === lang) return;
       const newPath = '/' + lang + (loc.pathname === '/' ? '' : loc.pathname);
       const newUrl = newPath + loc.search + loc.hash;
-
-      // Replace state (no reload)
       history.replaceState({ lang: lang, forced: true }, document.title, newUrl);
-      // record mapping
       recordNavLangForPath(newPath + loc.search, lang, 'ensureUrlHasPrefix');
     } catch (e) {
-      // If replace fails, fallback to hard redirect
-      try {
-        location.replace('/' + (lang || DEFAULT_LANG) + location.pathname + location.search + location.hash);
-      } catch (err) {}
+      try { location.replace('/' + (lang || DEFAULT_LANG) + location.pathname + location.search + location.hash); } catch (err) {}
     }
   }
 
-  // When navigation occurs (popstate or fv:history), decide whether to apply mapped language
+  /**
+   * หลักการตัดสินเมื่อ navigation (back/forward/pushState/replaceState/pageshow)
+   * - โหลด mapped info (sessionStorage) สำหรับหน้าเป้าหมาย
+   * - โหลด lastChange (localStorage) ที่บันทึกเมื่อ user เปลี่ยนภาษา
+   * - ถ้า lastChange มีและ newer กว่า mapped.ts → ให้ override ด้วย lastChange.lang
+   * - ถ้า mapped มีและ newer → ใช้ mapped.lang
+   * - ถ้าไม่มี mapping แต่ URL มี prefix → ใช้ URL lang (และบันทึก)
+   * - ถ้าไม่มี prefix เลย → enforce storedLang / lastChange.lang
+   */
   function onNavigationEvent(ev) {
     try {
       const loc = location;
@@ -144,69 +135,85 @@
       const map = loadNavMap();
       const mapped = map[key];
       const urlLang = getLangFromPath(loc.pathname);
+      const lastChange = getLastChange();
 
-      // If mapping exists for exact key, prefer mapped language (for back/forward)
+      // If last change exists and is newer than mapping -> prefer lastChange.lang
+      if (lastChange && (!mapped || (mapped.ts && lastChange.ts > mapped.ts))) {
+        const desiredLang = lastChange.lang;
+        if (urlLang !== desiredLang && shouldPrefixPath(loc.pathname)) {
+          const newPath = '/' + desiredLang + (loc.pathname === '/' ? '' : loc.pathname);
+          const newUrl = newPath + loc.search + loc.hash;
+          history.replaceState({ lang: desiredLang, restoredFromLastChange: true }, document.title, newUrl);
+          // record mapping for newPath
+          recordNavLangForPath(newPath + loc.search, desiredLang, 'override-last-change');
+        }
+        // sync stored lang
+        if (getStoredLang() !== desiredLang) {
+          setStoredLang(desiredLang, 'override-last-change');
+        }
+        if (window.FVLangLinks) window.FVLangLinks.updateAllLinks(document, desiredLang);
+        return;
+      }
+
+      // Otherwise if mapping exists, honor it
       if (mapped && mapped.lang) {
         const desiredLang = mapped.lang;
-        // If URL's prefix is different, replace URL to match desiredLang
         if (urlLang !== desiredLang && shouldPrefixPath(loc.pathname)) {
           const newPath = '/' + desiredLang + (loc.pathname === '/' ? '' : loc.pathname);
           const newUrl = newPath + loc.search + loc.hash;
           history.replaceState({ lang: desiredLang, restored: true }, document.title, newUrl);
-          // update stored lang if different
-          if (getStoredLang() !== desiredLang) {
-            setStoredLang(desiredLang);
-          }
-          // update links on page
-          if (window.FVLangLinks) window.FVLangLinks.updateAllLinks(document, desiredLang);
-        } else {
-          // URL already consistent; ensure stored lang is same
-          if (getStoredLang() !== desiredLang) {
-            setStoredLang(desiredLang);
-            if (window.FVLangLinks) window.FVLangLinks.updateAllLinks(document, desiredLang);
-          }
+          recordNavLangForPath(newPath + loc.search, desiredLang, 'restore-mapped');
         }
+        if (getStoredLang() !== desiredLang) {
+          setStoredLang(desiredLang, 'restore-mapped');
+        }
+        if (window.FVLangLinks) window.FVLangLinks.updateAllLinks(document, desiredLang);
         return;
       }
 
-      // No mapping — fallback behavior:
-      // If URL has lang prefix, adopt URL language (and record mapping)
+      // No mapping: if URL has prefix, adopt it and record mapping & last-change (manual prefix is user action)
       if (urlLang) {
         recordNavLangForPath(key, urlLang, 'url-prefix');
-        if (getStoredLang() !== urlLang) {
-          setStoredLang(urlLang);
-          if (window.FVLangLinks) window.FVLangLinks.updateAllLinks(document, urlLang);
-        }
+        // treat manual URL prefix as user selection -> update lastChange
+        setLastChange(urlLang, 'manual-url');
+        if (getStoredLang() !== urlLang) setStoredLang(urlLang, 'url-prefix');
+        if (window.FVLangLinks) window.FVLangLinks.updateAllLinks(document, urlLang);
         return;
       }
 
-      // If no prefix in URL, enforce storedLang
-      const stored = getStoredLang() || DEFAULT_LANG;
-      ensureUrlHasPrefix(stored);
-      if (window.FVLangLinks) window.FVLangLinks.updateAllLinks(document, stored);
+      // No prefix & no mapping -> enforce storedLang or lastChange or default
+      const stored = getStoredLang();
+      const fallback = (lastChange && lastChange.lang) ? lastChange.lang : (stored || DEFAULT_LANG);
+      ensureUrlHasPrefix(fallback);
+      if (window.FVLangLinks) window.FVLangLinks.updateAllLinks(document, fallback);
+
     } catch (e) {
       // ignore
     }
   }
 
-  // React when language changes in-page (language manager should dispatch 'languageChange' with detail.language)
+  // When language is changed programmatically (language manager, UI)
+  // Expect language manager to dispatch 'languageChange' with detail.language
   function onLanguageChangeEvent(e) {
     try {
       const newLang = e.detail && e.detail.language ? e.detail.language : getStoredLang();
       if (!newLang) return;
-      // record nav mapping for current path (map current URL to this language)
+      // record last change (explicit user action)
+      setLastChange(newLang, (e.detail && e.detail.source) ? e.detail.source : 'user');
+
+      // record nav mapping for current path
       const currentKey = pathKeyForLocation(location);
       recordNavLangForPath(currentKey, newLang, 'languageChangeEvent');
 
-      // update storedLang (also triggers languageChange for same-tab)
+      // update storedLang (triggers languageChange in-tab)
       if (getStoredLang() !== newLang) {
         localStorage.setItem(LS_KEY, newLang);
+        window.dispatchEvent(new CustomEvent('languageChange', { detail: { language: newLang, source: 'coordinator-set' } }));
       }
 
-      // ensure the URL prefix matches the new language
+      // ensure URL prefix matches
       const urlLang = getLangFromPath(location.pathname);
       if (urlLang !== newLang && shouldPrefixPath(location.pathname)) {
-        // Use replaceState (do not reload)
         const newPath = '/' + newLang + (location.pathname === '/' ? '' : location.pathname);
         const newUrl = newPath + location.search + location.hash;
         history.replaceState({ lang: newLang, fromLangChange: true }, document.title, newUrl);
@@ -218,16 +225,14 @@
     } catch (err) {}
   }
 
-  // Listen cross-tab/localStorage changes
+  // Storage event (cross-tab)
   function onStorageEvent(e) {
     try {
       if (!e) return;
       if (e.key === LS_KEY) {
         const newLang = e.newValue;
         if (!newLang) return;
-        // Update links and URL if needed
         if (window.FVLangLinks) window.FVLangLinks.updateAllLinks(document, newLang);
-        // Ensure URL has prefix
         const urlLang = getLangFromPath(location.pathname);
         if (urlLang !== newLang && shouldPrefixPath(location.pathname)) {
           const newPath = '/' + newLang + (location.pathname === '/' ? '' : location.pathname);
@@ -239,63 +244,70 @@
             location.replace(newUrl);
           }
         }
+      } else if (e.key === LAST_CHANGE_KEY) {
+        // cross-tab last change: ensure links/url follow
+        const last = getLastChange();
+        if (last && last.lang) {
+          if (window.FVLangLinks) window.FVLangLinks.updateAllLinks(document, last.lang);
+          const urlLang = getLangFromPath(location.pathname);
+          if (urlLang !== last.lang && shouldPrefixPath(location.pathname)) {
+            const newPath = '/' + last.lang + (location.pathname === '/' ? '' : location.pathname);
+            const newUrl = newPath + location.search + location.hash;
+            try {
+              history.replaceState({ lang: last.lang, crossTabLastChange: true }, document.title, newUrl);
+              recordNavLangForPath(newPath + location.search, last.lang, 'storageEvent-lastChange');
+            } catch (err) {
+              location.replace(newUrl);
+            }
+          }
+        }
       }
     } catch (e) {}
   }
 
-  // When the page first loads, ensure URL has prefix (cooperate with lang-proxy which normally redirects early)
+  // Initial enforcement on page load
   function initialEnforce() {
     try {
       const urlLang = getLangFromPath(location.pathname);
       if (urlLang) {
-        // record mapping for current path
+        // record mapping and treat as manual selection
         recordNavLangForPath(pathKeyForLocation(location), urlLang, 'initial-url');
-        // sync storage
-        if (getStoredLang() !== urlLang) setStoredLang(urlLang);
+        setLastChange(urlLang, 'initial-url');
+        if (getStoredLang() !== urlLang) setStoredLang(urlLang, 'initial-url');
         if (window.FVLangLinks) window.FVLangLinks.updateAllLinks(document, urlLang);
         return;
       }
 
-      // No prefix in URL — try to enforce storedLang or fallback detect
-      const stored = getStoredLang() || DEFAULT_LANG;
-      ensureUrlHasPrefix(stored);
-      if (window.FVLangLinks) window.FVLangLinks.updateAllLinks(document, stored);
+      // no prefix: try lastChange -> stored -> default
+      const last = getLastChange();
+      const stored = getStoredLang();
+      const chosen = (last && last.lang) ? last.lang : (stored || DEFAULT_LANG);
+      ensureUrlHasPrefix(chosen);
+      if (window.FVLangLinks) window.FVLangLinks.updateAllLinks(document, chosen);
     } catch (e) {}
   }
 
   // Wiring
-  window.addEventListener('popstate', function(ev) {
-    onNavigationEvent(ev);
-  });
-
-  window.addEventListener('fv:history', function(ev) {
-    // pushState/replaceState origin — treat as navigation event (e.g. SPA click)
-    // Small delay to let location update
-    setTimeout(() => onNavigationEvent(ev), 0);
-  });
-
-  window.addEventListener('pageshow', function(ev) {
-    // pageshow can indicate bfcache restore — ensure consistency
-    setTimeout(() => onNavigationEvent(ev), 0);
-  });
+  window.addEventListener('popstate', function(ev) { onNavigationEvent(ev); });
+  window.addEventListener('fv:history', function(ev) { setTimeout(() => onNavigationEvent(ev), 0); });
+  window.addEventListener('pageshow', function(ev) { setTimeout(() => onNavigationEvent(ev), 0); });
 
   window.addEventListener('languageChange', onLanguageChangeEvent, false);
-
   window.addEventListener('storage', onStorageEvent, false);
 
-  // page initial
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initialEnforce);
   } else {
     initialEnforce();
   }
 
-  // Expose small API for debugging
+  // Small API for debugging
   window.FVLangCoordinator = {
     ensureUrlHasPrefix,
     recordNavLangForPath,
     loadNavMap,
-    saveNavMap
+    saveNavMap,
+    getLastChange: getLastChange
   };
 
 })();
