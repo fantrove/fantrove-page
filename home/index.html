@@ -2,10 +2,8 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <script src="assets/js/lang-proxy.js"></script>
-  <script src="assets/js/language.min.js"></script>
-  <script src="assets/js/lang-links.js"></script>
-  <script src="assets/js/lang-sync.js"></script>
+<script src="assets/js/lang-proxy.js"></script>
+<script src="assets/js/lang-sync.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>FANTROVE - Emoji & Symbols Hub</title>
 
@@ -135,6 +133,12 @@
     </div>
   </main>
 
+  <!-- 
+    โหลดไฟล์ระบบภาษา (language.min.js) ก่อนใครแบบ synchronous
+    เพราะต้องใช้แปลข้อความตั้งแต่เริ่มต้น
+  -->
+  <script src="/assets/js/language.min.js"></script>
+
   <!-- โหลดไฟล์ JavaScript อื่นๆ แบบ defer
        เพื่อโหลดพร้อม DOM แต่รันหลัง DOM โหลดเสร็จ
        ให้เว็บเร็วและเสถียร -->
@@ -145,5 +149,6 @@
   <script defer src="/assets/js/back-to-top.min.js"></script>
   <script defer src="/assets/js/footer-template.js"></script>
 
+  <script defer src="/assets/js/lang-links.js"></script>
 </body>
 </html>
