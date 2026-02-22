@@ -1,214 +1,234 @@
 /**
- * lang-links.js v2.0 - Smart Link Language Prefix Manager
- * 
- * หน้าที่:
- * 1. อัพเดทลิงก์ทั้งหมดในหน้าให้มี prefix ภาษาตามที่เลือก
- * 2. Intercept การคลิกลิงก์ภายในเว็บไซต์ - ถ้าลิงก์ไม่มี prefix ให้เติมให้
- * 3. ไม่แตะต้องลิงก์ภายนอก, mailto, tel, assets, APIs
- * 
- * การทำงาน:
- * - ตอน DOM ready: อัพเดทลิงก์ทั้งหมดให้มี prefix ตาม localStorage
- * - ตอนคลิก: ถ้าเป็น internal link ไม่มี prefix → เติม prefix → navigate
- * - ตอน languageChange: อัพเดทลิงก์ทั้งหมดใหม่ตามภาษาใหม่
- * 
- * ไม่รองรับ: URL parameters (?lang=th) - ใช้ path prefix เท่านั้น
+ * Language Links Manager v3.0
+ * ทำหน้าที่:
+ * 1. อัปเดตลิงก์ทั้งหมดให้มี prefix ภาษา
+ * 2. จัดการการนำทางโดยคงภาษาปัจจุบันไว้
+ * 3. บันทึก mapping สำหรับการย้อนกลับ
  */
 
 (function() {
-  "use strict";
-  
-  const SUPPORTED_LANGS = ['en', 'th'];
-  const DEFAULT_LANG = 'en';
-  const LS_KEY = 'selectedLang';
-  
-  // Paths ที่ไม่ควรใส่ prefix
-  const SKIP_PATHS = [
-    '/assets/', '/static/', '/api/', '/_next/', 
-    '/favicon.ico', '/robots.txt', '/sitemap.xml',
-    '/sw.js', '/manifest.json', '/.well-known/'
-  ];
-  
-  // Schemes ที่ไม่ควรแตะ
-  const SKIP_SCHEMES = /^(mailto:|tel:|javascript:|data:|#|blob:|file:)/i;
-  
-  /**
-   * อ่านภาษาปัจจุบันจาก localStorage
-   */
-  function getCurrentLang() {
-    try {
-      const stored = localStorage.getItem(LS_KEY);
-      return SUPPORTED_LANGS.includes(stored) ? stored : DEFAULT_LANG;
-    } catch (e) {
-      return DEFAULT_LANG;
-    }
-  }
-  
-  /**
-   * ตรวจสอบว่าเป็น internal link หรือไม่
-   */
-  function isInternalLink(href) {
-    try {
+  'use strict';
+
+  const CONFIG = {
+    LANGS: ['en', 'th'],
+    SKIP_PREFIXES: ['/assets/', '/static/', '/api/', '/_next/', '/favicon.ico', '/robots.txt', '/sitemap.xml'],
+    STORAGE_KEY: 'selectedLang',
+    NAV_MAP_KEY: 'fv-nav-lang-map'
+  };
+
+  // Utility: URL Manager
+  const UrlManager = {
+    extractLang(path) {
+      const match = path.match(/^\/(en|th)(\/|$)/);
+      return match ? match[1] : null;
+    },
+
+    stripLang(path) {
+      return path.replace(/^\/(en|th)(\/|$)/, '/');
+    },
+
+    addLang(path, lang) {
+      const clean = this.stripLang(path);
+      if (clean === '/' || clean === '') return `/${lang}/`;
+      return `/${lang}${clean.startsWith('/') ? clean : '/' + clean}`;
+    },
+
+    hasLangPrefix(path) {
+      return /^\/(en|th)(\/|$)/.test(path);
+    },
+
+    isInternal(href) {
       if (!href) return false;
-      if (SKIP_SCHEMES.test(href)) return false;
-      
-      const url = new URL(href, location.origin);
-      return url.origin === location.origin;
-    } catch (e) {
-      return false;
+      try {
+        const url = new URL(href, location.origin);
+        return url.origin === location.origin;
+      } catch(e) {
+        return false;
+      }
+    },
+
+    shouldPrefix(path) {
+      if (!path.startsWith('/')) return false;
+      return !CONFIG.SKIP_PREFIXES.some(p => path.startsWith(p));
     }
-  }
-  
-  /**
-   * ตรวจสอบว่า path ควรใส่ prefix หรือไม่
-   */
-  function shouldPrefixPath(path) {
-    if (!path.startsWith('/')) return false;
-    for (const skip of SKIP_PATHS) {
-      if (path.startsWith(skip)) return false;
+  };
+
+  // Utility: Storage
+  const Storage = {
+    getLang() {
+      try { return localStorage.getItem(CONFIG.STORAGE_KEY); } 
+      catch(e) { return null; }
+    },
+
+    setLang(lang) {
+      try { localStorage.setItem(CONFIG.STORAGE_KEY, lang); } 
+      catch(e) {}
+    },
+
+    recordNav(path, lang) {
+      try {
+        const raw = sessionStorage.getItem(CONFIG.NAV_MAP_KEY) || '{}';
+        const map = JSON.parse(raw);
+        map[path] = { lang, timestamp: Date.now() };
+        sessionStorage.setItem(CONFIG.NAV_MAP_KEY, JSON.stringify(map));
+      } catch(e) {}
     }
-    return true;
-  }
-  
-  /**
-   * ตรวจสอบว่า path มี prefix ภาษาอยู่แล้วหรือไม่
-   */
-  function hasLangPrefix(path) {
-    return /^\/(en|th)(\/|$)/.test(path);
-  }
-  
-  /**
-   * เพิ่ม prefix ภาษาให้กับ URL
-   */
-  function addLangPrefix(href, lang) {
-    try {
-      const url = new URL(href, location.origin);
+  };
+
+  // Link Processor
+  class LinkProcessor {
+    constructor(currentLang) {
+      this.currentLang = currentLang;
+    }
+
+    processLink(anchor) {
+      const raw = anchor.getAttribute('href');
+      if (!raw) return;
+
+      // Skip special protocols
+      if (/^(mailto:|tel:|javascript:|#|data:)/i.test(raw)) return;
       
-      // ถ้ามี prefix อยู่แล้ว ไม่ต้องทำอะไร
-      if (hasLangPrefix(url.pathname)) return href;
+      // Skip external
+      if (!UrlManager.isInternal(raw)) return;
+
+      const url = new URL(raw, location.origin);
       
-      // ถ้าไม่ควรใส่ prefix ให้ path นี้
-      if (!shouldPrefixPath(url.pathname)) return href;
-      
-      // สร้าง path ใหม่
-      const newPath = '/' + lang + (url.pathname === '/' ? '' : url.pathname);
+      // Skip non-prefixable paths
+      if (!UrlManager.shouldPrefix(url.pathname)) return;
+
+      // Skip if already has correct prefix
+      const existingLang = UrlManager.extractLang(url.pathname);
+      if (existingLang === this.currentLang) return;
+
+      // Update href with current language prefix
+      const newPath = UrlManager.addLang(url.pathname, this.currentLang);
       url.pathname = newPath;
       
-      return url.toString();
-    } catch (e) {
-      return href;
+      anchor.setAttribute('href', url.toString());
+      
+      // Record for back navigation tracking
+      Storage.recordNav(url.pathname, this.currentLang);
+    }
+
+    processContainer(container) {
+      const anchors = container.querySelectorAll('a[href]');
+      anchors.forEach(a => this.processLink(a));
     }
   }
-  
-  /**
-   * อัพเดทลิงก์ทั้งหมดใน root ให้มี prefix ภาษา
-   */
-  function updateAllLinks(root, lang) {
-    const links = root.querySelectorAll('a[href]');
-    links.forEach(link => {
-      const href = link.getAttribute('href');
-      if (!href) return;
-      if (!isInternalLink(href)) return;
-      
-      const newHref = addLangPrefix(href, lang);
-      if (newHref !== href) {
-        link.setAttribute('href', newHref);
-      }
-    });
-  }
-  
-  /**
-   * Intercept การคลิกลิงก์
-   */
-  function interceptLinkClicks(lang) {
-    document.addEventListener('click', function(e) {
-      try {
-        const link = e.target.closest('a[href]');
-        if (!link) return;
-        
-        const href = link.getAttribute('href');
-        if (!href) return;
-        if (!isInternalLink(href)) return;
-        
-        // ถ้าลิงก์มี prefix อยู่แล้ว ให้ผ่านไปตามปกติ
-        if (hasLangPrefix(new URL(href, location.origin).pathname)) {
-          return;
-        }
-        
-        // ถ้าไม่ควรใส่ prefix
-        if (!shouldPrefixPath(new URL(href, location.origin).pathname)) {
-          return;
-        }
-        
-        // เติม prefix และ navigate
-        e.preventDefault();
-        const newHref = addLangPrefix(href, lang);
-        
-        // ใช้ history.pushState เพื่อให้เป็น SPA-like navigation
-        try {
-          history.pushState({ lang: lang, ts: Date.now() }, '', newHref);
-          // Dispatch popstate-like event ให้ languageManager จับได้
-          window.dispatchEvent(new PopStateEvent('popstate', { state: { lang: lang } }));
-        } catch (err) {
-          // Fallback ถ้า pushState ไม่ได้
-          window.location.href = newHref;
-        }
-        
-      } catch (e) {
-        // Ignore errors
-      }
-    }, true); // Use capture phase
-  }
-  
-  /**
-   * ตรวจสอบว่าเป็น local dev หรือไม่ (disable aggressive features)
-   */
-  function isLocalDev() {
-    try {
+
+  // Navigation Interceptor
+  class NavigationInterceptor {
+    constructor(currentLang) {
+      this.currentLang = currentLang;
+      this.isLocalDev = this.checkLocalDev();
+    }
+
+    checkLocalDev() {
       const host = location.hostname || '';
       return host === 'localhost' || host === '127.0.0.1' || 
              host === '0.0.0.0' || host.endsWith('.local');
-    } catch (e) { 
-      return false; 
+    }
+
+    attach() {
+      if (this.isLocalDev) return; // Skip aggressive intercept in dev
+      
+      document.addEventListener('click', (e) => this.handleClick(e), true);
+    }
+
+    handleClick(e) {
+      const anchor = e.target.closest('a[href]');
+      if (!anchor) return;
+
+      const raw = anchor.getAttribute('href') || '';
+      
+      // Skip special links
+      if (/^(mailto:|tel:|javascript:|#)/i.test(raw)) return;
+      if (!UrlManager.isInternal(raw)) return;
+
+      const url = new URL(raw, location.origin);
+      
+      // Skip assets
+      if (!UrlManager.shouldPrefix(url.pathname)) return;
+
+      // If already has prefix, allow default
+      if (UrlManager.hasLangPrefix(url.pathname)) {
+        // But record the mapping
+        Storage.recordNav(url.pathname, UrlManager.extractLang(url.pathname));
+        return;
+      }
+
+      // Intercept and add language prefix
+      e.preventDefault();
+      
+      const newPath = UrlManager.addLang(url.pathname, this.currentLang);
+      url.pathname = newPath;
+      
+      // Record navigation
+      Storage.recordNav(newPath, this.currentLang);
+      
+      // Navigate
+      window.location.assign(url.toString());
     }
   }
-  
-  /**
-   * Main initialization
-   */
-  function init() {
-    const lang = getCurrentLang();
-    
-    // อัพเดทลิงก์ทั้งหมด
-    updateAllLinks(document, lang);
-    
-    // Intercept การคลิก (ยกเว้น local dev)
-    if (!isLocalDev()) {
-      interceptLinkClicks(lang);
+
+  // Main Controller
+  class LanguageLinkManager {
+    constructor() {
+      this.currentLang = Storage.getLang() || 'en';
+      this.processor = new LinkProcessor(this.currentLang);
+      this.interceptor = new NavigationInterceptor(this.currentLang);
     }
-    
-    // ฟัง event languageChange เพื่ออัพเดทลิงก์ใหม่
-    window.addEventListener('languageChange', function(e) {
-      if (e.detail && e.detail.language) {
-        updateAllLinks(document, e.detail.language);
-      }
-    });
-    
-    // Observe DOM mutations สำหรับ dynamic content
-    const observer = new MutationObserver((mutations) => {
-      const currentLang = getCurrentLang();
-      mutations.forEach(mutation => {
-        mutation.addedNodes.forEach(node => {
-          if (node.nodeType === Node.ELEMENT_NODE) {
-            updateAllLinks(node, currentLang);
-          }
+
+    init() {
+      // Process existing links
+      this.processor.processContainer(document);
+      
+      // Setup interceptor
+      this.interceptor.attach();
+      
+      // Watch for new links
+      this.setupMutationObserver();
+      
+      // Listen for language changes
+      window.addEventListener('languageChange', (e) => {
+        this.handleLanguageChange(e.detail.language);
+      });
+    }
+
+    setupMutationObserver() {
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach(mutation => {
+          mutation.addedNodes.forEach(node => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              this.processor.processContainer(node);
+            }
+          });
         });
       });
-    });
-    
-    observer.observe(document.body, { childList: true, subtree: true });
+      
+      observer.observe(document.body || document.documentElement, {
+        childList: true,
+        subtree: true
+      });
+    }
+
+    handleLanguageChange(newLang) {
+      this.currentLang = newLang;
+      this.processor.currentLang = newLang;
+      this.interceptor.currentLang = newLang;
+      
+      // Re-process all links
+      this.processor.processContainer(document);
+    }
   }
-  
-  // Run
+
+  // Initialize when DOM ready
+  function init() {
+    const manager = new LanguageLinkManager();
+    manager.init();
+    window.__linkManager = manager;
+  }
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
