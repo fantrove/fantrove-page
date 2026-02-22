@@ -176,14 +176,4 @@
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', runOnce);
   } else runOnce();
-  
-  // Trigger a light URL verification after initialization (non-blocking)
-  try {
-    setTimeout(() => {
-      if (window.langSync && typeof window.langSync.verifyAndSyncUrl === 'function') {
-        window.langSync.verifyAndSyncUrl().catch(() => {});
-      }
-    }, 50);
-  } catch (e) {}
-  
 })();

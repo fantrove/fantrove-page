@@ -64,13 +64,6 @@
         sessionStorage.setItem('fv-nav-lang-map', JSON.stringify(map));
       } catch (e) {}
       
-      // Attempt to notify langSync (non-blocking) that selectedLang set (landing logic will handle replace/ack)
-      try {
-        if (window.langSync && typeof window.langSync.verifyAndSyncUrl === 'function') {
-          window.langSync.verifyAndSyncUrl({ force: true, reason: 'proxy-init' }).catch(() => {});
-        }
-      } catch (e) {}
-      
       // compute target path by stripping the language prefix
       let target = m[2] || '/';
       if (!target) target = '/';
