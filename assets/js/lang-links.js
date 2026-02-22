@@ -5,6 +5,10 @@
    - Observes DOM mutations to update dynamically-inserted links
    - Intercepts clicks to ensure navigation always goes to a prefixed URL when possible
    - Now: disabled aggressive intercept/prefix in local development hosts (localhost, 127.0.0.1, *.local, 0.0.0.0)
+   - Improvements:
+     * Respect explicit URL prefix on load (override selectedLang when present)
+     * Avoid intercepting ctrl/meta/shift (open in new tab/window) and modified clicks
+     * Use session mapping to improve popstate/back behaviour
 */
 (function() {
   const SKIP_PREFIXES = ['/assets/', '/static/', '/api/', '/_next/', '/favicon.ico', '/robots.txt', '/sitemap.xml'];
@@ -78,6 +82,21 @@
     } catch (e) { return false; }
   }
   
+  // Try to detect navigation type to understand typed/bookmark vs back/forward vs link
+  function getNavigationType() {
+    try {
+      if (performance && typeof performance.getEntriesByType === 'function') {
+        const nav = performance.getEntriesByType('navigation');
+        if (nav && nav.length) return nav[0].type || 'navigate';
+      }
+      if (performance && performance.navigation && typeof performance.navigation.type !== 'undefined') {
+        const t = performance.navigation.type;
+        return t === 0 ? 'navigate' : (t === 1 ? 'reload' : (t === 2 ? 'back_forward' : 'navigate'));
+      }
+    } catch (e) {}
+    return 'navigate';
+  }
+  
   // Intercept clicks on internal links that would navigate to non-prefixed paths,
   // and redirect to a prefixed variant when a selectedLang is available.
   // Also record a session mapping target path -> lang so popstate can predict language.
@@ -89,6 +108,11 @@
     window[CLICK_INTERCEPT_KEY] = true;
     document.addEventListener('click', function(ev) {
       try {
+        // Don't intercept modified clicks (open in new tab/window) or right-clicks
+        if (ev.defaultPrevented) return;
+        if (ev.button !== 0) return; // only left-click
+        if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
+        
         const a = ev.target && ev.target.closest ? ev.target.closest('a[href]') : null;
         if (!a) return;
         const raw = a.getAttribute('href') || '';
@@ -122,17 +146,18 @@
   function ensureSelectedLang() {
     try {
       let lang = null;
-      try { lang = localStorage.getItem(LANG_KEY); } catch (e) { lang = null; }
-      if (lang) return lang;
-      // try detect from current pathname (/en/... or /th/...)
+      // First: if current pathname explicitly has prefix, honor it and override localStorage
       try {
         const m = location.pathname.match(/^\/(en|th)(\/|$)/);
-        if (m) {
+        if (m && m[1]) {
           lang = m[1];
-          localStorage.setItem(LANG_KEY, lang);
+          try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
           return lang;
         }
       } catch (e) {}
+      // Next: try localStorage (user preference)
+      try { lang = localStorage.getItem(LANG_KEY); } catch (e) { lang = null; }
+      if (lang) return lang;
       // fallback to browser prefs if available
       try {
         const bros = navigator.languages || [navigator.language || navigator.userLanguage];
@@ -142,7 +167,7 @@
             // only set to en/th by default to avoid unexpected prefixes for unknown langs
             if (['en', 'th'].includes(first)) {
               lang = first;
-              localStorage.setItem(LANG_KEY, lang);
+              try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
               return lang;
             }
           }
@@ -155,6 +180,7 @@
   function runOnce() {
     const lang = ensureSelectedLang();
     if (!lang) return;
+    // Immediately update links using lang chosen (honors explicit prefix on load)
     updateLinksIn(document, lang);
     interceptClicks(lang);
     
@@ -171,6 +197,29 @@
       });
     });
     mo.observe(document.body || document.documentElement, { childList: true, subtree: true });
+    
+    // Optional: on popstate, try to update links / local state based on session mapping
+    window.addEventListener('popstate', (ev) => {
+      try {
+        const key = location.pathname + (location.search || '');
+        const rawMap = sessionStorage.getItem('fv-nav-lang-map') || '{}';
+        const map = JSON.parse(rawMap || '{}');
+        if (map && map[key] && map[key].lang) {
+          const mappedLang = map[key].lang;
+          // Update localStorage to reflect recent evidence (but keep honoring explicit prefix if present)
+          try { localStorage.setItem(LANG_KEY, mappedLang); } catch (e) {}
+          // Update links to mapped lang
+          updateLinksIn(document, mappedLang);
+        } else {
+          // If pathname has explicit prefix, ensure links are updated to that too
+          const m = location.pathname.match(/^\/(en|th)(\/|$)/);
+          if (m && m[1]) {
+            try { localStorage.setItem(LANG_KEY, m[1]); } catch (e) {}
+            updateLinksIn(document, m[1]);
+          }
+        }
+      } catch (e) {}
+    });
   }
   
   if (document.readyState === 'loading') {

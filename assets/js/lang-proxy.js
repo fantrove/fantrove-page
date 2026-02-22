@@ -1,17 +1,7 @@
 /* assets/js/lang-proxy.js
    Dynamic language prefix proxy for /en/ and /th/
-   - Place this script as early as possible in <head>
-   - If URL starts with /en or /th, it will:
-     1. set localStorage.selectedLang
-     2. fetch the "real" HTML (stripping the lang prefix)
-     3. document.write() the fetched HTML so existing language.min.js runs
-     4. keep the URL with the lang prefix in the address bar
-   - Uses sessionStorage 'fv-proxy-done' to avoid infinite loops
-   - EXTENDED: If current URL does NOT have a lang prefix but localStorage.selectedLang is set,
-     the proxy will aggressively try to locate and navigate to a prefixed version of the current page.
-   - NEW: Aggressive promotion is disabled on local/dev hosts (localhost, 127.0.0.1, *.local, 0.0.0.0)
-   - COORDINATION: Uses a small reload protocol (fv-forcereload / fv-reload-inflight / fv-reload-ack)
-     so that only one actor performs the actual navigation/reload and others acknowledge it.
+   Updated: improve navigation-type heuristics so explicit URL prefixes and typed/bookmarked navigations
+   are respected, while still promoting unprefixed pages to prefixed variants where appropriate.
 */
 (function() {
   try {
@@ -44,6 +34,43 @@
         sessionStorage.setItem('fv-reload-inflight', id);
       } catch (e) {}
     }
+    
+    // --- New helpers: navigation-type & user-typed detection ---
+    function getNavigationType() {
+      try {
+        // Preferred modern API
+        if (performance && typeof performance.getEntriesByType === 'function') {
+          const nav = performance.getEntriesByType('navigation');
+          if (nav && nav.length) return nav[0].type || 'navigate';
+        }
+        // Fallback (deprecated)
+        if (performance && performance.navigation && typeof performance.navigation.type !== 'undefined') {
+          const t = performance.navigation.type;
+          // 0 = navigate (typed/bookmark/link), 1 = reload, 2 = back_forward
+          return t === 0 ? 'navigate' : (t === 1 ? 'reload' : (t === 2 ? 'back_forward' : 'navigate'));
+        }
+      } catch (e) {}
+      return 'navigate';
+    }
+    
+    function isReferrerSameOrigin() {
+      try {
+        const ref = document.referrer || '';
+        if (!ref) return false;
+        const r = new URL(ref, location.origin);
+        return r.origin === location.origin;
+      } catch (e) { return false; }
+    }
+    
+    function isUserTypedNavigation() {
+      try {
+        const navType = getNavigationType();
+        // A 'navigate' with empty referrer (or cross-origin referrer) is often typed/bookmark
+        if (navType === 'navigate' && !isReferrerSameOrigin()) return true;
+        return false;
+      } catch (e) { return false; }
+    }
+    // --- end new helpers ---
     
     const m = location.pathname.match(/^\/(en|th)(\/.*|$)/);
     const sessionKey = 'fv-proxy-done';
@@ -135,6 +162,23 @@
       if (sessionStorage.getItem(markKey)) return;
       sessionStorage.setItem(markKey, '1');
       
+      // Attempt to adjust selectedLang by checking session mapping for back/forward navigations:
+      try {
+        const navKey = location.pathname + (location.search || '');
+        const rawMap = sessionStorage.getItem('fv-nav-lang-map') || '{}';
+        const map = JSON.parse(rawMap || '{}');
+        if (map && map[navKey] && map[navKey].lang) {
+          // If we have evidence that this path was recently associated with a lang (e.g. via click/proxy),
+          // honor that mapping rather than blindly using the stored selectedLang.
+          sel = map[navKey].lang;
+        }
+      } catch (e) {}
+      
+      // If the navigation appears to be a user-typed navigation AND the current unprefixed URL is visited,
+      // we still enforce prefixing (policy: app uses prefix-only). This ensures user doesn't stay on 'unprefixed' pages.
+      // However, if user typed a prefixed URL above, we would already have matched earlier.
+      const userTyped = isUserTypedNavigation();
+      
       // Build candidate prefixed paths for current location.pathname
       function buildPrefixedCandidatesForCurrent(selLang) {
         const t = location.pathname || '/';
@@ -162,7 +206,12 @@
           try {
             const resp = await fetch(c, { method: 'HEAD', cache: 'no-store', credentials: 'same-origin' });
             if (resp && resp.ok) {
-              // Found a prefixed page: navigate user there (preserve search/hash)
+              // Found a prefixed page.
+              // Decide whether to navigate:
+              // - If this was a user-typed navigation (unprefixed) -> enforce redirect to prefixed (policy)
+              // - If there is session evidence (we updated sel from map) -> go
+              // - If navigation type is back_forward, and we have mapping evidence -> go
+              // - Otherwise (normal arrival by link but no evidence) -> still go (policy: no unprefixed)
               try {
                 const urlObj = new URL(c, location.origin);
                 urlObj.search = location.search || '';
