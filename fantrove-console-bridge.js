@@ -1,35 +1,17 @@
 /**
  * Fantrove Console Bridge
- * Connects your app to Fantrove Console Pro
- * Auto-captures: console.*, errors, unhandled rejections
+ * Clean API - No user behavior tracking
  */
 (function() {
     'use strict';
-
-    const CONFIG = {
-        consoleUrl: '/console.html',
-        autoCapture: true,
-        captureNativeConsole: true,
-        captureErrors: true,
-        captureNetwork: false // Set true to capture fetch/XHR errors
-    };
-
-    // Internal log queue
-    const queue = [];
-    let isReady = false;
-
-    // Initialize
+    
+    // Initialize immediately
     function init() {
-        if (CONFIG.captureNativeConsole) hijackConsole();
-        if (CONFIG.captureErrors) hijackErrors();
-        if (CONFIG.captureNetwork) hijackNetwork();
-        
-        setupBroadcast();
-        isReady = true;
-        flushQueue();
+        hijackConsole();
+        hijackErrors();
     }
-
-    // Hijack native console methods
+    
+    // Hijack native console - clean version
     function hijackConsole() {
         const methods = ['log', 'info', 'warn', 'error', 'debug'];
         
@@ -41,58 +23,54 @@
             };
         });
     }
-
-    // Hijack global errors
+    
+    // Hijack only critical errors
     function hijackErrors() {
         window.addEventListener('error', (e) => {
             sendToFantrove('error', [{
                 message: e.message,
                 filename: e.filename,
                 lineno: e.lineno,
-                colno: e.colno,
                 error: e.error?.toString()
             }], 'Exception');
         });
-
+        
         window.addEventListener('unhandledrejection', (e) => {
             sendToFantrove('error', [e.reason], 'UnhandledRejection');
         });
     }
-
-    // Hijack network (optional)
-    function hijackNetwork() {
-        const originalFetch = window.fetch;
-        window.fetch = async function(...args) {
-            try {
-                const response = await originalFetch.apply(this, args);
-                if (!response.ok) {
-                    sendToFantrove('warn', [`HTTP ${response.status}: ${args[0]}`], 'Network');
-                }
-                return response;
-            } catch (err) {
-                sendToFantrove('error', [`Fetch failed: ${args[0]}`, err.message], 'Network');
-                throw err;
-            }
-        };
-    }
-
-    // Send to Fantrove Console
+    
+    // Send to console
     function sendToFantrove(level, args, source) {
+        const message = args.map(formatArg).join(' ');
+        
+        // Skip user behavior logs
+        const skipPatterns = ['scroll', 'touch', 'mouse', 'click', 'key', 'resize',
+            'pointer', 'drag', 'gesture', 'wheel', 'mousemove',
+            'Body scroll', 'callback', 'observer', 'mutation'
+        ];
+        
+        if (skipPatterns.some(p => message.toLowerCase().includes(p.toLowerCase()))) {
+            return;
+        }
+        
         const payload = {
             level: level,
-            message: args.map(formatArg).join(' '),
-            source: source || detectSource(),
-            meta: { url: location.href, timestamp: Date.now() },
-            type: 'external'
+            message: message,
+            source: source || 'App',
+            timestamp: Date.now()
         };
-
-        if (isReady) {
-            broadcast(payload);
-        } else {
-            queue.push(payload);
+        
+        // Broadcast
+        try {
+            localStorage.setItem('fantrove_broadcast', JSON.stringify(payload));
+        } catch (e) {}
+        
+        if (window.opener && !window.opener.closed) {
+            window.opener.postMessage({ type: 'FANTROVE_LOG', payload }, '*');
         }
     }
-
+    
     function formatArg(arg) {
         if (arg === null) return 'null';
         if (arg === undefined) return 'undefined';
@@ -105,54 +83,7 @@
         }
         return String(arg);
     }
-
-    function detectSource() {
-        try {
-            throw new Error();
-        } catch (e) {
-            const stack = e.stack.split('\n')[3];
-            const match = stack?.match(/at\s+(?:.+?\s+)?\(?(.+?):(\d+):(\d+)\)?/);
-            return match ? match[1].split('/').pop() : 'App';
-        }
-    }
-
-    // Broadcast mechanisms
-    function setupBroadcast() {
-        // Method 1: localStorage (cross-tab)
-        // Method 2: postMessage (iframe/parent)
-        // Method 3: BroadcastChannel (modern browsers)
-        
-        if (typeof BroadcastChannel !== 'undefined') {
-            const channel = new BroadcastChannel('fantrove_console');
-            window.__fantroveChannel = channel;
-        }
-    }
-
-    function broadcast(payload) {
-        const data = { type: 'FANTROVE_LOG', payload };
-
-        // Try BroadcastChannel
-        if (window.__fantroveChannel) {
-            window.__fantroveChannel.postMessage(data);
-        }
-
-        // Try localStorage
-        try {
-            localStorage.setItem('fantrove_broadcast', JSON.stringify(payload));
-        } catch (e) {}
-
-        // Try postMessage to opener/parent
-        if (window.opener && !window.opener.closed) {
-            window.opener.postMessage(data, '*');
-        }
-    }
-
-    function flushQueue() {
-        while (queue.length) {
-            broadcast(queue.shift());
-        }
-    }
-
+    
     // Public API
     window.FantroveConsole = {
         log: (...args) => sendToFantrove('log', args),
@@ -160,14 +91,9 @@
         warn: (...args) => sendToFantrove('warn', args),
         error: (...args) => sendToFantrove('error', args),
         debug: (...args) => sendToFantrove('debug', args),
-        success: (...args) => sendToFantrove('success', args),
-        
-        // Manual error capture
-        captureException: (err, context) => {
-            sendToFantrove('error', [err.message, err.stack], context || 'Manual');
-        }
+        success: (...args) => sendToFantrove('success', args)
     };
-
+    
     // Auto-init
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);

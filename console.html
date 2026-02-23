@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#0d1117">
-    <title>Fantrove Console</title>
+    <title>Fantrove Console Pro</title>
     <style>
         * {
             margin: 0;
@@ -26,7 +26,8 @@
             --accent-yellow: #d29922;
             --accent-red: #da3633;
             --accent-purple: #8957e5;
-            --font-mono: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            --accent-cyan: #39c5cf;
+            --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Fira Code', monospace;
             --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             --safe-top: env(safe-area-inset-top);
             --safe-bottom: env(safe-area-inset-bottom);
@@ -47,6 +48,7 @@
             padding-bottom: var(--safe-bottom);
         }
 
+        /* Header */
         .header {
             background: var(--bg-secondary);
             border-bottom: 1px solid var(--border-color);
@@ -74,6 +76,7 @@
             align-items: center;
             justify-content: center;
             font-size: 14px;
+            flex-shrink: 0;
         }
 
         .header-actions {
@@ -93,6 +96,7 @@
             display: flex;
             align-items: center;
             gap: 4px;
+            white-space: nowrap;
             touch-action: manipulation;
         }
 
@@ -100,6 +104,43 @@
             transform: scale(0.95);
         }
 
+        .btn-icon {
+            font-size: 16px;
+        }
+
+        /* Connection Bar */
+        .connection-bar {
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 8px 16px;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-green);
+            animation: pulse 2s infinite;
+            flex-shrink: 0;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* Toolbar */
         .toolbar {
             background: var(--bg-secondary);
             border-bottom: 1px solid var(--border-color);
@@ -108,12 +149,19 @@
             gap: 8px;
             align-items: center;
             overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
             flex-shrink: 0;
             scrollbar-width: none;
         }
 
         .toolbar::-webkit-scrollbar {
             display: none;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 4px;
+            flex-shrink: 0;
         }
 
         .filter-btn {
@@ -156,6 +204,15 @@
             color: var(--accent-blue); 
             border-color: var(--accent-blue); 
         }
+        .filter-btn[data-level="log"].active { 
+            background: rgba(201, 209, 217, 0.2); 
+            color: var(--text-primary); 
+        }
+        .filter-btn[data-level="debug"].active { 
+            background: rgba(137, 87, 229, 0.2); 
+            color: var(--accent-purple); 
+            border-color: var(--accent-purple); 
+        }
 
         .badge {
             background: var(--bg-primary);
@@ -166,6 +223,38 @@
             text-align: center;
         }
 
+        .search-box {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .search-box input {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 6px 10px 6px 32px;
+            border-radius: 12px;
+            font-size: 13px;
+            width: 140px;
+            font-family: inherit;
+            outline: none;
+        }
+
+        .search-box input:focus {
+            border-color: var(--accent-blue);
+            width: 180px;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 12px;
+            opacity: 0.5;
+        }
+
+        /* Console Output */
         .console-container {
             flex: 1;
             overflow-y: auto;
@@ -179,6 +268,10 @@
 
         .console-container::-webkit-scrollbar {
             width: 6px;
+        }
+
+        .console-container::-webkit-scrollbar-track {
+            background: var(--bg-primary);
         }
 
         .console-container::-webkit-scrollbar-thumb {
@@ -200,13 +293,19 @@
             to { opacity: 1; transform: translateX(0); }
         }
 
+        .log-entry:active {
+            background: var(--bg-hover);
+        }
+
         .log-entry.error { 
             border-left-color: var(--accent-red); 
             background: rgba(218, 54, 51, 0.05);
         }
         .log-entry.warn { border-left-color: var(--accent-yellow); }
         .log-entry.info { border-left-color: var(--accent-blue); }
+        .log-entry.log { border-left-color: var(--text-secondary); }
         .log-entry.debug { border-left-color: var(--accent-purple); }
+        .log-entry.success { border-left-color: var(--accent-green); }
 
         .log-header {
             display: flex;
@@ -218,6 +317,7 @@
 
         .log-time {
             font-family: var(--font-mono);
+            opacity: 0.8;
         }
 
         .log-level-badge {
@@ -231,10 +331,11 @@
         .log-level-badge.error { background: rgba(218, 54, 51, 0.2); color: var(--accent-red); }
         .log-level-badge.warn { background: rgba(210, 153, 34, 0.2); color: var(--accent-yellow); }
         .log-level-badge.info { background: rgba(88, 166, 255, 0.2); color: var(--accent-blue); }
+        .log-level-badge.debug { background: rgba(137, 87, 229, 0.2); color: var(--accent-purple); }
 
         .log-source {
             color: var(--accent-cyan);
-            max-width: 150px;
+            max-width: 120px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
@@ -249,6 +350,7 @@
         }
 
         .log-entry.error .log-content { color: #ff7b72; }
+        .log-entry.warn .log-content { color: #e3b341; }
 
         .stack-trace {
             margin-top: 8px;
@@ -260,8 +362,10 @@
             overflow-x: auto;
             white-space: pre;
             font-family: var(--font-mono);
+            border-left: 2px solid var(--border-color);
         }
 
+        /* Empty State */
         .empty-state {
             display: flex;
             flex-direction: column;
@@ -279,6 +383,87 @@
             opacity: 0.3;
         }
 
+        .empty-text {
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        .empty-hint {
+            font-size: 13px;
+            opacity: 0.7;
+        }
+
+        /* Input Section */
+        .input-section {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            padding: 12px;
+            flex-shrink: 0;
+        }
+
+        .input-header {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 8px;
+            align-items: flex-start;
+        }
+
+        .input-prompt {
+            color: var(--accent-green);
+            font-family: var(--font-mono);
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .console-input {
+            flex: 1;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-family: var(--font-mono);
+            font-size: 14px;
+            resize: none;
+            min-height: 44px;
+            max-height: 100px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .console-input:focus {
+            border-color: var(--accent-blue);
+        }
+
+        .send-btn {
+            background: var(--accent-blue);
+            border: none;
+            color: white;
+            width: 44px;
+            height: 44px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .send-btn:active {
+            transform: scale(0.95);
+            opacity: 0.8;
+        }
+
+        /* Footer */
         .footer {
             background: var(--bg-tertiary);
             border-top: 1px solid var(--border-color);
@@ -291,6 +476,26 @@
             flex-shrink: 0;
         }
 
+        .footer-stats {
+            display: flex;
+            gap: 12px;
+        }
+
+        .stat { 
+            display: flex; 
+            gap: 4px; 
+            align-items: center;
+        }
+
+        .stat-value { 
+            color: var(--text-primary); 
+            font-weight: 600; 
+        }
+
+        .stat-value.error { color: var(--accent-red); }
+        .stat-value.warn { color: var(--accent-yellow); }
+
+        /* Toast */
         .toast {
             position: fixed;
             top: 50%;
@@ -304,18 +509,26 @@
             color: var(--text-primary);
             z-index: 1000;
             box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s ease;
         }
 
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -40%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+
+        /* Desktop */
         @media (min-width: 768px) {
-            .log-entry {
-                padding: 12px 24px;
-                flex-direction: row;
-                align-items: flex-start;
-            }
-            .log-header {
-                flex-direction: column;
-                min-width: 120px;
-            }
+            .header { padding: 16px 24px; }
+            .brand { font-size: 16px; }
+            .toolbar { padding: 12px 24px; }
+            .filter-btn { padding: 6px 14px; }
+            .search-box input { width: 200px; }
+            .search-box input:focus { width: 280px; }
+            .log-entry { padding: 12px 24px; flex-direction: row; align-items: flex-start; }
+            .log-header { flex-direction: column; min-width: 100px; }
+            .input-section { padding: 16px 24px; }
+            .footer { padding: 10px 24px; }
         }
     </style>
 </head>
@@ -326,271 +539,415 @@
             <span>Fantrove Console</span>
         </div>
         <div class="header-actions">
-            <button class="btn" onclick="consoleSystem.exportLogs()" title="Export">📥</button>
-            <button class="btn" onclick="consoleSystem.clear()" style="color: var(--accent-red);" title="Clear">🗑</button>
+            <button class="btn" onclick="consolePro.toggleCapture()" id="capture-btn">
+                <span class="btn-icon" id="capture-icon">⏸</span>
+                <span>Pause</span>
+            </button>
+            <button class="btn" onclick="consolePro.exportLogs()">
+                <span class="btn-icon">📥</span>
+            </button>
+            <button class="btn" onclick="consolePro.clear()" style="color: var(--accent-red);">
+                <span class="btn-icon">🗑</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="connection-bar">
+        <div class="status-indicator">
+            <span class="status-dot" id="status-dot"></span>
+            <span id="status-text">Ready</span>
+        </div>
+        <div style="opacity: 0.8;">
+            <span id="persist-status">💾 Auto-save</span>
         </div>
     </div>
 
     <div class="toolbar">
-        <button class="filter-btn active" data-level="all" onclick="consoleSystem.setFilter('all')">
-            All <span class="badge" id="count-all">0</span>
-        </button>
-        <button class="filter-btn active" data-level="error" onclick="consoleSystem.setFilter('error')">
-            Errors <span class="badge" id="count-error">0</span>
-        </button>
-        <button class="filter-btn active" data-level="warn" onclick="consoleSystem.setFilter('warn')">
-            Warnings <span class="badge" id="count-warn">0</span>
-        </button>
-        <button class="filter-btn active" data-level="info" onclick="consoleSystem.setFilter('info')">
-            Info <span class="badge" id="count-info">0</span>
-        </button>
+        <div class="filter-group">
+            <button class="filter-btn active" data-level="all" onclick="consolePro.setFilter('all')">
+                All <span class="badge" id="count-all">0</span>
+            </button>
+        </div>
+        <div class="filter-group">
+            <button class="filter-btn active" data-level="error" onclick="consolePro.setFilter('error')">
+                Errors <span class="badge" id="count-error">0</span>
+            </button>
+            <button class="filter-btn active" data-level="warn" onclick="consolePro.setFilter('warn')">
+                Warnings <span class="badge" id="count-warn">0</span>
+            </button>
+            <button class="filter-btn active" data-level="info" onclick="consolePro.setFilter('info')">
+                Info <span class="badge" id="count-info">0</span>
+            </button>
+            <button class="filter-btn active" data-level="log" onclick="consolePro.setFilter('log')">
+                Logs <span class="badge" id="count-log">0</span>
+            </button>
+            <button class="filter-btn active" data-level="debug" onclick="consolePro.setFilter('debug')">
+                Debug <span class="badge" id="count-debug">0</span>
+            </button>
+        </div>
+        <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="search-input" placeholder="Search..." oninput="consolePro.search(this.value)">
+        </div>
     </div>
 
     <div class="console-container" id="console-output">
         <div class="empty-state">
-            <div class="empty-icon">📭</div>
-            <div>Waiting for logs...</div>
+            <div class="empty-icon">📡</div>
+            <div class="empty-text">No logs yet</div>
+            <div class="empty-hint">Use console.log() or FantroveConsole.log() in your app</div>
+        </div>
+    </div>
+
+    <div class="input-section">
+        <div class="input-header">
+            <span>JavaScript Console</span>
+            <span>7-day retention</span>
+        </div>
+        <div class="input-wrapper">
+            <span class="input-prompt">❯</span>
+            <textarea class="console-input" id="js-input" rows="1" 
+                placeholder="Enter command..."
+                onkeydown="consolePro.handleInput(event)"
+                oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,100)+'px'"></textarea>
+            <button class="send-btn" onclick="consolePro.executeFromButton()">▶</button>
         </div>
     </div>
 
     <div class="footer">
-        <div>
-            <span id="stat-total">0</span> logs | 
-            <span style="color: var(--accent-red)" id="stat-errors">0</span> errors
+        <div class="footer-stats">
+            <span class="stat">Total: <span class="stat-value" id="stat-total">0</span></span>
+            <span class="stat">Errors: <span class="stat-value error" id="stat-errors">0</span></span>
+            <span class="stat">Warns: <span class="stat-value warn" id="stat-warns">0</span></span>
         </div>
         <div id="storage-info">--</div>
     </div>
 
     <script>
         /**
-         * Fantrove Console - Simple & Clean
-         * Only captures: Errors, API calls, and explicit logs
-         * NO user behavior tracking
+         * Fantrove Console Pro
+         * Clean logging - no user behavior tracking
          */
-        class FantroveConsole {
+        class FantroveConsolePro {
             constructor() {
                 this.logs = [];
-                this.activeFilters = new Set(['error', 'warn', 'info']);
-                this.storageKey = 'fantrove_logs_v1';
-                this.maxLogs = 200;
+                this.activeFilters = new Set(['error', 'warn', 'info', 'log', 'debug']);
+                this.searchQuery = '';
+                this.isCapturing = true;
+                this.storageKey = 'fantrove_console_v2';
+                this.filterKey = 'fantrove_filters_v2';
+                this.startTime = Date.now();
+                this.maxLogs = 500;
                 this.originalConsole = {};
                 
                 this.init();
             }
 
             init() {
-                // Load existing logs
+                // Load persisted data
                 this.loadFromStorage();
+                this.loadFilters();
                 
-                // Only capture errors and explicit API calls
-                // NO user behavior tracking
-                this.setupErrorCapture();
-                this.setupApiListener();
+                // Setup console hijacking and error handling only
+                this.hijackNativeConsole();
+                this.setupErrorHandling();
+                this.setupMessageHandling();
                 
-                // Initial render
+                // Start timers
+                this.startUptimeTimer();
+                this.updateStorageInfo();
+                
+                // Render loaded logs
                 this.refreshDisplay();
                 this.updateStats();
                 
-                // Auto-save periodically
-                setInterval(() => this.saveToStorage(), 10000);
+                // Welcome message
+                if (this.logs.length === 0) {
+                    this.system('Console ready');
+                } else {
+                    this.system(`Restored ${this.logs.length} logs`);
+                }
+
+                // Auto-save
+                window.addEventListener('beforeunload', () => this.saveToStorage());
+                setInterval(() => this.saveToStorage(), 5000);
             }
 
-            /* Load/Save - Simple and Clean */
+            /* Storage - 7 day TTL */
+            saveToStorage() {
+                try {
+                    const data = {
+                        timestamp: Date.now(),
+                        logs: this.logs.slice(-this.maxLogs),
+                        sessionStart: this.startTime
+                    };
+                    localStorage.setItem(this.storageKey, JSON.stringify(data));
+                    localStorage.setItem(this.filterKey, JSON.stringify([...this.activeFilters]));
+                } catch (e) {
+                    if (e.name === 'QuotaExceededError') {
+                        this.cleanupOldLogs();
+                    }
+                }
+            }
+
             loadFromStorage() {
                 try {
                     const data = localStorage.getItem(this.storageKey);
                     if (data) {
                         const parsed = JSON.parse(data);
-                        // Only load if less than 7 days old
-                        if (parsed.timestamp && (Date.now() - parsed.timestamp < 7 * 24 * 60 * 60 * 1000)) {
+                        const sevenDays = 7 * 24 * 60 * 60 * 1000;
+                        
+                        if (parsed.timestamp && (Date.now() - parsed.timestamp < sevenDays)) {
                             this.logs = parsed.logs || [];
+                            this.startTime = parsed.sessionStart || Date.now();
                         } else {
                             localStorage.removeItem(this.storageKey);
                         }
                     }
-                } catch (e) {
-                    console.error('Failed to load logs:', e);
-                }
+                } catch (e) {}
             }
 
-            saveToStorage() {
+            loadFilters() {
                 try {
-                    const data = {
-                        timestamp: Date.now(),
-                        logs: this.logs.slice(-this.maxLogs)
-                    };
-                    localStorage.setItem(this.storageKey, JSON.stringify(data));
-                    this.updateStorageInfo();
-                } catch (e) {
-                    // If full, clear half
-                    if (e.name === 'QuotaExceededError') {
-                        this.logs = this.logs.slice(this.logs.length / 2);
-                        this.saveToStorage();
-                    }
-                }
-            }
-
-            /* ONLY Error Capture - No user behavior */
-            setupErrorCapture() {
-                // Global errors only
-                window.onerror = (message, source, lineno, colno, error) => {
-                    this.addLog({
-                        level: 'error',
-                        message: String(message),
-                        source: source ? `${source}:${lineno}` : 'Error',
-                        stack: error?.stack,
-                        time: Date.now()
-                    });
-                    return false;
-                };
-
-                // Unhandled promises only
-                window.onunhandledrejection = (event) => {
-                    this.addLog({
-                        level: 'error',
-                        message: String(event.reason),
-                        source: 'Unhandled Promise',
-                        time: Date.now()
-                    });
-                };
-            }
-
-            /* API Listener - Only responds to explicit calls */
-            setupApiListener() {
-                // Listen for messages from other tabs/windows
-                window.addEventListener('message', (e) => {
-                    if (e.data && e.data.type === 'FANTROVE_LOG') {
-                        const { level, message, source } = e.data;
-                        this.addLog({
-                            level: level || 'info',
-                            message: String(message),
-                            source: source || 'External',
-                            time: Date.now()
+                    const filters = localStorage.getItem(this.filterKey);
+                    if (filters) {
+                        this.activeFilters = new Set(JSON.parse(filters));
+                        document.querySelectorAll('.filter-btn[data-level]').forEach(btn => {
+                            const level = btn.dataset.level;
+                            btn.classList.toggle('active', this.activeFilters.has(level) || this.activeFilters.size === 5);
                         });
                     }
-                });
-
-                // Listen for storage events (cross-tab)
-                window.addEventListener('storage', (e) => {
-                    if (e.key === 'fantrove_log_broadcast') {
-                        try {
-                            const data = JSON.parse(e.newValue);
-                            if (data && !data._internal) {
-                                this.addLog({
-                                    level: data.level,
-                                    message: String(data.message),
-                                    source: data.source || 'App',
-                                    time: Date.now()
-                                });
-                            }
-                        } catch (err) {}
-                    }
-                });
+                } catch (e) {}
             }
 
-            /* Core Function */
-            addLog(log) {
-                log.id = Date.now() + Math.random().toString(36).substr(2, 5);
+            cleanupOldLogs() {
+                this.logs = this.logs.slice(Math.floor(this.logs.length / 2));
+                this.saveToStorage();
+                this.showToast('Storage cleaned');
+            }
+
+            /* Core Logging */
+            addLog(log, save = true) {
+                log.id = log.id || Date.now() + Math.random();
                 this.logs.push(log);
                 
-                // Keep only last N logs
                 if (this.logs.length > this.maxLogs) {
                     this.logs.shift();
                 }
                 
-                // Render if matches filter
-                if (this.activeFilters.has(log.level)) {
+                if (this.isCapturing && this.shouldDisplay(log)) {
                     this.renderLog(log);
                 }
                 
                 this.updateStats();
-                this.saveToStorage();
+                
+                if (save) {
+                    this.saveToStorage();
+                    this.updateStorageInfo();
+                }
             }
 
-            renderLog(log) {
+            shouldDisplay(log) {
+                if (!this.activeFilters.has(log.level)) return false;
+                if (!this.searchQuery) return true;
+                
+                const query = this.searchQuery.toLowerCase();
+                return (log.message || '').toLowerCase().includes(query) ||
+                       (log.source || '').toLowerCase().includes(query);
+            }
+
+            renderLog(log, animate = true) {
                 const output = document.getElementById('console-output');
                 
-                // Remove empty state
-                const empty = output.querySelector('.empty-state');
-                if (empty) empty.remove();
+                const emptyState = output.querySelector('.empty-state');
+                if (emptyState) {
+                    emptyState.remove();
+                }
 
                 const entry = document.createElement('div');
                 entry.className = `log-entry ${log.level}`;
+                if (!animate) entry.style.animation = 'none';
                 
-                const time = new Date(log.time).toLocaleTimeString('en-GB', {
+                const time = new Date(log.timestamp).toLocaleTimeString('en-GB', {
+                    hour12: false,
                     hour: '2-digit',
                     minute: '2-digit',
                     second: '2-digit'
                 });
 
-                const stackHtml = log.stack ? 
-                    `<div class="stack-trace">${log.stack.split('\n').slice(0, 5).join('\n')}</div>` : '';
+                const levelColors = {
+                    error: 'error',
+                    warn: 'warn',
+                    info: 'info',
+                    debug: 'debug',
+                    log: '',
+                    success: ''
+                };
+
+                let stackHtml = '';
+                if (log.stackTrace) {
+                    stackHtml = `<div class="stack-trace">${log.stackTrace}</div>`;
+                }
 
                 entry.innerHTML = `
                     <div class="log-header">
                         <span class="log-time">${time}</span>
-                        <span class="log-level-badge ${log.level}">${log.level}</span>
-                        <span class="log-source">${log.source}</span>
+                        <span class="log-level-badge ${levelColors[log.level] || ''}">${log.level}</span>
+                        <span class="log-source">${log.source || 'System'}</span>
                     </div>
                     <div class="log-content">${this.escapeHtml(log.message)}</div>
                     ${stackHtml}
                 `;
 
                 output.appendChild(entry);
-                output.scrollTop = output.scrollHeight;
+                
+                const isNearBottom = output.scrollHeight - output.scrollTop - output.clientHeight < 100;
+                if (isNearBottom) {
+                    output.scrollTop = output.scrollHeight;
+                }
             }
 
             escapeHtml(text) {
+                if (typeof text !== 'string') text = String(text);
                 const div = document.createElement('div');
                 div.textContent = text;
                 return div.innerHTML;
             }
 
-            /* Public API for external use */
-            static log(message, source) {
-                this.send('info', message, source);
-            }
-
-            static error(message, source) {
-                this.send('error', message, source);
-            }
-
-            static warn(message, source) {
-                this.send('warn', message, source);
-            }
-
-            static send(level, message, source) {
-                const data = {
-                    type: 'FANTROVE_LOG',
-                    level,
-                    message: String(message),
-                    source: source || 'API'
-                };
+            /* Native Console - Clean, no user behavior tracking */
+            hijackNativeConsole() {
+                const methods = ['log', 'info', 'warn', 'error', 'debug'];
                 
-                // Broadcast to other tabs
-                try {
-                    localStorage.setItem('fantrove_log_broadcast', JSON.stringify({
-                        ...data,
-                        _internal: true,
-                        _time: Date.now()
-                    }));
-                } catch (e) {}
-                
-                // Post to parent/opener
-                if (window.opener) {
-                    window.opener.postMessage(data, '*');
+                methods.forEach(method => {
+                    this.originalConsole[method] = console[method];
+                    console[method] = (...args) => {
+                        this.originalConsole[method].apply(console, args);
+                        if (this.isCapturing) {
+                            this.processNativeLog(method, args);
+                        }
+                    };
+                });
+            }
+
+            processNativeLog(level, args) {
+                // Filter out user behavior logs
+                const message = args.map(arg => {
+                    if (arg === null) return 'null';
+                    if (arg === undefined) return 'undefined';
+                    if (typeof arg === 'object') {
+                        try {
+                            return JSON.stringify(arg);
+                        } catch (e) {
+                            return '[Object]';
+                        }
+                    }
+                    return String(arg);
+                }).join(' ');
+
+                // Skip user behavior patterns
+                const skipPatterns = [
+                    'scroll', 'touch', 'mouse', 'click', 'key', 'resize', 
+                    'pointer', 'drag', 'gesture', 'wheel', 'mousemove',
+                    'Body scroll', 'callback', 'observer', 'mutation',
+                    'intersection', 'visibilitychange', 'focus', 'blur'
+                ];
+
+                const lowerMsg = message.toLowerCase();
+                if (skipPatterns.some(p => lowerMsg.includes(p.toLowerCase()))) {
+                    return; // Skip logging user behaviors
                 }
+
+                const error = args.find(arg => arg instanceof Error);
+                
+                this.addLog({
+                    level,
+                    message,
+                    source: 'console.' + level,
+                    stackTrace: error?.stack,
+                    timestamp: Date.now()
+                });
+            }
+
+            /* Error Handling - Only critical errors */
+            setupErrorHandling() {
+                window.onerror = (message, source, lineno, colno, error) => {
+                    this.addLog({
+                        level: 'error',
+                        message: `${message} at ${source}:${lineno}:${colno}`,
+                        source: 'Exception',
+                        stackTrace: error?.stack,
+                        timestamp: Date.now()
+                    });
+                    return false;
+                };
+
+                window.onunhandledrejection = (event) => {
+                    this.addLog({
+                        level: 'error',
+                        message: `Unhandled Promise: ${event.reason}`,
+                        source: 'Promise',
+                        stackTrace: event.reason?.stack,
+                        timestamp: Date.now()
+                    });
+                };
+            }
+
+            /* Message Handling */
+            setupMessageHandling() {
+                window.addEventListener('message', (e) => {
+                    if (e.data?.type === 'FANTROVE_LOG') {
+                        this.receiveExternalLog(e.data.payload);
+                    }
+                });
+
+                window.addEventListener('storage', (e) => {
+                    if (e.key === 'fantrove_broadcast') {
+                        try {
+                            const data = JSON.parse(e.newValue);
+                            if (data) this.receiveExternalLog(data);
+                        } catch (err) {}
+                    }
+                });
+            }
+
+            receiveExternalLog(data) {
+                this.addLog({
+                    level: data.level || 'info',
+                    message: data.message,
+                    source: data.source || 'External',
+                    timestamp: Date.now()
+                });
+            }
+
+            /* Public API */
+            log(msg, meta) { this.externalLog('log', msg, meta); }
+            info(msg, meta) { this.externalLog('info', msg, meta); }
+            warn(msg, meta) { this.externalLog('warn', msg, meta); }
+            error(msg, meta) { this.externalLog('error', msg, meta); }
+            debug(msg, meta) { this.externalLog('debug', msg, meta); }
+            success(msg, meta) { this.externalLog('success', msg, meta); }
+            system(msg) { this.externalLog('info', msg, null, 'System'); }
+
+            externalLog(level, message, meta, source) {
+                const msg = typeof message === 'object' ? JSON.stringify(message) : String(message);
+                this.addLog({
+                    level,
+                    message: msg,
+                    source: source || 'API',
+                    timestamp: Date.now()
+                });
             }
 
             /* UI Controls */
             setFilter(level) {
                 if (level === 'all') {
-                    const allActive = this.activeFilters.size === 3;
+                    const allActive = this.activeFilters.size === 5;
                     if (allActive) {
                         this.activeFilters.clear();
                     } else {
-                        this.activeFilters = new Set(['error', 'warn', 'info']);
+                        ['error', 'warn', 'info', 'log', 'debug'].forEach(l => this.activeFilters.add(l));
                     }
+                    
                     document.querySelectorAll('.filter-btn[data-level]').forEach(btn => {
                         btn.classList.toggle('active', !allActive);
                     });
@@ -604,50 +961,75 @@
                         btn.classList.add('active');
                     }
                 }
-                this.refreshDisplay();
+                
                 this.saveToStorage();
+                this.refreshDisplay();
+            }
+
+            search(query) {
+                this.searchQuery = query;
+                this.refreshDisplay();
             }
 
             refreshDisplay() {
                 const output = document.getElementById('console-output');
                 output.innerHTML = '';
                 
-                const filtered = this.logs.filter(log => this.activeFilters.has(log.level));
+                const toShow = this.logs.filter(log => this.shouldDisplay(log));
                 
-                if (filtered.length === 0) {
+                if (toShow.length === 0) {
                     output.innerHTML = `
                         <div class="empty-state">
-                            <div class="empty-icon">📭</div>
-                            <div>No logs found</div>
+                            <div class="empty-icon">🔍</div>
+                            <div class="empty-text">No matching logs</div>
                         </div>
                     `;
                 } else {
-                    filtered.forEach(log => this.renderLog(log));
+                    toShow.forEach(log => this.renderLog(log, false));
                 }
             }
 
-            updateStats() {
-                const counts = { all: this.logs.length, error: 0, warn: 0, info: 0 };
-                this.logs.forEach(log => {
-                    if (counts[log.level] !== undefined) counts[log.level]++;
-                });
-
-                ['all', 'error', 'warn', 'info'].forEach(key => {
-                    const el = document.getElementById(`count-${key}`);
-                    if (el) el.textContent = counts[key];
-                });
-
-                document.getElementById('stat-total').textContent = counts.all;
-                document.getElementById('stat-errors').textContent = counts.error;
+            handleInput(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    this.executeFromButton();
+                }
             }
 
-            updateStorageInfo() {
-                try {
-                    const data = localStorage.getItem(this.storageKey);
-                    const size = data ? (data.length / 1024).toFixed(1) : '0';
-                    document.getElementById('storage-info').textContent = `${size}KB`;
-                } catch (e) {
-                    document.getElementById('storage-info').textContent = '--';
+            executeFromButton() {
+                const input = document.getElementById('js-input');
+                const code = input.value.trim();
+                
+                if (code) {
+                    this.system('> ' + code);
+                    try {
+                        const result = eval(code);
+                        if (result !== undefined) {
+                            this.system('< ' + result);
+                        }
+                    } catch (err) {
+                        this.error('✖ ' + err.message);
+                    }
+                    input.value = '';
+                    input.style.height = 'auto';
+                }
+            }
+
+            toggleCapture() {
+                this.isCapturing = !this.isCapturing;
+                const btn = document.getElementById('capture-btn');
+                const icon = document.getElementById('capture-icon');
+                
+                if (this.isCapturing) {
+                    btn.classList.remove('active');
+                    icon.textContent = '⏸';
+                    btn.innerHTML = '<span class="btn-icon" id="capture-icon">⏸</span> <span>Pause</span>';
+                    this.system('Capture resumed');
+                } else {
+                    btn.classList.add('active');
+                    icon.textContent = '▶';
+                    btn.innerHTML = '<span class="btn-icon" id="capture-icon">▶</span> <span>Resume</span>';
+                    this.warn('Capture paused');
                 }
             }
 
@@ -664,35 +1046,85 @@
             exportLogs() {
                 const data = {
                     exported: new Date().toISOString(),
+                    count: this.logs.length,
                     logs: this.logs
                 };
+                
                 const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `logs-${Date.now()}.json`;
+                a.download = `fantrove-logs-${Date.now()}.json`;
                 a.click();
                 URL.revokeObjectURL(url);
+                
                 this.showToast('Exported');
             }
 
+            updateStats() {
+                const counts = { all: this.logs.length, error: 0, warn: 0, info: 0, log: 0, debug: 0 };
+                this.logs.forEach(log => {
+                    if (counts[log.level] !== undefined) counts[log.level]++;
+                });
+
+                Object.keys(counts).forEach(key => {
+                    const el = document.getElementById(`count-${key}`);
+                    if (el) el.textContent = counts[key];
+                });
+
+                document.getElementById('stat-total').textContent = counts.all;
+                document.getElementById('stat-errors').textContent = counts.error;
+                document.getElementById('stat-warns').textContent = counts.warn;
+            }
+
+            updateStorageInfo() {
+                try {
+                    let total = 0;
+                    for (let key in localStorage) {
+                        if (localStorage.hasOwnProperty(key)) {
+                            total += localStorage[key].length;
+                        }
+                    }
+                    const kb = (total / 1024).toFixed(1);
+                    document.getElementById('storage-info').textContent = `${kb}KB`;
+                } catch (e) {
+                    document.getElementById('storage-info').textContent = '--';
+                }
+            }
+
+            startUptimeTimer() {
+                setInterval(() => {
+                    const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
+                    const h = Math.floor(elapsed / 3600).toString().padStart(2, '0');
+                    const m = Math.floor((elapsed % 3600) / 60).toString().padStart(2, '0');
+                    const s = (elapsed % 60).toString().padStart(2, '0');
+                }, 1000);
+            }
+
             showToast(msg) {
+                const existing = document.querySelector('.toast');
+                if (existing) existing.remove();
+                
                 const toast = document.createElement('div');
                 toast.className = 'toast';
                 toast.textContent = msg;
                 document.body.appendChild(toast);
-                setTimeout(() => toast.remove(), 1500);
+                
+                setTimeout(() => toast.remove(), 2000);
             }
         }
 
         // Initialize
-        window.consoleSystem = new FantroveConsole();
+        window.consolePro = new FantroveConsolePro();
 
         // Global API
         window.FantroveConsole = {
-            log: (msg, src) => FantroveConsole.log(msg, src),
-            error: (msg, src) => FantroveConsole.error(msg, src),
-            warn: (msg, src) => FantroveConsole.warn(msg, src)
+            log: (m, meta) => consolePro.log(m, meta),
+            info: (m, meta) => consolePro.info(m, meta),
+            warn: (m, meta) => consolePro.warn(m, meta),
+            error: (m, meta) => consolePro.error(m, meta),
+            debug: (m, meta) => consolePro.debug(m, meta),
+            success: (m, meta) => consolePro.success(m, meta)
         };
     </script>
 </body>
