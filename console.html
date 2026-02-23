@@ -48,7 +48,6 @@
             padding-bottom: var(--safe-bottom);
         }
 
-        /* Header */
         .header {
             background: var(--bg-secondary);
             border-bottom: 1px solid var(--border-color);
@@ -108,7 +107,6 @@
             font-size: 16px;
         }
 
-        /* Connection Bar */
         .connection-bar {
             background: var(--bg-tertiary);
             border-bottom: 1px solid var(--border-color);
@@ -135,12 +133,16 @@
             flex-shrink: 0;
         }
 
+        .status-dot.error {
+            background: var(--accent-red);
+            animation: none;
+        }
+
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.4; }
         }
 
-        /* Toolbar */
         .toolbar {
             background: var(--bg-secondary);
             border-bottom: 1px solid var(--border-color);
@@ -254,7 +256,6 @@
             opacity: 0.5;
         }
 
-        /* Console Output */
         .console-container {
             flex: 1;
             overflow-y: auto;
@@ -365,7 +366,16 @@
             border-left: 2px solid var(--border-color);
         }
 
-        /* Empty State */
+        .meta-data {
+            margin-top: 4px;
+            padding: 4px 8px;
+            background: var(--bg-primary);
+            border-radius: 4px;
+            font-size: 11px;
+            color: var(--accent-cyan);
+            font-family: var(--font-mono);
+        }
+
         .empty-state {
             display: flex;
             flex-direction: column;
@@ -393,7 +403,6 @@
             opacity: 0.7;
         }
 
-        /* Input Section */
         .input-section {
             background: var(--bg-secondary);
             border-top: 1px solid var(--border-color);
@@ -463,7 +472,6 @@
             opacity: 0.8;
         }
 
-        /* Footer */
         .footer {
             background: var(--bg-tertiary);
             border-top: 1px solid var(--border-color);
@@ -495,7 +503,6 @@
         .stat-value.error { color: var(--accent-red); }
         .stat-value.warn { color: var(--accent-yellow); }
 
-        /* Toast */
         .toast {
             position: fixed;
             top: 50%;
@@ -517,7 +524,6 @@
             to { opacity: 1; transform: translate(-50%, -50%); }
         }
 
-        /* Desktop */
         @media (min-width: 768px) {
             .header { padding: 16px 24px; }
             .brand { font-size: 16px; }
@@ -555,7 +561,7 @@
     <div class="connection-bar">
         <div class="status-indicator">
             <span class="status-dot" id="status-dot"></span>
-            <span id="status-text">Ready</span>
+            <span id="status-text">Monitoring Active</span>
         </div>
         <div style="opacity: 0.8;">
             <span id="persist-status">💾 Auto-save</span>
@@ -594,8 +600,8 @@
     <div class="console-container" id="console-output">
         <div class="empty-state">
             <div class="empty-icon">📡</div>
-            <div class="empty-text">No logs yet</div>
-            <div class="empty-hint">Use console.log() or FantroveConsole.log() in your app</div>
+            <div class="empty-text">Monitoring for errors...</div>
+            <div class="empty-hint">Errors will appear here automatically. Use FantroveConsole.log() for custom logs.</div>
         </div>
     </div>
 
@@ -626,7 +632,7 @@
     <script>
         /**
          * Fantrove Console Pro
-         * Clean logging - no user behavior tracking
+         * Auto-capture all errors + API logs, no user events
          */
         class FantroveConsolePro {
             constructor() {
@@ -634,52 +640,52 @@
                 this.activeFilters = new Set(['error', 'warn', 'info', 'log', 'debug']);
                 this.searchQuery = '';
                 this.isCapturing = true;
-                this.storageKey = 'fantrove_console_v2';
-                this.filterKey = 'fantrove_filters_v2';
+                this.storageKey = 'fantrove_console_v3';
+                this.filterKey = 'fantrove_filters_v3';
                 this.startTime = Date.now();
-                this.maxLogs = 500;
-                this.originalConsole = {};
+                this.maxLogs = 1000;
+                this.sources = new Set(); // Track connected sources
                 
                 this.init();
             }
 
             init() {
-                // Load persisted data
                 this.loadFromStorage();
                 this.loadFilters();
                 
-                // Setup console hijacking and error handling only
-                this.hijackNativeConsole();
-                this.setupErrorHandling();
-                this.setupMessageHandling();
+                // Setup error capture (comprehensive)
+                this.setupComprehensiveErrorCapture();
                 
-                // Start timers
+                // Setup API message handling
+                this.setupAPIMessageHandling();
+                
+                // Start monitoring
                 this.startUptimeTimer();
                 this.updateStorageInfo();
                 
-                // Render loaded logs
+                // Restore display
                 this.refreshDisplay();
                 this.updateStats();
+                this.updateConnectionStatus();
                 
-                // Welcome message
-                if (this.logs.length === 0) {
-                    this.system('Console ready');
-                } else {
-                    this.system(`Restored ${this.logs.length} logs`);
-                }
-
                 // Auto-save
                 window.addEventListener('beforeunload', () => this.saveToStorage());
-                setInterval(() => this.saveToStorage(), 5000);
+                setInterval(() => this.saveToStorage(), 3000);
+                
+                // Welcome
+                if (this.logs.length > 0) {
+                    this.system(`Restored ${this.logs.length} logs from storage`);
+                }
             }
 
-            /* Storage - 7 day TTL */
+            /* Storage */
             saveToStorage() {
                 try {
                     const data = {
                         timestamp: Date.now(),
                         logs: this.logs.slice(-this.maxLogs),
-                        sessionStart: this.startTime
+                        sessionStart: this.startTime,
+                        sources: Array.from(this.sources)
                     };
                     localStorage.setItem(this.storageKey, JSON.stringify(data));
                     localStorage.setItem(this.filterKey, JSON.stringify([...this.activeFilters]));
@@ -700,6 +706,9 @@
                         if (parsed.timestamp && (Date.now() - parsed.timestamp < sevenDays)) {
                             this.logs = parsed.logs || [];
                             this.startTime = parsed.sessionStart || Date.now();
+                            if (parsed.sources) {
+                                parsed.sources.forEach(s => this.sources.add(s));
+                            }
                         } else {
                             localStorage.removeItem(this.storageKey);
                         }
@@ -726,9 +735,229 @@
                 this.showToast('Storage cleaned');
             }
 
+            /* Comprehensive Error Capture - No user events */
+            setupComprehensiveErrorCapture() {
+                // 1. Global errors
+                window.onerror = (message, source, lineno, colno, error) => {
+                    this.captureError({
+                        type: 'javascript',
+                        message: message,
+                        source: source,
+                        line: lineno,
+                        column: colno,
+                        stack: error?.stack,
+                        timestamp: Date.now()
+                    });
+                    return false;
+                };
+
+                // 2. Unhandled promise rejections
+                window.addEventListener('unhandledrejection', (event) => {
+                    this.captureError({
+                        type: 'promise',
+                        message: event.reason?.message || String(event.reason),
+                        reason: event.reason,
+                        stack: event.reason?.stack,
+                        timestamp: Date.now()
+                    });
+                });
+
+                // 3. Resource loading errors (images, scripts, css)
+                window.addEventListener('error', (event) => {
+                    if (event.target && (event.target.tagName === 'IMG' || 
+                        event.target.tagName === 'SCRIPT' || 
+                        event.target.tagName === 'LINK')) {
+                        this.captureError({
+                            type: 'resource',
+                            message: `Failed to load ${event.target.tagName}: ${event.target.src || event.target.href}`,
+                            source: event.target.src || event.target.href,
+                            timestamp: Date.now()
+                        });
+                    }
+                }, true);
+
+                // 4. Network errors (fetch/XHR failures)
+                this.hijackNetworkErrors();
+
+                // 5. Console error method
+                const originalError = console.error;
+                console.error = (...args) => {
+                    originalError.apply(console, args);
+                    if (this.isCapturing && !this.isUserEventLog(args)) {
+                        const error = args.find(arg => arg instanceof Error);
+                        this.captureError({
+                            type: 'console',
+                            message: args.map(a => this.stringifyArg(a)).join(' '),
+                            stack: error?.stack,
+                            timestamp: Date.now()
+                        });
+                    }
+                };
+            }
+
+            hijackNetworkErrors() {
+                // Fetch errors
+                const originalFetch = window.fetch;
+                window.fetch = async (...args) => {
+                    try {
+                        const response = await originalFetch.apply(this, args);
+                        if (!response.ok) {
+                            this.captureError({
+                                type: 'http',
+                                message: `HTTP ${response.status}: ${response.statusText}`,
+                                url: args[0],
+                                status: response.status,
+                                timestamp: Date.now()
+                            });
+                        }
+                        return response;
+                    } catch (error) {
+                        this.captureError({
+                            type: 'network',
+                            message: `Fetch failed: ${error.message}`,
+                            url: args[0],
+                            error: error.message,
+                            timestamp: Date.now()
+                        });
+                        throw error;
+                    }
+                };
+
+                // XHR errors
+                const originalXHR = window.XMLHttpRequest;
+                window.XMLHttpRequest = function() {
+                    const xhr = new originalXHR();
+                    const url = '';
+                    
+                    xhr.addEventListener('error', function() {
+                        if (window.consolePro && window.consolePro.isCapturing) {
+                            window.consolePro.captureError({
+                                type: 'network',
+                                message: `XHR Request failed`,
+                                url: this._url,
+                                status: this.status,
+                                timestamp: Date.now()
+                            });
+                        }
+                    });
+                    
+                    xhr.addEventListener('load', function() {
+                        if (this.status >= 400 && window.consolePro && window.consolePro.isCapturing) {
+                            window.consolePro.captureError({
+                                type: 'http',
+                                message: `HTTP ${this.status} Error`,
+                                url: this._url,
+                                status: this.status,
+                                timestamp: Date.now()
+                            });
+                        }
+                    });
+                    
+                    const originalOpen = xhr.open;
+                    xhr.open = function(method, url) {
+                        this._url = url;
+                        this._method = method;
+                        return originalOpen.apply(this, arguments);
+                    };
+                    
+                    return xhr;
+                };
+            }
+
+            captureError(errorData) {
+                const log = {
+                    id: Date.now() + Math.random(),
+                    level: 'error',
+                    message: `[${errorData.type.toUpperCase()}] ${errorData.message}`,
+                    source: errorData.source || errorData.url || 'System',
+                    stackTrace: errorData.stack,
+                    meta: {
+                        type: errorData.type,
+                        line: errorData.line,
+                        column: errorData.column,
+                        status: errorData.status
+                    },
+                    timestamp: errorData.timestamp || Date.now()
+                };
+
+                this.addLog(log);
+                this.updateConnectionStatus(true);
+            }
+
+            /* API Message Handling - From fantrove-console-bridge.js */
+            setupAPIMessageHandling() {
+                // Method 1: postMessage (same origin or popup)
+                window.addEventListener('message', (e) => {
+                    if (e.data && e.data.type === 'FANTROVE_LOG') {
+                        this.receiveAPILog(e.data.payload, e.origin);
+                    }
+                });
+
+                // Method 2: localStorage (cross-tab)
+                window.addEventListener('storage', (e) => {
+                    if (e.key === 'fantrove_broadcast') {
+                        try {
+                            const data = JSON.parse(e.newValue);
+                            if (data && data.source !== 'ConsolePro') {
+                                this.receiveAPILog(data, 'broadcast');
+                            }
+                        } catch (err) {}
+                    }
+                });
+
+                // Method 3: BroadcastChannel (modern browsers)
+                if (typeof BroadcastChannel !== 'undefined') {
+                    this.channel = new BroadcastChannel('fantrove_console');
+                    this.channel.onmessage = (e) => {
+                        if (e.data && e.data.type === 'FANTROVE_LOG') {
+                            this.receiveAPILog(e.data.payload, 'channel');
+                        }
+                    };
+                }
+            }
+
+            receiveAPILog(data, origin) {
+                // Skip if it's a user event
+                if (this.isUserEventLog([data.message])) {
+                    return;
+                }
+
+                // Track source
+                if (data.source) {
+                    this.sources.add(data.source);
+                }
+
+                const log = {
+                    id: Date.now() + Math.random(),
+                    level: data.level || 'info',
+                    message: data.message,
+                    source: data.source || origin || 'API',
+                    meta: data.meta || null,
+                    stackTrace: data.stack,
+                    timestamp: Date.now()
+                };
+
+                this.addLog(log);
+                this.updateConnectionStatus(true);
+            }
+
+            isUserEventLog(args) {
+                if (!args || args.length === 0) return false;
+                
+                const text = args.map(a => String(a)).join(' ').toLowerCase();
+                const userEventPatterns = [
+                    'scroll', 'touch', 'mouse', 'click', 'key', 'resize',
+                    'pointer', 'drag', 'gesture', 'wheel', 'mousemove',
+                    'body scroll', 'callback triggered', 'observer',
+                    'intersection', 'mutation', 'visibilitychange',
+                    'focus', 'blur', 'input', 'change', 'submit'
+                ];
+                
+                return userEventPatterns.some(pattern => text.includes(pattern));
+            }
+
             /* Core Logging */
             addLog(log, save = true) {
-                log.id = log.id || Date.now() + Math.random();
                 this.logs.push(log);
                 
                 if (this.logs.length > this.maxLogs) {
@@ -786,7 +1015,12 @@
 
                 let stackHtml = '';
                 if (log.stackTrace) {
-                    stackHtml = `<div class="stack-trace">${log.stackTrace}</div>`;
+                    stackHtml = `<div class="stack-trace">${this.escapeHtml(log.stackTrace)}</div>`;
+                }
+
+                let metaHtml = '';
+                if (log.meta && Object.keys(log.meta).length > 0) {
+                    metaHtml = `<div class="meta-data">${this.escapeHtml(JSON.stringify(log.meta))}</div>`;
                 }
 
                 entry.innerHTML = `
@@ -796,6 +1030,7 @@
                         <span class="log-source">${log.source || 'System'}</span>
                     </div>
                     <div class="log-content">${this.escapeHtml(log.message)}</div>
+                    ${metaHtml}
                     ${stackHtml}
                 `;
 
@@ -814,128 +1049,17 @@
                 return div.innerHTML;
             }
 
-            /* Native Console - Clean, no user behavior tracking */
-            hijackNativeConsole() {
-                const methods = ['log', 'info', 'warn', 'error', 'debug'];
-                
-                methods.forEach(method => {
-                    this.originalConsole[method] = console[method];
-                    console[method] = (...args) => {
-                        this.originalConsole[method].apply(console, args);
-                        if (this.isCapturing) {
-                            this.processNativeLog(method, args);
-                        }
-                    };
-                });
-            }
-
-            processNativeLog(level, args) {
-                // Filter out user behavior logs
-                const message = args.map(arg => {
-                    if (arg === null) return 'null';
-                    if (arg === undefined) return 'undefined';
-                    if (typeof arg === 'object') {
-                        try {
-                            return JSON.stringify(arg);
-                        } catch (e) {
-                            return '[Object]';
-                        }
+            stringifyArg(arg) {
+                if (arg === null) return 'null';
+                if (arg === undefined) return 'undefined';
+                if (typeof arg === 'object') {
+                    try {
+                        return JSON.stringify(arg);
+                    } catch (e) {
+                        return '[Object]';
                     }
-                    return String(arg);
-                }).join(' ');
-
-                // Skip user behavior patterns
-                const skipPatterns = [
-                    'scroll', 'touch', 'mouse', 'click', 'key', 'resize', 
-                    'pointer', 'drag', 'gesture', 'wheel', 'mousemove',
-                    'Body scroll', 'callback', 'observer', 'mutation',
-                    'intersection', 'visibilitychange', 'focus', 'blur'
-                ];
-
-                const lowerMsg = message.toLowerCase();
-                if (skipPatterns.some(p => lowerMsg.includes(p.toLowerCase()))) {
-                    return; // Skip logging user behaviors
                 }
-
-                const error = args.find(arg => arg instanceof Error);
-                
-                this.addLog({
-                    level,
-                    message,
-                    source: 'console.' + level,
-                    stackTrace: error?.stack,
-                    timestamp: Date.now()
-                });
-            }
-
-            /* Error Handling - Only critical errors */
-            setupErrorHandling() {
-                window.onerror = (message, source, lineno, colno, error) => {
-                    this.addLog({
-                        level: 'error',
-                        message: `${message} at ${source}:${lineno}:${colno}`,
-                        source: 'Exception',
-                        stackTrace: error?.stack,
-                        timestamp: Date.now()
-                    });
-                    return false;
-                };
-
-                window.onunhandledrejection = (event) => {
-                    this.addLog({
-                        level: 'error',
-                        message: `Unhandled Promise: ${event.reason}`,
-                        source: 'Promise',
-                        stackTrace: event.reason?.stack,
-                        timestamp: Date.now()
-                    });
-                };
-            }
-
-            /* Message Handling */
-            setupMessageHandling() {
-                window.addEventListener('message', (e) => {
-                    if (e.data?.type === 'FANTROVE_LOG') {
-                        this.receiveExternalLog(e.data.payload);
-                    }
-                });
-
-                window.addEventListener('storage', (e) => {
-                    if (e.key === 'fantrove_broadcast') {
-                        try {
-                            const data = JSON.parse(e.newValue);
-                            if (data) this.receiveExternalLog(data);
-                        } catch (err) {}
-                    }
-                });
-            }
-
-            receiveExternalLog(data) {
-                this.addLog({
-                    level: data.level || 'info',
-                    message: data.message,
-                    source: data.source || 'External',
-                    timestamp: Date.now()
-                });
-            }
-
-            /* Public API */
-            log(msg, meta) { this.externalLog('log', msg, meta); }
-            info(msg, meta) { this.externalLog('info', msg, meta); }
-            warn(msg, meta) { this.externalLog('warn', msg, meta); }
-            error(msg, meta) { this.externalLog('error', msg, meta); }
-            debug(msg, meta) { this.externalLog('debug', msg, meta); }
-            success(msg, meta) { this.externalLog('success', msg, meta); }
-            system(msg) { this.externalLog('info', msg, null, 'System'); }
-
-            externalLog(level, message, meta, source) {
-                const msg = typeof message === 'object' ? JSON.stringify(message) : String(message);
-                this.addLog({
-                    level,
-                    message: msg,
-                    source: source || 'API',
-                    timestamp: Date.now()
-                });
+                return String(arg);
             }
 
             /* UI Controls */
@@ -1025,17 +1149,20 @@
                     icon.textContent = '⏸';
                     btn.innerHTML = '<span class="btn-icon" id="capture-icon">⏸</span> <span>Pause</span>';
                     this.system('Capture resumed');
+                    this.updateConnectionStatus(true);
                 } else {
                     btn.classList.add('active');
                     icon.textContent = '▶';
                     btn.innerHTML = '<span class="btn-icon" id="capture-icon">▶</span> <span>Resume</span>';
                     this.warn('Capture paused');
+                    this.updateConnectionStatus(false);
                 }
             }
 
             clear() {
                 if (confirm('Clear all logs?')) {
                     this.logs = [];
+                    this.sources.clear();
                     localStorage.removeItem(this.storageKey);
                     this.refreshDisplay();
                     this.updateStats();
@@ -1047,6 +1174,7 @@
                 const data = {
                     exported: new Date().toISOString(),
                     count: this.logs.length,
+                    sources: Array.from(this.sources),
                     logs: this.logs
                 };
                 
@@ -1092,6 +1220,19 @@
                 }
             }
 
+            updateConnectionStatus(active = true) {
+                const dot = document.getElementById('status-dot');
+                const text = document.getElementById('status-text');
+                
+                if (this.isCapturing && active) {
+                    dot.className = 'status-dot';
+                    text.textContent = `Monitoring (${this.sources.size} sources)`;
+                } else if (!this.isCapturing) {
+                    dot.className = 'status-dot error';
+                    text.textContent = 'Paused';
+                }
+            }
+
             startUptimeTimer() {
                 setInterval(() => {
                     const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
@@ -1112,19 +1253,33 @@
                 
                 setTimeout(() => toast.remove(), 2000);
             }
+
+            /* Public API for this page */
+            log(msg, meta) { this.addLog({ level: 'log', message: msg, source: 'Console', meta, timestamp: Date.now() }); }
+            info(msg, meta) { this.addLog({ level: 'info', message: msg, source: 'Console', meta, timestamp: Date.now() }); }
+            warn(msg, meta) { this.addLog({ level: 'warn', message: msg, source: 'Console', meta, timestamp: Date.now() }); }
+            error(msg, meta) { this.addLog({ level: 'error', message: msg, source: 'Console', meta, timestamp: Date.now() }); }
+            debug(msg, meta) { this.addLog({ level: 'debug', message: msg, source: 'Console', meta, timestamp: Date.now() }); }
+            system(msg) { this.addLog({ level: 'info', message: msg, source: 'System', timestamp: Date.now() }); }
         }
 
         // Initialize
         window.consolePro = new FantroveConsolePro();
 
-        // Global API
+        // Global API for external scripts
         window.FantroveConsole = {
-            log: (m, meta) => consolePro.log(m, meta),
-            info: (m, meta) => consolePro.info(m, meta),
-            warn: (m, meta) => consolePro.warn(m, meta),
-            error: (m, meta) => consolePro.error(m, meta),
-            debug: (m, meta) => consolePro.debug(m, meta),
-            success: (m, meta) => consolePro.success(m, meta)
+            log: (msg, meta) => consolePro.log(msg, meta),
+            info: (msg, meta) => consolePro.info(msg, meta),
+            warn: (msg, meta) => consolePro.warn(msg, meta),
+            error: (msg, meta) => consolePro.error(msg, meta),
+            debug: (msg, meta) => consolePro.debug(msg, meta),
+            success: (msg, meta) => consolePro.addLog({ 
+                level: 'success', 
+                message: msg, 
+                source: 'API', 
+                meta, 
+                timestamp: Date.now() 
+            })
         };
     </script>
 </body>
