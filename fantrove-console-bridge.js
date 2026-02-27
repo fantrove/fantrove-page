@@ -22,6 +22,9 @@
     const queue = [];
     let isOnline = navigator.onLine;
     let isInitialized = false;
+    let isApiHealthy = false;
+    let lastHealthCheck = 0;
+    const HEALTH_CHECK_INTERVAL = 30000; // ตรวจสอบทุก 30 วินาที
 
     function init() {
         setupErrorCapture();
@@ -31,17 +34,79 @@
         // โหลด logs ค้างจาก localStorage (ถ้ามี)
         loadPendingFromStorage();
         
-        isInitialized = true;
-        flushQueue();
+        // ตรวจสอบ API health ก่อนเริ่มใช้งาน
+        checkHealth().then(healthy => {
+            isInitialized = true;
+            if (healthy) {
+                flushQueue();
+            }
+        });
+        
+        // เริ่ม health check loop
+        startHealthCheckLoop();
+    }
+
+    async function checkHealth() {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            
+            const response = await fetch(`${WORKER_URL}/health`, {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' },
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (response.ok) {
+                const data = await response.json();
+                isApiHealthy = true;
+                lastHealthCheck = Date.now();
+                console.log('[Fantrove Bridge] API Health:', data);
+                return true;
+            } else {
+                isApiHealthy = false;
+                console.warn('[Fantrove Bridge] API Health check failed:', response.status);
+                return false;
+            }
+        } catch (error) {
+            isApiHealthy = false;
+            console.warn('[Fantrove Bridge] API unreachable:', error.message);
+            return false;
+        }
+    }
+
+    function startHealthCheckLoop() {
+        setInterval(async () => {
+            if (!isOnline) return;
+            
+            // ถ้ายังไม่เคย check หรือครบ interval แล้ว
+            if (Date.now() - lastHealthCheck > HEALTH_CHECK_INTERVAL) {
+                const wasHealthy = isApiHealthy;
+                await checkHealth();
+                
+                // ถ้ากลับมาออนไลน์ได้ ให้ sync queue ทันที
+                if (!wasHealthy && isApiHealthy) {
+                    console.log('[Fantrove Bridge] API back online, syncing...');
+                    flushQueue();
+                }
+            }
+        }, 10000); // ตรวจสอบทุก 10 วินาทีว่าควร check health หรือยัง
     }
 
     function setupOnlineListeners() {
         window.addEventListener('online', () => {
             isOnline = true;
-            flushQueue();
+            // เมื่อกลับมาออนไลน์ ตรวจสอบ health ก่อนแล้วค่อย sync
+            checkHealth().then(healthy => {
+                if (healthy) flushQueue();
+            });
         });
+        
         window.addEventListener('offline', () => {
             isOnline = false;
+            isApiHealthy = false;
         });
     }
 
@@ -53,9 +118,12 @@
                 if (Array.isArray(logs)) {
                     queue.push(...logs);
                     localStorage.removeItem('fantrove_backup');
+                    console.log('[Fantrove Bridge] Restored', logs.length, 'logs from storage');
                 }
             }
-        } catch (e) {}
+        } catch (e) {
+            console.error('[Fantrove Bridge] Failed to load backup:', e);
+        }
     }
 
     function savePendingToStorage() {
@@ -83,7 +151,8 @@
         // Broadcast ให้ console ในแท็บเดียวกัน (real-time)
         broadcastLocal(payload);
 
-        if (!isOnline) {
+        // ถ้า offline หรือ API ไม่ healthy ให้เก็บใน queue
+        if (!isOnline || !isApiHealthy) {
             queue.push(payload);
             savePendingToStorage();
             return;
@@ -96,8 +165,11 @@
             body: JSON.stringify(payload),
             keepalive: true
         }).catch(err => {
+            // ถ้าส่งไม่สำเร็จ เก็บไว้ retry
             queue.push(payload);
             savePendingToStorage();
+            // ทำเครื่องหมายว่า API อาจมีปัญหา
+            isApiHealthy = false;
         });
     }
 
@@ -112,28 +184,51 @@
     }
 
     async function flushQueue() {
-        if (queue.length === 0 || !isOnline) return;
+        if (queue.length === 0 || !isOnline || !isApiHealthy) return;
+        
+        // ตรวจสอบ health อีกครั้งก่อน sync
+        if (!await checkHealth()) return;
         
         const batch = queue.splice(0, 50);
         
         try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            
             const response = await fetch(`${WORKER_URL}/logs/batch`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ logs: batch })
+                body: JSON.stringify({ logs: batch }),
+                signal: controller.signal
             });
+
+            clearTimeout(timeoutId);
 
             if (!response.ok) throw new Error('Batch failed');
             
             const result = await response.json();
             if (result.failed > 0) {
-                // คืน failed logs กลับ queue
-                // (simplified - ในความเป็นจริงควร track แต่ละ log)
+                console.warn('[Fantrove Bridge] Batch partially failed:', result);
+            }
+            
+            // ถ้า sync สำเร็จ ลบ backup ใน storage
+            if (result.saved > 0) {
+                removeFromLocalBackup(result.saved);
             }
         } catch (err) {
+            // คืน logs กลับ queue
             queue.unshift(...batch);
             savePendingToStorage();
+            isApiHealthy = false;
         }
+    }
+
+    function removeFromLocalBackup(count) {
+        try {
+            const backup = JSON.parse(localStorage.getItem('fantrove_backup') || '[]');
+            const remaining = backup.slice(count);
+            localStorage.setItem('fantrove_backup', JSON.stringify(remaining));
+        } catch (e) {}
     }
 
     function detectCategory(source, level) {
@@ -218,7 +313,15 @@
         error: (msg, meta) => send('error', msg, meta, 'API'),
         debug: (msg, meta) => send('debug', msg, meta, 'API'),
         success: (msg, meta) => send('success', msg, meta, 'API'),
-        captureException: (err, ctx) => send('error', err.message, { stack: err.stack, context: ctx }, 'ManualCapture')
+        captureException: (err, ctx) => send('error', err.message, { stack: err.stack, context: ctx }, 'ManualCapture'),
+        // เพิ่ม method สำหรับตรวจสอบสถานะ
+        getStatus: () => ({ 
+            online: isOnline, 
+            apiHealthy: isApiHealthy, 
+            pending: queue.length,
+            sessionId: SESSION_ID
+        }),
+        forceSync: () => flushQueue()
     };
 
     // Auto-init
@@ -228,8 +331,8 @@
         init();
     }
 
-    // Sync loop
-    setInterval(flushQueue, 10000);
+    // Sync loop - ลดความถี่ลงเพราะมี health check แยกแล้ว
+    setInterval(flushQueue, 30000);
     
     // Save before unload
     window.addEventListener('beforeunload', savePendingToStorage);
