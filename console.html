@@ -27,6 +27,7 @@
             --accent-red: #da3633;
             --accent-purple: #8957e5;
             --accent-cyan: #39c5cf;
+            --accent-orange: #e3b341;
             --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Fira Code', monospace;
             --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             --safe-top: env(safe-area-inset-top);
@@ -308,6 +309,34 @@
         .log-entry.debug { border-left-color: var(--accent-purple); }
         .log-entry.success { border-left-color: var(--accent-green); }
 
+        /* Category badges */
+        .log-category {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-right: 6px;
+        }
+
+        .log-category.code { 
+            background: rgba(218, 54, 51, 0.3); 
+            color: #ff7b72; 
+        }
+        .log-category.network { 
+            background: rgba(210, 153, 34, 0.3); 
+            color: #e3b341; 
+        }
+        .log-category.system { 
+            background: rgba(88, 166, 255, 0.3); 
+            color: #58a6ff; 
+        }
+        .log-category.api { 
+            background: rgba(35, 134, 54, 0.3); 
+            color: #7ee787; 
+        }
+
         .log-header {
             display: flex;
             align-items: center;
@@ -391,16 +420,6 @@
         .empty-icon {
             font-size: 64px;
             opacity: 0.3;
-        }
-
-        .empty-text {
-            font-size: 16px;
-            line-height: 1.5;
-        }
-
-        .empty-hint {
-            font-size: 13px;
-            opacity: 0.7;
         }
 
         .input-section {
@@ -561,7 +580,7 @@
     <div class="connection-bar">
         <div class="status-indicator">
             <span class="status-dot" id="status-dot"></span>
-            <span id="status-text">Monitoring Active</span>
+            <span id="status-text">Monitoring Code Errors</span>
         </div>
         <div style="opacity: 0.8;">
             <span id="persist-status">💾 Auto-save</span>
@@ -599,9 +618,9 @@
 
     <div class="console-container" id="console-output">
         <div class="empty-state">
-            <div class="empty-icon">📡</div>
-            <div class="empty-text">Monitoring for errors...</div>
-            <div class="empty-hint">Errors will appear here automatically. Use FantroveConsole.log() for custom logs.</div>
+            <div class="empty-icon">🛡️</div>
+            <div class="empty-text">Monitoring for code errors...</div>
+            <div class="empty-hint">Only critical errors from your code will appear here</div>
         </div>
     </div>
 
@@ -623,8 +642,8 @@
     <div class="footer">
         <div class="footer-stats">
             <span class="stat">Total: <span class="stat-value" id="stat-total">0</span></span>
-            <span class="stat">Errors: <span class="stat-value error" id="stat-errors">0</span></span>
-            <span class="stat">Warns: <span class="stat-value warn" id="stat-warns">0</span></span>
+            <span class="stat">Code: <span class="stat-value error" id="stat-code">0</span></span>
+            <span class="stat">Network: <span class="stat-value warn" id="stat-network">0</span></span>
         </div>
         <div id="storage-info">--</div>
     </div>
@@ -632,7 +651,7 @@
     <script>
         /**
          * Fantrove Console Pro
-         * Auto-capture all errors + API logs, no user events
+         * Smart Error Detection - Code errors only, no noise
          */
         class FantroveConsolePro {
             constructor() {
@@ -640,11 +659,11 @@
                 this.activeFilters = new Set(['error', 'warn', 'info', 'log', 'debug']);
                 this.searchQuery = '';
                 this.isCapturing = true;
-                this.storageKey = 'fantrove_console_v3';
-                this.filterKey = 'fantrove_filters_v3';
+                this.storageKey = 'fantrove_console_v4';
+                this.filterKey = 'fantrove_filters_v4';
                 this.startTime = Date.now();
-                this.maxLogs = 1000;
-                this.sources = new Set(); // Track connected sources
+                this.maxLogs = 500;
+                this.stats = { code: 0, network: 0, system: 0, api: 0 };
                 
                 this.init();
             }
@@ -653,46 +672,35 @@
                 this.loadFromStorage();
                 this.loadFilters();
                 
-                // Setup error capture (comprehensive)
-                this.setupComprehensiveErrorCapture();
-                
-                // Setup API message handling
+                // Setup smart error capture
+                this.setupSmartErrorCapture();
                 this.setupAPIMessageHandling();
                 
-                // Start monitoring
                 this.startUptimeTimer();
                 this.updateStorageInfo();
-                
-                // Restore display
                 this.refreshDisplay();
                 this.updateStats();
-                this.updateConnectionStatus();
                 
-                // Auto-save
                 window.addEventListener('beforeunload', () => this.saveToStorage());
-                setInterval(() => this.saveToStorage(), 3000);
+                setInterval(() => this.saveToStorage(), 5000);
                 
-                // Welcome
                 if (this.logs.length > 0) {
-                    this.system(`Restored ${this.logs.length} logs from storage`);
+                    this.system(`Restored ${this.logs.length} logs`);
                 }
             }
 
-            /* Storage */
             saveToStorage() {
                 try {
                     const data = {
                         timestamp: Date.now(),
                         logs: this.logs.slice(-this.maxLogs),
                         sessionStart: this.startTime,
-                        sources: Array.from(this.sources)
+                        stats: this.stats
                     };
                     localStorage.setItem(this.storageKey, JSON.stringify(data));
                     localStorage.setItem(this.filterKey, JSON.stringify([...this.activeFilters]));
                 } catch (e) {
-                    if (e.name === 'QuotaExceededError') {
-                        this.cleanupOldLogs();
-                    }
+                    if (e.name === 'QuotaExceededError') this.cleanupOldLogs();
                 }
             }
 
@@ -706,9 +714,7 @@
                         if (parsed.timestamp && (Date.now() - parsed.timestamp < sevenDays)) {
                             this.logs = parsed.logs || [];
                             this.startTime = parsed.sessionStart || Date.now();
-                            if (parsed.sources) {
-                                parsed.sources.forEach(s => this.sources.add(s));
-                            }
+                            this.stats = parsed.stats || { code: 0, network: 0, system: 0, api: 0 };
                         } else {
                             localStorage.removeItem(this.storageKey);
                         }
@@ -735,225 +741,308 @@
                 this.showToast('Storage cleaned');
             }
 
-            /* Comprehensive Error Capture - No user events */
-            setupComprehensiveErrorCapture() {
-                // 1. Global errors
-                window.onerror = (message, source, lineno, colno, error) => {
-                    this.captureError({
-                        type: 'javascript',
-                        message: message,
-                        source: source,
-                        line: lineno,
-                        column: colno,
-                        stack: error?.stack,
-                        timestamp: Date.now()
-                    });
-                    return false;
-                };
-
-                // 2. Unhandled promise rejections
-                window.addEventListener('unhandledrejection', (event) => {
-                    this.captureError({
-                        type: 'promise',
-                        message: event.reason?.message || String(event.reason),
-                        reason: event.reason,
-                        stack: event.reason?.stack,
-                        timestamp: Date.now()
-                    });
+            /* Smart Error Capture - Only important errors */
+            setupSmartErrorCapture() {
+                // 1. Code Runtime Errors (สำคัญที่สุด)
+                window.addEventListener('error', (event) => {
+                    // กรอง error ที่ไม่สำคัญ
+                    if (this.isNoiseError(event)) return;
+                    
+                    const errorData = {
+                        type: 'code',
+                        category: 'code',
+                        message: event.message,
+                        filename: event.filename,
+                        lineno: event.lineno,
+                        colno: event.colno,
+                        stack: event.error?.stack,
+                        isUserCode: this.isUserCode(event.filename)
+                    };
+                    
+                    this.captureError(errorData);
                 });
 
-                // 3. Resource loading errors (images, scripts, css)
-                window.addEventListener('error', (event) => {
-                    if (event.target && (event.target.tagName === 'IMG' || 
-                        event.target.tagName === 'SCRIPT' || 
-                        event.target.tagName === 'LINK')) {
-                        this.captureError({
-                            type: 'resource',
-                            message: `Failed to load ${event.target.tagName}: ${event.target.src || event.target.href}`,
-                            source: event.target.src || event.target.href,
-                            timestamp: Date.now()
-                        });
-                    }
-                }, true);
+                // 2. Unhandled Promise Rejections (สำคัญ)
+                window.addEventListener('unhandledrejection', (event) => {
+                    const reason = event.reason;
+                    
+                    // กรอง promise rejections ที่ไม่สำคัญ
+                    if (this.isNoisePromise(reason)) return;
+                    
+                    const errorData = {
+                        type: 'promise',
+                        category: 'code',
+                        message: reason?.message || String(reason),
+                        stack: reason?.stack,
+                        isUserCode: true // Promise ส่วนใหญ่มาจากโค้ดเรา
+                    };
+                    
+                    this.captureError(errorData);
+                });
 
-                // 4. Network errors (fetch/XHR failures)
-                this.hijackNetworkErrors();
+                // 3. Network Errors (แยกหมวดหมู่)
+                this.setupSmartNetworkCapture();
 
-                // 5. Console error method
+                // 4. Console.error จากโค้ดเท่านั้น
                 const originalError = console.error;
                 console.error = (...args) => {
                     originalError.apply(console, args);
-                    if (this.isCapturing && !this.isUserEventLog(args)) {
-                        const error = args.find(arg => arg instanceof Error);
+                    
+                    if (!this.isCapturing) return;
+                    
+                    // กรองขยะ
+                    const message = args.map(a => this.stringify(a)).join(' ');
+                    if (this.isNoiseMessage(message)) return;
+                    
+                    // ตรวจสอบว่าเป็น error จริงหรือแค่ log
+                    const isRealError = args.some(a => 
+                        a instanceof Error || 
+                        (typeof a === 'string' && a.includes('Error'))
+                    );
+                    
+                    if (isRealError) {
                         this.captureError({
                             type: 'console',
-                            message: args.map(a => this.stringifyArg(a)).join(' '),
-                            stack: error?.stack,
-                            timestamp: Date.now()
+                            category: 'code',
+                            message: message,
+                            isUserCode: true
                         });
                     }
                 };
             }
 
-            hijackNetworkErrors() {
-                // Fetch errors
+            isNoiseError(event) {
+                // กรอง error ที่ไม่สำคัญ
+                const noisePatterns = [
+                    'ResizeObserver loop',
+                    'Script error.', // CORS error ที่ไม่มี detail
+                    'Cannot read properties of undefined (reading \'__VUE__\')', // Vue internal
+                    'Failed to fetch', // จะจับผ่าน network แทน
+                    'NetworkError',
+                    'The operation was aborted',
+                    'The user aborted a request'
+                ];
+                
+                const message = event.message || '';
+                return noisePatterns.some(p => message.includes(p));
+            }
+
+            isNoisePromise(reason) {
+                if (!reason) return true;
+                
+                const noisePatterns = [
+                    'ResizeObserver',
+                    'The operation was aborted',
+                    'The user aborted a request',
+                    'Network request failed',
+                    'cancelled',
+                    'canceled'
+                ];
+                
+                const message = String(reason.message || reason);
+                return noisePatterns.some(p => message.toLowerCase().includes(p.toLowerCase()));
+            }
+
+            isNoiseMessage(msg) {
+                const noisePatterns = [
+                    'webpack',
+                    'hot module',
+                    'HMR',
+                    '[Vue warn]', // Vue warnings แยกไปอยู่แล้ว
+                    'Download the Vue Devtools',
+                    'You are running a development build',
+                    '[WDS]', // Webpack dev server
+                    'ResizeObserver'
+                ];
+                
+                return noisePatterns.some(p => msg.includes(p));
+            }
+
+            isUserCode(filename) {
+                if (!filename) return true;
+                
+                // ถ้าไม่ใช่จาก node_modules, vendor, หรือ framework คือโค้ดเรา
+                const thirdParty = [
+                    'node_modules',
+                    'vendor',
+                    'webpack',
+                    'react-dom',
+                    'vue.runtime',
+                    'angular',
+                    'jquery',
+                    'bootstrap',
+                    'lodash',
+                    'axios',
+                    'core-js'
+                ];
+                
+                return !thirdParty.some(p => filename.includes(p));
+            }
+
+            setupSmartNetworkCapture() {
+                // Capture เฉพาะ network errors ที่สำคัญ (5xx, timeout, failed)
                 const originalFetch = window.fetch;
                 window.fetch = async (...args) => {
+                    const url = args[0];
+                    
                     try {
                         const response = await originalFetch.apply(this, args);
-                        if (!response.ok) {
+                        
+                        // แจ้งเตือนเฉพาะ server errors (5xx) ไม่ใช่ 404 ทั่วไป
+                        if (response.status >= 500) {
                             this.captureError({
                                 type: 'http',
-                                message: `HTTP ${response.status}: ${response.statusText}`,
-                                url: args[0],
+                                category: 'network',
+                                message: `Server Error ${response.status}: ${response.statusText}`,
+                                url: url,
                                 status: response.status,
-                                timestamp: Date.now()
+                                critical: true
+                            });
+                        } else if (response.status === 404 && this.isAPIEndpoint(url)) {
+                            // 404 เฉพาะ API endpoints เท่านั้น ไม่ใช่รูปภาพ
+                            this.captureError({
+                                type: 'http',
+                                category: 'network',
+                                message: `API Not Found: ${url}`,
+                                url: url,
+                                status: 404
                             });
                         }
+                        
                         return response;
                     } catch (error) {
-                        this.captureError({
-                            type: 'network',
-                            message: `Fetch failed: ${error.message}`,
-                            url: args[0],
-                            error: error.message,
-                            timestamp: Date.now()
-                        });
+                        // Network failure (offline, timeout, CORS)
+                        if (error.name === 'TypeError' || error.name === 'AbortError') {
+                            // อาจเป็น CORS หรือ offline
+                            this.captureError({
+                                type: 'network',
+                                category: 'network',
+                                message: `Network Failed: ${error.message}`,
+                                url: url,
+                                error: error.name,
+                                critical: true
+                            });
+                        }
                         throw error;
                     }
                 };
+            }
 
-                // XHR errors
-                const originalXHR = window.XMLHttpRequest;
-                window.XMLHttpRequest = function() {
-                    const xhr = new originalXHR();
-                    const url = '';
-                    
-                    xhr.addEventListener('error', function() {
-                        if (window.consolePro && window.consolePro.isCapturing) {
-                            window.consolePro.captureError({
-                                type: 'network',
-                                message: `XHR Request failed`,
-                                url: this._url,
-                                status: this.status,
-                                timestamp: Date.now()
-                            });
-                        }
-                    });
-                    
-                    xhr.addEventListener('load', function() {
-                        if (this.status >= 400 && window.consolePro && window.consolePro.isCapturing) {
-                            window.consolePro.captureError({
-                                type: 'http',
-                                message: `HTTP ${this.status} Error`,
-                                url: this._url,
-                                status: this.status,
-                                timestamp: Date.now()
-                            });
-                        }
-                    });
-                    
-                    const originalOpen = xhr.open;
-                    xhr.open = function(method, url) {
-                        this._url = url;
-                        this._method = method;
-                        return originalOpen.apply(this, arguments);
-                    };
-                    
-                    return xhr;
-                };
+            isAPIEndpoint(url) {
+                // ตรวจสอบว่าเป็น API หรือไม่
+                return url.includes('/api/') || 
+                       url.includes('/graphql') ||
+                       url.endsWith('.json') ||
+                       (!url.match(/\.(jpg|jpeg|png|gif|css|js|woff|svg)$/));
             }
 
             captureError(errorData) {
+                // ไม่บันทึกถ้าไม่ใช่ error สำคัญ
+                if (!errorData.critical && !errorData.isUserCode && errorData.category === 'code') {
+                    // ถ้าเป็นโค้ดสามัญและไม่ใช่โค้ดเรา อาจข้ามได้
+                    // แต่ถ้าเป็น network ยังบันทึกอยู่
+                }
+
                 const log = {
                     id: Date.now() + Math.random(),
-                    level: 'error',
-                    message: `[${errorData.type.toUpperCase()}] ${errorData.message}`,
-                    source: errorData.source || errorData.url || 'System',
+                    level: errorData.critical ? 'error' : (errorData.category === 'network' ? 'warn' : 'error'),
+                    message: this.formatErrorMessage(errorData),
+                    source: errorData.filename || errorData.url || 'System',
+                    category: errorData.category || 'system',
                     stackTrace: errorData.stack,
                     meta: {
                         type: errorData.type,
-                        line: errorData.line,
-                        column: errorData.column,
-                        status: errorData.status
+                        line: errorData.lineno,
+                        column: errorData.colno,
+                        status: errorData.status,
+                        isUserCode: errorData.isUserCode
                     },
-                    timestamp: errorData.timestamp || Date.now()
+                    timestamp: Date.now()
                 };
 
+                // Update stats
+                if (this.stats[log.category] !== undefined) {
+                    this.stats[log.category]++;
+                }
+
                 this.addLog(log);
-                this.updateConnectionStatus(true);
             }
 
-            /* API Message Handling - From fantrove-console-bridge.js */
+            formatErrorMessage(data) {
+                let msg = '';
+                
+                // Add category badge prefix
+                const categoryLabels = {
+                    code: '[CODE]',
+                    network: '[NETWORK]',
+                    system: '[SYSTEM]',
+                    api: '[API]'
+                };
+                
+                msg += categoryLabels[data.category] || '[ERROR]';
+                msg += ' ';
+                
+                if (data.type === 'code' && data.filename) {
+                    const file = data.filename.split('/').pop();
+                    msg += `${data.message} (${file}:${data.lineno || 0})`;
+                } else if (data.type === 'network') {
+                    msg += `${data.message}`;
+                    if (data.url) {
+                        const url = new URL(data.url, location.href);
+                        msg += ` → ${url.pathname}`;
+                    }
+                } else {
+                    msg += data.message;
+                }
+                
+                return msg;
+            }
+
+            /* API Message Handling */
             setupAPIMessageHandling() {
-                // Method 1: postMessage (same origin or popup)
                 window.addEventListener('message', (e) => {
-                    if (e.data && e.data.type === 'FANTROVE_LOG') {
-                        this.receiveAPILog(e.data.payload, e.origin);
+                    if (e.data?.type === 'FANTROVE_LOG') {
+                        this.receiveAPILog(e.data.payload);
                     }
                 });
 
-                // Method 2: localStorage (cross-tab)
                 window.addEventListener('storage', (e) => {
                     if (e.key === 'fantrove_broadcast') {
                         try {
                             const data = JSON.parse(e.newValue);
-                            if (data && data.source !== 'ConsolePro') {
-                                this.receiveAPILog(data, 'broadcast');
-                            }
+                            if (data) this.receiveAPILog(data);
                         } catch (err) {}
                     }
                 });
 
-                // Method 3: BroadcastChannel (modern browsers)
                 if (typeof BroadcastChannel !== 'undefined') {
                     this.channel = new BroadcastChannel('fantrove_console');
                     this.channel.onmessage = (e) => {
-                        if (e.data && e.data.type === 'FANTROVE_LOG') {
-                            this.receiveAPILog(e.data.payload, 'channel');
+                        if (e.data?.type === 'FANTROVE_LOG') {
+                            this.receiveAPILog(e.data.payload);
                         }
                     };
                 }
             }
 
-            receiveAPILog(data, origin) {
-                // Skip if it's a user event
-                if (this.isUserEventLog([data.message])) {
-                    return;
-                }
-
-                // Track source
-                if (data.source) {
-                    this.sources.add(data.source);
-                }
-
+            receiveAPILog(data) {
+                // API logs มาจากโค้ดที่ตั้งใจส่ง ไม่ต้องกรองมาก
                 const log = {
                     id: Date.now() + Math.random(),
                     level: data.level || 'info',
                     message: data.message,
-                    source: data.source || origin || 'API',
+                    source: data.source || 'API',
+                    category: 'api',
                     meta: data.meta || null,
                     stackTrace: data.stack,
                     timestamp: Date.now()
                 };
 
-                this.addLog(log);
-                this.updateConnectionStatus(true);
-            }
+                if (this.stats.api !== undefined) {
+                    this.stats.api++;
+                }
 
-            isUserEventLog(args) {
-                if (!args || args.length === 0) return false;
-                
-                const text = args.map(a => String(a)).join(' ').toLowerCase();
-                const userEventPatterns = [
-                    'scroll', 'touch', 'mouse', 'click', 'key', 'resize',
-                    'pointer', 'drag', 'gesture', 'wheel', 'mousemove',
-                    'body scroll', 'callback triggered', 'observer',
-                    'intersection', 'mutation', 'visibilitychange',
-                    'focus', 'blur', 'input', 'change', 'submit'
-                ];
-                
-                return userEventPatterns.some(pattern => text.includes(pattern));
+                this.addLog(log);
             }
 
             /* Core Logging */
@@ -989,9 +1078,7 @@
                 const output = document.getElementById('console-output');
                 
                 const emptyState = output.querySelector('.empty-state');
-                if (emptyState) {
-                    emptyState.remove();
-                }
+                if (emptyState) emptyState.remove();
 
                 const entry = document.createElement('div');
                 entry.className = `log-entry ${log.level}`;
@@ -1013,20 +1100,32 @@
                     success: ''
                 };
 
+                // Category badge
+                const categoryClass = log.category || 'system';
+                
                 let stackHtml = '';
                 if (log.stackTrace) {
-                    stackHtml = `<div class="stack-trace">${this.escapeHtml(log.stackTrace)}</div>`;
+                    // Clean stack trace - แสดงเฉพาะบรรทัดที่เป็นประโยชน์
+                    const cleanStack = this.cleanStackTrace(log.stackTrace);
+                    stackHtml = `<div class="stack-trace">${cleanStack}</div>`;
                 }
 
                 let metaHtml = '';
                 if (log.meta && Object.keys(log.meta).length > 0) {
-                    metaHtml = `<div class="meta-data">${this.escapeHtml(JSON.stringify(log.meta))}</div>`;
+                    const metaStr = Object.entries(log.meta)
+                        .filter(([k, v]) => v !== undefined && v !== null)
+                        .map(([k, v]) => `${k}: ${v}`)
+                        .join(', ');
+                    if (metaStr) {
+                        metaHtml = `<div class="meta-data">${this.escapeHtml(metaStr)}</div>`;
+                    }
                 }
 
                 entry.innerHTML = `
                     <div class="log-header">
                         <span class="log-time">${time}</span>
                         <span class="log-level-badge ${levelColors[log.level] || ''}">${log.level}</span>
+                        <span class="log-category ${categoryClass}">${log.category}</span>
                         <span class="log-source">${log.source || 'System'}</span>
                     </div>
                     <div class="log-content">${this.escapeHtml(log.message)}</div>
@@ -1042,6 +1141,22 @@
                 }
             }
 
+            cleanStackTrace(stack) {
+                // กรอง stack trace ให้แสดงเฉพาะโค้ดที่สำคัญ
+                return stack
+                    .split('\n')
+                    .filter(line => {
+                        // ข้าม node_modules และ framework internals
+                        if (line.includes('node_modules')) return false;
+                        if (line.includes('webpack/bootstrap')) return false;
+                        if (line.includes('vue.runtime.esm')) return false;
+                        if (line.includes('react-dom')) return false;
+                        return true;
+                    })
+                    .slice(0, 5) // แสดงแค่ 5 บรรทัดแรกที่เป็นประโยชน์
+                    .join('\n');
+            }
+
             escapeHtml(text) {
                 if (typeof text !== 'string') text = String(text);
                 const div = document.createElement('div');
@@ -1049,7 +1164,7 @@
                 return div.innerHTML;
             }
 
-            stringifyArg(arg) {
+            stringify(arg) {
                 if (arg === null) return 'null';
                 if (arg === undefined) return 'undefined';
                 if (typeof arg === 'object') {
@@ -1149,20 +1264,18 @@
                     icon.textContent = '⏸';
                     btn.innerHTML = '<span class="btn-icon" id="capture-icon">⏸</span> <span>Pause</span>';
                     this.system('Capture resumed');
-                    this.updateConnectionStatus(true);
                 } else {
                     btn.classList.add('active');
                     icon.textContent = '▶';
                     btn.innerHTML = '<span class="btn-icon" id="capture-icon">▶</span> <span>Resume</span>';
                     this.warn('Capture paused');
-                    this.updateConnectionStatus(false);
                 }
             }
 
             clear() {
                 if (confirm('Clear all logs?')) {
                     this.logs = [];
-                    this.sources.clear();
+                    this.stats = { code: 0, network: 0, system: 0, api: 0 };
                     localStorage.removeItem(this.storageKey);
                     this.refreshDisplay();
                     this.updateStats();
@@ -1174,7 +1287,7 @@
                 const data = {
                     exported: new Date().toISOString(),
                     count: this.logs.length,
-                    sources: Array.from(this.sources),
+                    stats: this.stats,
                     logs: this.logs
                 };
                 
@@ -1201,8 +1314,8 @@
                 });
 
                 document.getElementById('stat-total').textContent = counts.all;
-                document.getElementById('stat-errors').textContent = counts.error;
-                document.getElementById('stat-warns').textContent = counts.warn;
+                document.getElementById('stat-code').textContent = this.stats.code;
+                document.getElementById('stat-network').textContent = this.stats.network;
             }
 
             updateStorageInfo() {
@@ -1220,25 +1333,9 @@
                 }
             }
 
-            updateConnectionStatus(active = true) {
-                const dot = document.getElementById('status-dot');
-                const text = document.getElementById('status-text');
-                
-                if (this.isCapturing && active) {
-                    dot.className = 'status-dot';
-                    text.textContent = `Monitoring (${this.sources.size} sources)`;
-                } else if (!this.isCapturing) {
-                    dot.className = 'status-dot error';
-                    text.textContent = 'Paused';
-                }
-            }
-
             startUptimeTimer() {
                 setInterval(() => {
                     const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
-                    const h = Math.floor(elapsed / 3600).toString().padStart(2, '0');
-                    const m = Math.floor((elapsed % 3600) / 60).toString().padStart(2, '0');
-                    const s = (elapsed % 60).toString().padStart(2, '0');
                 }, 1000);
             }
 
@@ -1254,29 +1351,30 @@
                 setTimeout(() => toast.remove(), 2000);
             }
 
-            /* Public API for this page */
-            log(msg, meta) { this.addLog({ level: 'log', message: msg, source: 'Console', meta, timestamp: Date.now() }); }
-            info(msg, meta) { this.addLog({ level: 'info', message: msg, source: 'Console', meta, timestamp: Date.now() }); }
-            warn(msg, meta) { this.addLog({ level: 'warn', message: msg, source: 'Console', meta, timestamp: Date.now() }); }
-            error(msg, meta) { this.addLog({ level: 'error', message: msg, source: 'Console', meta, timestamp: Date.now() }); }
-            debug(msg, meta) { this.addLog({ level: 'debug', message: msg, source: 'Console', meta, timestamp: Date.now() }); }
-            system(msg) { this.addLog({ level: 'info', message: msg, source: 'System', timestamp: Date.now() }); }
+            /* Public API */
+            log(msg, meta) { this.addLog({ level: 'log', message: msg, source: 'Console', category: 'api', meta, timestamp: Date.now() }); }
+            info(msg, meta) { this.addLog({ level: 'info', message: msg, source: 'Console', category: 'api', meta, timestamp: Date.now() }); }
+            warn(msg, meta) { this.addLog({ level: 'warn', message: msg, source: 'Console', category: 'api', meta, timestamp: Date.now() }); }
+            error(msg, meta) { this.addLog({ level: 'error', message: msg, source: 'Console', category: 'api', meta, timestamp: Date.now() }); }
+            debug(msg, meta) { this.addLog({ level: 'debug', message: msg, source: 'Console', category: 'api', meta, timestamp: Date.now() }); }
+            system(msg) { this.addLog({ level: 'info', message: msg, source: 'System', category: 'system', timestamp: Date.now() }); }
         }
 
         // Initialize
         window.consolePro = new FantroveConsolePro();
 
-        // Global API for external scripts
+        // Global API
         window.FantroveConsole = {
-            log: (msg, meta) => consolePro.log(msg, meta),
-            info: (msg, meta) => consolePro.info(msg, meta),
-            warn: (msg, meta) => consolePro.warn(msg, meta),
-            error: (msg, meta) => consolePro.error(msg, meta),
-            debug: (msg, meta) => consolePro.debug(msg, meta),
-            success: (msg, meta) => consolePro.addLog({ 
+            log: (m, meta) => consolePro.log(m, meta),
+            info: (m, meta) => consolePro.info(m, meta),
+            warn: (m, meta) => consolePro.warn(m, meta),
+            error: (m, meta) => consolePro.error(m, meta),
+            debug: (m, meta) => consolePro.debug(m, meta),
+            success: (m, meta) => consolePro.addLog({ 
                 level: 'success', 
-                message: msg, 
+                message: m, 
                 source: 'API', 
+                category: 'api',
                 meta, 
                 timestamp: Date.now() 
             })
