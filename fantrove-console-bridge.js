@@ -7,7 +7,7 @@
     'use strict';
 
     // ⚠️ แก้ไข URL นี้ให้ตรงกับ Workers ของคุณ
-    const WORKER_URL = 'https://fantrove-console-api.YOUR_SUBDOMAIN.workers.dev';
+    const WORKER_URL = 'https://fantrove-console-api.nontakorn2600.workers.dev';
     
     // ดึง session ID จาก localStorage หรือสร้างใหม่
     const SESSION_ID = (function() {
