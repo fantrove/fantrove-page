@@ -6,6 +6,7 @@
     <meta name="theme-color" content="#0d1117">
     <title>Fantrove Console Pro</title>
     <style>
+        /* CSS เหมือนเดิมจากเวอร์ชั่นก่อน */
         * {
             margin: 0;
             padding: 0;
@@ -27,7 +28,6 @@
             --accent-red: #da3633;
             --accent-purple: #8957e5;
             --accent-cyan: #39c5cf;
-            --accent-orange: #e3b341;
             --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Fira Code', monospace;
             --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             --safe-top: env(safe-area-inset-top);
@@ -137,6 +137,11 @@
         .status-dot.error {
             background: var(--accent-red);
             animation: none;
+        }
+
+        .status-dot.syncing {
+            background: var(--accent-yellow);
+            animation: pulse 1s infinite;
         }
 
         @keyframes pulse {
@@ -309,7 +314,6 @@
         .log-entry.debug { border-left-color: var(--accent-purple); }
         .log-entry.success { border-left-color: var(--accent-green); }
 
-        /* Category badges */
         .log-category {
             display: inline-block;
             padding: 2px 6px;
@@ -403,6 +407,28 @@
             font-size: 11px;
             color: var(--accent-cyan);
             font-family: var(--font-mono);
+        }
+
+        .sync-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .sync-status.syncing::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border: 2px solid var(--accent-blue);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
 
         .empty-state {
@@ -580,10 +606,10 @@
     <div class="connection-bar">
         <div class="status-indicator">
             <span class="status-dot" id="status-dot"></span>
-            <span id="status-text">Monitoring Code Errors</span>
+            <span id="status-text">Connecting to Cloud...</span>
         </div>
-        <div style="opacity: 0.8;">
-            <span id="persist-status">💾 Auto-save</span>
+        <div>
+            <span class="sync-status" id="sync-status">Initializing...</span>
         </div>
     </div>
 
@@ -618,16 +644,16 @@
 
     <div class="console-container" id="console-output">
         <div class="empty-state">
-            <div class="empty-icon">🛡️</div>
-            <div class="empty-text">Monitoring for code errors...</div>
-            <div class="empty-hint">Only critical errors from your code will appear here</div>
+            <div class="empty-icon">☁️</div>
+            <div class="empty-text">Connecting to cloud storage...</div>
+            <div class="empty-hint">Logs will be synced automatically</div>
         </div>
     </div>
 
     <div class="input-section">
         <div class="input-header">
             <span>JavaScript Console</span>
-            <span>7-day retention</span>
+            <span>30-day retention</span>
         </div>
         <div class="input-wrapper">
             <span class="input-prompt">❯</span>
@@ -645,411 +671,233 @@
             <span class="stat">Code: <span class="stat-value error" id="stat-code">0</span></span>
             <span class="stat">Network: <span class="stat-value warn" id="stat-network">0</span></span>
         </div>
-        <div id="storage-info">--</div>
+        <div id="storage-info">Cloud</div>
     </div>
 
     <script>
         /**
-         * Fantrove Console Pro
-         * Smart Error Detection - Code errors only, no noise
+         * Fantrove Console Pro - Cloud Edition
+         * Integrated with Supabase via Cloudflare Workers
+         * Retention: 30 days (managed by Supabase pg_cron)
          */
         class FantroveConsolePro {
             constructor() {
+                // ⚠️ แก้ไข URL นี้ให้ตรงกับ Workers ของคุณ
+                this.apiUrl = 'https://fantrove-console-api.YOUR_SUBDOMAIN.workers.dev';
+                
                 this.logs = [];
+                this.pendingLogs = [];
                 this.activeFilters = new Set(['error', 'warn', 'info', 'log', 'debug']);
                 this.searchQuery = '';
                 this.isCapturing = true;
-                this.storageKey = 'fantrove_console_v4';
-                this.filterKey = 'fantrove_filters_v4';
-                this.startTime = Date.now();
-                this.maxLogs = 500;
+                this.sessionId = this.getOrCreateSessionId();
+                this.isOnline = navigator.onLine;
+                this.isSyncing = false;
                 this.stats = { code: 0, network: 0, system: 0, api: 0 };
                 
                 this.init();
             }
 
+            getOrCreateSessionId() {
+                let sessionId = localStorage.getItem('fantrove_session_id');
+                if (!sessionId) {
+                    sessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                    localStorage.setItem('fantrove_session_id', sessionId);
+                }
+                return sessionId;
+            }
+
             init() {
-                this.loadFromStorage();
-                this.loadFilters();
-                
-                // Setup smart error capture
+                this.setupNetworkListeners();
                 this.setupSmartErrorCapture();
                 this.setupAPIMessageHandling();
                 
-                this.startUptimeTimer();
-                this.updateStorageInfo();
-                this.refreshDisplay();
-                this.updateStats();
+                // โหลด logs จาก cloud
+                this.loadLogsFromCloud();
                 
-                window.addEventListener('beforeunload', () => this.saveToStorage());
-                setInterval(() => this.saveToStorage(), 5000);
+                // เริ่ม sync loop
+                this.startSyncLoop();
                 
-                if (this.logs.length > 0) {
-                    this.system(`Restored ${this.logs.length} logs`);
-                }
+                // แสดงสถานะ
+                this.updateConnectionStatus();
             }
 
-            saveToStorage() {
+            setupNetworkListeners() {
+                window.addEventListener('online', () => {
+                    this.isOnline = true;
+                    this.updateConnectionStatus();
+                    this.syncPendingLogs();
+                });
+                
+                window.addEventListener('offline', () => {
+                    this.isOnline = false;
+                    this.updateConnectionStatus();
+                });
+            }
+
+            /* Cloud API Methods */
+            async loadLogsFromCloud() {
+                this.setSyncStatus(true, 'Loading...');
+                
                 try {
-                    const data = {
-                        timestamp: Date.now(),
-                        logs: this.logs.slice(-this.maxLogs),
-                        sessionStart: this.startTime,
-                        stats: this.stats
-                    };
-                    localStorage.setItem(this.storageKey, JSON.stringify(data));
-                    localStorage.setItem(this.filterKey, JSON.stringify([...this.activeFilters]));
-                } catch (e) {
-                    if (e.name === 'QuotaExceededError') this.cleanupOldLogs();
+                    const response = await fetch(`${this.apiUrl}/logs?session=${this.sessionId}&limit=100`);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    
+                    const result = await response.json();
+                    
+                    if (!result.success) {
+                        throw new Error(result.error || 'Unknown error');
+                    }
+                    
+                    const logs = result.data || [];
+                    
+                    this.logs = logs.map(log => ({
+                        id: log.id,
+                        level: log.level,
+                        category: log.category,
+                        message: log.message,
+                        source: log.source,
+                        meta: log.meta || {},
+                        stackTrace: log.stack_trace,
+                        timestamp: new Date(log.created_at).getTime(),
+                        isFromCloud: true
+                    }));
+                    
+                    this.refreshDisplay();
+                    this.updateStats();
+                    
+                    if (logs.length > 0) {
+                        this.system(`Loaded ${logs.length} logs from cloud`);
+                    }
+                    
+                } catch (error) {
+                    console.error('Failed to load logs:', error);
+                    this.error('Failed to connect to cloud: ' + error.message);
+                } finally {
+                    this.setSyncStatus(false);
                 }
             }
 
-            loadFromStorage() {
+            async saveLogToCloud(log) {
+                if (!this.isOnline) {
+                    this.pendingLogs.push(log);
+                    this.updatePendingCount();
+                    return { queued: true };
+                }
+
                 try {
-                    const data = localStorage.getItem(this.storageKey);
-                    if (data) {
-                        const parsed = JSON.parse(data);
-                        const sevenDays = 7 * 24 * 60 * 60 * 1000;
-                        
-                        if (parsed.timestamp && (Date.now() - parsed.timestamp < sevenDays)) {
-                            this.logs = parsed.logs || [];
-                            this.startTime = parsed.sessionStart || Date.now();
-                            this.stats = parsed.stats || { code: 0, network: 0, system: 0, api: 0 };
-                        } else {
-                            localStorage.removeItem(this.storageKey);
-                        }
+                    const payload = {
+                        session_id: this.sessionId,
+                        level: log.level,
+                        category: log.category || 'system',
+                        message: log.message,
+                        source: log.source,
+                        meta: log.meta || {},
+                        stack_trace: log.stackTrace,
+                        user_agent: navigator.userAgent,
+                        url: location.href
+                    };
+
+                    const response = await fetch(`${this.apiUrl}/logs`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                        keepalive: true
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.error || `HTTP ${response.status}`);
                     }
-                } catch (e) {}
+
+                    const result = await response.json();
+                    return { success: true, id: result.id };
+                    
+                } catch (error) {
+                    // เก็บไว้ retry ภายหลัง
+                    this.pendingLogs.push(log);
+                    this.updatePendingCount();
+                    return { error: error.message, queued: true };
+                }
             }
 
-            loadFilters() {
+            async syncPendingLogs() {
+                if (this.pendingLogs.length === 0 || !this.isOnline || this.isSyncing) return;
+                
+                this.isSyncing = true;
+                this.setSyncStatus(true, `Syncing ${this.pendingLogs.length}...`);
+                
+                // จำกัด batch size
+                const batch = this.pendingLogs.splice(0, 50);
+                
                 try {
-                    const filters = localStorage.getItem(this.filterKey);
-                    if (filters) {
-                        this.activeFilters = new Set(JSON.parse(filters));
-                        document.querySelectorAll('.filter-btn[data-level]').forEach(btn => {
-                            const level = btn.dataset.level;
-                            btn.classList.toggle('active', this.activeFilters.has(level) || this.activeFilters.size === 5);
-                        });
-                    }
-                } catch (e) {}
-            }
+                    const response = await fetch(`${this.apiUrl}/logs/batch`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ logs: batch.map(log => ({
+                            session_id: this.sessionId,
+                            level: log.level,
+                            category: log.category || 'system',
+                            message: log.message,
+                            source: log.source,
+                            meta: log.meta || {},
+                            stack_trace: log.stackTrace,
+                            user_agent: navigator.userAgent,
+                            url: location.href
+                        }))})
+                    });
 
-            cleanupOldLogs() {
-                this.logs = this.logs.slice(Math.floor(this.logs.length / 2));
-                this.saveToStorage();
-                this.showToast('Storage cleaned');
-            }
-
-            /* Smart Error Capture - Only important errors */
-            setupSmartErrorCapture() {
-                // 1. Code Runtime Errors (สำคัญที่สุด)
-                window.addEventListener('error', (event) => {
-                    // กรอง error ที่ไม่สำคัญ
-                    if (this.isNoiseError(event)) return;
+                    const result = await response.json();
                     
-                    const errorData = {
-                        type: 'code',
-                        category: 'code',
-                        message: event.message,
-                        filename: event.filename,
-                        lineno: event.lineno,
-                        colno: event.colno,
-                        stack: event.error?.stack,
-                        isUserCode: this.isUserCode(event.filename)
-                    };
-                    
-                    this.captureError(errorData);
-                });
-
-                // 2. Unhandled Promise Rejections (สำคัญ)
-                window.addEventListener('unhandledrejection', (event) => {
-                    const reason = event.reason;
-                    
-                    // กรอง promise rejections ที่ไม่สำคัญ
-                    if (this.isNoisePromise(reason)) return;
-                    
-                    const errorData = {
-                        type: 'promise',
-                        category: 'code',
-                        message: reason?.message || String(reason),
-                        stack: reason?.stack,
-                        isUserCode: true // Promise ส่วนใหญ่มาจากโค้ดเรา
-                    };
-                    
-                    this.captureError(errorData);
-                });
-
-                // 3. Network Errors (แยกหมวดหมู่)
-                this.setupSmartNetworkCapture();
-
-                // 4. Console.error จากโค้ดเท่านั้น
-                const originalError = console.error;
-                console.error = (...args) => {
-                    originalError.apply(console, args);
-                    
-                    if (!this.isCapturing) return;
-                    
-                    // กรองขยะ
-                    const message = args.map(a => this.stringify(a)).join(' ');
-                    if (this.isNoiseMessage(message)) return;
-                    
-                    // ตรวจสอบว่าเป็น error จริงหรือแค่ log
-                    const isRealError = args.some(a => 
-                        a instanceof Error || 
-                        (typeof a === 'string' && a.includes('Error'))
-                    );
-                    
-                    if (isRealError) {
-                        this.captureError({
-                            type: 'console',
-                            category: 'code',
-                            message: message,
-                            isUserCode: true
-                        });
-                    }
-                };
-            }
-
-            isNoiseError(event) {
-                // กรอง error ที่ไม่สำคัญ
-                const noisePatterns = [
-                    'ResizeObserver loop',
-                    'Script error.', // CORS error ที่ไม่มี detail
-                    'Cannot read properties of undefined (reading \'__VUE__\')', // Vue internal
-                    'Failed to fetch', // จะจับผ่าน network แทน
-                    'NetworkError',
-                    'The operation was aborted',
-                    'The user aborted a request'
-                ];
-                
-                const message = event.message || '';
-                return noisePatterns.some(p => message.includes(p));
-            }
-
-            isNoisePromise(reason) {
-                if (!reason) return true;
-                
-                const noisePatterns = [
-                    'ResizeObserver',
-                    'The operation was aborted',
-                    'The user aborted a request',
-                    'Network request failed',
-                    'cancelled',
-                    'canceled'
-                ];
-                
-                const message = String(reason.message || reason);
-                return noisePatterns.some(p => message.toLowerCase().includes(p.toLowerCase()));
-            }
-
-            isNoiseMessage(msg) {
-                const noisePatterns = [
-                    'webpack',
-                    'hot module',
-                    'HMR',
-                    '[Vue warn]', // Vue warnings แยกไปอยู่แล้ว
-                    'Download the Vue Devtools',
-                    'You are running a development build',
-                    '[WDS]', // Webpack dev server
-                    'ResizeObserver'
-                ];
-                
-                return noisePatterns.some(p => msg.includes(p));
-            }
-
-            isUserCode(filename) {
-                if (!filename) return true;
-                
-                // ถ้าไม่ใช่จาก node_modules, vendor, หรือ framework คือโค้ดเรา
-                const thirdParty = [
-                    'node_modules',
-                    'vendor',
-                    'webpack',
-                    'react-dom',
-                    'vue.runtime',
-                    'angular',
-                    'jquery',
-                    'bootstrap',
-                    'lodash',
-                    'axios',
-                    'core-js'
-                ];
-                
-                return !thirdParty.some(p => filename.includes(p));
-            }
-
-            setupSmartNetworkCapture() {
-                // Capture เฉพาะ network errors ที่สำคัญ (5xx, timeout, failed)
-                const originalFetch = window.fetch;
-                window.fetch = async (...args) => {
-                    const url = args[0];
-                    
-                    try {
-                        const response = await originalFetch.apply(this, args);
-                        
-                        // แจ้งเตือนเฉพาะ server errors (5xx) ไม่ใช่ 404 ทั่วไป
-                        if (response.status >= 500) {
-                            this.captureError({
-                                type: 'http',
-                                category: 'network',
-                                message: `Server Error ${response.status}: ${response.statusText}`,
-                                url: url,
-                                status: response.status,
-                                critical: true
-                            });
-                        } else if (response.status === 404 && this.isAPIEndpoint(url)) {
-                            // 404 เฉพาะ API endpoints เท่านั้น ไม่ใช่รูปภาพ
-                            this.captureError({
-                                type: 'http',
-                                category: 'network',
-                                message: `API Not Found: ${url}`,
-                                url: url,
-                                status: 404
-                            });
+                    if (result.success) {
+                        this.system(`Synced ${result.saved} logs to cloud`);
+                        if (result.failed > 0) {
+                            this.warn(`${result.failed} logs failed to sync`);
                         }
-                        
-                        return response;
-                    } catch (error) {
-                        // Network failure (offline, timeout, CORS)
-                        if (error.name === 'TypeError' || error.name === 'AbortError') {
-                            // อาจเป็น CORS หรือ offline
-                            this.captureError({
-                                type: 'network',
-                                category: 'network',
-                                message: `Network Failed: ${error.message}`,
-                                url: url,
-                                error: error.name,
-                                critical: true
-                            });
-                        }
-                        throw error;
+                    } else {
+                        // คืน logs กลับ queue ถ้า fail
+                        this.pendingLogs.unshift(...batch);
                     }
-                };
-            }
-
-            isAPIEndpoint(url) {
-                // ตรวจสอบว่าเป็น API หรือไม่
-                return url.includes('/api/') || 
-                       url.includes('/graphql') ||
-                       url.endsWith('.json') ||
-                       (!url.match(/\.(jpg|jpeg|png|gif|css|js|woff|svg)$/));
-            }
-
-            captureError(errorData) {
-                // ไม่บันทึกถ้าไม่ใช่ error สำคัญ
-                if (!errorData.critical && !errorData.isUserCode && errorData.category === 'code') {
-                    // ถ้าเป็นโค้ดสามัญและไม่ใช่โค้ดเรา อาจข้ามได้
-                    // แต่ถ้าเป็น network ยังบันทึกอยู่
+                } catch (error) {
+                    console.error('Sync failed:', error);
+                    this.pendingLogs.unshift(...batch);
+                } finally {
+                    this.isSyncing = false;
+                    this.setSyncStatus(false);
+                    this.updatePendingCount();
                 }
-
-                const log = {
-                    id: Date.now() + Math.random(),
-                    level: errorData.critical ? 'error' : (errorData.category === 'network' ? 'warn' : 'error'),
-                    message: this.formatErrorMessage(errorData),
-                    source: errorData.filename || errorData.url || 'System',
-                    category: errorData.category || 'system',
-                    stackTrace: errorData.stack,
-                    meta: {
-                        type: errorData.type,
-                        line: errorData.lineno,
-                        column: errorData.colno,
-                        status: errorData.status,
-                        isUserCode: errorData.isUserCode
-                    },
-                    timestamp: Date.now()
-                };
-
-                // Update stats
-                if (this.stats[log.category] !== undefined) {
-                    this.stats[log.category]++;
-                }
-
-                this.addLog(log);
             }
 
-            formatErrorMessage(data) {
-                let msg = '';
+            startSyncLoop() {
+                // Sync ทุก 10 วินาที
+                setInterval(() => this.syncPendingLogs(), 10000);
                 
-                // Add category badge prefix
-                const categoryLabels = {
-                    code: '[CODE]',
-                    network: '[NETWORK]',
-                    system: '[SYSTEM]',
-                    api: '[API]'
-                };
-                
-                msg += categoryLabels[data.category] || '[ERROR]';
-                msg += ' ';
-                
-                if (data.type === 'code' && data.filename) {
-                    const file = data.filename.split('/').pop();
-                    msg += `${data.message} (${file}:${data.lineno || 0})`;
-                } else if (data.type === 'network') {
-                    msg += `${data.message}`;
-                    if (data.url) {
-                        const url = new URL(data.url, location.href);
-                        msg += ` → ${url.pathname}`;
-                    }
-                } else {
-                    msg += data.message;
-                }
-                
-                return msg;
-            }
-
-            /* API Message Handling */
-            setupAPIMessageHandling() {
-                window.addEventListener('message', (e) => {
-                    if (e.data?.type === 'FANTROVE_LOG') {
-                        this.receiveAPILog(e.data.payload);
+                // Sync เมื่อ page visibility เปลี่ยน
+                document.addEventListener('visibilitychange', () => {
+                    if (!document.hidden) {
+                        this.syncPendingLogs();
+                        this.loadLogsFromCloud();
                     }
                 });
-
-                window.addEventListener('storage', (e) => {
-                    if (e.key === 'fantrove_broadcast') {
-                        try {
-                            const data = JSON.parse(e.newValue);
-                            if (data) this.receiveAPILog(data);
-                        } catch (err) {}
-                    }
-                });
-
-                if (typeof BroadcastChannel !== 'undefined') {
-                    this.channel = new BroadcastChannel('fantrove_console');
-                    this.channel.onmessage = (e) => {
-                        if (e.data?.type === 'FANTROVE_LOG') {
-                            this.receiveAPILog(e.data.payload);
-                        }
-                    };
-                }
             }
 
-            receiveAPILog(data) {
-                // API logs มาจากโค้ดที่ตั้งใจส่ง ไม่ต้องกรองมาก
-                const log = {
-                    id: Date.now() + Math.random(),
-                    level: data.level || 'info',
-                    message: data.message,
-                    source: data.source || 'API',
-                    category: 'api',
-                    meta: data.meta || null,
-                    stackTrace: data.stack,
-                    timestamp: Date.now()
-                };
-
-                if (this.stats.api !== undefined) {
-                    this.stats.api++;
+            updatePendingCount() {
+                const count = this.pendingLogs.length;
+                if (count > 0) {
+                    this.setSyncStatus(false, `${count} pending`);
                 }
-
-                this.addLog(log);
             }
 
             /* Core Logging */
-            addLog(log, save = true) {
+            async addLog(log, saveToCloud = true) {
+                log.id = log.id || Date.now() + Math.random();
                 this.logs.push(log);
                 
-                if (this.logs.length > this.maxLogs) {
+                // เก็บแค่ 500 logs ใน memory
+                if (this.logs.length > 500) {
                     this.logs.shift();
                 }
                 
@@ -1059,9 +907,14 @@
                 
                 this.updateStats();
                 
-                if (save) {
-                    this.saveToStorage();
-                    this.updateStorageInfo();
+                // Update category stats
+                if (this.stats[log.category] !== undefined) {
+                    this.stats[log.category]++;
+                }
+                
+                // Save to cloud
+                if (saveToCloud) {
+                    await this.saveLogToCloud(log);
                 }
             }
 
@@ -1100,14 +953,11 @@
                     success: ''
                 };
 
-                // Category badge
                 const categoryClass = log.category || 'system';
                 
                 let stackHtml = '';
                 if (log.stackTrace) {
-                    // Clean stack trace - แสดงเฉพาะบรรทัดที่เป็นประโยชน์
-                    const cleanStack = this.cleanStackTrace(log.stackTrace);
-                    stackHtml = `<div class="stack-trace">${cleanStack}</div>`;
+                    stackHtml = `<div class="stack-trace">${this.escapeHtml(log.stackTrace)}</div>`;
                 }
 
                 let metaHtml = '';
@@ -1141,22 +991,6 @@
                 }
             }
 
-            cleanStackTrace(stack) {
-                // กรอง stack trace ให้แสดงเฉพาะโค้ดที่สำคัญ
-                return stack
-                    .split('\n')
-                    .filter(line => {
-                        // ข้าม node_modules และ framework internals
-                        if (line.includes('node_modules')) return false;
-                        if (line.includes('webpack/bootstrap')) return false;
-                        if (line.includes('vue.runtime.esm')) return false;
-                        if (line.includes('react-dom')) return false;
-                        return true;
-                    })
-                    .slice(0, 5) // แสดงแค่ 5 บรรทัดแรกที่เป็นประโยชน์
-                    .join('\n');
-            }
-
             escapeHtml(text) {
                 if (typeof text !== 'string') text = String(text);
                 const div = document.createElement('div');
@@ -1175,6 +1009,229 @@
                     }
                 }
                 return String(arg);
+            }
+
+            /* Smart Error Capture */
+            setupSmartErrorCapture() {
+                window.addEventListener('error', (event) => {
+                    if (this.isNoiseError(event)) return;
+                    
+                    const errorData = {
+                        type: 'code',
+                        category: 'code',
+                        message: event.message,
+                        filename: event.filename,
+                        lineno: event.lineno,
+                        colno: event.colno,
+                        stack: event.error?.stack,
+                        isUserCode: this.isUserCode(event.filename)
+                    };
+                    
+                    this.captureError(errorData);
+                });
+
+                window.addEventListener('unhandledrejection', (event) => {
+                    if (this.isNoisePromise(event.reason)) return;
+                    
+                    const errorData = {
+                        type: 'promise',
+                        category: 'code',
+                        message: event.reason?.message || String(event.reason),
+                        stack: event.reason?.stack,
+                        isUserCode: true
+                    };
+                    
+                    this.captureError(errorData);
+                });
+
+                this.setupSmartNetworkCapture();
+
+                const originalError = console.error;
+                console.error = (...args) => {
+                    originalError.apply(console, args);
+                    
+                    if (!this.isCapturing) return;
+                    
+                    const message = args.map(a => this.stringify(a)).join(' ');
+                    if (this.isNoiseMessage(message)) return;
+                    
+                    const error = args.find(a => a instanceof Error);
+                    if (error) {
+                        this.captureError({
+                            type: 'console',
+                            category: 'code',
+                            message: message,
+                            stack: error.stack,
+                            isUserCode: true
+                        });
+                    }
+                };
+            }
+
+            isNoiseError(event) {
+                const noise = [
+                    'ResizeObserver loop',
+                    'Script error.',
+                    'The operation was aborted',
+                    'The user aborted a request'
+                ];
+                return noise.some(n => event.message?.includes(n));
+            }
+
+            isNoisePromise(reason) {
+                if (!reason) return true;
+                const msg = String(reason.message || reason).toLowerCase();
+                return msg.includes('resizeobserver') || 
+                       msg.includes('abort') || 
+                       msg.includes('cancel');
+            }
+
+            isNoiseMessage(msg) {
+                const noise = ['webpack', 'hot module', 'HMR', '[Vue warn]', '[WDS]', 'ResizeObserver'];
+                return noise.some(n => msg.includes(n));
+            }
+
+            isUserCode(filename) {
+                if (!filename) return true;
+                const thirdParty = ['node_modules', 'vendor', 'webpack', 'react-dom', 'vue.runtime'];
+                return !thirdParty.some(p => filename.includes(p));
+            }
+
+            setupSmartNetworkCapture() {
+                const originalFetch = window.fetch;
+                window.fetch = async (...args) => {
+                    const url = args[0];
+                    
+                    try {
+                        const response = await originalFetch.apply(this, args);
+                        
+                        if (response.status >= 500) {
+                            this.captureError({
+                                type: 'http',
+                                category: 'network',
+                                message: `Server Error ${response.status}: ${response.statusText}`,
+                                url: url,
+                                status: response.status,
+                                critical: true
+                            });
+                        } else if (response.status === 404 && this.isAPIEndpoint(url)) {
+                            this.captureError({
+                                type: 'http',
+                                category: 'network',
+                                message: `API Not Found: ${url}`,
+                                url: url,
+                                status: 404
+                            });
+                        }
+                        
+                        return response;
+                    } catch (error) {
+                        if (error.name !== 'AbortError') {
+                            this.captureError({
+                                type: 'network',
+                                category: 'network',
+                                message: `Network Failed: ${error.message}`,
+                                url: url,
+                                error: error.name,
+                                critical: true
+                            });
+                        }
+                        throw error;
+                    }
+                };
+            }
+
+            isAPIEndpoint(url) {
+                return url.includes('/api/') || 
+                       url.includes('/graphql') ||
+                       url.endsWith('.json') ||
+                       (!url.match(/\.(jpg|jpeg|png|gif|css|js|woff|svg)$/));
+            }
+
+            captureError(errorData) {
+                const log = {
+                    level: errorData.critical ? 'error' : (errorData.category === 'network' ? 'warn' : 'error'),
+                    message: this.formatErrorMessage(errorData),
+                    source: errorData.filename || errorData.url || 'System',
+                    category: errorData.category || 'system',
+                    stackTrace: errorData.stack,
+                    meta: {
+                        type: errorData.type,
+                        line: errorData.lineno,
+                        column: errorData.colno,
+                        status: errorData.status,
+                        isUserCode: errorData.isUserCode
+                    },
+                    timestamp: Date.now()
+                };
+
+                this.addLog(log);
+            }
+
+            formatErrorMessage(data) {
+                let msg = '';
+                const categoryLabels = { code: '[CODE]', network: '[NETWORK]', system: '[SYSTEM]', api: '[API]' };
+                
+                msg += categoryLabels[data.category] || '[ERROR]';
+                msg += ' ';
+                
+                if (data.type === 'code' && data.filename) {
+                    const file = data.filename.split('/').pop();
+                    msg += `${data.message} (${file}:${data.lineno || 0})`;
+                } else if (data.type === 'network') {
+                    msg += `${data.message}`;
+                    if (data.url) {
+                        const url = new URL(data.url, location.href);
+                        msg += ` → ${url.pathname}`;
+                    }
+                } else {
+                    msg += data.message;
+                }
+                
+                return msg;
+            }
+
+            /* API Message Handling */
+            setupAPIMessageHandling() {
+                window.addEventListener('message', (e) => {
+                    if (e.data?.type === 'FANTROVE_LOG') {
+                        this.receiveAPILog(e.data.payload);
+                    }
+                });
+
+                window.addEventListener('storage', (e) => {
+                    if (e.key === 'fantrove_broadcast') {
+                        try {
+                            const data = JSON.parse(e.newValue);
+                            if (data && !data._local) {
+                                this.receiveAPILog(data);
+                            }
+                        } catch (err) {}
+                    }
+                });
+
+                if (typeof BroadcastChannel !== 'undefined') {
+                    this.channel = new BroadcastChannel('fantrove_console');
+                    this.channel.onmessage = (e) => {
+                        if (e.data?.type === 'FANTROVE_LOG') {
+                            this.receiveAPILog(e.data.payload);
+                        }
+                    };
+                }
+            }
+
+            receiveAPILog(data) {
+                const log = {
+                    level: data.level || 'info',
+                    message: data.message,
+                    source: data.source || 'API',
+                    category: 'api',
+                    meta: data.meta || null,
+                    stackTrace: data.stack,
+                    timestamp: Date.now()
+                };
+
+                this.addLog(log);
             }
 
             /* UI Controls */
@@ -1201,7 +1258,6 @@
                     }
                 }
                 
-                this.saveToStorage();
                 this.refreshDisplay();
             }
 
@@ -1272,20 +1328,20 @@
                 }
             }
 
-            clear() {
-                if (confirm('Clear all logs?')) {
+            async clear() {
+                if (confirm('Clear all logs from view? (Logs in cloud will remain until auto-deleted after 30 days)')) {
                     this.logs = [];
                     this.stats = { code: 0, network: 0, system: 0, api: 0 };
-                    localStorage.removeItem(this.storageKey);
                     this.refreshDisplay();
                     this.updateStats();
-                    this.showToast('Cleared');
+                    this.showToast('Cleared from view');
                 }
             }
 
             exportLogs() {
                 const data = {
                     exported: new Date().toISOString(),
+                    session: this.sessionId,
                     count: this.logs.length,
                     stats: this.stats,
                     logs: this.logs
@@ -1318,25 +1374,28 @@
                 document.getElementById('stat-network').textContent = this.stats.network;
             }
 
-            updateStorageInfo() {
-                try {
-                    let total = 0;
-                    for (let key in localStorage) {
-                        if (localStorage.hasOwnProperty(key)) {
-                            total += localStorage[key].length;
-                        }
-                    }
-                    const kb = (total / 1024).toFixed(1);
-                    document.getElementById('storage-info').textContent = `${kb}KB`;
-                } catch (e) {
-                    document.getElementById('storage-info').textContent = '--';
+            updateConnectionStatus() {
+                const dot = document.getElementById('status-dot');
+                const text = document.getElementById('status-text');
+                
+                if (this.isOnline) {
+                    dot.className = 'status-dot';
+                    text.textContent = 'Cloud Connected';
+                } else {
+                    dot.className = 'status-dot error';
+                    text.textContent = 'Offline - Queuing logs';
                 }
             }
 
-            startUptimeTimer() {
-                setInterval(() => {
-                    const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
-                }, 1000);
+            setSyncStatus(syncing, message) {
+                const status = document.getElementById('sync-status');
+                if (syncing) {
+                    status.textContent = message || 'Syncing...';
+                    status.className = 'sync-status syncing';
+                } else {
+                    status.textContent = message || 'Synced';
+                    status.className = 'sync-status';
+                }
             }
 
             showToast(msg) {
