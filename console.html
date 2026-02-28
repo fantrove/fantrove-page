@@ -220,6 +220,19 @@
                 this.connectionError = null;
                 this.isInitialized = false;
                 
+                // Patterns ของข้อความ system ที่ไม่ต้องการบันทึก
+                this.skipStoragePatterns = [
+                    /^Console ready \(Session:/i,
+                    /^Restored \d+ logs from local backup/i,
+                    /^Loaded \d+ new logs from cloud/i,
+                    /^Synced \d+\/\d+ pending logs/i,
+                    /^Sync completed:/i,
+                    /^Capture (resumed|paused)/i,
+                    /^Display cleared/i,
+                    /^Exported$/i,
+                    /^Reconnected successfully$/i
+                ];
+                
                 this.init();
             }
 
@@ -245,7 +258,9 @@
                 this.loadFromLocalBackup();
                 this.updateConnectionStatus('local');
                 this.isInitialized = true;
-                this.system('Console ready (Session: ' + this.sessionId.substring(0, 8) + ')');
+                
+                // ใช้ skipStorage = true เพื่อไม่บันทึกลงฐานข้อมูล
+                this.system('Console ready (Session: ' + this.sessionId.substring(0, 8) + ')', null, true);
                 
                 setTimeout(() => {
                     this.connectToCloud().catch(err => {
@@ -363,7 +378,8 @@
                 this.updateStats();
                 
                 if (newLogs.length > 0) {
-                    this.system(`Loaded ${newLogs.length} new logs from cloud`);
+                    // ใช้ skipStorage = true เพื่อไม่บันทึกข้อความนี้
+                    this.system(`Loaded ${newLogs.length} new logs from cloud`, null, true);
                 }
                 
                 this.setSyncStatus(false);
@@ -481,15 +497,16 @@
                         this.isCloudConnected = true;
                         this.hideError();
                         
-                        // ✅ แก้ไข: ตรวจสอบค่าที่ได้จาก API อย่างปลอดภัย
                         const saved = result.saved || result.successful || 0;
                         const failed = result.failed || 0;
                         const total = result.total || batch.length;
                         
                         if (saved > 0) {
-                            this.system(`Synced ${saved}/${total} pending logs${failed > 0 ? ` (${failed} failed)` : ''}`);
+                            // ใช้ skipStorage = true เพื่อไม่บันทึกข้อความนี้
+                            this.system(`Synced ${saved}/${total} pending logs${failed > 0 ? ` (${failed} failed)` : ''}`, null, true);
                         } else if (failed > 0) {
-                            this.warn(`Sync completed: ${failed} logs failed`);
+                            // ใช้ skipStorage = true เพื่อไม่บันทึกข้อความนี้
+                            this.warn(`Sync completed: ${failed} logs failed`, null, true);
                         }
                         
                         this.removeFromLocalBackup(saved);
@@ -538,7 +555,8 @@
                     
                     if (recent.length > 0) {
                         this.pendingLogs.push(...recent);
-                        this.system(`Restored ${recent.length} logs from local backup`);
+                        // ใช้ skipStorage = true เพื่อไม่บันทึกข้อความนี้
+                        this.system(`Restored ${recent.length} logs from local backup`, null, true);
                     }
                     
                     this.refreshDisplay();
@@ -563,9 +581,18 @@
                 } catch (e) {}
             }
 
-            async addLog(log, saveToCloud = true) {
+            /**
+             * เพิ่ม log entry
+             * @param {Object} log - ข้อมูล log
+             * @param {boolean} saveToCloud - บันทึกลง cloud หรือไม่
+             * @param {boolean} skipStorage - ข้ามการบันทึกทั้งหมด (cloud + local) หรือไม่
+             */
+            async addLog(log, saveToCloud = true, skipStorage = false) {
                 log.id = log.id || (Date.now() + Math.random()).toString();
                 log.timestamp = log.timestamp || Date.now();
+                
+                // ตรวจสอบว่าเป็นข้อความ system ที่ไม่ต้องการบันทึกหรือไม่
+                const shouldSkipStorage = skipStorage || this.shouldSkipStorage(log);
                 
                 this.logs.push(log);
                 if (this.logs.length > 500) this.logs.shift();
@@ -580,9 +607,25 @@
                     this.stats[log.category]++;
                 }
                 
-                if (saveToCloud && this.isInitialized) {
+                // ถ้า skipStorage เป็น true จะไม่บันทึกลงทั้ง cloud และ local backup
+                if (!shouldSkipStorage && saveToCloud && this.isInitialized) {
                     this.saveLogToCloud(log).catch(() => {});
                 }
+            }
+
+            /**
+             * ตรวจสอบว่าข้อความควรข้ามการบันทึกหรือไม่
+             */
+            shouldSkipStorage(log) {
+                // ถ้าไม่ใช่ system log ให้บันทึกตามปกติ
+                if (log.category !== 'system' && log.source !== 'System') {
+                    return false;
+                }
+                
+                const message = log.message || '';
+                
+                // ตรวจสอบกับ patterns ที่กำหนดไว้
+                return this.skipStoragePatterns.some(pattern => pattern.test(message));
             }
 
             shouldDisplay(log) {
@@ -879,10 +922,10 @@
                 const btn = document.getElementById('capture-btn');
                 if (this.isCapturing) {
                     btn.innerHTML = '<span class="btn-icon">⏸</span><span>Pause</span>';
-                    this.system('Capture resumed');
+                    this.system('Capture resumed', null, true); // ไม่บันทึก
                 } else {
                     btn.innerHTML = '<span class="btn-icon">▶</span><span>Resume</span>';
-                    this.warn('Capture paused');
+                    this.warn('Capture paused', null, true); // ไม่บันทึก
                 }
             }
 
@@ -893,6 +936,8 @@
                     this.refreshDisplay();
                     this.updateStats();
                     this.showToast('Display cleared');
+                    // ไม่ต้องบันทึกข้อความ "Display cleared" ลงฐานข้อมูล
+                    // แค่แสดง toast พอ
                 }
             }
 
@@ -912,6 +957,7 @@
                 a.click();
                 URL.revokeObjectURL(url);
                 this.showToast('Exported');
+                // ไม่บันทึกข้อความ "Exported" ลงฐานข้อมูล
             }
 
             updateStats() {
@@ -984,12 +1030,30 @@
                 setTimeout(() => toast.remove(), 2000);
             }
 
-            log(msg, meta) { this.addLog({ level: 'log', message: msg, source: 'Console', category: 'api', meta, timestamp: Date.now() }); }
-            info(msg, meta) { this.addLog({ level: 'info', message: msg, source: 'Console', category: 'api', meta, timestamp: Date.now() }); }
-            warn(msg, meta) { this.addLog({ level: 'warn', message: msg, source: 'Console', category: 'api', meta, timestamp: Date.now() }); }
-            error(msg, meta) { this.addLog({ level: 'error', message: msg, source: 'Console', category: 'api', meta, timestamp: Date.now() }); }
-            debug(msg, meta) { this.addLog({ level: 'debug', message: msg, source: 'Console', category: 'api', meta, timestamp: Date.now() }); }
-            system(msg) { this.addLog({ level: 'info', message: msg, source: 'System', category: 'system', timestamp: Date.now() }); }
+            // ปรับปรุง method ทั้งหมดให้รับพารามิเตอร์ skipStorage
+            log(msg, meta, skipStorage = false) { 
+                this.addLog({ level: 'log', message: msg, source: 'Console', category: 'api', meta, timestamp: Date.now() }, true, skipStorage); 
+            }
+            
+            info(msg, meta, skipStorage = false) { 
+                this.addLog({ level: 'info', message: msg, source: 'Console', category: 'api', meta, timestamp: Date.now() }, true, skipStorage); 
+            }
+            
+            warn(msg, meta, skipStorage = false) { 
+                this.addLog({ level: 'warn', message: msg, source: 'Console', category: 'api', meta, timestamp: Date.now() }, true, skipStorage); 
+            }
+            
+            error(msg, meta, skipStorage = false) { 
+                this.addLog({ level: 'error', message: msg, source: 'Console', category: 'api', meta, timestamp: Date.now() }, true, skipStorage); 
+            }
+            
+            debug(msg, meta, skipStorage = false) { 
+                this.addLog({ level: 'debug', message: msg, source: 'Console', category: 'api', meta, timestamp: Date.now() }, true, skipStorage); 
+            }
+            
+            system(msg, meta, skipStorage = false) { 
+                this.addLog({ level: 'info', message: msg, source: 'System', category: 'system', timestamp: Date.now() }, true, skipStorage); 
+            }
         }
 
         window.consolePro = new FantroveConsolePro();
