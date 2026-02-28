@@ -712,25 +712,32 @@
 
             setupSmartNetworkCapture() {
                 const originalFetch = window.fetch;
-                window.fetch = async (...args) => {
+                // แก้ไข: ใช้ function แทน arrow function และผูก this เป็น window
+                window.fetch = async function(...args) {
                     const url = args[0];
                     try {
-                        const response = await originalFetch.apply(this, args);
+                        // ผูกบริบทเป็น window เพื่อหลีกเลี่ยง "Illegal invocation"
+                        const response = await originalFetch.apply(window, args);
                         if (response.status >= 500) {
-                            this.captureError({
-                                type: 'http', category: 'network',
-                                message: `Server Error ${response.status}: ${response.statusText}`,
-                                url: url, status: response.status, critical: true
-                            });
+                            // ใช้ window.consolePro แทน this
+                            if (window.consolePro && typeof window.consolePro.captureError === 'function') {
+                                window.consolePro.captureError({
+                                    type: 'http', category: 'network',
+                                    message: `Server Error ${response.status}: ${response.statusText}`,
+                                    url: url, status: response.status, critical: true
+                                });
+                            }
                         }
                         return response;
                     } catch (error) {
                         if (error.name !== 'AbortError') {
-                            this.captureError({
-                                type: 'network', category: 'network',
-                                message: `Network Failed: ${error.message}`,
-                                url: url, error: error.name, critical: true
-                            });
+                            if (window.consolePro && typeof window.consolePro.captureError === 'function') {
+                                window.consolePro.captureError({
+                                    type: 'network', category: 'network',
+                                    message: `Network Failed: ${error.message}`,
+                                    url: url, error: error.name, critical: true
+                                });
+                            }
                         }
                         throw error;
                     }

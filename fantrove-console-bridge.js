@@ -6,10 +6,8 @@
 (function() {
     'use strict';
 
-    // ⚠️ แก้ไข URL นี้ให้ตรงกับ Workers ของคุณ
     const WORKER_URL = 'https://fantrove-console-api.nontakorn2600.workers.dev';
     
-    // ดึง session ID จาก localStorage หรือสร้างใหม่
     const SESSION_ID = (function() {
         let id = localStorage.getItem('fantrove_session_id');
         if (!id) {
@@ -24,25 +22,19 @@
     let isInitialized = false;
     let isApiHealthy = false;
     let lastHealthCheck = 0;
-    const HEALTH_CHECK_INTERVAL = 30000; // ตรวจสอบทุก 30 วินาที
+    const HEALTH_CHECK_INTERVAL = 30000;
 
     function init() {
         setupErrorCapture();
         setupNetworkCapture();
         setupOnlineListeners();
-        
-        // โหลด logs ค้างจาก localStorage (ถ้ามี)
         loadPendingFromStorage();
         
-        // ตรวจสอบ API health ก่อนเริ่มใช้งาน
         checkHealth().then(healthy => {
             isInitialized = true;
-            if (healthy) {
-                flushQueue();
-            }
+            if (healthy) flushQueue();
         });
         
-        // เริ่ม health check loop
         startHealthCheckLoop();
     }
 
@@ -81,24 +73,21 @@
         setInterval(async () => {
             if (!isOnline) return;
             
-            // ถ้ายังไม่เคย check หรือครบ interval แล้ว
             if (Date.now() - lastHealthCheck > HEALTH_CHECK_INTERVAL) {
                 const wasHealthy = isApiHealthy;
                 await checkHealth();
                 
-                // ถ้ากลับมาออนไลน์ได้ ให้ sync queue ทันที
                 if (!wasHealthy && isApiHealthy) {
                     console.log('[Fantrove Bridge] API back online, syncing...');
                     flushQueue();
                 }
             }
-        }, 10000); // ตรวจสอบทุก 10 วินาทีว่าควร check health หรือยัง
+        }, 10000);
     }
 
     function setupOnlineListeners() {
         window.addEventListener('online', () => {
             isOnline = true;
-            // เมื่อกลับมาออนไลน์ ตรวจสอบ health ก่อนแล้วค่อย sync
             checkHealth().then(healthy => {
                 if (healthy) flushQueue();
             });
@@ -134,7 +123,6 @@
         } catch (e) {}
     }
 
-    // Send log to Worker
     function send(level, message, meta, source) {
         const payload = {
             session_id: SESSION_ID,
@@ -148,27 +136,22 @@
             timestamp: Date.now()
         };
 
-        // Broadcast ให้ console ในแท็บเดียวกัน (real-time)
         broadcastLocal(payload);
 
-        // ถ้า offline หรือ API ไม่ healthy ให้เก็บใน queue
         if (!isOnline || !isApiHealthy) {
             queue.push(payload);
             savePendingToStorage();
             return;
         }
 
-        // Send ตรงไป Workers
         fetch(`${WORKER_URL}/logs`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
             keepalive: true
         }).catch(err => {
-            // ถ้าส่งไม่สำเร็จ เก็บไว้ retry
             queue.push(payload);
             savePendingToStorage();
-            // ทำเครื่องหมายว่า API อาจมีปัญหา
             isApiHealthy = false;
         });
     }
@@ -186,7 +169,6 @@
     async function flushQueue() {
         if (queue.length === 0 || !isOnline || !isApiHealthy) return;
         
-        // ตรวจสอบ health อีกครั้งก่อน sync
         if (!await checkHealth()) return;
         
         const batch = queue.splice(0, 50);
@@ -207,16 +189,10 @@
             if (!response.ok) throw new Error('Batch failed');
             
             const result = await response.json();
-            if (result.failed > 0) {
-                console.warn('[Fantrove Bridge] Batch partially failed:', result);
-            }
-            
-            // ถ้า sync สำเร็จ ลบ backup ใน storage
             if (result.saved > 0) {
                 removeFromLocalBackup(result.saved);
             }
         } catch (err) {
-            // คืน logs กลับ queue
             queue.unshift(...batch);
             savePendingToStorage();
             isApiHealthy = false;
@@ -238,7 +214,6 @@
         return 'system';
     }
 
-    // Error Capture
     function setupErrorCapture() {
         window.addEventListener('error', (event) => {
             if (isNoise(event.message)) return;
@@ -269,12 +244,14 @@
         };
     }
 
+    // แก้ไข: ใช้ function แทน arrow function และผูก this เป็น window
     function setupNetworkCapture() {
         const originalFetch = window.fetch;
         window.fetch = async function(...args) {
             const url = args[0];
             try {
-                const response = await originalFetch.apply(this, args);
+                // ผูกบริบทเป็น window เพื่อหลีกเลี่ยง "Illegal invocation"
+                const response = await originalFetch.apply(window, args);
                 if (response.status >= 500) {
                     send('error', `Server Error ${response.status}`, { url, status: response.status }, 'ServerError');
                 }
@@ -288,7 +265,6 @@
         };
     }
 
-    // Helpers
     function isNoise(msg) {
         if (!msg) return true;
         const noise = ['ResizeObserver', 'Script error.', 'The operation was aborted', 'cancelled', 'canceled'];
@@ -305,7 +281,6 @@
         return stack.split('\n').filter(l => !l.includes('node_modules')).slice(0, 5).join('\n');
     }
 
-    // Public API
     window.FantroveConsole = {
         log: (msg, meta) => send('log', msg, meta, 'API'),
         info: (msg, meta) => send('info', msg, meta, 'API'),
@@ -314,7 +289,6 @@
         debug: (msg, meta) => send('debug', msg, meta, 'API'),
         success: (msg, meta) => send('success', msg, meta, 'API'),
         captureException: (err, ctx) => send('error', err.message, { stack: err.stack, context: ctx }, 'ManualCapture'),
-        // เพิ่ม method สำหรับตรวจสอบสถานะ
         getStatus: () => ({ 
             online: isOnline, 
             apiHealthy: isApiHealthy, 
@@ -324,16 +298,12 @@
         forceSync: () => flushQueue()
     };
 
-    // Auto-init
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
         init();
     }
 
-    // Sync loop - ลดความถี่ลงเพราะมี health check แยกแล้ว
     setInterval(flushQueue, 30000);
-    
-    // Save before unload
     window.addEventListener('beforeunload', savePendingToStorage);
 })();
