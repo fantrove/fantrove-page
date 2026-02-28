@@ -155,22 +155,56 @@ class FantroveConsolePro {
 
         const logs = await response.json();
         
-        const existingIds = new Set(this.logs.map(l => l.id));
-        const newLogs = logs
-            .filter(log => !existingIds.has(log.id))
-            .map(log => ({
-                id: log.id,
-                level: log.level,
-                category: log.category,
-                message: log.message,
-                source: log.source,
-                meta: log.meta || {},
-                stackTrace: log.stack_trace,
-                timestamp: new Date(log.created_at).getTime()
-            }));
+        // DEBUG: ดูข้อมูลที่ได้จาก API
+        console.log('[Fantrove Debug] API Response:', logs);
+        console.log('[Fantrove Debug] Session ID:', this.sessionId);
+        console.log('[Fantrove Debug] Current logs count:', this.logs.length);
         
-        this.logs = [...newLogs, ...this.logs].sort((a, b) => b.timestamp - a.timestamp);
+        // ตรวจสอบว่าเป็น array หรือไม่
+        if (!Array.isArray(logs)) {
+            console.error('[Fantrove Debug] API did not return array:', typeof logs, logs);
+            this.setSyncStatus(false);
+            throw new Error('Invalid response format from API');
+        }
+        
+        console.log('[Fantrove Debug] Logs count from API:', logs.length);
+        
+        // สร้าง ID ถ้าไม่มี (กรณี backend ไม่ส่ง id มา)
+        const processedLogs = logs.map((log, index) => ({
+            id: log.id || `api_${new Date(log.created_at).getTime()}_${index}`,
+            level: log.level,
+            category: log.category,
+            message: log.message,
+            source: log.source,
+            meta: log.meta || {},
+            stackTrace: log.stack_trace,
+            timestamp: new Date(log.created_at).getTime()
+        }));
+        
+        const existingIds = new Set(this.logs.map(l => l.id));
+        
+        // DEBUG: ดู existing IDs
+        console.log('[Fantrove Debug] Existing IDs in memory:', Array.from(existingIds));
+        
+        const newLogs = processedLogs.filter(log => {
+            const isNew = !existingIds.has(log.id);
+            if (!isNew) {
+                console.log('[Fantrove Debug] Duplicate ID filtered:', log.id);
+            }
+            return isNew;
+        });
+        
+        // DEBUG: ดูผลลัพธ์หลังกรอง
+        console.log('[Fantrove Debug] New logs after filter:', newLogs.length);
+        console.log('[Fantrove Debug] New logs IDs:', newLogs.map(l => l.id));
+
+        // รวม logs ใหม่เข้ากับของเดิม แล้ว sort ใหม่
+        this.logs = [...newLogs, ...this.logs];
+        this.logs.sort((a, b) => b.timestamp - a.timestamp);
         this.logs = this.logs.slice(0, 500);
+        
+        // DEBUG: ดูผลลัพธ์สุดท้าย
+        console.log('[Fantrove Debug] Total logs after merge:', this.logs.length);
         
         this.refreshDisplay();
         this.updateStats();
