@@ -1,7 +1,7 @@
 /**
  * Fantrove Console Pro - Main JavaScript
  * Cloud logging with Supabase backend
- * Enhanced with historical data loading
+ * Simplified historical data loading
  */
 
 class FantroveConsolePro {
@@ -19,23 +19,19 @@ class FantroveConsolePro {
         this.stats = { code: 0, network: 0, system: 0, api: 0 };
         this.connectionError = null;
         this.isInitialized = false;
-        this.lastLoadTime = null; // เวลาที่โหลดข้อมูลล่าสุด
-        this.isLoadingMore = false; // สถานะกำลังโหลดเพิ่ม
-        this.hasMoreLogs = true; // ยังมีข้อมูลให้โหลดอีกหรือไม่
+        this.cloudLogsLoaded = false; // ตรวจสอบว่าโหลดจาก cloud แล้วหรือยัง
         
         // System messages to skip from storage
         this.skipStoragePatterns = [
             /^Console ready \(Session:/i,
             /^Restored \d+ logs from local backup/i,
-            /^Loaded \d+ new logs from cloud/i,
+            /^Loaded \d+ logs from cloud/i,
             /^Synced \d+\/\d+ pending logs/i,
             /^Sync completed:/i,
             /^Capture (resumed|paused)/i,
             /^Display cleared/i,
             /^Exported$/i,
-            /^Reconnected successfully$/i,
-            /^Loading historical logs/i,
-            /^Loaded \d+ historical logs/i
+            /^Reconnected successfully$/i
         ];
         
         this.init();
@@ -60,7 +56,6 @@ class FantroveConsolePro {
         this.setupNetworkListeners();
         this.setupSmartErrorCapture();
         this.setupAPIMessageHandling();
-        this.setupInfiniteScroll(); // เพิ่ม: ระบบ scroll โหลดเพิ่ม
         this.loadFromLocalBackup();
         this.updateConnectionStatus('local');
         this.isInitialized = true;
@@ -69,278 +64,125 @@ class FantroveConsolePro {
         
         // โหลดข้อมูลจาก cloud ทันทีที่เริ่มต้น
         setTimeout(() => {
-            this.connectToCloud().catch(err => {
+            this.loadAllCloudLogs().catch(err => {
                 console.warn('Cloud connection failed:', err);
                 this.showError('Cloud unavailable. Working in local mode.');
             });
         }, 100);
         
         this.startSyncLoop();
-        this.startRealtimeSync(); // เพิ่ม: ซิงค์แบบ real-time
     }
 
     // ============================================
-    // NEW: ระบบโหลดข้อมูลย้อนหลัง (Historical Logs)
+    // ดึงข้อมูลทั้งหมดจาก Cloud (แบบง่าย ไม่มีพารามิเตอร์ซับซ้อน)
     // ============================================
 
-    /**
-     * โหลดข้อมูลจาก cloud พร้อมรองรับการโหลดย้อนหลัง
-     */
-    async connectToCloud() {
-        this.updateConnectionStatus('loading');
-        
-        try {
-            // โหลดข้อมูลล่าสุดก่อน (real-time)
-            await this.loadLogsFromCloud();
-            
-            // โหลดข้อมูลย้อนหลังเพิ่มเติม (historical)
-            await this.loadHistoricalLogs();
-            
-            this.isCloudConnected = true;
-            this.updateConnectionStatus('connected');
-            this.hideError();
-        } catch (error) {
-            this.isCloudConnected = false;
-            this.updateConnectionStatus('local');
-            throw error;
-        }
-    }
-
-    /**
-     * โหลด logs ล่าสุดจาก cloud (ใช้ตอนเริ่มต้น)
-     */
-    async loadLogsFromCloud(limit = 50) {
+    async loadAllCloudLogs() {
         if (!this.isOnline) {
-            throw new Error('Offline');
+            this.updateConnectionStatus('offline');
+            return;
         }
 
-        this.setSyncStatus(true, 'Connecting...');
-        
-        const healthController = new AbortController();
-        const healthTimeout = setTimeout(() => healthController.abort(), 5000);
-        
+        this.updateConnectionStatus('loading');
+        this.setSyncStatus(true, 'Loading from cloud...');
+
         try {
+            // ตรวจสอบ API ก่อน
             const healthCheck = await fetch(`${this.apiUrl}/health`, {
                 method: 'GET',
                 headers: { 'Accept': 'application/json' },
                 mode: 'cors',
-                credentials: 'omit',
-                signal: healthController.signal
+                credentials: 'omit'
             });
-            
+
             if (!healthCheck.ok) {
-                throw new Error('Health check failed');
+                throw new Error('API health check failed');
             }
-        } catch (err) {
-            clearTimeout(healthTimeout);
-            this.setSyncStatus(false);
-            throw new Error('API unreachable');
-        }
-        clearTimeout(healthTimeout);
 
-        // โหลด logs ล่าสุด
-        const logs = await this.fetchLogsFromAPI({ limit });
-        
-        if (logs.length > 0) {
-            this.lastLoadTime = logs[logs.length - 1].timestamp; // บันทึกเวลาข้อมูลเก่าสุดที่โหลดมา
-            this.mergeLogs(logs);
-            this.system(`Loaded ${logs.length} recent logs from cloud`, null, true);
-        }
-        
-        this.setSyncStatus(false);
-        return logs;
-    }
-
-    /**
-     * โหลดข้อมูลย้อนหลังเพิ่มเติม (historical data)
-     */
-    async loadHistoricalLogs(limit = 100) {
-        if (!this.isOnline || !this.lastLoadTime) return;
-        
-        this.isLoadingMore = true;
-        this.setSyncStatus(true, 'Loading history...');
-        
-        try {
-            // โหลดข้อมูลที่เก่ากว่าเวลาที่โหลดมาล่าสุด
-            const logs = await this.fetchLogsFromAPI({ 
-                limit, 
-                before: this.lastLoadTime 
-            });
-            
-            if (logs.length > 0) {
-                this.lastLoadTime = logs[logs.length - 1].timestamp;
-                this.mergeLogs(logs, true); // true = prepend (เพิ่มด้านบน)
-                this.system(`Loaded ${logs.length} historical logs`, null, true);
-            } else {
-                this.hasMoreLogs = false;
-                this.system('All historical logs loaded', null, true);
-            }
-        } catch (error) {
-            console.warn('Failed to load historical logs:', error);
-        } finally {
-            this.isLoadingMore = false;
-            this.setSyncStatus(false);
-        }
-    }
-
-    /**
-     * ดึงข้อมูลจาก API ด้วยพารามิเตอร์ที่กำหนด
-     */
-    async fetchLogsFromAPI(params = {}) {
-        const { limit = 50, before = null, after = null } = params;
-        
-        let url = `${this.apiUrl}/logs?session=${this.sessionId}&limit=${limit}`;
-        
-        // ถ้ามีพารามิเตอร์ before (โหลดข้อมูลเก่ากว่า)
-        if (before) {
-            url += `&before=${before}`;
-        }
-        
-        // ถ้ามีพารามิเตอร์ after (โหลดข้อมูลใหม่กว่า - สำหรับ real-time sync)
-        if (after) {
-            url += `&after=${after}`;
-        }
-
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 10000);
-        
-        try {
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: { 'Accept': 'application/json' },
-                mode: 'cors',
-                credentials: 'omit',
-                signal: controller.signal
-            });
-
-            clearTimeout(timeout);
+            // ดึงข้อมูลทั้งหมดของ session นี้ (ไม่จำกัดจำนวน)
+            const response = await fetch(
+                `${this.apiUrl}/logs?session=${this.sessionId}`,
+                {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' },
+                    mode: 'cors',
+                    credentials: 'omit'
+                }
+            );
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
             }
 
-            const data = await response.json();
+            const cloudLogs = await response.json();
             
-            // แปลงรูปแบบข้อมูล
-            return data.map(log => ({
-                id: log.id,
-                level: log.level,
-                category: log.category,
-                message: log.message,
-                source: log.source,
-                meta: log.meta || {},
-                stackTrace: log.stack_trace,
-                timestamp: new Date(log.created_at).getTime(),
-                _fromCloud: true // 标记ว่ามาจาก cloud
-            }));
-            
+            if (cloudLogs.length > 0) {
+                // แปลงรูปแบบข้อมูลจาก cloud
+                const formattedLogs = cloudLogs.map(log => ({
+                    id: log.id,
+                    level: log.level,
+                    category: log.category,
+                    message: log.message,
+                    source: log.source,
+                    meta: log.meta || {},
+                    stackTrace: log.stack_trace,
+                    timestamp: new Date(log.created_at).getTime()
+                }));
+
+                // รวมกับข้อมูลที่มีอยู่ (ไม่ซ้ำ)
+                this.mergeCloudLogs(formattedLogs);
+                
+                this.system(`Loaded ${formattedLogs.length} logs from cloud`, null, true);
+            } else {
+                this.system('No historical logs found', null, true);
+            }
+
+            this.cloudLogsLoaded = true;
+            this.isCloudConnected = true;
+            this.updateConnectionStatus('connected');
+            this.hideError();
+
         } catch (error) {
-            clearTimeout(timeout);
-            throw error;
+            console.error('Failed to load cloud logs:', error);
+            this.isCloudConnected = false;
+            this.updateConnectionStatus('local');
+            // ไม่ throw error เพื่อให้ทำงานต่อใน local mode
+        } finally {
+            this.setSyncStatus(false);
         }
     }
 
     /**
-     * รวม logs เข้ากับข้อมูลที่มีอยู่
-     * @param {Array} newLogs - logs ใหม่
-     * @param {boolean} prepend - true = เพิ่มด้านบน, false = เพิ่มด้านล่าง
+     * รวมข้อมูลจาก cloud เข้ากับข้อมูลที่มีอยู่ (กรองซ้ำ)
      */
-    mergeLogs(newLogs, prepend = false) {
+    mergeCloudLogs(cloudLogs) {
+        // สร้าง Set ของ ID ที่มีอยู่แล้ว
         const existingIds = new Set(this.logs.map(l => l.id));
-        const uniqueLogs = newLogs.filter(log => !existingIds.has(log.id));
         
-        if (uniqueLogs.length === 0) return;
+        // กรองเฉพาะที่ยังไม่มี
+        const newLogs = cloudLogs.filter(log => !existingIds.has(log.id));
         
-        if (prepend) {
-            // เพิ่มด้านบน (สำหรับข้อมูลเก่า)
-            this.logs = [...uniqueLogs, ...this.logs];
-        } else {
-            // เพิ่มด้านล่าง (สำหรับข้อมูลใหม่)
-            this.logs = [...this.logs, ...uniqueLogs];
-        }
+        if (newLogs.length === 0) return;
+
+        // รวมข้อมูลและเรียงตามเวลา (เก่า -> ใหม่)
+        this.logs = [...this.logs, ...newLogs];
         
-        // จำกัดจำนวน logs ใน memory
-        if (this.logs.length > 1000) {
-            if (prepend) {
-                this.logs = this.logs.slice(0, 1000);
-            } else {
-                this.logs = this.logs.slice(-1000);
-            }
-        }
+        // เรียงลำดับตาม timestamp
+        this.logs.sort((a, b) => a.timestamp - b.timestamp);
         
+        // อัปเดตการแสดงผล
         this.refreshDisplay();
         this.updateStats();
     }
 
     // ============================================
-    // NEW: Infinite Scroll (เลื่อนลงเพื่อโหลดเพิ่ม)
-    // ============================================
-
-    setupInfiniteScroll() {
-        const container = document.getElementById('console-output');
-        
-        container.addEventListener('scroll', () => {
-            // เมื่อ scroll ถึงด้านบนสุด และยังมีข้อมูลเหลือ
-            if (container.scrollTop < 50 && !this.isLoadingMore && this.hasMoreLogs && this.isCloudConnected) {
-                this.loadHistoricalLogs(50);
-            }
-        });
-    }
-
-    // ============================================
-    // NEW: Real-time Sync (ตรวจสอบข้อมูลใหม่เป็นระยะ)
-    // ============================================
-
-    startRealtimeSync() {
-        // ตรวจสอบข้อมูลใหม่ทุก 5 วินาที
-        setInterval(() => {
-            if (this.isCloudConnected && !document.hidden) {
-                this.checkForNewLogs();
-            }
-        }, 5000);
-    }
-
-    /**
-     * ตรวจสอบ logs ใหม่จาก cloud (real-time)
-     */
-    async checkForNewLogs() {
-        const lastLog = this.logs[this.logs.length - 1];
-        const after = lastLog ? lastLog.timestamp : Date.now() - 60000; // 1 นาทีที่แล้ว
-        
-        try {
-            const newLogs = await this.fetchLogsFromAPI({ 
-                limit: 20, 
-                after: after 
-            });
-            
-            if (newLogs.length > 0) {
-                this.mergeLogs(newLogs, false);
-                
-                // แจ้งเตือนเมื่อมี error ใหม่
-                const hasNewErrors = newLogs.some(log => log.level === 'error');
-                if (hasNewErrors) {
-                    this.showToast(`${newLogs.length} new logs (including errors)`);
-                }
-            }
-        } catch (error) {
-            // ไม่แสดง error เพราะเป็น background sync
-            console.debug('Realtime sync check failed:', error);
-        }
-    }
-
-    // ============================================
-    // ส่วนที่เหลือเหมือนเดิม (แก้ไขเล็กน้อย)
+    // ส่วนอื่นๆ เหมือนเดิม
     // ============================================
 
     async retryConnection() {
         this.hideError();
-        this.hasMoreLogs = true; // รีเซ็ตสถานะการโหลด
-        try {
-            await this.connectToCloud();
-            this.showToast('Reconnected successfully');
-        } catch (error) {
-            this.showError('Still cannot connect to cloud');
-        }
+        this.cloudLogsLoaded = false;
+        await this.loadAllCloudLogs();
     }
 
     async saveLogToCloud(log) {
@@ -349,9 +191,6 @@ class FantroveConsolePro {
             this.saveToLocalBackup(log);
             return { queued: true };
         }
-
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 5000);
 
         try {
             const payload = {
@@ -372,11 +211,8 @@ class FantroveConsolePro {
                 body: JSON.stringify(payload),
                 mode: 'cors',
                 credentials: 'omit',
-                signal: controller.signal,
                 keepalive: true
             });
-
-            clearTimeout(timeout);
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
@@ -385,7 +221,6 @@ class FantroveConsolePro {
             return await response.json();
             
         } catch (error) {
-            clearTimeout(timeout);
             this.pendingLogs.push(log);
             this.saveToLocalBackup(log);
             
@@ -403,52 +238,41 @@ class FantroveConsolePro {
         if (this.pendingLogs.length === 0 || !this.isOnline || this.isSyncing) {
             return;
         }
-        
-        const controller = new AbortController();
-        const t = setTimeout(() => controller.abort(), 3000);
-        
-        try {
-            const health = await fetch(`${this.apiUrl}/health`, { 
-                method: 'GET',
-                mode: 'cors',
-                credentials: 'omit',
-                signal: controller.signal
-            });
-            if (!health.ok) throw new Error('API unavailable');
-        } catch (e) {
-            clearTimeout(t);
-            return;
-        }
-        clearTimeout(t);
 
         this.isSyncing = true;
         this.setSyncStatus(true, `Syncing ${this.pendingLogs.length}...`);
-        
-        const batch = this.pendingLogs.splice(0, 50);
-        const batchController = new AbortController();
-        const batchTimeout = setTimeout(() => batchController.abort(), 10000);
 
         try {
+            // ตรวจสอบ API ก่อน
+            const health = await fetch(`${this.apiUrl}/health`, { 
+                method: 'GET',
+                mode: 'cors',
+                credentials: 'omit'
+            });
+            
+            if (!health.ok) throw new Error('API unavailable');
+
+            const batch = this.pendingLogs.splice(0, 50);
+
             const response = await fetch(`${this.apiUrl}/logs/batch`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ logs: batch.map(log => ({
-                    session_id: this.sessionId,
-                    level: log.level,
-                    category: log.category || 'system',
-                    message: log.message,
-                    source: log.source,
-                    meta: log.meta || {},
-                    stack_trace: log.stackTrace,
-                    user_agent: navigator.userAgent,
-                    url: location.href
-                }))}),
+                body: JSON.stringify({ 
+                    logs: batch.map(log => ({
+                        session_id: this.sessionId,
+                        level: log.level,
+                        category: log.category || 'system',
+                        message: log.message,
+                        source: log.source,
+                        meta: log.meta || {},
+                        stack_trace: log.stackTrace,
+                        user_agent: navigator.userAgent,
+                        url: location.href
+                    }))
+                }),
                 mode: 'cors',
-                credentials: 'omit',
-                signal: batchController.signal
+                credentials: 'omit'
             });
-
-            clearTimeout(batchTimeout);
 
             if (response.ok) {
                 const result = await response.json();
@@ -456,13 +280,9 @@ class FantroveConsolePro {
                 this.hideError();
                 
                 const saved = result.saved || result.successful || 0;
-                const failed = result.failed || 0;
-                const total = result.total || batch.length;
                 
                 if (saved > 0) {
-                    this.system(`Synced ${saved}/${total} pending logs${failed > 0 ? ` (${failed} failed)` : ''}`, null, true);
-                } else if (failed > 0) {
-                    this.warn(`Sync completed: ${failed} logs failed`, null, true);
+                    this.system(`Synced ${saved} pending logs`, null, true);
                 }
                 
                 this.removeFromLocalBackup(saved);
@@ -470,7 +290,6 @@ class FantroveConsolePro {
                 this.pendingLogs.unshift(...batch);
             }
         } catch (error) {
-            clearTimeout(batchTimeout);
             this.pendingLogs.unshift(...batch);
         } finally {
             this.isSyncing = false;
@@ -484,7 +303,6 @@ class FantroveConsolePro {
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) {
                 this.syncPendingLogs();
-                this.checkForNewLogs(); // เช็คข้อมูลใหม่ทันทีเมื่อกลับมาที่หน้า
             }
         });
     }
@@ -493,8 +311,8 @@ class FantroveConsolePro {
         window.addEventListener('online', () => {
             this.isOnline = true;
             this.updateConnectionStatus('local');
-            if (!this.isCloudConnected) {
-                setTimeout(() => this.connectToCloud().catch(() => {}), 1000);
+            if (!this.isCloudConnected && !this.cloudLogsLoaded) {
+                setTimeout(() => this.loadAllCloudLogs().catch(() => {}), 1000);
             }
         });
         
@@ -544,7 +362,6 @@ class FantroveConsolePro {
         const shouldSkipStorage = skipStorage || this.shouldSkipStorage(log);
         
         this.logs.push(log);
-        if (this.logs.length > 1000) this.logs.shift(); // เพิ่ม limit เป็น 1000
         
         if (this.isCapturing && this.shouldDisplay(log)) {
             this.renderLog(log);
@@ -585,8 +402,6 @@ class FantroveConsolePro {
 
         const entry = document.createElement('div');
         entry.className = `log-entry ${log.level}`;
-        entry.dataset.logId = log.id; // เพิ่ม ID สำหรับอ้างอิง
-        
         if (!animate) entry.style.animation = 'none';
         
         const time = new Date(log.timestamp).toLocaleTimeString('en-GB', {
@@ -595,9 +410,6 @@ class FantroveConsolePro {
 
         const levelColors = { error: 'error', warn: 'warn', info: 'info', debug: 'debug', log: '', success: '' };
         const categoryClass = log.category || 'system';
-        
-        // เพิ่ม indicator สำหรับข้อมูลจาก cloud
-        const cloudIndicator = log._fromCloud ? '<span title="From Cloud">☁️</span> ' : '';
         
         let stackHtml = log.stackTrace ? `<div class="stack-trace">${this.escapeHtml(log.stackTrace)}</div>` : '';
         
@@ -612,7 +424,7 @@ class FantroveConsolePro {
 
         entry.innerHTML = `
             <div class="log-header">
-                <span class="log-time">${cloudIndicator}${time}</span>
+                <span class="log-time">${time}</span>
                 <span class="log-level-badge ${levelColors[log.level] || ''}">${log.level}</span>
                 <span class="log-category ${categoryClass}">${log.category}</span>
                 <span class="log-source">${log.source || 'System'}</span>
