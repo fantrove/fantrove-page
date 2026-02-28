@@ -6,7 +6,6 @@
     <meta name="theme-color" content="#0d1117">
     <title>Fantrove Console Pro</title>
     <style>
-        /* CSS เหมือนเดิม */
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         :root {
             --bg-primary: #0d1117; --bg-secondary: #161b22; --bg-tertiary: #21262d; --bg-hover: #30363d;
@@ -205,10 +204,6 @@
     </div>
 
     <script>
-        /**
-         * Fantrove Console Pro - Fixed Version
-         * แก้ไข: ไม่ block UI, ใช้ AbortController + setTimeout, fire-and-forget
-         */
         class FantroveConsolePro {
             constructor() {
                 this.apiUrl = 'https://fantrove-console-api.nontakorn2600.workers.dev';
@@ -244,20 +239,14 @@
             }
 
             init() {
-                // Setup listeners
                 this.setupNetworkListeners();
                 this.setupSmartErrorCapture();
                 this.setupAPIMessageHandling();
-                
-                // โหลดจาก local backup ทันที (ไม่รอ cloud)
                 this.loadFromLocalBackup();
-                
-                // แสดง UI พร้อมใช้งานทันที
                 this.updateConnectionStatus('local');
                 this.isInitialized = true;
                 this.system('Console ready (Session: ' + this.sessionId.substring(0, 8) + ')');
                 
-                // พยายามเชื่อมต่อ cloud แบบ non-blocking (fire-and-forget)
                 setTimeout(() => {
                     this.connectToCloud().catch(err => {
                         console.warn('Cloud connection failed:', err);
@@ -265,7 +254,6 @@
                     });
                 }, 100);
                 
-                // เริ่ม sync loop
                 this.startSyncLoop();
             }
 
@@ -301,7 +289,6 @@
 
                 this.setSyncStatus(true, 'Connecting...');
                 
-                // Health check with timeout
                 const healthController = new AbortController();
                 const healthTimeout = setTimeout(() => healthController.abort(), 5000);
                 
@@ -309,7 +296,11 @@
                 try {
                     healthCheck = await fetch(`${this.apiUrl}/health`, {
                         method: 'GET',
-                        headers: { 'Accept': 'application/json' },
+                        headers: { 
+                            'Accept': 'application/json'
+                        },
+                        mode: 'cors',
+                        credentials: 'omit',
                         signal: healthController.signal
                     });
                 } catch (err) {
@@ -324,7 +315,6 @@
                     throw new Error('Cannot reach API server');
                 }
 
-                // Load logs with timeout
                 const logsController = new AbortController();
                 const logsTimeout = setTimeout(() => logsController.abort(), 7000);
                 
@@ -334,7 +324,11 @@
                         `${this.apiUrl}/logs?session=${this.sessionId}&limit=200`,
                         {
                             method: 'GET',
-                            headers: { 'Accept': 'application/json' },
+                            headers: { 
+                                'Accept': 'application/json'
+                            },
+                            mode: 'cors',
+                            credentials: 'omit',
                             signal: logsController.signal
                         }
                     );
@@ -352,7 +346,6 @@
 
                 const logs = await response.json();
                 
-                // Merge with existing logs
                 const existingIds = new Set(this.logs.map(l => l.id));
                 const newLogs = logs
                     .filter(log => !existingIds.has(log.id))
@@ -405,8 +398,12 @@
 
                     const response = await fetch(`${this.apiUrl}/logs`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 
+                            'Content-Type': 'application/json'
+                        },
                         body: JSON.stringify(payload),
+                        mode: 'cors',
+                        credentials: 'omit',
                         signal: controller.signal,
                         keepalive: true
                     });
@@ -439,13 +436,14 @@
                     return;
                 }
                 
-                // Check connection with timeout
                 const controller = new AbortController();
                 const t = setTimeout(() => controller.abort(), 3000);
                 
                 try {
                     const health = await fetch(`${this.apiUrl}/health`, { 
                         method: 'GET',
+                        mode: 'cors',
+                        credentials: 'omit',
                         signal: controller.signal
                     });
                     if (!health.ok) throw new Error('API unavailable');
@@ -465,7 +463,9 @@
                 try {
                     const response = await fetch(`${this.apiUrl}/logs/batch`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 
+                            'Content-Type': 'application/json'
+                        },
                         body: JSON.stringify({ logs: batch.map(log => ({
                             session_id: this.sessionId,
                             level: log.level,
@@ -477,6 +477,8 @@
                             user_agent: navigator.userAgent,
                             url: location.href
                         }))}),
+                        mode: 'cors',
+                        credentials: 'omit',
                         signal: batchController.signal
                     });
 
