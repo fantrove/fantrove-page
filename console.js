@@ -1,7 +1,6 @@
 /**
  * Fantrove Console Pro - Main JavaScript
  * Cloud logging with Supabase backend
- * Simplified historical data loading
  */
 
 class FantroveConsolePro {
@@ -19,13 +18,12 @@ class FantroveConsolePro {
         this.stats = { code: 0, network: 0, system: 0, api: 0 };
         this.connectionError = null;
         this.isInitialized = false;
-        this.cloudLogsLoaded = false; // ตรวจสอบว่าโหลดจาก cloud แล้วหรือยัง
         
         // System messages to skip from storage
         this.skipStoragePatterns = [
             /^Console ready \(Session:/i,
             /^Restored \d+ logs from local backup/i,
-            /^Loaded \d+ logs from cloud/i,
+            /^Loaded \d+ new logs from cloud/i,
             /^Synced \d+\/\d+ pending logs/i,
             /^Sync completed:/i,
             /^Capture (resumed|paused)/i,
@@ -62,9 +60,8 @@ class FantroveConsolePro {
         
         this.system('Console ready (Session: ' + this.sessionId.substring(0, 8) + ')', null, true);
         
-        // โหลดข้อมูลจาก cloud ทันทีที่เริ่มต้น
         setTimeout(() => {
-            this.loadAllCloudLogs().catch(err => {
+            this.connectToCloud().catch(err => {
                 console.warn('Cloud connection failed:', err);
                 this.showError('Cloud unavailable. Working in local mode.');
             });
@@ -73,116 +70,116 @@ class FantroveConsolePro {
         this.startSyncLoop();
     }
 
-    // ============================================
-    // ดึงข้อมูลทั้งหมดจาก Cloud (แบบง่าย ไม่มีพารามิเตอร์ซับซ้อน)
-    // ============================================
+    async connectToCloud() {
+        this.updateConnectionStatus('loading');
+        
+        try {
+            await this.loadLogsFromCloud();
+            this.isCloudConnected = true;
+            this.updateConnectionStatus('connected');
+            this.hideError();
+        } catch (error) {
+            this.isCloudConnected = false;
+            this.updateConnectionStatus('local');
+            throw error;
+        }
+    }
 
-    async loadAllCloudLogs() {
+    async retryConnection() {
+        this.hideError();
+        try {
+            await this.connectToCloud();
+            this.showToast('Reconnected successfully');
+        } catch (error) {
+            this.showError('Still cannot connect to cloud');
+        }
+    }
+
+    async loadLogsFromCloud() {
         if (!this.isOnline) {
-            this.updateConnectionStatus('offline');
-            return;
+            throw new Error('Offline');
         }
 
-        this.updateConnectionStatus('loading');
-        this.setSyncStatus(true, 'Loading from cloud...');
-
+        this.setSyncStatus(true, 'Connecting...');
+        
+        const healthController = new AbortController();
+        const healthTimeout = setTimeout(() => healthController.abort(), 5000);
+        
+        let healthCheck;
         try {
-            // ตรวจสอบ API ก่อน
-            const healthCheck = await fetch(`${this.apiUrl}/health`, {
+            healthCheck = await fetch(`${this.apiUrl}/health`, {
                 method: 'GET',
                 headers: { 'Accept': 'application/json' },
                 mode: 'cors',
-                credentials: 'omit'
+                credentials: 'omit',
+                signal: healthController.signal
             });
+        } catch (err) {
+            clearTimeout(healthTimeout);
+            this.setSyncStatus(false);
+            throw new Error('Health check failed: ' + (err && err.message));
+        }
+        clearTimeout(healthTimeout);
 
-            if (!healthCheck.ok) {
-                throw new Error('API health check failed');
-            }
+        if (!healthCheck || !healthCheck.ok) {
+            this.setSyncStatus(false);
+            throw new Error('Cannot reach API server');
+        }
 
-            // ดึงข้อมูลทั้งหมดของ session นี้ (ไม่จำกัดจำนวน)
-            const response = await fetch(
-                `${this.apiUrl}/logs?session=${this.sessionId}`,
+        const logsController = new AbortController();
+        const logsTimeout = setTimeout(() => logsController.abort(), 7000);
+        
+        let response;
+        try {
+            response = await fetch(
+                `${this.apiUrl}/logs?session=${this.sessionId}&limit=200`,
                 {
                     method: 'GET',
                     headers: { 'Accept': 'application/json' },
                     mode: 'cors',
-                    credentials: 'omit'
+                    credentials: 'omit',
+                    signal: logsController.signal
                 }
             );
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-
-            const cloudLogs = await response.json();
-            
-            if (cloudLogs.length > 0) {
-                // แปลงรูปแบบข้อมูลจาก cloud
-                const formattedLogs = cloudLogs.map(log => ({
-                    id: log.id,
-                    level: log.level,
-                    category: log.category,
-                    message: log.message,
-                    source: log.source,
-                    meta: log.meta || {},
-                    stackTrace: log.stack_trace,
-                    timestamp: new Date(log.created_at).getTime()
-                }));
-
-                // รวมกับข้อมูลที่มีอยู่ (ไม่ซ้ำ)
-                this.mergeCloudLogs(formattedLogs);
-                
-                this.system(`Loaded ${formattedLogs.length} logs from cloud`, null, true);
-            } else {
-                this.system('No historical logs found', null, true);
-            }
-
-            this.cloudLogsLoaded = true;
-            this.isCloudConnected = true;
-            this.updateConnectionStatus('connected');
-            this.hideError();
-
-        } catch (error) {
-            console.error('Failed to load cloud logs:', error);
-            this.isCloudConnected = false;
-            this.updateConnectionStatus('local');
-            // ไม่ throw error เพื่อให้ทำงานต่อใน local mode
-        } finally {
+        } catch (err) {
+            clearTimeout(logsTimeout);
             this.setSyncStatus(false);
+            throw new Error('Logs fetch failed: ' + (err && err.message));
         }
-    }
+        clearTimeout(logsTimeout);
 
-    /**
-     * รวมข้อมูลจาก cloud เข้ากับข้อมูลที่มีอยู่ (กรองซ้ำ)
-     */
-    mergeCloudLogs(cloudLogs) {
-        // สร้าง Set ของ ID ที่มีอยู่แล้ว
+        if (!response.ok) {
+            this.setSyncStatus(false);
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const logs = await response.json();
+        
         const existingIds = new Set(this.logs.map(l => l.id));
+        const newLogs = logs
+            .filter(log => !existingIds.has(log.id))
+            .map(log => ({
+                id: log.id,
+                level: log.level,
+                category: log.category,
+                message: log.message,
+                source: log.source,
+                meta: log.meta || {},
+                stackTrace: log.stack_trace,
+                timestamp: new Date(log.created_at).getTime()
+            }));
         
-        // กรองเฉพาะที่ยังไม่มี
-        const newLogs = cloudLogs.filter(log => !existingIds.has(log.id));
+        this.logs = [...newLogs, ...this.logs].sort((a, b) => b.timestamp - a.timestamp);
+        this.logs = this.logs.slice(0, 500);
         
-        if (newLogs.length === 0) return;
-
-        // รวมข้อมูลและเรียงตามเวลา (เก่า -> ใหม่)
-        this.logs = [...this.logs, ...newLogs];
-        
-        // เรียงลำดับตาม timestamp
-        this.logs.sort((a, b) => a.timestamp - b.timestamp);
-        
-        // อัปเดตการแสดงผล
         this.refreshDisplay();
         this.updateStats();
-    }
-
-    // ============================================
-    // ส่วนอื่นๆ เหมือนเดิม
-    // ============================================
-
-    async retryConnection() {
-        this.hideError();
-        this.cloudLogsLoaded = false;
-        await this.loadAllCloudLogs();
+        
+        if (newLogs.length > 0) {
+            this.system(`Loaded ${newLogs.length} new logs from cloud`, null, true);
+        }
+        
+        this.setSyncStatus(false);
     }
 
     async saveLogToCloud(log) {
@@ -191,6 +188,9 @@ class FantroveConsolePro {
             this.saveToLocalBackup(log);
             return { queued: true };
         }
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
 
         try {
             const payload = {
@@ -211,8 +211,11 @@ class FantroveConsolePro {
                 body: JSON.stringify(payload),
                 mode: 'cors',
                 credentials: 'omit',
+                signal: controller.signal,
                 keepalive: true
             });
+
+            clearTimeout(timeout);
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
@@ -221,6 +224,7 @@ class FantroveConsolePro {
             return await response.json();
             
         } catch (error) {
+            clearTimeout(timeout);
             this.pendingLogs.push(log);
             this.saveToLocalBackup(log);
             
@@ -238,41 +242,52 @@ class FantroveConsolePro {
         if (this.pendingLogs.length === 0 || !this.isOnline || this.isSyncing) {
             return;
         }
-
-        this.isSyncing = true;
-        this.setSyncStatus(true, `Syncing ${this.pendingLogs.length}...`);
-
+        
+        const controller = new AbortController();
+        const t = setTimeout(() => controller.abort(), 3000);
+        
         try {
-            // ตรวจสอบ API ก่อน
             const health = await fetch(`${this.apiUrl}/health`, { 
                 method: 'GET',
                 mode: 'cors',
-                credentials: 'omit'
+                credentials: 'omit',
+                signal: controller.signal
             });
-            
             if (!health.ok) throw new Error('API unavailable');
+        } catch (e) {
+            clearTimeout(t);
+            return;
+        }
+        clearTimeout(t);
 
-            const batch = this.pendingLogs.splice(0, 50);
+        this.isSyncing = true;
+        this.setSyncStatus(true, `Syncing ${this.pendingLogs.length}...`);
+        
+        const batch = this.pendingLogs.splice(0, 50);
+        const batchController = new AbortController();
+        const batchTimeout = setTimeout(() => batchController.abort(), 10000);
 
+        try {
             const response = await fetch(`${this.apiUrl}/logs/batch`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    logs: batch.map(log => ({
-                        session_id: this.sessionId,
-                        level: log.level,
-                        category: log.category || 'system',
-                        message: log.message,
-                        source: log.source,
-                        meta: log.meta || {},
-                        stack_trace: log.stackTrace,
-                        user_agent: navigator.userAgent,
-                        url: location.href
-                    }))
-                }),
+                body: JSON.stringify({ logs: batch.map(log => ({
+                    session_id: this.sessionId,
+                    level: log.level,
+                    category: log.category || 'system',
+                    message: log.message,
+                    source: log.source,
+                    meta: log.meta || {},
+                    stack_trace: log.stackTrace,
+                    user_agent: navigator.userAgent,
+                    url: location.href
+                }))}),
                 mode: 'cors',
-                credentials: 'omit'
+                credentials: 'omit',
+                signal: batchController.signal
             });
+
+            clearTimeout(batchTimeout);
 
             if (response.ok) {
                 const result = await response.json();
@@ -280,9 +295,13 @@ class FantroveConsolePro {
                 this.hideError();
                 
                 const saved = result.saved || result.successful || 0;
+                const failed = result.failed || 0;
+                const total = result.total || batch.length;
                 
                 if (saved > 0) {
-                    this.system(`Synced ${saved} pending logs`, null, true);
+                    this.system(`Synced ${saved}/${total} pending logs${failed > 0 ? ` (${failed} failed)` : ''}`, null, true);
+                } else if (failed > 0) {
+                    this.warn(`Sync completed: ${failed} logs failed`, null, true);
                 }
                 
                 this.removeFromLocalBackup(saved);
@@ -290,6 +309,7 @@ class FantroveConsolePro {
                 this.pendingLogs.unshift(...batch);
             }
         } catch (error) {
+            clearTimeout(batchTimeout);
             this.pendingLogs.unshift(...batch);
         } finally {
             this.isSyncing = false;
@@ -311,8 +331,8 @@ class FantroveConsolePro {
         window.addEventListener('online', () => {
             this.isOnline = true;
             this.updateConnectionStatus('local');
-            if (!this.isCloudConnected && !this.cloudLogsLoaded) {
-                setTimeout(() => this.loadAllCloudLogs().catch(() => {}), 1000);
+            if (!this.isCloudConnected) {
+                setTimeout(() => this.connectToCloud().catch(() => {}), 1000);
             }
         });
         
@@ -355,6 +375,12 @@ class FantroveConsolePro {
         } catch (e) {}
     }
 
+    /**
+     * Add log entry
+     * @param {Object} log - Log data
+     * @param {boolean} saveToCloud - Save to cloud
+     * @param {boolean} skipStorage - Skip all storage (cloud + local)
+     */
     async addLog(log, saveToCloud = true, skipStorage = false) {
         log.id = log.id || (Date.now() + Math.random()).toString();
         log.timestamp = log.timestamp || Date.now();
@@ -362,6 +388,7 @@ class FantroveConsolePro {
         const shouldSkipStorage = skipStorage || this.shouldSkipStorage(log);
         
         this.logs.push(log);
+        if (this.logs.length > 500) this.logs.shift();
         
         if (this.isCapturing && this.shouldDisplay(log)) {
             this.renderLog(log);
@@ -378,6 +405,9 @@ class FantroveConsolePro {
         }
     }
 
+    /**
+     * Check if message should skip storage
+     */
     shouldSkipStorage(log) {
         if (log.category !== 'system' && log.source !== 'System') {
             return false;
@@ -786,7 +816,7 @@ class FantroveConsolePro {
         setTimeout(() => toast.remove(), 2000);
     }
 
-    // Logging methods
+    // Logging methods with skipStorage parameter
     log(msg, meta, skipStorage = false) { 
         this.addLog({ level: 'log', message: msg, source: 'Console', category: 'api', meta, timestamp: Date.now() }, true, skipStorage); 
     }
