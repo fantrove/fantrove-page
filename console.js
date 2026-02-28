@@ -1,6 +1,6 @@
 /**
- * Fantrove Console Pro - Ultra Optimized
- * Free Tier Optimized: Minimal API calls, Smart Caching, Fast Response
+ * Fantrove Console Pro - Fixed Version
+ * แก้ไข: การเชื่อมต่อ Supabase 401 และเพิ่ม Debug Logging
  */
 
 class FantroveConsolePro {
@@ -19,21 +19,21 @@ class FantroveConsolePro {
         this.connectionError = null;
         this.isInitialized = false;
         
-        // Optimized: ลดการเรียก API
+        // ลดการเรียก API
         this.lastSyncTime = 0;
-        this.syncInterval = 30000; // 30 วินาที (เดิม 10 วิ)
-        this.realtimeCheckInterval = 15000; // 15 วินาที (เดิม 5 วิ)
+        this.syncInterval = 30000;
+        this.realtimeCheckInterval = 15000;
         this.retryCount = 0;
         this.maxRetries = 3;
         
-        // Cache ข้อมูลที่โหลดแล้ว
         this.loadedTimeRange = { oldest: null, newest: null };
         this.hasMoreOldLogs = true;
         
         this.skipStoragePatterns = [
             /^Console ready/i, /^Restored \d+ logs/i, /^Loaded \d+ logs/i,
             /^Synced \d+/i, /^Sync completed/i, /^Capture (resumed|paused)/i,
-            /^Display cleared/i, /^Exported$/i, /^Reconnected/i, /^Loading/i
+            /^Display cleared/i, /^Exported$/i, /^Reconnected/i, /^Loading/i,
+            /^Cloud error/i, /^Connection failed/i  // เพิ่ม patterns ที่ skip
         ];
         
         this.init();
@@ -48,7 +48,7 @@ class FantroveConsolePro {
         }
         let session = localStorage.getItem('fantrove_session_id');
         if (!session) {
-            session = 'sess_' + Date.now().toString(36).substr(-8);
+            session = 'sess_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5);
             localStorage.setItem('fantrove_session_id', session);
         }
         return session;
@@ -60,93 +60,116 @@ class FantroveConsolePro {
         this.setupAPIMessageHandling();
         this.setupScrollHandler();
         
-        // โหลดจาก local ก่อน (เร็วทันที)
+        // โหลดจาก local ก่อน
         this.loadFromLocalStorage();
         
         this.isInitialized = true;
         this.system('Console ready', null, true);
         
-        // เชื่อมต่อ cloud แบบ non-blocking
+        // เชื่อมต่อ cloud
         if (this.isOnline) {
             setTimeout(() => this.connectToCloud(), 500);
         }
     }
 
     // ============================================
-    // OPTIMIZED: Connection ที่เสถียรขึ้น
+    // FIXED: Connection ที่มี Debug และ Retry ที่ดีขึ้น
     // ============================================
     
     async connectToCloud() {
         this.updateConnectionStatus('loading');
+        this.system('Connecting to cloud...', null, true);
         
         try {
-            // ใช้ Promise.race เพื่อ timeout ที่แน่นอน
-            const health = await this.fetchWithTimeout(
+            // ทดสอบ health check พร้อมรับข้อมูล debug
+            const healthRes = await this.fetchWithTimeout(
                 `${this.apiUrl}/health`, 
                 { method: 'GET' }, 
-                3000 // 3 วินาที max
+                5000
             );
             
-            if (!health.ok) throw new Error('Health check failed');
+            const healthData = await healthRes.json();
+            console.log('[Console] Health check:', healthData);
             
-            // โหลดข้อมูลครั้งเดียวตอนเริ่มต้น
+            if (!healthRes.ok || healthData.status !== 'healthy') {
+                throw new Error(healthData.error || 'Health check failed');
+            }
+            
+            if (!healthData.supabase_connected) {
+                throw new Error('Supabase connection failed - Check Worker logs');
+            }
+            
+            // โหลด logs เริ่มต้น
             await this.loadInitialLogs();
             
             this.isCloudConnected = true;
             this.retryCount = 0;
             this.updateConnectionStatus('connected');
             this.hideError();
+            this.system('Cloud connected', null, true);
             
-            // เริ่ม sync loop แบบประหยัด
+            // เริ่ม sync loop
             this.startEfficientSyncLoop();
             
         } catch (error) {
-            console.warn('[Console] Connection failed:', error.message);
-            this.handleConnectionFailure();
+            console.error('[Console] Connection failed:', error);
+            this.handleConnectionFailure(error.message);
         }
     }
 
-    handleConnectionFailure() {
+    handleConnectionFailure(errorMessage) {
         this.retryCount++;
         this.isCloudConnected = false;
         
+        // แสดง error ที่ชัดเจน
+        if (errorMessage.includes('401')) {
+            this.showError('⚠️ Supabase 401: ตรวจสอบ RLS Policies และ API Key');
+            this.system('Error: Supabase authentication failed', null, true);
+        } else if (errorMessage.includes('configuration')) {
+            this.showError('⚠️ Server configuration error');
+        } else {
+            this.showError(`⚠️ ${errorMessage}`);
+        }
+        
         if (this.retryCount >= this.maxRetries) {
             this.updateConnectionStatus('local');
-            this.showError('Cloud unavailable. Using local mode.');
-            // ลองใหม่อีกครั้งใน 60 วินาที
+            this.system('Switched to local mode', null, true);
+            // ลองใหม่ใน 60 วินาที
             setTimeout(() => this.connectToCloud(), 60000);
         } else {
-            // ลองใหม่แบบ exponential backoff
             const delay = Math.min(1000 * Math.pow(2, this.retryCount), 10000);
-            this.updateConnectionStatus('loading');
             setTimeout(() => this.connectToCloud(), delay);
         }
     }
 
     // ============================================
-    // OPTIMIZED: โหลดข้อมูลครั้งเดียวตอนเริ่มต้น
+    // FIXED: โหลดข้อมูลด้วย Error Handling ที่ดีขึ้น
     // ============================================
     
     async loadInitialLogs() {
-        // โหลดแค่ 100 รายการล่าสุดพอ (ไม่ต้องแยก historical)
-        const logs = await this.fetchLogs({ limit: 100 });
-        
-        if (logs.length > 0) {
-            // รวมกับข้อมูล local โดยไม่ซ้ำ
-            const existingIds = new Set(this.logs.map(l => l.id));
-            const newLogs = logs.filter(l => !existingIds.has(l.id));
+        try {
+            const logs = await this.fetchLogs({ limit: 100 });
             
-            if (newLogs.length > 0) {
-                this.logs = [...this.logs, ...newLogs].sort((a, b) => b.timestamp - a.timestamp);
-                this.logs = this.logs.slice(0, 200); // จำกัด memory
+            if (logs.length > 0) {
+                const existingIds = new Set(this.logs.map(l => l.id));
+                const newLogs = logs.filter(l => !existingIds.has(l.id));
                 
-                this.loadedTimeRange.newest = Math.max(...logs.map(l => l.timestamp));
-                this.loadedTimeRange.oldest = Math.min(...logs.map(l => l.timestamp));
-                
-                this.refreshDisplay();
-                this.updateStats();
-                this.system(`Loaded ${newLogs.length} logs from cloud`, null, true);
+                if (newLogs.length > 0) {
+                    this.logs = [...this.logs, ...newLogs]
+                        .sort((a, b) => b.timestamp - a.timestamp);
+                    this.logs = this.logs.slice(0, 200);
+                    
+                    this.loadedTimeRange.newest = Math.max(...logs.map(l => l.timestamp));
+                    this.loadedTimeRange.oldest = Math.min(...logs.map(l => l.timestamp));
+                    
+                    this.refreshDisplay();
+                    this.updateStats();
+                    this.system(`Loaded ${newLogs.length} logs from cloud`, null, true);
+                }
             }
+        } catch (error) {
+            console.error('[Console] Load initial logs failed:', error);
+            throw error; // ส่งต่อให้ connectToCloud จัดการ
         }
     }
 
@@ -157,11 +180,17 @@ class FantroveConsolePro {
         if (before) url += `&before=${before}`;
         if (after) url += `&after=${after}`;
         
-        const res = await this.fetchWithTimeout(url, { method: 'GET' }, 8000);
+        const res = await this.fetchWithTimeout(url, { method: 'GET' }, 10000);
         
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) {
+            const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
+            console.error('[Console] Fetch logs error:', res.status, errorData);
+            throw new Error(errorData.error || `HTTP ${res.status}`);
+        }
         
         const data = await res.json();
+        
+        // รองรับทั้งรูปแบบเก่าและใหม่
         return data.map(log => ({
             id: log.id,
             level: log.level,
@@ -169,67 +198,18 @@ class FantroveConsolePro {
             message: log.message,
             source: log.source,
             meta: log.meta || {},
-            stackTrace: log.stack_trace,
-            timestamp: new Date(log.created_at).getTime()
+            stackTrace: log.stack_trace || log.stackTrace,
+            timestamp: log.timestamp || new Date(log.created_at).getTime()
         }));
     }
 
     // ============================================
-    // OPTIMIZED: Sync แบบประหยัด quota
+    // FIXED: Sync ที่มี Error Handling
     // ============================================
     
-    startEfficientSyncLoop() {
-        // Sync ข้อมูลที่ pending ทุก 30 วินาที (ไม่บ่อย)
-        setInterval(() => {
-            if (this.isOnline && this.pendingLogs.length > 0) {
-                this.syncPendingLogs();
-            }
-        }, this.syncInterval);
-        
-        // ตรวจสอบข้อมูลใหม่ทุก 15 วินาที (เฉพาะตอนเปิดหน้าจอ)
-        setInterval(() => {
-            if (this.isCloudConnected && !document.hidden) {
-                this.checkNewLogsEfficient();
-            }
-        }, this.realtimeCheckInterval);
-        
-        // Sync เมื่อกลับมาที่หน้า
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden && this.isOnline) {
-                // รอสักครู่ให้เครือข่ายพร้อม
-                setTimeout(() => {
-                    this.syncPendingLogs();
-                    if (this.isCloudConnected) this.checkNewLogsEfficient();
-                }, 1000);
-            }
-        });
-    }
-
-    async checkNewLogsEfficient() {
-        // ดึงแค่ 10 รายการล่าสุดที่ใหม่กว่าที่มีอยู่
-        const after = this.loadedTimeRange.newest || (Date.now() - 60000);
-        
-        try {
-            const newLogs = await this.fetchLogs({ limit: 10, after });
-            
-            if (newLogs.length > 0) {
-                this.loadedTimeRange.newest = Math.max(...newLogs.map(l => l.timestamp));
-                this.mergeLogs(newLogs);
-                
-                // แจ้งเตือนเฉพาะ error
-                const hasError = newLogs.some(l => l.level === 'error');
-                if (hasError) this.showToast(`${newLogs.length} new logs`);
-            }
-        } catch (e) {
-            // ไม่แสดง error เพราะเป็น background check
-            this.isCloudConnected = false;
-        }
-    }
-
     async syncPendingLogs() {
         if (this.pendingLogs.length === 0 || !this.isOnline || this.isSyncing) return;
         
-        // ถ้าไม่ได้เชื่อมต่อ ลองเชื่อมต่อใหม่ก่อน
         if (!this.isCloudConnected) {
             await this.connectToCloud();
             if (!this.isCloudConnected) return;
@@ -248,7 +228,7 @@ class FantroveConsolePro {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ logs: batch })
                 },
-                10000
+                15000
             );
             
             if (res.ok) {
@@ -259,10 +239,20 @@ class FantroveConsolePro {
                     this.system(`Synced ${result.saved || batch.length}, ${this.pendingLogs.length} remaining`, null, true);
                 }
             } else {
-                // คืนค่าเข้า queue ถ้าล้มเหลว
-                this.pendingLogs.unshift(...batch);
+                const error = await res.json();
+                console.error('[Console] Sync failed:', error);
+                
+                // ถ้าเป็น 401 ให้หยุด sync และแจ้งเตือน
+                if (res.status === 401) {
+                    this.isCloudConnected = false;
+                    this.showError('⚠️ Sync failed: Supabase 401');
+                } else {
+                    // คืนค่าเข้า queue ถ้าเป็น error อื่น
+                    this.pendingLogs.unshift(...batch);
+                }
             }
         } catch (error) {
+            console.error('[Console] Sync error:', error);
             this.pendingLogs.unshift(...batch);
             this.isCloudConnected = false;
         } finally {
@@ -271,16 +261,12 @@ class FantroveConsolePro {
         }
     }
 
-    // ============================================
-    // OPTIMIZED: Helper ที่มี timeout แน่นอน
-    // ============================================
-    
     fetchWithTimeout(url, options, timeoutMs) {
         return new Promise((resolve, reject) => {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => {
                 controller.abort();
-                reject(new Error('Timeout'));
+                reject(new Error('Request timeout'));
             }, timeoutMs);
             
             fetch(url, { ...options, signal: controller.signal })
@@ -291,22 +277,20 @@ class FantroveConsolePro {
     }
 
     // ============================================
-    // Local Storage Management (Optimized)
+    // Local Storage Management
     // ============================================
     
     loadFromLocalStorage() {
         try {
-            // โหลด logs จาก local ก่อน (เร็วทันที)
             const savedLogs = localStorage.getItem('fantrove_logs_cache');
             if (savedLogs) {
                 const parsed = JSON.parse(savedLogs);
-                const recent = parsed.filter(l => Date.now() - l.timestamp < 86400000); // 1 วัน
+                const recent = parsed.filter(l => Date.now() - l.timestamp < 86400000);
                 this.logs = recent;
                 this.refreshDisplay();
                 this.updateStats();
             }
             
-            // โหลด pending logs
             const backup = localStorage.getItem('fantrove_backup');
             if (backup) {
                 const parsed = JSON.parse(backup);
@@ -322,9 +306,8 @@ class FantroveConsolePro {
     }
 
     saveToLocalCache() {
-        // บันทึก logs ลง local แทนการดึงจาก cloud บ่อยๆ
         try {
-            const cacheData = this.logs.slice(0, 100); // เก็บแค่ 100 รายการ
+            const cacheData = this.logs.slice(0, 100);
             localStorage.setItem('fantrove_logs_cache', JSON.stringify(cacheData));
         } catch (e) {}
     }
@@ -333,7 +316,7 @@ class FantroveConsolePro {
         try {
             const backup = JSON.parse(localStorage.getItem('fantrove_backup') || '[]');
             backup.push({ ...log, _savedAt: Date.now() });
-            if (backup.length > 50) backup.shift(); // จำกัดไม่ให้เยอะเกิน
+            if (backup.length > 50) backup.shift();
             localStorage.setItem('fantrove_backup', JSON.stringify(backup));
         } catch (e) {}
     }
@@ -347,7 +330,7 @@ class FantroveConsolePro {
     }
 
     // ============================================
-    // ส่วนที่เหลือคงเดิม (แก้ไขเล็กน้อย)
+    // Event Handlers
     // ============================================
     
     setupNetworkListeners() {
@@ -365,7 +348,6 @@ class FantroveConsolePro {
     }
 
     setupScrollHandler() {
-        // Infinite scroll แบบง่าย - โหลดเมื่อ scroll ถึงบนสุด
         const container = document.getElementById('console-output');
         let scrollTimeout;
         
@@ -375,7 +357,7 @@ class FantroveConsolePro {
                 if (container.scrollTop < 50 && this.hasMoreOldLogs && this.isCloudConnected) {
                     this.loadOlderLogs();
                 }
-            }, 200); // Debounce 200ms
+            }, 200);
         });
     }
 
@@ -390,7 +372,7 @@ class FantroveConsolePro {
             
             if (logs.length > 0) {
                 this.loadedTimeRange.oldest = Math.min(...logs.map(l => l.timestamp));
-                this.mergeLogs(logs, true); // prepend
+                this.mergeLogs(logs, true);
             } else {
                 this.hasMoreOldLogs = false;
             }
@@ -414,11 +396,15 @@ class FantroveConsolePro {
         this.logs = this.logs.slice(0, 200);
         this.refreshDisplay();
         this.updateStats();
-        this.saveToLocalCache(); // บันทึกลง local ด้วย
+        this.saveToLocalCache();
     }
 
+    // ============================================
+    // Core Functions
+    // ============================================
+    
     async addLog(log, saveToCloud = true, skipStorage = false) {
-        log.id = log.id || (Date.now() + Math.random()).toString();
+        log.id = log.id || crypto.randomUUID?.() || (Date.now() + Math.random()).toString(36);
         log.timestamp = log.timestamp || Date.now();
         
         const shouldSkipStorage = skipStorage || this.shouldSkipStorage(log);
@@ -437,11 +423,10 @@ class FantroveConsolePro {
         }
         
         if (!shouldSkipStorage && saveToCloud && this.isInitialized) {
-            // เก็บใน queue ก่อน รอ sync ตามรอบ
             this.pendingLogs.push(log);
             this.saveToLocalBackup(log);
             
-            // ถ้าเป็น error สำคัญ ให้พยายาม sync ทันที
+            // Sync ทันทีถ้าเป็น error
             if (log.level === 'error' && this.isCloudConnected && !this.isSyncing) {
                 this.syncPendingLogs();
             }
@@ -665,6 +650,51 @@ class FantroveConsolePro {
         this.addLog(log, false);
     }
 
+    startEfficientSyncLoop() {
+        setInterval(() => {
+            if (this.isOnline && this.pendingLogs.length > 0) {
+                this.syncPendingLogs();
+            }
+        }, this.syncInterval);
+        
+        setInterval(() => {
+            if (this.isCloudConnected && !document.hidden) {
+                this.checkNewLogsEfficient();
+            }
+        }, this.realtimeCheckInterval);
+        
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && this.isOnline) {
+                setTimeout(() => {
+                    this.syncPendingLogs();
+                    if (this.isCloudConnected) this.checkNewLogsEfficient();
+                }, 1000);
+            }
+        });
+    }
+
+    async checkNewLogsEfficient() {
+        const after = this.loadedTimeRange.newest || (Date.now() - 60000);
+        
+        try {
+            const newLogs = await this.fetchLogs({ limit: 10, after });
+            
+            if (newLogs.length > 0) {
+                this.loadedTimeRange.newest = Math.max(...newLogs.map(l => l.timestamp));
+                this.mergeLogs(newLogs);
+                
+                const hasError = newLogs.some(l => l.level === 'error');
+                if (hasError) this.showToast(`${newLogs.length} new logs`);
+            }
+        } catch (e) {
+            this.isCloudConnected = false;
+        }
+    }
+
+    // ============================================
+    // UI Methods
+    // ============================================
+    
     setFilter(level) {
         if (level === 'all') {
             const allActive = this.activeFilters.size === 5;
@@ -791,7 +821,8 @@ class FantroveConsolePro {
             loading: { color: 'var(--accent-yellow)', text: 'Connecting...', dot: '' },
             connected: { color: 'var(--accent-green)', text: 'Cloud Connected', dot: '' },
             local: { color: 'var(--accent-blue)', text: 'Local Mode', dot: 'local' },
-            offline: { color: 'var(--accent-yellow)', text: 'Offline', dot: 'offline' }
+            offline: { color: 'var(--accent-yellow)', text: 'Offline', dot: 'offline' },
+            error: { color: 'var(--accent-red)', text: 'Connection Error', dot: 'error' }
         };
         
         const style = styles[status] || styles.local;
@@ -808,7 +839,7 @@ class FantroveConsolePro {
         } else {
             const pending = this.pendingLogs.length;
             if (!this.isOnline) status.textContent = `${pending} queued (offline)`;
-            else if (!this.isCloudConnected) status.textContent = `${pending} pending`;
+            else if (!this.isCloudConnected) status.textContent = `${pending} pending (local)`;
             else status.textContent = pending > 0 ? `${pending} syncing...` : 'Synced';
             status.className = 'sync-status';
         }
@@ -818,6 +849,9 @@ class FantroveConsolePro {
         this.connectionError = message;
         document.getElementById('error-message').textContent = message;
         document.getElementById('error-banner').classList.add('visible');
+        
+        // Auto hide หลัง 10 วินาที
+        setTimeout(() => this.hideError(), 10000);
     }
 
     hideError() {
@@ -833,6 +867,11 @@ class FantroveConsolePro {
         toast.textContent = msg;
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 2000);
+    }
+
+    retryConnection() {
+        this.retryCount = 0;
+        this.connectToCloud();
     }
 
     // Logging methods
