@@ -11,7 +11,7 @@
             --bg-primary: #0d1117; --bg-secondary: #161b22; --bg-tertiary: #21262d; --bg-hover: #30363d;
             --border-color: #30363d; --text-primary: #c9d1d9; --text-secondary: #8b949e;
             --accent-blue: #58a6ff; --accent-green: #238636; --accent-yellow: #d29922; --accent-red: #da3633;
-            --accent-purple: #8957e5; --accent-cyan: #39c5cf;
+            --accent-purple: #8957e5; --accent-cyan: #39c5cf; --accent-orange: #f0883e;
             --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Fira Code', monospace;
             --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             --safe-top: env(safe-area-inset-top); --safe-bottom: env(safe-area-inset-bottom);
@@ -32,7 +32,9 @@
         .status-dot.error { background: var(--accent-red); animation: none; }
         .status-dot.offline { background: var(--accent-yellow); animation: none; }
         .status-dot.local { background: var(--accent-blue); animation: none; }
+        .status-dot.syncing { background: var(--accent-purple); animation: spin 1s linear infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        @keyframes spin { to { transform: rotate(360deg); } }
         .toolbar { background: var(--bg-secondary); border-bottom: 1px solid var(--border-color); padding: 8px; display: flex; gap: 8px; align-items: center; overflow-x: auto; -webkit-overflow-scrolling: touch; flex-shrink: 0; scrollbar-width: none; }
         .toolbar::-webkit-scrollbar { display: none; }
         .filter-group { display: flex; gap: 4px; flex-shrink: 0; }
@@ -44,6 +46,7 @@
         .filter-btn[data-level="info"].active { background: rgba(88, 166, 255, 0.2); color: var(--accent-blue); border-color: var(--accent-blue); }
         .filter-btn[data-level="log"].active { background: rgba(201, 209, 217, 0.2); color: var(--text-primary); }
         .filter-btn[data-level="debug"].active { background: rgba(137, 87, 229, 0.2); color: var(--accent-purple); border-color: var(--accent-purple); }
+        .filter-btn[data-level="success"].active { background: rgba(35, 134, 54, 0.2); color: var(--accent-green); border-color: var(--accent-green); }
         .badge { background: var(--bg-primary); padding: 1px 5px; border-radius: 10px; font-size: 10px; min-width: 16px; text-align: center; }
         .search-box { position: relative; flex-shrink: 0; }
         .search-box input { background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px 10px 6px 32px; border-radius: 12px; font-size: 13px; width: 140px; font-family: inherit; outline: none; }
@@ -67,6 +70,7 @@
         .log-category.network { background: rgba(210, 153, 34, 0.3); color: #e3b341; }
         .log-category.system { background: rgba(88, 166, 255, 0.3); color: #58a6ff; }
         .log-category.api { background: rgba(35, 134, 54, 0.3); color: #7ee787; }
+        .log-category.unknown { background: rgba(240, 136, 62, 0.3); color: #f0883e; }
         .log-header { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-secondary); }
         .log-time { font-family: var(--font-mono); opacity: 0.8; }
         .log-level-badge { text-transform: uppercase; font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
@@ -74,6 +78,7 @@
         .log-level-badge.warn { background: rgba(210, 153, 34, 0.2); color: var(--accent-yellow); }
         .log-level-badge.info { background: rgba(88, 166, 255, 0.2); color: var(--accent-blue); }
         .log-level-badge.debug { background: rgba(137, 87, 229, 0.2); color: var(--accent-purple); }
+        .log-level-badge.success { background: rgba(35, 134, 54, 0.2); color: var(--accent-green); }
         .log-source { color: var(--accent-cyan); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .log-content { color: var(--text-primary); word-break: break-word; white-space: pre-wrap; font-size: 13px; line-height: 1.6; }
         .log-entry.error .log-content { color: #ff7b72; }
@@ -82,7 +87,6 @@
         .meta-data { margin-top: 4px; padding: 4px 8px; background: var(--bg-primary); border-radius: 4px; font-size: 11px; color: var(--accent-cyan); font-family: var(--font-mono); }
         .sync-status { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-secondary); }
         .sync-status.syncing::before { content: ''; width: 8px; height: 8px; border: 2px solid var(--accent-blue); border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
         .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-secondary); gap: 16px; padding: 40px 20px; text-align: center; }
         .empty-icon { font-size: 64px; opacity: 0.3; }
         .error-banner { background: rgba(218, 54, 51, 0.1); border: 1px solid var(--accent-red); color: var(--accent-red); padding: 12px 16px; margin: 8px; border-radius: 6px; font-size: 13px; display: none; }
@@ -104,6 +108,8 @@
         .stat-value.warn { color: var(--accent-yellow); }
         .toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--bg-secondary); border: 1px solid var(--border-color); padding: 12px 24px; border-radius: 8px; font-size: 14px; color: var(--text-primary); z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.5); animation: fadeIn 0.3s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translate(-50%, -40%); } to { opacity: 1; transform: translate(-50%, -50%); } }
+        .sync-indicator { display: inline-flex; align-items: center; gap: 4px; }
+        .sync-indicator.syncing { color: var(--accent-purple); }
         @media (min-width: 768px) { .header { padding: 16px 24px; } .brand { font-size: 16px; } .toolbar { padding: 12px 24px; } .filter-btn { padding: 6px 14px; } .search-box input { width: 200px; } .search-box input:focus { width: 280px; } .log-entry { padding: 12px 24px; flex-direction: row; align-items: flex-start; } .log-header { flex-direction: column; min-width: 100px; } .input-section { padding: 16px 24px; } .footer { padding: 10px 24px; } }
     </style>
 </head>
@@ -114,6 +120,10 @@
             <span>Fantrove Console</span>
         </div>
         <div class="header-actions">
+            <button class="btn" onclick="consolePro.syncAll()" title="Force Sync All">
+                <span class="btn-icon">🔄</span>
+                <span>Sync</span>
+            </button>
             <button class="btn" onclick="consolePro.toggleCapture()" id="capture-btn">
                 <span class="btn-icon" id="capture-icon">⏸</span>
                 <span>Pause</span>
@@ -164,6 +174,9 @@
             <button class="filter-btn active" data-level="debug" onclick="consolePro.setFilter('debug')">
                 Debug <span class="badge" id="count-debug">0</span>
             </button>
+            <button class="filter-btn active" data-level="success" onclick="consolePro.setFilter('success')">
+                Success <span class="badge" id="count-success">0</span>
+            </button>
         </div>
         <div class="search-box">
             <span class="search-icon">🔍</span>
@@ -197,6 +210,8 @@
     <div class="footer">
         <div class="footer-stats">
             <span class="stat">Total: <span class="stat-value" id="stat-total">0</span></span>
+            <span class="stat">Cloud: <span class="stat-value" id="stat-cloud">0</span></span>
+            <span class="stat">Local: <span class="stat-value" id="stat-local">0</span></span>
             <span class="stat">Code: <span class="stat-value error" id="stat-code">0</span></span>
             <span class="stat">Network: <span class="stat-value warn" id="stat-network">0</span></span>
         </div>
@@ -209,16 +224,18 @@
                 this.apiUrl = 'https://fantrove-console-api.nontakorn2600.workers.dev';
                 this.logs = [];
                 this.pendingLogs = [];
-                this.activeFilters = new Set(['error', 'warn', 'info', 'log', 'debug']);
+                this.activeFilters = new Set(['error', 'warn', 'info', 'log', 'debug', 'success']);
                 this.searchQuery = '';
                 this.isCapturing = true;
                 this.sessionId = this.getOrCreateSession();
                 this.isOnline = navigator.onLine;
                 this.isCloudConnected = false;
                 this.isSyncing = false;
-                this.stats = { code: 0, network: 0, system: 0, api: 0 };
+                this.stats = { code: 0, network: 0, system: 0, api: 0, unknown: 0, cloud: 0, local: 0 };
                 this.connectionError = null;
                 this.isInitialized = false;
+                this.lastSyncTime = 0;
+                this.syncInterval = null;
                 
                 // Patterns ของข้อความ system ที่ไม่ต้องการบันทึก
                 this.skipStoragePatterns = [
@@ -230,7 +247,9 @@
                     /^Capture (resumed|paused)/i,
                     /^Display cleared/i,
                     /^Exported$/i,
-                    /^Reconnected successfully$/i
+                    /^Reconnected successfully$/i,
+                    /^Force sync completed/i,
+                    /^Synced \d+ total logs/i
                 ];
                 
                 this.init();
@@ -255,21 +274,64 @@
                 this.setupNetworkListeners();
                 this.setupSmartErrorCapture();
                 this.setupAPIMessageHandling();
-                this.loadFromLocalBackup();
+                this.setupStorageSync();
                 this.updateConnectionStatus('local');
                 this.isInitialized = true;
+                
+                // โหลดข้อมูลจากทุกแหล่งพร้อมกัน
+                this.loadAllSources();
                 
                 // ใช้ skipStorage = true เพื่อไม่บันทึกลงฐานข้อมูล
                 this.system('Console ready (Session: ' + this.sessionId.substring(0, 8) + ')', null, true);
                 
-                setTimeout(() => {
-                    this.connectToCloud().catch(err => {
-                        console.warn('Cloud connection failed:', err);
-                        this.showError('Cloud unavailable. Working in local mode.');
-                    });
-                }, 100);
+                // เริ่มระบบ Real-time Sync
+                this.startRealTimeSync();
+            }
+
+            // โหลดข้อมูลจากทุกแหล่งพร้อมกัน
+            async loadAllSources() {
+                this.setSyncStatus(true, 'Loading data...');
                 
-                this.startSyncLoop();
+                const promises = [];
+                
+                // โหลดจาก Local Backup
+                promises.push(this.loadFromLocalBackup());
+                
+                // โหลดจาก Cloud ถ้า Online
+                if (this.isOnline) {
+                    promises.push(this.loadLogsFromCloud().catch(err => {
+                        console.warn('Cloud load failed:', err);
+                        return [];
+                    }));
+                }
+                
+                await Promise.all(promises);
+                
+                // รวมและจัดเรียงข้อมูล
+                this.mergeAndSortLogs();
+                this.refreshDisplay();
+                this.updateStats();
+                this.setSyncStatus(false);
+            }
+
+            // รวมข้อมูลจากทุกแหล่งและจัดเรียง
+            mergeAndSortLogs() {
+                // ลบข้อมูลซ้ำโดยใช้ ID หรือ timestamp + message เป็น key
+                const seen = new Set();
+                const uniqueLogs = [];
+                
+                // จัดเรียงตาม timestamp ล่าสุดก่อน
+                this.logs.sort((a, b) => b.timestamp - a.timestamp);
+                
+                for (const log of this.logs) {
+                    const key = log.id || `${log.timestamp}-${log.message}`;
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        uniqueLogs.push(log);
+                    }
+                }
+                
+                this.logs = uniqueLogs.slice(0, 1000); // จำกัดไม่เกิน 1000 รายการ
             }
 
             async connectToCloud() {
@@ -297,13 +359,12 @@
                 }
             }
 
+            // ปรับปรุงการโหลดจาก Cloud ให้ดึงทั้งหมดและรวมกับข้อมูลเดิม
             async loadLogsFromCloud() {
                 if (!this.isOnline) {
                     throw new Error('Offline');
                 }
 
-                this.setSyncStatus(true, 'Connecting...');
-                
                 const healthController = new AbortController();
                 const healthTimeout = setTimeout(() => healthController.abort(), 5000);
                 
@@ -318,23 +379,22 @@
                     });
                 } catch (err) {
                     clearTimeout(healthTimeout);
-                    this.setSyncStatus(false);
-                    throw new Error('Health check failed: ' + (err && err.message));
+                    throw new Error('Health check failed');
                 }
                 clearTimeout(healthTimeout);
 
                 if (!healthCheck || !healthCheck.ok) {
-                    this.setSyncStatus(false);
                     throw new Error('Cannot reach API server');
                 }
 
+                // ดึงข้อมูลทั้งหมดจาก Cloud (เพิ่ม limit เป็น 1000)
                 const logsController = new AbortController();
-                const logsTimeout = setTimeout(() => logsController.abort(), 7000);
+                const logsTimeout = setTimeout(() => logsController.abort(), 10000);
                 
                 let response;
                 try {
                     response = await fetch(
-                        `${this.apiUrl}/logs?session=${this.sessionId}&limit=200`,
+                        `${this.apiUrl}/logs?session=${this.sessionId}&limit=1000`,
                         {
                             method: 'GET',
                             headers: { 'Accept': 'application/json' },
@@ -345,47 +405,48 @@
                     );
                 } catch (err) {
                     clearTimeout(logsTimeout);
-                    this.setSyncStatus(false);
-                    throw new Error('Logs fetch failed: ' + (err && err.message));
+                    throw new Error('Logs fetch failed');
                 }
                 clearTimeout(logsTimeout);
 
                 if (!response.ok) {
-                    this.setSyncStatus(false);
                     throw new Error(`HTTP ${response.status}`);
                 }
 
                 const logs = await response.json();
                 
-                const existingIds = new Set(this.logs.map(l => l.id));
-                const newLogs = logs
-                    .filter(log => !existingIds.has(log.id))
-                    .map(log => ({
-                        id: log.id,
-                        level: log.level,
-                        category: log.category,
-                        message: log.message,
-                        source: log.source,
-                        meta: log.meta || {},
-                        stackTrace: log.stack_trace,
-                        timestamp: new Date(log.created_at).getTime()
-                    }));
+                // แปลงข้อมูลจาก Cloud ให้ตรงกับรูปแบบภายใน
+                const cloudLogs = logs.map(log => ({
+                    id: log.id,
+                    level: log.level || 'info',
+                    category: log.category || 'unknown',
+                    message: log.message || '',
+                    source: log.source || 'Cloud',
+                    meta: log.meta || {},
+                    stackTrace: log.stack_trace,
+                    timestamp: new Date(log.created_at).getTime(),
+                    fromCloud: true // 标记ว่ามาจาก Cloud
+                }));
                 
-                this.logs = [...newLogs, ...this.logs].sort((a, b) => b.timestamp - a.timestamp);
-                this.logs = this.logs.slice(0, 500);
+                // รวมเข้ากับข้อมูลที่มีอยู่
+                this.logs = [...this.logs, ...cloudLogs];
                 
-                this.refreshDisplay();
-                this.updateStats();
+                // อัปเดตสถิติ
+                this.stats.cloud = cloudLogs.length;
                 
-                if (newLogs.length > 0) {
-                    // ใช้ skipStorage = true เพื่อไม่บันทึกข้อความนี้
-                    this.system(`Loaded ${newLogs.length} new logs from cloud`, null, true);
+                if (cloudLogs.length > 0) {
+                    this.system(`Loaded ${cloudLogs.length} logs from cloud`, null, true);
                 }
                 
-                this.setSyncStatus(false);
+                return cloudLogs;
             }
 
             async saveLogToCloud(log) {
+                // ถ้าเป็นข้อความที่ไม่ต้องการบันทึก ให้ข้าม
+                if (this.shouldSkipStorage(log)) {
+                    return { skipped: true };
+                }
+
                 if (!this.isOnline || !this.isCloudConnected) {
                     this.pendingLogs.push(log);
                     this.saveToLocalBackup(log);
@@ -424,7 +485,14 @@
                         throw new Error(`HTTP ${response.status}`);
                     }
 
-                    return await response.json();
+                    const result = await response.json();
+                    // อัปเดต ID จาก Cloud
+                    if (result.id && !log.id) {
+                        log.id = result.id;
+                        log.fromCloud = true;
+                    }
+                    
+                    return result;
                     
                 } catch (error) {
                     clearTimeout(timeout);
@@ -441,11 +509,13 @@
                 }
             }
 
+            // ซิงค์ข้อมูลที่ค้างอยู่ทั้งหมด
             async syncPendingLogs() {
                 if (this.pendingLogs.length === 0 || !this.isOnline || this.isSyncing) {
                     return;
                 }
                 
+                // ตรวจสอบสถานะ API ก่อน
                 const controller = new AbortController();
                 const t = setTimeout(() => controller.abort(), 3000);
                 
@@ -502,14 +572,16 @@
                         const total = result.total || batch.length;
                         
                         if (saved > 0) {
-                            // ใช้ skipStorage = true เพื่อไม่บันทึกข้อความนี้
                             this.system(`Synced ${saved}/${total} pending logs${failed > 0 ? ` (${failed} failed)` : ''}`, null, true);
-                        } else if (failed > 0) {
-                            // ใช้ skipStorage = true เพื่อไม่บันทึกข้อความนี้
-                            this.warn(`Sync completed: ${failed} logs failed`, null, true);
                         }
                         
                         this.removeFromLocalBackup(saved);
+                        
+                        // โหลดข้อมูลใหม่จาก Cloud เพื่ออัปเดต ID
+                        await this.loadLogsFromCloud();
+                        this.mergeAndSortLogs();
+                        this.refreshDisplay();
+                        this.updateStats();
                     } else {
                         this.pendingLogs.unshift(...batch);
                     }
@@ -522,13 +594,60 @@
                 }
             }
 
-            startSyncLoop() {
-                setInterval(() => this.syncPendingLogs(), 10000);
+            // Force Sync ทั้งหมด
+            async syncAll() {
+                this.setSyncStatus(true, 'Full sync...');
                 
+                // 1. ซิงค์ pending logs ก่อน
+                await this.syncPendingLogs();
+                
+                // 2. โหลดข้อมูลใหม่จาก Cloud
+                try {
+                    await this.loadLogsFromCloud();
+                } catch (e) {
+                    console.warn('Cloud sync failed:', e);
+                }
+                
+                // 3. โหลดจาก Local อีกครั้ง
+                await this.loadFromLocalBackup();
+                
+                // 4. รวมและจัดเรียง
+                this.mergeAndSortLogs();
+                this.refreshDisplay();
+                this.updateStats();
+                
+                this.setSyncStatus(false);
+                this.showToast(`Synced ${this.logs.length} total logs`);
+            }
+
+            // Real-time Sync ตรวจจับการเปลี่ยนแปลง
+            startRealTimeSync() {
+                // Sync ทุก 30 วินาที
+                this.syncInterval = setInterval(() => {
+                    if (!document.hidden && this.isOnline) {
+                        this.syncPendingLogs();
+                        // ตรวจสอบข้อมูลใหม่จาก Cloud ทุก 2 นาที
+                        if (Date.now() - this.lastSyncTime > 120000) {
+                            this.loadLogsFromCloud().then(() => {
+                                this.mergeAndSortLogs();
+                                this.refreshDisplay();
+                                this.updateStats();
+                            }).catch(() => {});
+                            this.lastSyncTime = Date.now();
+                        }
+                    }
+                }, 30000);
+
+                // Sync เมื่อกลับมาที่หน้าเว็บ
                 document.addEventListener('visibilitychange', () => {
                     if (!document.hidden) {
                         this.syncPendingLogs();
                     }
+                });
+
+                // Sync เมื่อกลับมา Online
+                window.addEventListener('online', () => {
+                    setTimeout(() => this.syncAll(), 1000);
                 });
             }
 
@@ -536,9 +655,6 @@
                 window.addEventListener('online', () => {
                     this.isOnline = true;
                     this.updateConnectionStatus('local');
-                    if (!this.isCloudConnected) {
-                        setTimeout(() => this.connectToCloud().catch(() => {}), 1000);
-                    }
                 });
                 
                 window.addEventListener('offline', () => {
@@ -548,27 +664,49 @@
                 });
             }
 
-            loadFromLocalBackup() {
+            // โหลดจาก Local Backup และรวมเข้ากับข้อมูลหลัก
+            async loadFromLocalBackup() {
                 try {
                     const backup = JSON.parse(localStorage.getItem('fantrove_backup') || '[]');
-                    const recent = backup.filter(l => Date.now() - l._savedAt < 86400000);
+                    const recent = backup.filter(l => Date.now() - (l._savedAt || 0) < 86400000);
                     
                     if (recent.length > 0) {
-                        this.pendingLogs.push(...recent);
+                        // แปลงข้อมูลให้ตรงกับรูปแบบ
+                        const localLogs = recent.map(log => ({
+                            ...log,
+                            fromLocal: true, // 标记ว่ามาจาก Local
+                            id: log.id || `local_${Date.now()}_${Math.random()}`
+                        }));
+                        
+                        // รวมเข้ากับข้อมูลหลัก
+                        this.logs = [...this.logs, ...localLogs];
+                        this.pendingLogs.push(...localLogs.filter(l => !l.fromCloud));
+                        
+                        this.stats.local = localLogs.length;
+                        
                         // ใช้ skipStorage = true เพื่อไม่บันทึกข้อความนี้
                         this.system(`Restored ${recent.length} logs from local backup`, null, true);
                     }
                     
-                    this.refreshDisplay();
-                    this.updateStats();
-                } catch (e) {}
+                    // ล้าง backup ที่เก่าแล้ว
+                    const validBackup = backup.filter(l => Date.now() - (l._savedAt || 0) < 86400000);
+                    localStorage.setItem('fantrove_backup', JSON.stringify(validBackup));
+                    
+                } catch (e) {
+                    console.error('Load backup failed:', e);
+                }
             }
 
             saveToLocalBackup(log) {
+                // ถ้าเป็นข้อความที่ไม่ต้องการบันทึก ให้ข้าม
+                if (this.shouldSkipStorage(log)) {
+                    return;
+                }
+                
                 try {
                     const backup = JSON.parse(localStorage.getItem('fantrove_backup') || '[]');
                     backup.push({ ...log, _savedAt: Date.now() });
-                    if (backup.length > 100) backup.shift();
+                    if (backup.length > 200) backup.shift(); // เพิ่มเป็น 200 รายการ
                     localStorage.setItem('fantrove_backup', JSON.stringify(backup));
                 } catch (e) {}
             }
@@ -579,6 +717,29 @@
                     const remaining = backup.slice(count);
                     localStorage.setItem('fantrove_backup', JSON.stringify(remaining));
                 } catch (e) {}
+            }
+
+            // ตรวจจับการเปลี่ยนแปลงจากแท็บอื่น
+            setupStorageSync() {
+                window.addEventListener('storage', (e) => {
+                    if (e.key === 'fantrove_backup' && e.newValue) {
+                        try {
+                            const data = JSON.parse(e.newValue);
+                            if (Array.isArray(data) && data.length > 0) {
+                                // มีข้อมูลใหม่จากแท็บอื่น
+                                const newLogs = data.filter(log => 
+                                    !this.logs.some(existing => existing.id === log.id)
+                                );
+                                if (newLogs.length > 0) {
+                                    this.logs.push(...newLogs);
+                                    this.mergeAndSortLogs();
+                                    this.refreshDisplay();
+                                    this.updateStats();
+                                }
+                            }
+                        } catch (err) {}
+                    }
+                });
             }
 
             /**
@@ -595,7 +756,7 @@
                 const shouldSkipStorage = skipStorage || this.shouldSkipStorage(log);
                 
                 this.logs.push(log);
-                if (this.logs.length > 500) this.logs.shift();
+                if (this.logs.length > 1000) this.logs.shift();
                 
                 if (this.isCapturing && this.shouldDisplay(log)) {
                     this.renderLog(log);
@@ -605,6 +766,8 @@
                 
                 if (this.stats[log.category] !== undefined) {
                     this.stats[log.category]++;
+                } else {
+                    this.stats.unknown++;
                 }
                 
                 // ถ้า skipStorage เป็น true จะไม่บันทึกลงทั้ง cloud และ local backup
@@ -633,7 +796,8 @@
                 if (!this.searchQuery) return true;
                 const query = this.searchQuery.toLowerCase();
                 return (log.message || '').toLowerCase().includes(query) ||
-                       (log.source || '').toLowerCase().includes(query);
+                       (log.source || '').toLowerCase().includes(query) ||
+                       (log.category || '').toLowerCase().includes(query);
             }
 
             renderLog(log, animate = true) {
@@ -649,8 +813,14 @@
                     hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'
                 });
 
-                const levelColors = { error: 'error', warn: 'warn', info: 'info', debug: 'debug', log: '', success: '' };
-                const categoryClass = log.category || 'system';
+                const levelColors = { 
+                    error: 'error', warn: 'warn', info: 'info', 
+                    debug: 'debug', log: '', success: 'success' 
+                };
+                
+                // รองรับหมวดหมู่ที่ไม่รู้จัก
+                const categoryClass = log.category || 'unknown';
+                const categoryLabel = log.category || 'unknown';
                 
                 let stackHtml = log.stackTrace ? `<div class="stack-trace">${this.escapeHtml(log.stackTrace)}</div>` : '';
                 
@@ -663,12 +833,15 @@
                     if (metaStr) metaHtml = `<div class="meta-data">${this.escapeHtml(metaStr)}</div>`;
                 }
 
+                // แสดงแหล่งที่มาของข้อมูล (Cloud/Local)
+                const sourceIndicator = log.fromCloud ? '☁️' : (log.fromLocal ? '💾' : '');
+
                 entry.innerHTML = `
                     <div class="log-header">
                         <span class="log-time">${time}</span>
                         <span class="log-level-badge ${levelColors[log.level] || ''}">${log.level}</span>
-                        <span class="log-category ${categoryClass}">${log.category}</span>
-                        <span class="log-source">${log.source || 'System'}</span>
+                        <span class="log-category ${categoryClass}">${categoryLabel}</span>
+                        <span class="log-source">${log.source || 'System'} ${sourceIndicator}</span>
                     </div>
                     <div class="log-content">${this.escapeHtml(log.message)}</div>
                     ${metaHtml}
@@ -855,12 +1028,12 @@
 
             setFilter(level) {
                 if (level === 'all') {
-                    const allActive = this.activeFilters.size === 5;
+                    const allActive = this.activeFilters.size === 6;
                     if (allActive) {
                         this.activeFilters.clear();
                         document.querySelectorAll('.filter-btn[data-level]').forEach(btn => btn.classList.remove('active'));
                     } else {
-                        ['error', 'warn', 'info', 'log', 'debug'].forEach(l => this.activeFilters.add(l));
+                        ['error', 'warn', 'info', 'log', 'debug', 'success'].forEach(l => this.activeFilters.add(l));
                         document.querySelectorAll('.filter-btn[data-level]').forEach(btn => btn.classList.add('active'));
                     }
                 } else {
@@ -922,22 +1095,21 @@
                 const btn = document.getElementById('capture-btn');
                 if (this.isCapturing) {
                     btn.innerHTML = '<span class="btn-icon">⏸</span><span>Pause</span>';
-                    this.system('Capture resumed', null, true); // ไม่บันทึก
+                    this.system('Capture resumed', null, true);
                 } else {
                     btn.innerHTML = '<span class="btn-icon">▶</span><span>Resume</span>';
-                    this.warn('Capture paused', null, true); // ไม่บันทึก
+                    this.warn('Capture paused', null, true);
                 }
             }
 
             async clear() {
                 if (confirm('Clear all logs?')) {
                     this.logs = [];
-                    this.stats = { code: 0, network: 0, system: 0, api: 0 };
+                    this.pendingLogs = [];
+                    this.stats = { code: 0, network: 0, system: 0, api: 0, unknown: 0, cloud: 0, local: 0 };
                     this.refreshDisplay();
                     this.updateStats();
                     this.showToast('Display cleared');
-                    // ไม่ต้องบันทึกข้อความ "Display cleared" ลงฐานข้อมูล
-                    // แค่แสดง toast พอ
                 }
             }
 
@@ -957,12 +1129,24 @@
                 a.click();
                 URL.revokeObjectURL(url);
                 this.showToast('Exported');
-                // ไม่บันทึกข้อความ "Exported" ลงฐานข้อมูล
             }
 
             updateStats() {
-                const counts = { all: this.logs.length, error: 0, warn: 0, info: 0, log: 0, debug: 0 };
-                this.logs.forEach(log => { if (counts[log.level] !== undefined) counts[log.level]++; });
+                const counts = { all: this.logs.length, error: 0, warn: 0, info: 0, log: 0, debug: 0, success: 0 };
+                const categories = { code: 0, network: 0, system: 0, api: 0, unknown: 0 };
+                let cloudCount = 0;
+                let localCount = 0;
+                
+                this.logs.forEach(log => { 
+                    if (counts[log.level] !== undefined) counts[log.level]++;
+                    if (categories[log.category] !== undefined) {
+                        categories[log.category]++;
+                    } else {
+                        categories.unknown++;
+                    }
+                    if (log.fromCloud) cloudCount++;
+                    if (log.fromLocal) localCount++;
+                });
                 
                 Object.keys(counts).forEach(key => {
                     const el = document.getElementById(`count-${key}`);
@@ -970,8 +1154,12 @@
                 });
 
                 document.getElementById('stat-total').textContent = counts.all;
-                document.getElementById('stat-code').textContent = this.stats.code;
-                document.getElementById('stat-network').textContent = this.stats.network;
+                document.getElementById('stat-cloud').textContent = cloudCount;
+                document.getElementById('stat-local').textContent = localCount;
+                document.getElementById('stat-code').textContent = categories.code;
+                document.getElementById('stat-network').textContent = categories.network;
+                
+                this.stats = { ...this.stats, ...categories, cloud: cloudCount, local: localCount };
             }
 
             updateConnectionStatus(status) {
@@ -982,7 +1170,8 @@
                     loading: { color: 'var(--accent-yellow)', text: 'Connecting...', dot: '' },
                     connected: { color: 'var(--accent-green)', text: 'Cloud Connected', dot: '' },
                     local: { color: 'var(--accent-blue)', text: 'Local Mode', dot: 'local' },
-                    offline: { color: 'var(--accent-yellow)', text: 'Offline', dot: 'offline' }
+                    offline: { color: 'var(--accent-yellow)', text: 'Offline', dot: 'offline' },
+                    syncing: { color: 'var(--accent-purple)', text: 'Syncing...', dot: 'syncing' }
                 };
                 
                 const style = styles[status] || styles.local;
