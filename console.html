@@ -296,9 +296,7 @@
                 try {
                     healthCheck = await fetch(`${this.apiUrl}/health`, {
                         method: 'GET',
-                        headers: { 
-                            'Accept': 'application/json'
-                        },
+                        headers: { 'Accept': 'application/json' },
                         mode: 'cors',
                         credentials: 'omit',
                         signal: healthController.signal
@@ -324,9 +322,7 @@
                         `${this.apiUrl}/logs?session=${this.sessionId}&limit=200`,
                         {
                             method: 'GET',
-                            headers: { 
-                                'Accept': 'application/json'
-                            },
+                            headers: { 'Accept': 'application/json' },
                             mode: 'cors',
                             credentials: 'omit',
                             signal: logsController.signal
@@ -398,9 +394,7 @@
 
                     const response = await fetch(`${this.apiUrl}/logs`, {
                         method: 'POST',
-                        headers: { 
-                            'Content-Type': 'application/json'
-                        },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload),
                         mode: 'cors',
                         credentials: 'omit',
@@ -463,9 +457,7 @@
                 try {
                     const response = await fetch(`${this.apiUrl}/logs/batch`, {
                         method: 'POST',
-                        headers: { 
-                            'Content-Type': 'application/json'
-                        },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ logs: batch.map(log => ({
                             session_id: this.sessionId,
                             level: log.level,
@@ -488,8 +480,19 @@
                         const result = await response.json();
                         this.isCloudConnected = true;
                         this.hideError();
-                        this.system(`Synced ${result.saved} pending logs`);
-                        this.removeFromLocalBackup(result.saved);
+                        
+                        // ✅ แก้ไข: ตรวจสอบค่าที่ได้จาก API อย่างปลอดภัย
+                        const saved = result.saved || result.successful || 0;
+                        const failed = result.failed || 0;
+                        const total = result.total || batch.length;
+                        
+                        if (saved > 0) {
+                            this.system(`Synced ${saved}/${total} pending logs${failed > 0 ? ` (${failed} failed)` : ''}`);
+                        } else if (failed > 0) {
+                            this.warn(`Sync completed: ${failed} logs failed`);
+                        }
+                        
+                        this.removeFromLocalBackup(saved);
                     } else {
                         this.pendingLogs.unshift(...batch);
                     }
@@ -712,14 +715,11 @@
 
             setupSmartNetworkCapture() {
                 const originalFetch = window.fetch;
-                // แก้ไข: ใช้ function แทน arrow function และผูก this เป็น window
                 window.fetch = async function(...args) {
                     const url = args[0];
                     try {
-                        // ผูกบริบทเป็น window เพื่อหลีกเลี่ยง "Illegal invocation"
                         const response = await originalFetch.apply(window, args);
                         if (response.status >= 500) {
-                            // ใช้ window.consolePro แทน this
                             if (window.consolePro && typeof window.consolePro.captureError === 'function') {
                                 window.consolePro.captureError({
                                     type: 'http', category: 'network',
