@@ -1,16 +1,13 @@
 /**
  * Fantrove Console Pro - Supabase Realtime Edition
- * Enhanced: Better Error Handling, Auto-Fallback, Debug Mode
+ * ดึงข้อมูลครั้งแรกครั้งเดียว ที่เหลือรอ Realtime ส่งมา
  */
 
 class FantroveConsolePro {
     constructor() {
-        // ตรวจสอบค่า config ก่อน
-        this.SUPABASE_URL = 'https://your-project.supabase.co'; // ← แก้ไขตรงนี้
-        this.SUPABASE_ANON_KEY = 'your-anon-key'; // ← แก้ไขตรงนี้
-        
-        // Debug mode - เปิดเพื่อดู log การทำงาน
-        this.DEBUG = true;
+        // Supabase Config (เปลี่ยนเป็นของคุณ)
+        this.SUPABASE_URL = 'https://your-project.supabase.co';
+        this.SUPABASE_ANON_KEY = 'your-anon-key';
         
         this.supabase = null;
         this.realtimeChannel = null;
@@ -23,27 +20,18 @@ class FantroveConsolePro {
         this.sessionId = this.getOrCreateSession();
         this.isOnline = navigator.onLine;
         this.isConnected = false;
-        this.connectionError = null;
         this.stats = { code: 0, network: 0, system: 0, api: 0 };
         
+        // สถานะการโหลด
         this.isLoading = false;
         this.hasMoreHistory = true;
-        this.retryCount = 0;
-        this.maxRetries = 3;
         
         this.skipStoragePatterns = [
-            /^Console ready/i, /^Loaded \d+ logs/i, /^Realtime/i,
-            /^Connection/i, /^Failed to connect/i
+            /^Console ready/i, /^Loaded \d+ logs/i, /^Realtime connected/i,
+            /^Connection lost/i, /^Reconnected/i
         ];
         
         this.init();
-    }
-
-    // Debug logger
-    debugLog(...args) {
-        if (this.DEBUG) {
-            console.log('[Console Debug]', ...args);
-        }
     }
 
     getOrCreateSession() {
@@ -55,299 +43,172 @@ class FantroveConsolePro {
         }
         let s = localStorage.getItem('fantrove_session_id');
         if (!s) {
-            s = 'sess_' + Date.now().toString(36).substr(-8) + '_' + Math.random().toString(36).substr(2, 4);
+            s = 'sess_' + Date.now().toString(36).substr(-8);
             localStorage.setItem('fantrove_session_id', s);
         }
         return s;
     }
 
     async init() {
-        this.debugLog('Initializing... Session:', this.sessionId);
-        
         this.setupErrorCapture();
         this.setupNetworkListeners();
         
         // โหลดจาก cache ก่อน (ทันที)
         this.loadFromCache();
         
-        // ตรวจสอบ config
-        if (!this.validateConfig()) {
-            this.error('Invalid Supabase configuration. Check SUPABASE_URL and SUPABASE_ANON_KEY');
-            this.updateStatus('error', 'Config Error');
-            return;
-        }
-        
-        // เชื่อมต่อ Supabase ถ้า online
+        // เชื่อมต่อ Supabase
         if (this.isOnline) {
-            await this.connectWithRetry();
-        } else {
-            this.updateStatus('offline', '✕ Offline');
-            this.system('Working in offline mode', null, true);
+            await this.connectSupabase();
         }
-    }
-
-    validateConfig() {
-        const isValid = (
-            this.SUPABASE_URL && 
-            this.SUPABASE_URL.includes('supabase.co') &&
-            this.SUPABASE_ANON_KEY &&
-            this.SUPABASE_ANON_KEY.length > 20
-        );
-        
-        this.debugLog('Config valid:', isValid);
-        return isValid;
     }
 
     // ============================================
-    // CONNECT: พร้อม Retry และ Fallback
+    // SUPABASE: เชื่อมต่อและตั้งค่า Realtime
     // ============================================
     
-    async connectWithRetry() {
-        while (this.retryCount < this.maxRetries) {
-            try {
-                await this.connectSupabase();
-                return; // สำเร็จ
-            } catch (error) {
-                this.retryCount++;
-                this.debugLog(`Connection attempt ${this.retryCount} failed:`, error.message);
-                
-                if (this.retryCount < this.maxRetries) {
-                    const delay = 1000 * Math.pow(2, this.retryCount);
-                    this.updateStatus('loading', `Retrying in ${delay/1000}s...`);
-                    await this.sleep(delay);
-                }
-            }
-        }
-        
-        // ถ้าไม่สำเร็จหลัง retry ทั้งหมด
-        this.handleConnectionFailure();
-    }
-
-    sleep(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
-    handleConnectionFailure() {
-        this.debugLog('All connection attempts failed, switching to local mode');
-        this.isConnected = false;
-        this.updateStatus('local', '○ Local Mode (Limited)');
-        this.showError(
-            'Cannot connect to database. Working in local mode. ' +
-            'Errors will be saved locally and synced when connection returns.'
-        );
-        
-        // ยังคงทำงานได้ใน local mode
-        this.system('Local mode active - logs saved to browser', null, true);
-    }
-
     async connectSupabase() {
-        this.updateStatus('loading', 'Connecting...');
-        this.debugLog('Creating Supabase client...');
-        
         try {
-            // สร้าง client พร้อม timeout
-            const clientPromise = this.createClient();
-            const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Connection timeout')), 10000)
-            );
+            this.updateStatus('loading', 'Connecting to Supabase...');
             
-            this.supabase = await Promise.race([clientPromise, timeoutPromise]);
-            
-            this.debugLog('Client created, testing connection...');
-            
-            // Test connection ด้วย simple query
-            const { data: testData, error: testError } = await this.supabase
-                .from('console_logs')
-                .select('count', { count: 'exact', head: true })
-                .eq('session_id', this.sessionId)
-                .limit(1);
-            
-            if (testError) {
-                throw new Error(`Database test failed: ${testError.message}`);
-            }
-            
-            this.debugLog('Connection test passed');
-            
-            // ดึงข้อมูลครั้งแรก
+            // สร้าง client
+            this.supabase = supabase.createClient(this.SUPABASE_URL, this.SUPABASE_ANON_KEY, {
+                realtime: {
+                    params: {
+                        eventsPerSecond: 10
+                    }
+                }
+            });
+
+            // ดึงข้อมูลครั้งแรก (initial load)
             await this.loadInitialLogs();
             
-            // เปิด Realtime
+            // เปิด Realtime subscription
             this.subscribeToRealtime();
             
             this.isConnected = true;
-            this.retryCount = 0;
-            this.hideError();
             this.updateStatus('connected', '● Real-time');
-            this.system('Connected to cloud database', null, true);
+            this.system('Realtime connected', null, true);
             
-            // Sync pending logs
+            // sync pending logs ถ้ามี
             this.syncPendingLogs();
             
         } catch (error) {
-            this.debugLog('Connection error:', error);
-            throw error; // ส่งต่อให้ retry logic จัดการ
+            console.error('[Supabase] Connection failed:', error);
+            this.updateStatus('local', '○ Local Mode');
+            this.showError('Cannot connect to database. Using local mode.');
         }
-    }
-
-    async createClient() {
-        // ใช้ global supabase จาก CDN
-        if (typeof supabase === 'undefined' || !supabase.createClient) {
-            throw new Error('Supabase library not loaded');
-        }
-        
-        return supabase.createClient(this.SUPABASE_URL, this.SUPABASE_ANON_KEY, {
-            auth: {
-                autoRefreshToken: true,
-                persistSession: true
-            },
-            realtime: {
-                params: {
-                    eventsPerSecond: 10
-                }
-            },
-            db: {
-                schema: 'public'
-            }
-        });
     }
 
     // ============================================
-    // LOAD: ดึงข้อมูลครั้งแรก
+    // ดึงข้อมูลครั้งแรกครั้งเดียว (Initial Load)
     // ============================================
     
     async loadInitialLogs(limit = 100) {
         this.isLoading = true;
-        this.updateStatus('loading', 'Loading history...');
-        this.debugLog('Loading initial logs, limit:', limit);
+        this.updateStatus('loading', 'Loading logs...');
         
         try {
-            // ใช้ simple query แทน complex
             const { data, error } = await this.supabase
                 .from('console_logs')
-                .select('id, level, category, message, source, meta, stack_trace, created_at')
+                .select('*')
                 .eq('session_id', this.sessionId)
                 .order('created_at', { ascending: false })
                 .limit(limit);
 
-            if (error) {
-                throw new Error(`Query failed: ${error.message} (code: ${error.code})`);
-            }
-
-            this.debugLog('Loaded', data?.length || 0, 'logs from database');
+            if (error) throw error;
 
             if (data && data.length > 0) {
+                // แปลงรูปแบบ
                 const formatted = data.map(log => this.formatLogFromDB(log));
+                
+                // รวมกับข้อมูลที่มีอยู่ (ถ้ามี)
                 this.mergeLogs(formatted, false);
-                this.system(`Loaded ${data.length} historical logs`, null, true);
+                this.system(`Loaded ${data.length} logs`, null, true);
+                
+                // ถ้าได้ครบ 100 แสดงว่าอาจมีอีก
                 this.hasMoreHistory = data.length === limit;
             } else {
                 this.hasMoreHistory = false;
-                this.system('No previous logs found', null, true);
             }
             
         } catch (error) {
-            this.debugLog('Load failed:', error);
-            // ไม่ throw ต่อ แค่ log ไว้และทำงานต่อ
-            this.error(`Failed to load history: ${error.message}`);
+            console.error('[Load] Failed:', error);
+            this.system('Failed to load history', null, true);
         } finally {
             this.isLoading = false;
         }
     }
 
     // ============================================
-    // REALTIME: Subscribe แบบ Robust
+    // REALTIME: รอข้อมูลจาก Supabase ส่งมา
     // ============================================
     
     subscribeToRealtime() {
-        this.debugLog('Setting up realtime subscription...');
-        
-        try {
-            this.realtimeChannel = this.supabase
-                .channel(`console_logs:${this.sessionId}`, {
-                    config: {
-                        broadcast: { self: false },
-                        presence: { key: '' }
-                    }
-                })
-                .on(
-                    'postgres_changes',
-                    {
-                        event: 'INSERT',
-                        schema: 'public',
-                        table: 'console_logs',
-                        filter: `session_id=eq.${this.sessionId}`
-                    },
-                    (payload) => {
-                        this.debugLog('Realtime event received:', payload.eventType);
-                        
-                        if (payload.eventType === 'INSERT' && payload.new) {
-                            const log = this.formatLogFromDB(payload.new);
-                            
-                            // ตรวจสอบซ้ำ
-                            if (!this.logs.find(l => l.id === log.id)) {
-                                this.addRealtimeLog(log);
-                            }
-                        }
-                    }
-                )
-                .subscribe((status, err) => {
-                    this.debugLog('Realtime status:', status, err || '');
+        // Subscribe ตาราง console_logs สำหรับ session นี้เท่านั้น
+        this.realtimeChannel = this.supabase
+            .channel(`console_logs:${this.sessionId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'console_logs',
+                    filter: `session_id=eq.${this.sessionId}`
+                },
+                (payload) => {
+                    // ได้รับข้อมูลใหม่แบบ real-time!
+                    const log = this.formatLogFromDB(payload.new);
                     
-                    if (status === 'SUBSCRIBED') {
-                        this.debugLog('Successfully subscribed to realtime');
-                    } else if (status === 'CLOSED') {
-                        this.handleRealtimeDisconnect('closed');
-                    } else if (status === 'CHANNEL_ERROR') {
-                        this.handleRealtimeDisconnect('error', err);
+                    // ตรวจสอบว่าไม่ซ้ำ
+                    if (!this.logs.find(l => l.id === log.id)) {
+                        this.addRealtimeLog(log);
                     }
-                });
-
-        } catch (error) {
-            this.debugLog('Realtime setup failed:', error);
-            this.warn('Realtime updates unavailable - using manual refresh', null, true);
-        }
-    }
-
-    handleRealtimeDisconnect(reason, error) {
-        this.debugLog('Realtime disconnected:', reason, error);
-        
-        if (this.isConnected) {
-            this.isConnected = false;
-            this.updateStatus('local', '○ Local Mode (Sync paused)');
-            this.warn('Real-time connection lost. Retrying...', null, true);
-            
-            // Retry realtime ใน 5 วินาที
-            setTimeout(() => {
-                if (this.isOnline && this.supabase) {
-                    this.debugLog('Attempting realtime reconnect...');
-                    this.subscribeToRealtime();
                 }
-            }, 5000);
-        }
+            )
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    console.log('[Realtime] Subscribed to', this.sessionId);
+                } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+                    this.handleRealtimeDisconnect();
+                }
+            });
     }
 
     addRealtimeLog(log) {
+        // เพิ่ม log ใหม่แบบ real-time
         this.logs.push(log);
         if (this.logs.length > 500) this.logs.shift();
         
         if (this.isCapturing && this.shouldDisplay(log)) {
-            this.renderLog(log, true);
+            this.renderLog(log, true); // มี animation
         }
         
         this.updateStats();
         
+        // แจ้งเตือนเฉพาะ error
         if (log.level === 'error') {
-            this.showToast(`⚠️ New error from ${log.source}`);
+            this.showToast(`⚠️ New error: ${log.message.substring(0, 50)}...`);
         }
     }
 
+    handleRealtimeDisconnect() {
+        this.isConnected = false;
+        this.updateStatus('local', '○ Local Mode');
+        
+        // พยายาม reconnect ใน 5 วินาที
+        setTimeout(() => {
+            if (this.isOnline) {
+                this.subscribeToRealtime();
+            }
+        }, 5000);
+    }
+
     // ============================================
-    // SAVE: บันทึกลง Supabase
+    // SAVE: บันทึก logs ลง Supabase
     // ============================================
     
     async saveLog(log) {
-        if (!this.supabase || !this.isConnected) {
-            this.debugLog('Offline, queueing log');
+        if (!this.supabase) {
             this.pendingLogs.push(log);
             this.saveToLocalBackup(log);
             return;
@@ -359,66 +220,38 @@ class FantroveConsolePro {
                 level: log.level,
                 category: log.category || 'system',
                 message: log.message,
-                source: log.source || 'Unknown',
+                source: log.source,
                 meta: log.meta || {},
-                stack_trace: log.stackTrace || null,
+                stack_trace: log.stackTrace,
                 user_agent: navigator.userAgent?.substring(0, 200),
                 url: location.href?.substring(0, 500),
                 created_at: new Date(log.timestamp).toISOString(),
                 expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
             };
 
-            this.debugLog('Saving log:', payload.level, payload.message.substring(0, 50));
-
             const { error } = await this.supabase
                 .from('console_logs')
                 .insert(payload);
 
-            if (error) {
-                throw error;
-            }
-            
-            this.debugLog('Log saved successfully');
+            if (error) throw error;
             
         } catch (error) {
-            this.debugLog('Save failed, queueing:', error.message);
+            console.warn('[Save] Failed, queueing:', error);
             this.pendingLogs.push(log);
             this.saveToLocalBackup(log);
-            
-            // ถ้า error เป็น connection ปัญหา ให้ mark ว่าไม่ได้เชื่อมต่อ
-            if (error.message?.includes('fetch') || error.message?.includes('network')) {
-                this.isConnected = false;
-                this.updateStatus('local', '○ Local Mode');
-            }
         }
     }
 
     async syncPendingLogs() {
-        if (this.pendingLogs.length === 0 || !this.supabase) {
-            return;
-        }
+        if (this.pendingLogs.length === 0 || !this.supabase) return;
         
-        this.debugLog('Syncing', this.pendingLogs.length, 'pending logs');
+        const batch = this.pendingLogs.splice(0, 50);
+        const promises = batch.map(log => this.saveLog(log));
         
-        const batch = this.pendingLogs.splice(0, 20); // จำกัด batch ไม่ให้ใหญ่เกิน
-        let success = 0;
-        
-        for (const log of batch) {
-            try {
-                await this.saveLog(log);
-                success++;
-            } catch (e) {
-                // ถ้าล้มเหลว คืนค่าเข้า queue
-                this.pendingLogs.unshift(log);
-                break; // หยุดตรงนี้ รอรอบหน้า
-            }
-        }
-        
-        this.debugLog('Sync complete:', success, '/', batch.length);
+        await Promise.all(promises);
         
         if (this.pendingLogs.length > 0) {
-            // ลองอีกครั้งใน 10 วินาที
-            setTimeout(() => this.syncPendingLogs(), 10000);
+            setTimeout(() => this.syncPendingLogs(), 1000);
         }
     }
 
@@ -433,7 +266,7 @@ class FantroveConsolePro {
             category: dbLog.category,
             message: dbLog.message,
             source: dbLog.source,
-            meta: typeof dbLog.meta === 'string' ? JSON.parse(dbLog.meta) : (dbLog.meta || {}),
+            meta: dbLog.meta || {},
             stackTrace: dbLog.stack_trace,
             timestamp: new Date(dbLog.created_at).getTime(),
             _fromDB: true
@@ -455,6 +288,7 @@ class FantroveConsolePro {
             }
         });
 
+        // จำกัดขนาด
         if (this.logs.length > 500) {
             this.logs = this.logs.slice(-500);
         }
@@ -465,7 +299,7 @@ class FantroveConsolePro {
     }
 
     // ============================================
-    // Local Storage
+    // Local Storage (Backup)
     // ============================================
     
     loadFromCache() {
@@ -474,12 +308,9 @@ class FantroveConsolePro {
             if (cache) {
                 const parsed = JSON.parse(cache);
                 const recent = parsed.filter(l => Date.now() - l.timestamp < 86400000);
-                if (recent.length > 0) {
-                    this.logs = recent;
-                    this.refreshDisplay();
-                    this.updateStats();
-                    this.debugLog('Loaded', recent.length, 'logs from cache');
-                }
+                this.logs = recent;
+                this.refreshDisplay();
+                this.updateStats();
             }
             
             const backup = localStorage.getItem('fantrove_backup');
@@ -487,13 +318,8 @@ class FantroveConsolePro {
                 const parsed = JSON.parse(backup);
                 const recent = parsed.filter(l => Date.now() - l._savedAt < 86400000);
                 this.pendingLogs = recent;
-                if (recent.length > 0) {
-                    this.debugLog('Restored', recent.length, 'pending logs');
-                }
             }
-        } catch (e) {
-            this.debugLog('Cache load failed:', e);
-        }
+        } catch (e) {}
     }
 
     saveToCache() {
@@ -512,7 +338,7 @@ class FantroveConsolePro {
     }
 
     // ============================================
-    // Error Capture & Network
+    // UI & Event Handling (เหมือนเดิม)
     // ============================================
     
     setupErrorCapture() {
@@ -552,21 +378,19 @@ class FantroveConsolePro {
             message: data.message,
             source: data.filename || 'Error',
             stackTrace: data.stack,
-            meta: { line: data.lineno, type: data.type }
-        }, true);
+            meta: { line: data.lineno }
+        }, true); // saveToCloud = true
     }
 
     isNoise(msg) {
-        return !msg || ['ResizeObserver', 'Script error.', 'The operation was aborted', 'Supabase library not loaded'].some(n => msg.includes(n));
+        return !msg || ['ResizeObserver', 'Script error.', 'The operation was aborted'].some(n => msg.includes(n));
     }
 
     setupNetworkListeners() {
         window.addEventListener('online', () => {
             this.isOnline = true;
-            this.debugLog('Network online');
-            if (!this.isConnected && this.retryCount < this.maxRetries) {
-                this.retryCount = 0; // reset retry
-                this.connectWithRetry();
+            if (!this.isConnected) {
+                this.connectSupabase();
             }
         });
 
@@ -574,19 +398,14 @@ class FantroveConsolePro {
             this.isOnline = false;
             this.isConnected = false;
             this.updateStatus('offline', '✕ Offline');
-            this.debugLog('Network offline');
-            
             if (this.realtimeChannel) {
-                this.supabase?.removeChannel(this.realtimeChannel);
+                this.supabase.removeChannel(this.realtimeChannel);
                 this.realtimeChannel = null;
             }
         });
     }
 
-    // ============================================
     // UI Methods
-    // ============================================
-    
     renderLog(log, animate = true) {
         const output = document.getElementById('console-output');
         const empty = output.querySelector('.empty-state');
@@ -602,14 +421,6 @@ class FantroveConsolePro {
 
         const cloudIcon = log._fromDB ? '☁️ ' : '';
         
-        let metaHtml = '';
-        if (log.meta && Object.keys(log.meta).length > 0) {
-            const metaStr = Object.entries(log.meta)
-                .map(([k, v]) => `${k}: ${v}`)
-                .join(', ');
-            metaHtml = `<div class="meta-data">${this.escapeHtml(metaStr)}</div>`;
-        }
-
         entry.innerHTML = `
             <div class="log-header">
                 <span class="log-time">${cloudIcon}${time}</span>
@@ -618,7 +429,6 @@ class FantroveConsolePro {
                 <span class="log-source">${log.source}</span>
             </div>
             <div class="log-content">${this.escapeHtml(log.message)}</div>
-            ${metaHtml}
             ${log.stackTrace ? `<div class="stack-trace">${this.escapeHtml(log.stackTrace)}</div>` : ''}
         `;
 
@@ -629,7 +439,6 @@ class FantroveConsolePro {
     }
 
     escapeHtml(text) {
-        if (typeof text !== 'string') return String(text);
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
@@ -651,6 +460,7 @@ class FantroveConsolePro {
     }
 
     setFilter(level) {
+        // ... (เหมือนเดิม)
         if (level === 'all') {
             const all = this.activeFilters.size === 5;
             document.querySelectorAll('.filter-btn[data-level]').forEach(btn => {
@@ -702,12 +512,10 @@ class FantroveConsolePro {
             connected: '#238636',
             loading: '#d29922',
             local: '#58a6ff',
-            offline: '#da3633',
-            error: '#f85149'
+            offline: '#da3633'
         };
         
         dot.style.background = colors[type] || colors.local;
-        dot.className = 'status-dot ' + (type === 'loading' ? '' : type);
         statusText.textContent = text;
         statusText.style.color = colors[type] || colors.local;
     }
@@ -723,19 +531,12 @@ class FantroveConsolePro {
     }
 
     showError(msg) {
-        this.connectionError = msg;
         document.getElementById('error-message').textContent = msg;
         document.getElementById('error-banner').classList.add('visible');
     }
 
     hideError() {
-        this.connectionError = null;
         document.getElementById('error-banner').classList.remove('visible');
-    }
-
-    shouldSkipStorage(log) {
-        if (log.category !== 'system') return false;
-        return this.skipStoragePatterns.some(p => p.test(log.message || ''));
     }
 
     // Public API
@@ -762,6 +563,11 @@ class FantroveConsolePro {
         if (saveToCloud && !skipStorage) {
             await this.saveLog(log);
         }
+    }
+
+    shouldSkipStorage(log) {
+        if (log.category !== 'system') return false;
+        return this.skipStoragePatterns.some(p => p.test(log.message || ''));
     }
 
     // Logging methods
@@ -825,7 +631,6 @@ class FantroveConsolePro {
     }
 }
 
-// Initialize
 window.consolePro = new FantroveConsolePro();
 
 window.FantroveConsole = {
