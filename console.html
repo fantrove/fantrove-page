@@ -6,7 +6,6 @@
     <meta name="theme-color" content="#0d1117">
     <title>Fantrove Console Pro</title>
     <link rel="stylesheet" href="console.css">
-    
 </head>
 <body>
     <div class="header">
@@ -15,14 +14,14 @@
             <span>Fantrove Console</span>
         </div>
         <div class="header-actions">
-            <button class="btn" onclick="consolePro.toggleCapture()" id="capture-btn">
+            <button class="btn" onclick="window.consolePro && window.consolePro.toggleCapture()" id="capture-btn">
                 <span class="btn-icon" id="capture-icon">⏸</span>
                 <span>Pause</span>
             </button>
-            <button class="btn" onclick="consolePro.exportLogs()">
+            <button class="btn" onclick="window.consolePro && window.consolePro.exportLogs()">
                 <span class="btn-icon">📥</span>
             </button>
-            <button class="btn" onclick="consolePro.clear()" style="color: var(--accent-red);">
+            <button class="btn" onclick="window.consolePro && window.consolePro.clear()" style="color: var(--accent-red);">
                 <span class="btn-icon">🗑</span>
             </button>
         </div>
@@ -31,44 +30,44 @@
     <div class="connection-bar">
         <div class="status-indicator">
             <span class="status-dot" id="status-dot"></span>
-            <span id="status-text">Initializing...</span>
+            <span id="status-text">Ready</span>
         </div>
         <div>
-            <span class="sync-status" id="sync-status">Loading...</span>
+            <span class="sync-status" id="sync-status">Ready</span>
         </div>
     </div>
 
     <div class="error-banner" id="error-banner">
         ⚠️ <span id="error-message">Connection error</span>
-        <button class="retry-btn" onclick="consolePro.retryConnection()">Retry</button>
+        <button class="retry-btn" onclick="window.consolePro && window.consolePro.retryConnection()">Retry</button>
     </div>
 
     <div class="toolbar">
         <div class="filter-group">
-            <button class="filter-btn active" data-level="all" onclick="consolePro.setFilter('all')">
+            <button class="filter-btn active" data-level="all" onclick="window.consolePro && window.consolePro.setFilter('all')">
                 All <span class="badge" id="count-all">0</span>
             </button>
         </div>
         <div class="filter-group">
-            <button class="filter-btn active" data-level="error" onclick="consolePro.setFilter('error')">
+            <button class="filter-btn active" data-level="error" onclick="window.consolePro && window.consolePro.setFilter('error')">
                 Errors <span class="badge" id="count-error">0</span>
             </button>
-            <button class="filter-btn active" data-level="warn" onclick="consolePro.setFilter('warn')">
+            <button class="filter-btn active" data-level="warn" onclick="window.consolePro && window.consolePro.setFilter('warn')">
                 Warnings <span class="badge" id="count-warn">0</span>
             </button>
-            <button class="filter-btn active" data-level="info" onclick="consolePro.setFilter('info')">
+            <button class="filter-btn active" data-level="info" onclick="window.consolePro && window.consolePro.setFilter('info')">
                 Info <span class="badge" id="count-info">0</span>
             </button>
-            <button class="filter-btn active" data-level="log" onclick="consolePro.setFilter('log')">
+            <button class="filter-btn active" data-level="log" onclick="window.consolePro && window.consolePro.setFilter('log')">
                 Logs <span class="badge" id="count-log">0</span>
             </button>
-            <button class="filter-btn active" data-level="debug" onclick="consolePro.setFilter('debug')">
+            <button class="filter-btn active" data-level="debug" onclick="window.consolePro && window.consolePro.setFilter('debug')">
                 Debug <span class="badge" id="count-debug">0</span>
             </button>
         </div>
         <div class="search-box">
             <span class="search-icon">🔍</span>
-            <input type="text" id="search-input" placeholder="Search..." oninput="consolePro.search(this.value)">
+            <input type="text" id="search-input" placeholder="Search..." oninput="window.consolePro && window.consolePro.search(this.value)">
         </div>
     </div>
 
@@ -76,22 +75,22 @@
         <div class="empty-state" id="initial-state">
             <div class="empty-icon">☁️</div>
             <div class="empty-text">Ready</div>
-            <div class="empty-hint">Console is starting...</div>
+            <div class="empty-hint">Initializing...</div>
         </div>
     </div>
 
     <div class="input-section">
         <div class="input-header">
             <span>JavaScript Console</span>
-            <span>30-day retention</span>
+            <span id="session-id-display">Session: loading...</span>
         </div>
         <div class="input-wrapper">
             <span class="input-prompt">❯</span>
             <textarea class="console-input" id="js-input" rows="1" 
                 placeholder="Enter command..."
-                onkeydown="consolePro.handleInput(event)"
+                onkeydown="window.consolePro && window.consolePro.handleInput(event)"
                 oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,100)+'px'"></textarea>
-            <button class="send-btn" onclick="consolePro.executeFromButton()">▶</button>
+            <button class="send-btn" onclick="window.consolePro && window.consolePro.executeFromButton()">▶</button>
         </div>
     </div>
 
@@ -101,9 +100,28 @@
             <span class="stat">Code: <span class="stat-value error" id="stat-code">0</span></span>
             <span class="stat">Network: <span class="stat-value warn" id="stat-network">0</span></span>
         </div>
-        <div id="storage-info">☁️ Supabase</div>
+        <div id="storage-info">☁️ Cloud</div>
     </div>
 
+    <!-- ✅ FIXED: โหลด JS ท้ายสุด -->
     <script src="console.js"></script>
+    
+    <!-- ✅ FIXED: อัพเดท session ID แสดงผล -->
+    <script>
+        // อัพเดท session ID บนหน้าจอ
+        function updateSessionDisplay() {
+            const sessionId = localStorage.getItem('fantrove_session_id') || 'unknown';
+            const display = document.getElementById('session-id-display');
+            if (display) {
+                display.textContent = 'Session: ' + sessionId.substring(0, 20) + '...';
+            }
+        }
+        
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', updateSessionDisplay);
+        } else {
+            updateSessionDisplay();
+        }
+    </script>
 </body>
 </html>
