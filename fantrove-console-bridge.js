@@ -1,6 +1,5 @@
 /**
- * Fantrove Console Bridge - Realtime Edition
- * ส่ง logs ผ่าน Cloudflare Workers + รองรับ Realtime subscription
+ * Fantrove Console Bridge - Fixed Session Support
  */
 
 (function() {
@@ -8,6 +7,7 @@
 
     const WORKER_URL = 'https://fantrove-console-api.nontakorn2600.workers.dev';
     
+    // ✅ FIXED: ใช้ session ID เดียวกับ console.js เสมอ
     const SESSION_ID = (function() {
         let id = localStorage.getItem('fantrove_session_id');
         if (!id) {
@@ -97,12 +97,13 @@
 
     function loadPendingFromStorage() {
         try {
-            const backup = localStorage.getItem('fantrove_backup');
+            // ✅ FIXED: โหลดเฉพาะของ session ตัวเอง
+            const backup = localStorage.getItem(`fantrove_bridge_backup_${SESSION_ID}`);
             if (backup) {
                 const logs = JSON.parse(backup);
                 if (Array.isArray(logs)) {
                     queue.push(...logs);
-                    localStorage.removeItem('fantrove_backup');
+                    localStorage.removeItem(`fantrove_bridge_backup_${SESSION_ID}`);
                 }
             }
         } catch (e) {}
@@ -111,14 +112,15 @@
     function savePendingToStorage() {
         try {
             if (queue.length > 0) {
-                localStorage.setItem('fantrove_backup', JSON.stringify(queue.slice(-100)));
+                localStorage.setItem(`fantrove_bridge_backup_${SESSION_ID}`, JSON.stringify(queue.slice(-100)));
             }
         } catch (e) {}
     }
 
+    // ✅ FIXED: ทุก log ต้องมี session_id
     function send(level, message, meta, source) {
         const payload = {
-            session_id: SESSION_ID,
+            session_id: SESSION_ID, // ✅ บังคับใส่ทุกครั้ง
             level: level,
             category: detectCategory(source, level),
             message: String(message),
@@ -170,10 +172,16 @@
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000);
             
+            // ✅ FIXED: ส่ง session_id ในแต่ละ log ของ batch
             const response = await fetch(`${WORKER_URL}/logs/batch`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ logs: batch }),
+                body: JSON.stringify({ 
+                    logs: batch.map(log => ({
+                        ...log,
+                        session_id: SESSION_ID // ensure ทุกอันมี session_id
+                    }))
+                }),
                 signal: controller.signal
             });
 
@@ -194,9 +202,9 @@
 
     function removeFromLocalBackup(count) {
         try {
-            const backup = JSON.parse(localStorage.getItem('fantrove_backup') || '[]');
+            const backup = JSON.parse(localStorage.getItem(`fantrove_bridge_backup_${SESSION_ID}`) || '[]');
             const remaining = backup.slice(count);
-            localStorage.setItem('fantrove_backup', JSON.stringify(remaining));
+            localStorage.setItem(`fantrove_bridge_backup_${SESSION_ID}`, JSON.stringify(remaining));
         } catch (e) {}
     }
 
@@ -272,6 +280,7 @@
         return stack.split('\n').filter(l => !l.includes('node_modules')).slice(0, 5).join('\n');
     }
 
+    // ✅ FIXED: ทุก method จะส่ง session_id อัตโนมัติ
     window.FantroveConsole = {
         log: (msg, meta) => send('log', msg, meta, 'API'),
         info: (msg, meta) => send('info', msg, meta, 'API'),
@@ -280,6 +289,7 @@
         debug: (msg, meta) => send('debug', msg, meta, 'API'),
         success: (msg, meta) => send('success', msg, meta, 'API'),
         captureException: (err, ctx) => send('error', err.message, { stack: err.stack, context: ctx }, 'ManualCapture'),
+        getSessionId: () => SESSION_ID, // ✅ NEW: ให้ภายนอกเรียกดู session ได้
         getStatus: () => ({ 
             online: isOnline, 
             apiHealthy: isApiHealthy, 
