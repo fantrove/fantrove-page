@@ -1,11 +1,13 @@
 /**
- * Fantrove Console Pro - Realtime Edition
- * แก้ไข: โหลดข้อมูลย้อนหลัง, Realtime subscription, Reconnection logic
+ * Fantrove Console Pro - Realtime Edition (Fixed)
+ * แก้ไข: Realtime URL, Load History, Reconnection
  */
 
 class FantroveConsolePro {
     constructor() {
         this.apiUrl = 'https://fantrove-console-api.nontakorn2600.workers.dev';
+        this.supabaseUrl = null; // จะดึงจาก Worker
+        this.supabaseAnonKey = null; // จะดึงจาก Worker
         this.logs = [];
         this.pendingLogs = [];
         this.activeFilters = new Set(['error', 'warn', 'info', 'log', 'debug']);
@@ -19,12 +21,12 @@ class FantroveConsolePro {
         this.connectionError = null;
         this.isInitialized = false;
         
-        // ✅ NEW: Realtime
+        // Realtime
         this.realtimeChannel = null;
         this.isRealtimeConnected = false;
         this.supabaseClient = null;
         
-        // Optimized sync
+        // Sync settings
         this.lastSyncTime = 0;
         this.syncInterval = 30000;
         this.retryCount = 0;
@@ -66,20 +68,19 @@ class FantroveConsolePro {
         this.setupAPIMessageHandling();
         this.setupScrollHandler();
         
-        // ✅ FIXED: โหลดจาก local ก่อนเพื่อแสดงทันที
+        // โหลดจาก local ก่อน
         this.loadFromLocalStorage();
         
         this.isInitialized = true;
         this.system('Console ready', null, true);
         
-        // ✅ FIXED: เชื่อมต่อ cloud และโหลดประวัติทั้งหมด
         if (this.isOnline) {
             setTimeout(() => this.connectToCloud(), 500);
         }
     }
 
     // ============================================
-    // ✅ FIXED: Connection + Load Full History
+    // FIXED: Connection + Load Full History
     // ============================================
     
     async connectToCloud() {
@@ -87,6 +88,20 @@ class FantroveConsolePro {
         this.system('Connecting to cloud...', null, true);
         
         try {
+            // ✅ FIXED: ดึง config จาก Worker ก่อน
+            const configRes = await this.fetchWithTimeout(
+                `${this.apiUrl}/config`, 
+                { method: 'GET' }, 
+                10000
+            ).catch(() => null);
+            
+            if (configRes && configRes.ok) {
+                const config = await configRes.json();
+                this.supabaseUrl = config.supabaseUrl;
+                this.supabaseAnonKey = config.anonKey;
+                console.log('[Console] Got config:', { url: this.supabaseUrl, hasKey: !!this.supabaseAnonKey });
+            }
+            
             const healthRes = await this.fetchWithTimeout(
                 `${this.apiUrl}/health`, 
                 { method: 'GET' }, 
@@ -107,7 +122,12 @@ class FantroveConsolePro {
                 throw new Error(healthData.error?.message || healthData.message || 'Health check failed');
             }
             
-            // ✅ FIXED: โหลด logs ทั้งหมดย้อนหลัง (ไม่ใช่แค่ 100 ล่าสุด)
+            // ดึง URL จาก health response ถ้ายังไม่มี
+            if (!this.supabaseUrl && healthData.supabaseUrl) {
+                this.supabaseUrl = healthData.supabaseUrl;
+            }
+            
+            // โหลด logs ทั้งหมดย้อนหลัง
             await this.loadFullHistory();
             
             this.isCloudConnected = true;
@@ -116,10 +136,13 @@ class FantroveConsolePro {
             this.hideError();
             this.system('Cloud connected', null, true);
             
-            // ✅ NEW: เชื่อมต่อ Realtime
-            await this.connectRealtime();
+            // เชื่อมต่อ Realtime ถ้ามี config
+            if (this.supabaseUrl && this.supabaseAnonKey) {
+                await this.connectRealtime();
+            } else {
+                this.warn('Realtime config missing, using polling', null, true);
+            }
             
-            // เริ่ม sync loop สำหรับ pending logs
             this.startEfficientSyncLoop();
             
         } catch (error) {
@@ -129,28 +152,25 @@ class FantroveConsolePro {
         }
     }
 
-    // ✅ NEW: โหลดประวัติทั้งหมดแบบ pagination
     async loadFullHistory() {
         this.system('Loading history...', null, true);
         
         try {
-            // โหลดครั้งแรก 200 logs ล่าสุด
             const result = await this.fetchLogs({ 
                 limit: 200, 
                 fromStart: true 
             });
             
             if (result.logs.length > 0) {
-                // รวมกับ logs ที่มีอยู่ (ถ้ามี)
                 const existingIds = new Set(this.logs.map(l => l.id));
                 const newLogs = result.logs.filter(l => !existingIds.has(l.id));
                 
                 if (newLogs.length > 0) {
-                    // รวมและเรียงตามเวลา
-                    this.logs = [...this.logs, ...newLogs]
+                    // เรียงจากใหม่ -> เก่า (timestamp มาก -> น้อย)
+                    this.logs = [...newLogs, ...this.logs]
                         .sort((a, b) => b.timestamp - a.timestamp);
                     
-                    // เก็บแค่ 500 ล่าสุดใน memory
+                    // เก็บแค่ 500 ล่าสุด
                     this.logs = this.logs.slice(0, 500);
                     
                     this.loadedTimeRange.newest = Math.max(...this.logs.map(l => l.timestamp));
@@ -170,32 +190,53 @@ class FantroveConsolePro {
         }
     }
 
-    // ✅ NEW: เชื่อมต่อ Supabase Realtime
+    // ============================================
+    // FIXED: Realtime Connection
+    // ============================================
+    
     async connectRealtime() {
         try {
-            // โหลด Supabase client จาก CDN
+            // โหลด Supabase client
             if (!window.supabase) {
                 await this.loadSupabaseClient();
             }
             
-            const supabaseUrl = this.apiUrl.replace('/realtime-token', '').replace('https://', 'https://').split('/')[0];
-            // ใช้ anon key จาก environment หรือ fetch จาก worker
+            // ✅ FIXED: ตรวจสอบ URL ให้ถูกต้อง
+            if (!this.supabaseUrl || !this.isValidUrl(this.supabaseUrl)) {
+                throw new Error('Invalid Supabase URL: ' + this.supabaseUrl);
+            }
+            
+            // ทำให้แน่ใจว่า URL เป็น HTTPS
+            let url = this.supabaseUrl;
+            if (!url.startsWith('http')) {
+                url = 'https://' + url;
+            }
+            // ลบ / ท้ายออก
+            url = url.replace(/\/$/, '');
+            
+            console.log('[Realtime] Connecting to:', url);
             
             this.supabaseClient = window.supabase.createClient(
-                supabaseUrl, 
-                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV5d3l0eGJ4b2J4d2Z0aGtqdXlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDQwMjA2MTYsImV4cCI6MjAxOTU5NjYxNn0.placeholder', // ใช้จริง
+                url, 
+                this.supabaseAnonKey,
                 {
                     realtime: {
                         params: {
                             eventsPerSecond: 10
                         }
+                    },
+                    db: {
+                        schema: 'public'
                     }
                 }
             );
 
             // สร้าง channel สำหรับ session นี้
+            const channelName = `console_logs:${this.sessionId}`;
+            console.log('[Realtime] Subscribing to:', channelName);
+            
             this.realtimeChannel = this.supabaseClient
-                .channel(`console_logs:${this.sessionId}`)
+                .channel(channelName)
                 .on(
                     'postgres_changes',
                     {
@@ -205,6 +246,7 @@ class FantroveConsolePro {
                         filter: `session_id=eq.${this.sessionId}`
                     },
                     (payload) => {
+                        console.log('[Realtime] Received:', payload);
                         this.handleRealtimeInsert(payload.new);
                     }
                 )
@@ -212,25 +254,46 @@ class FantroveConsolePro {
                     console.log('[Realtime] Status:', status);
                     if (status === 'SUBSCRIBED') {
                         this.isRealtimeConnected = true;
+                        this.updateConnectionStatus('connected');
                         this.system('Realtime connected', null, true);
                     } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
                         this.isRealtimeConnected = false;
                         this.warn('Realtime disconnected', null, true);
+                        // พยายาม reconnect หลัง 5 วินาที
+                        setTimeout(() => this.connectRealtime(), 5000);
                     }
                 });
 
         } catch (error) {
             console.error('[Realtime] Connection failed:', error);
-            this.warn('Realtime unavailable, using polling', null, true);
+            this.error('[Realtime] Connection failed: ' + error.message, { type: 'console' }, true);
+            this.isRealtimeConnected = false;
+        }
+    }
+
+    isValidUrl(string) {
+        try {
+            new URL(string);
+            return true;
+        } catch (_) {
+            return false;
         }
     }
 
     async loadSupabaseClient() {
         return new Promise((resolve, reject) => {
+            if (window.supabase) {
+                resolve();
+                return;
+            }
+            
             const script = document.createElement('script');
             script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
-            script.onload = resolve;
-            script.onerror = reject;
+            script.onload = () => {
+                console.log('[Console] Supabase client loaded');
+                resolve();
+            };
+            script.onerror = () => reject(new Error('Failed to load Supabase client'));
             document.head.appendChild(script);
         });
     }
@@ -250,15 +313,14 @@ class FantroveConsolePro {
         // ตรวจสอบว่ามีอยู่แล้วหรือไม่
         if (this.logs.some(l => l.id === log.id)) return;
 
-        // เพิ่มเข้าไปและแสดง
-        this.logs.unshift(log); // เพิ่มด้านบนเพราะ realtime มาใหม่
+        // เพิ่มเข้าไป (ใหม่อยู่บน)
+        this.logs.unshift(log);
         if (this.logs.length > 500) this.logs.pop();
         
         this.loadedTimeRange.newest = Math.max(this.loadedTimeRange.newest || 0, log.timestamp);
         
         if (this.shouldDisplay(log)) {
             this.renderLog(log, true);
-            this.showToast('New log');
         }
         
         this.updateStats();
@@ -292,7 +354,7 @@ class FantroveConsolePro {
     }
 
     // ============================================
-    // ✅ FIXED: Fetch Logs with Proper Response Handling
+    // API Methods
     // ============================================
     
     async fetchLogs(params = {}) {
@@ -324,7 +386,6 @@ class FantroveConsolePro {
             throw new Error('Invalid JSON: ' + responseText.substring(0, 200));
         }
         
-        // ✅ FIXED: รองรับทั้ง format เก่าและใหม่
         if (data.logs && Array.isArray(data.logs)) {
             return {
                 logs: data.logs.map(log => this.normalizeLog(log)),
@@ -368,10 +429,6 @@ class FantroveConsolePro {
         });
     }
 
-    // ============================================
-    // ✅ FIXED: Load Older Logs (Scroll up)
-    // ============================================
-    
     async loadOlderLogs() {
         if (this.isLoadingHistory || !this.hasMoreOldLogs || !this.isCloudConnected) return;
         
@@ -379,16 +436,16 @@ class FantroveConsolePro {
         this.setSyncStatus(true, 'Loading history...');
         
         try {
-            const logs = await this.fetchLogs({ 
+            const result = await this.fetchLogs({ 
                 limit: 50, 
                 before: this.loadedTimeRange.oldest 
             });
             
-            if (logs.logs.length > 0) {
-                this.loadedTimeRange.oldest = Math.min(...logs.logs.map(l => l.timestamp));
-                this.hasMoreOldLogs = logs.meta.has_more;
-                this.mergeLogs(logs.logs, true); // prepend
-                this.system(`Loaded ${logs.logs.length} older logs`, null, true);
+            if (result.logs.length > 0) {
+                this.loadedTimeRange.oldest = Math.min(...result.logs.map(l => l.timestamp));
+                this.hasMoreOldLogs = result.meta.has_more;
+                this.mergeLogs(result.logs, true);
+                this.system(`Loaded ${result.logs.length} older logs`, null, true);
             } else {
                 this.hasMoreOldLogs = false;
                 this.system('No more history', null, true);
@@ -415,7 +472,7 @@ class FantroveConsolePro {
             
             this.logs = [...uniqueLogs, ...this.logs];
             
-            // คืนค่า scroll หลัง render
+            // คืนค่า scroll
             requestAnimationFrame(() => {
                 const newHeight = container.scrollHeight;
                 container.scrollTop = oldScroll + (newHeight - oldHeight);
@@ -431,7 +488,7 @@ class FantroveConsolePro {
     }
 
     // ============================================
-    // Local Storage Management
+    // Local Storage
     // ============================================
     
     loadFromLocalStorage() {
@@ -439,7 +496,7 @@ class FantroveConsolePro {
             const savedLogs = localStorage.getItem('fantrove_logs_cache');
             if (savedLogs) {
                 const parsed = JSON.parse(savedLogs);
-                const recent = parsed.filter(l => Date.now() - l.timestamp < 86400000 * 7); // 7 วัน
+                const recent = parsed.filter(l => Date.now() - l.timestamp < 86400000 * 7);
                 this.logs = recent;
                 this.refreshDisplay();
                 this.updateStats();
@@ -510,7 +567,6 @@ class FantroveConsolePro {
         container.addEventListener('scroll', () => {
             clearTimeout(scrollTimeout);
             scrollTimeout = setTimeout(() => {
-                // โหลดข้อมูลเก่าเมื่อ scroll ถึงด้านบน
                 if (container.scrollTop < 100 && this.hasMoreOldLogs && this.isCloudConnected) {
                     this.loadOlderLogs();
                 }
@@ -528,7 +584,8 @@ class FantroveConsolePro {
         
         const shouldSkipStorage = skipStorage || this.shouldSkipStorage(log);
         
-        this.logs.unshift(log); // เพิ่มด้านบน
+        // เพิ่มด้านบน (ใหม่สุด)
+        this.logs.unshift(log);
         if (this.logs.length > 500) this.logs.pop();
         
         if (this.isCapturing && this.shouldDisplay(log)) {
@@ -605,10 +662,10 @@ class FantroveConsolePro {
             ${stackHtml}
         `;
 
-        // ✅ FIXED: prepend แทน append เพรให้ใหม่อยู่บน
+        // เพิ่มด้านบน (ใหม่สุดอยู่บน)
         output.insertBefore(entry, output.firstChild);
         
-        // จำกัดจำนวน DOM elements
+        // จำกัด DOM elements
         while (output.children.length > 200) {
             output.removeChild(output.lastChild);
         }
@@ -773,7 +830,7 @@ class FantroveConsolePro {
     }
 
     startEfficientSyncLoop() {
-        // Sync pending logs ทุก 30 วินาที
+        // Sync pending logs ทุก 30 วินาที (ถ้าไม่มี realtime)
         setInterval(() => {
             if (this.isOnline && this.pendingLogs.length > 0 && !this.isRealtimeConnected) {
                 this.syncPendingLogs();
@@ -785,7 +842,7 @@ class FantroveConsolePro {
             if (this.isCloudConnected && !this.isRealtimeConnected && !document.hidden) {
                 this.checkNewLogsEfficient();
             }
-        }, this.realtimeCheckInterval);
+        }, 15000);
         
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden && this.isOnline) {
@@ -914,7 +971,6 @@ class FantroveConsolePro {
         if (toShow.length === 0) {
             output.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-text">No matching logs</div></div>`;
         } else {
-            // แสดงจากใหม่ไปเก่า (index 0 คือใหม่สุด)
             toShow.forEach(log => this.renderLog(log, false));
         }
     }
