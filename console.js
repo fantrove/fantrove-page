@@ -1,6 +1,6 @@
 /**
- * Fantrove Console Pro - Fixed Version
- * แก้ไข: การเชื่อมต่อ Supabase 401 และเพิ่ม Debug Logging
+ * Fantrove Console Pro - Fully Optimized & Fixed Version
+ * แก้ไข: [object Object] error, Schema reference, Connection handling, Debug logging
  */
 
 class FantroveConsolePro {
@@ -19,10 +19,10 @@ class FantroveConsolePro {
         this.connectionError = null;
         this.isInitialized = false;
         
-        // ลดการเรียก API
+        // Optimized: ลดการเรียก API
         this.lastSyncTime = 0;
-        this.syncInterval = 30000;
-        this.realtimeCheckInterval = 15000;
+        this.syncInterval = 30000; // 30 วินาที
+        this.realtimeCheckInterval = 15000; // 15 วินาที
         this.retryCount = 0;
         this.maxRetries = 3;
         
@@ -33,7 +33,7 @@ class FantroveConsolePro {
             /^Console ready/i, /^Restored \d+ logs/i, /^Loaded \d+ logs/i,
             /^Synced \d+/i, /^Sync completed/i, /^Capture (resumed|paused)/i,
             /^Display cleared/i, /^Exported$/i, /^Reconnected/i, /^Loading/i,
-            /^Cloud error/i, /^Connection failed/i  // เพิ่ม patterns ที่ skip
+            /^Cloud error/i, /^Connection failed/i, /^Connecting/i
         ];
         
         this.init();
@@ -73,7 +73,7 @@ class FantroveConsolePro {
     }
 
     // ============================================
-    // FIXED: Connection ที่มี Debug และ Retry ที่ดีขึ้น
+    // FIXED: Connection with Proper Error Handling
     // ============================================
     
     async connectToCloud() {
@@ -81,22 +81,41 @@ class FantroveConsolePro {
         this.system('Connecting to cloud...', null, true);
         
         try {
-            // ทดสอบ health check พร้อมรับข้อมูล debug
             const healthRes = await this.fetchWithTimeout(
                 `${this.apiUrl}/health`, 
                 { method: 'GET' }, 
-                5000
+                10000
             );
             
-            const healthData = await healthRes.json();
-            console.log('[Console] Health check:', healthData);
+            // ✅ FIXED: อ่าน response เป็น text ก่อนเสมอ
+            const responseText = await healthRes.text();
+            console.log('[Console] Health raw response:', responseText.substring(0, 500));
             
-            if (!healthRes.ok || healthData.status !== 'healthy') {
-                throw new Error(healthData.error || 'Health check failed');
+            let healthData;
+            try {
+                healthData = JSON.parse(responseText);
+            } catch (e) {
+                throw new Error('Invalid JSON response: ' + responseText.substring(0, 200));
             }
             
-            if (!healthData.supabase_connected) {
-                throw new Error('Supabase connection failed - Check Worker logs');
+            console.log('[Console] Health parsed:', healthData);
+            
+            // ตรวจสอบสถานะ
+            if (healthData.status === 'error' || healthData.status === 'schema_error') {
+                const errorDetail = healthData.hint || 
+                                   (healthData.error && typeof healthData.error === 'object' 
+                                    ? healthData.error.message || JSON.stringify(healthData.error)
+                                    : healthData.error) 
+                                   || 'Unknown error';
+                throw new Error(errorDetail);
+            }
+            
+            if (healthData.status !== 'healthy') {
+                throw new Error(healthData.message || 'Health check failed: ' + JSON.stringify(healthData));
+            }
+            
+            if (!healthData.connected) {
+                throw new Error('Not connected to Supabase');
             }
             
             // โหลด logs เริ่มต้น
@@ -108,12 +127,20 @@ class FantroveConsolePro {
             this.hideError();
             this.system('Cloud connected', null, true);
             
-            // เริ่ม sync loop
             this.startEfficientSyncLoop();
             
         } catch (error) {
             console.error('[Console] Connection failed:', error);
-            this.handleConnectionFailure(error.message);
+            // ✅ FIXED: แปลง error เป็น string ที่อ่านได้
+            let errorMessage;
+            if (error instanceof Error) {
+                errorMessage = error.message;
+            } else if (typeof error === 'object') {
+                errorMessage = JSON.stringify(error);
+            } else {
+                errorMessage = String(error);
+            }
+            this.handleConnectionFailure(errorMessage);
         }
     }
 
@@ -122,19 +149,21 @@ class FantroveConsolePro {
         this.isCloudConnected = false;
         
         // แสดง error ที่ชัดเจน
-        if (errorMessage.includes('401')) {
-            this.showError('⚠️ Supabase 401: ตรวจสอบ RLS Policies และ API Key');
-            this.system('Error: Supabase authentication failed', null, true);
-        } else if (errorMessage.includes('configuration')) {
-            this.showError('⚠️ Server configuration error');
+        if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+            this.showError('⚠️ Supabase 401: Check API key or enable legacy keys');
+        } else if (errorMessage.includes('404') || errorMessage.includes('schema') || errorMessage.includes('Could not find')) {
+            this.showError('⚠️ Schema Error: Run NOTIFY pgrst, \'reload schema\'; in Supabase SQL Editor');
+        } else if (errorMessage.includes('timeout') || errorMessage.includes('fetch')) {
+            this.showError('⚠️ Network timeout: Check internet connection');
         } else {
-            this.showError(`⚠️ ${errorMessage}`);
+            this.showError('⚠️ ' + errorMessage.substring(0, 100));
         }
+        
+        this.system('Connection failed: ' + errorMessage.substring(0, 100), null, true);
         
         if (this.retryCount >= this.maxRetries) {
             this.updateConnectionStatus('local');
             this.system('Switched to local mode', null, true);
-            // ลองใหม่ใน 60 วินาที
             setTimeout(() => this.connectToCloud(), 60000);
         } else {
             const delay = Math.min(1000 * Math.pow(2, this.retryCount), 10000);
@@ -143,7 +172,7 @@ class FantroveConsolePro {
     }
 
     // ============================================
-    // FIXED: โหลดข้อมูลด้วย Error Handling ที่ดีขึ้น
+    // FIXED: Fetch Logs with Proper Response Handling
     // ============================================
     
     async loadInitialLogs() {
@@ -169,7 +198,7 @@ class FantroveConsolePro {
             }
         } catch (error) {
             console.error('[Console] Load initial logs failed:', error);
-            throw error; // ส่งต่อให้ connectToCloud จัดการ
+            throw error;
         }
     }
 
@@ -182,15 +211,32 @@ class FantroveConsolePro {
         
         const res = await this.fetchWithTimeout(url, { method: 'GET' }, 10000);
         
+        // ✅ FIXED: อ่านเป็น text ก่อนแล้วค่อย parse
+        const responseText = await res.text();
+        
         if (!res.ok) {
-            const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
-            console.error('[Console] Fetch logs error:', res.status, errorData);
-            throw new Error(errorData.error || `HTTP ${res.status}`);
+            let errorData;
+            try {
+                errorData = JSON.parse(responseText);
+            } catch (e) {
+                errorData = { message: responseText };
+            }
+            const errorMsg = errorData.error || errorData.message || errorData.details || `HTTP ${res.status}`;
+            throw new Error(errorMsg);
         }
         
-        const data = await res.json();
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (e) {
+            throw new Error('Invalid JSON response: ' + responseText.substring(0, 200));
+        }
         
-        // รองรับทั้งรูปแบบเก่าและใหม่
+        if (!Array.isArray(data)) {
+            console.warn('[Console] Unexpected response format:', data);
+            return [];
+        }
+        
         return data.map(log => ({
             id: log.id,
             level: log.level,
@@ -203,8 +249,23 @@ class FantroveConsolePro {
         }));
     }
 
+    fetchWithTimeout(url, options, timeoutMs) {
+        return new Promise((resolve, reject) => {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => {
+                controller.abort();
+                reject(new Error('Request timeout'));
+            }, timeoutMs);
+            
+            fetch(url, { ...options, signal: controller.signal })
+                .then(resolve)
+                .catch(reject)
+                .finally(() => clearTimeout(timeoutId));
+        });
+    }
+
     // ============================================
-    // FIXED: Sync ที่มี Error Handling
+    // FIXED: Sync with Better Error Handling
     // ============================================
     
     async syncPendingLogs() {
@@ -231,23 +292,28 @@ class FantroveConsolePro {
                 15000
             );
             
+            // ✅ FIXED: อ่าน response เป็น text
+            const responseText = await res.text();
+            let result;
+            try {
+                result = JSON.parse(responseText);
+            } catch (e) {
+                result = { error: responseText };
+            }
+            
             if (res.ok) {
-                const result = await res.json();
                 this.removeFromLocalBackup(result.saved || batch.length);
                 
                 if (this.pendingLogs.length > 0) {
                     this.system(`Synced ${result.saved || batch.length}, ${this.pendingLogs.length} remaining`, null, true);
                 }
             } else {
-                const error = await res.json();
-                console.error('[Console] Sync failed:', error);
-                
-                // ถ้าเป็น 401 ให้หยุด sync และแจ้งเตือน
+                // ถ้าเป็น 401 ให้หยุด sync
                 if (res.status === 401) {
                     this.isCloudConnected = false;
-                    this.showError('⚠️ Sync failed: Supabase 401');
+                    this.showError('⚠️ Sync failed: Authentication error');
                 } else {
-                    // คืนค่าเข้า queue ถ้าเป็น error อื่น
+                    // คืนค่าเข้า queue
                     this.pendingLogs.unshift(...batch);
                 }
             }
@@ -259,21 +325,6 @@ class FantroveConsolePro {
             this.isSyncing = false;
             this.setSyncStatus(false);
         }
-    }
-
-    fetchWithTimeout(url, options, timeoutMs) {
-        return new Promise((resolve, reject) => {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => {
-                controller.abort();
-                reject(new Error('Request timeout'));
-            }, timeoutMs);
-            
-            fetch(url, { ...options, signal: controller.signal })
-                .then(resolve)
-                .catch(reject)
-                .finally(() => clearTimeout(timeoutId));
-        });
     }
 
     // ============================================
