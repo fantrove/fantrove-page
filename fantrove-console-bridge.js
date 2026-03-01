@@ -1,8 +1,8 @@
 /**
- * Fantrove Console Bridge - Cloud Edition
- * Send logs to Cloudflare Workers → Supabase
- * Retention: 30 days (managed by Supabase pg_cron)
+ * Fantrove Console Bridge - Realtime Edition
+ * ส่ง logs ผ่าน Cloudflare Workers + รองรับ Realtime subscription
  */
+
 (function() {
     'use strict';
 
@@ -55,16 +55,13 @@
                 const data = await response.json();
                 isApiHealthy = true;
                 lastHealthCheck = Date.now();
-                console.log('[Fantrove Bridge] API Health:', data);
                 return true;
             } else {
                 isApiHealthy = false;
-                console.warn('[Fantrove Bridge] API Health check failed:', response.status);
                 return false;
             }
         } catch (error) {
             isApiHealthy = false;
-            console.warn('[Fantrove Bridge] API unreachable:', error.message);
             return false;
         }
     }
@@ -78,7 +75,6 @@
                 await checkHealth();
                 
                 if (!wasHealthy && isApiHealthy) {
-                    console.log('[Fantrove Bridge] API back online, syncing...');
                     flushQueue();
                 }
             }
@@ -107,12 +103,9 @@
                 if (Array.isArray(logs)) {
                     queue.push(...logs);
                     localStorage.removeItem('fantrove_backup');
-                    console.log('[Fantrove Bridge] Restored', logs.length, 'logs from storage');
                 }
             }
-        } catch (e) {
-            console.error('[Fantrove Bridge] Failed to load backup:', e);
-        }
+        } catch (e) {}
     }
 
     function savePendingToStorage() {
@@ -244,13 +237,11 @@
         };
     }
 
-    // แก้ไข: ใช้ function แทน arrow function และผูก this เป็น window
     function setupNetworkCapture() {
         const originalFetch = window.fetch;
         window.fetch = async function(...args) {
             const url = args[0];
             try {
-                // ผูกบริบทเป็น window เพื่อหลีกเลี่ยง "Illegal invocation"
                 const response = await originalFetch.apply(window, args);
                 if (response.status >= 500) {
                     send('error', `Server Error ${response.status}`, { url, status: response.status }, 'ServerError');
