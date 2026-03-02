@@ -1,101 +1,93 @@
 /**
- * Fantrove Console Pro - Fixed Startup
+ * Fantrove Console Pro - Global Error Monitoring
+ * ไม่มี Session ID - ดูทุก errors จากทุกผู้ใช้
+ * Version: 2.0.0
  */
 
 class FantroveConsolePro {
     constructor() {
         this.apiUrl = 'https://fantrove-console-api.nontakorn2600.workers.dev';
-        this.supabaseUrl = null;
-        this.supabaseAnonKey = null;
         this.logs = [];
         this.pendingLogs = [];
         this.activeFilters = new Set(['error', 'warn', 'info', 'log', 'debug']);
         this.searchQuery = '';
         this.isCapturing = true;
-        this.sessionId = this.getOrCreateSession();
         this.isOnline = navigator.onLine;
         this.isCloudConnected = false;
         this.isSyncing = false;
         this.stats = { code: 0, network: 0, system: 0, api: 0 };
-        this.connectionError = null;
         this.isInitialized = false;
         this.hasShownReady = false;
-        this.initStarted = false; // ✅ NEW: ป้องกัน init ซ้ำ
+        this.initStarted = false;
         
-        // Realtime
-        this.realtimeChannel = null;
-        this.isRealtimeConnected = false;
-        this.supabaseClient = null;
+        // Client fingerprint สำหรับแยกผู้ใช้คร่าวๆ
+        this.clientFingerprint = this.generateFingerprint();
         
-        // Sync settings
-        this.lastSyncTime = 0;
-        this.syncInterval = 30000;
-        this.retryCount = 0;
-        this.maxRetries = 3;
-        
+        // Time range สำหรับ pagination
         this.loadedTimeRange = { oldest: null, newest: null };
         this.hasMoreOldLogs = true;
         this.isLoadingHistory = false;
         
+        // Polling สำหรับ realtime updates
+        this.pollingInterval = null;
+        this.lastPollTime = 0;
+        this.pollIntervalMs = 10000; // 10 วินาที
+        
+        // Skip patterns สำหรับลด noise
         this.skipStoragePatterns = [
             /^Console ready/i,
-            /^Session:/i,
+            /^Global Console Ready/i,
+            /^Loaded \d+ logs/i,
             /^Realtime/i,
             /^Cloud (connected|disconnected)/i,
-            /^Loading\.\.\.$/i
+            /^Loading\.\.\.$/i,
+            /^Poll/i
         ];
         
-        // ✅ FIXED: เรียก init ทันที ไม่รอ
+        // เริ่มต้นระบบ
         this.init();
     }
 
-    getOrCreateSession() {
+    // ============================================
+    // Initialization
+    // ============================================
+    
+    generateFingerprint() {
         try {
-            const urlParams = new URLSearchParams(window.location.search);
-            const sessionFromUrl = urlParams.get('session');
-            if (sessionFromUrl) {
-                localStorage.setItem('fantrove_session_id', sessionFromUrl);
-                return sessionFromUrl;
-            }
-            let session = localStorage.getItem('fantrove_session_id');
-            if (!session) {
-                session = 'sess_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5);
-                localStorage.setItem('fantrove_session_id', session);
-            }
-            return session;
+            const ua = navigator.userAgent;
+            const screen = `${window.screen.width}x${window.screen.height}`;
+            const lang = navigator.language;
+            const colorDepth = window.screen.colorDepth;
+            return btoa(`${ua}-${screen}-${lang}-${colorDepth}`).substring(0, 20);
         } catch (e) {
-            // ✅ FIXED: fallback ถ้า localStorage มีปัญหา
-            return 'sess_' + Date.now().toString(36);
+            return 'unknown_' + Date.now();
         }
     }
 
     async init() {
-        // ✅ FIXED: ป้องกัน init ซ้ำ
         if (this.initStarted) return;
         this.initStarted = true;
         
-        console.log('[Console] Initializing...');
+        console.log('[Console] Initializing Global Console...');
         
-        // เรียกทีละอัน ไม่ต้องรอทั้งหมด
+        // Setup event listeners
         this.setupNetworkListeners();
         this.setupSmartErrorCapture();
         this.setupAPIMessageHandling();
         this.setupScrollHandler();
-        
-        // โหลดจาก local ก่อน (ไม่บล็อก)
-        this.loadFromLocalStorage();
+        this.setupKeyboardShortcuts();
         
         this.isInitialized = true;
         
-        // แสดง ready ทันที
+        // แสดง ready message
         if (!this.hasShownReady) {
-            this.system(`Console ready | Session: ${this.sessionId}`, null, true);
+            this.system('🌐 Global Console Ready - Monitoring All Users', null, true);
+            this.system(`Client: ${this.clientFingerprint}`, null, true);
             this.hasShownReady = true;
         }
         
-        // ✅ FIXED: เชื่อมต่อ cloud แบบไม่บล็อก UI
+        // เชื่อมต่อ cloud แบบ non-blocking
         if (this.isOnline) {
-            // ใช้ setTimeout แยกออกจาก init หลัก
             setTimeout(() => {
                 this.connectToCloud().catch(err => {
                     console.error('[Console] Cloud connection failed:', err);
@@ -108,31 +100,13 @@ class FantroveConsolePro {
     }
 
     // ============================================
-    // FIXED: Non-blocking Connection
+    // Cloud Connection - Global Logs
     // ============================================
     
     async connectToCloud() {
-        console.log('[Console] Connecting to cloud...');
         this.updateConnectionStatus('loading');
         
         try {
-            // ดึง config
-            let config = null;
-            try {
-                const configRes = await this.fetchWithTimeout(
-                    `${this.apiUrl}/config`, 
-                    { method: 'GET' }, 
-                    5000 // ✅ ลด timeout
-                );
-                if (configRes && configRes.ok) {
-                    config = await configRes.json();
-                    this.supabaseUrl = config.supabaseUrl;
-                    this.supabaseAnonKey = config.anonKey;
-                }
-            } catch (e) {
-                console.warn('[Console] Config fetch failed:', e);
-            }
-            
             // Health check
             const healthRes = await this.fetchWithTimeout(
                 `${this.apiUrl}/health`, 
@@ -140,41 +114,22 @@ class FantroveConsolePro {
                 5000
             );
             
-            const responseText = await healthRes.text();
-            console.log('[Console] Health response:', responseText.substring(0, 200));
-            
-            let healthData;
-            try {
-                healthData = JSON.parse(responseText);
-            } catch (e) {
-                throw new Error('Invalid JSON');
-            }
+            const healthData = await healthRes.json();
             
             if (healthData.status !== 'healthy') {
-                throw new Error(healthData.message || 'Health check failed');
+                throw new Error('Health check failed');
             }
             
-            if (!this.supabaseUrl && healthData.supabaseUrl) {
-                this.supabaseUrl = healthData.supabaseUrl;
-            }
-            
-            // ✅ FIXED: โหลด history แบบไม่บล็อก
-            this.loadFullHistory().catch(e => {
-                console.warn('[Console] History load failed:', e);
-            });
+            // โหลด logs ทั้งหมดจากทุกผู้ใช้
+            await this.loadGlobalLogs();
             
             this.isCloudConnected = true;
             this.retryCount = 0;
             this.updateConnectionStatus('connected');
             this.hideError();
             
-            // ✅ FIXED: เชื่อมต่อ realtime แยก thread
-            if (this.supabaseUrl && this.supabaseAnonKey) {
-                setTimeout(() => this.connectRealtime(), 100);
-            }
-            
-            // เริ่ม sync loop
-            this.startEfficientSyncLoop();
+            // เริ่ม polling สำหรับ realtime
+            this.startPolling();
             
         } catch (error) {
             console.error('[Console] Connection failed:', error);
@@ -182,11 +137,52 @@ class FantroveConsolePro {
         }
     }
 
-    async loadFullHistory() {
+    async loadGlobalLogs() {
         try {
             const result = await this.fetchLogs({ 
-                limit: 100, // ✅ ลดจาก 200 เพื่อความเร็ว
+                limit: 100, 
                 fromStart: true 
+            });
+            
+            if (result.logs.length > 0) {
+                // เรียงจากใหม่ -> เก่า
+                this.logs = result.logs.sort((a, b) => b.timestamp - a.timestamp);
+                this.logs = this.logs.slice(0, 500);
+                
+                this.loadedTimeRange.newest = Math.max(...this.logs.map(l => l.timestamp));
+                this.loadedTimeRange.oldest = Math.min(...this.logs.map(l => l.timestamp));
+                this.hasMoreOldLogs = result.meta.has_more;
+                
+                this.refreshDisplay();
+                this.updateStats();
+                
+                // แสดงสรุป
+                const errors = result.meta.summary?.errors || 0;
+                const warnings = result.meta.summary?.warnings || 0;
+                const info = result.meta.summary?.info || 0;
+                
+                if (errors > 0 || warnings > 0) {
+                    this.system(`📊 ${result.logs.length} events (${errors}⚠️ ${warnings}⚡ ${info}ℹ️)`, null, true);
+                }
+            } else {
+                this.system('No events found', null, true);
+            }
+        } catch (error) {
+            console.error('[Console] Load global logs failed:', error);
+            throw error;
+        }
+    }
+
+    async loadOlderLogs() {
+        if (this.isLoadingHistory || !this.hasMoreOldLogs || !this.isCloudConnected) return;
+        
+        this.isLoadingHistory = true;
+        this.setSyncStatus(true, 'Loading history...');
+        
+        try {
+            const result = await this.fetchLogs({ 
+                limit: 50, 
+                before: this.loadedTimeRange.oldest 
             });
             
             if (result.logs.length > 0) {
@@ -194,157 +190,100 @@ class FantroveConsolePro {
                 const newLogs = result.logs.filter(l => !existingIds.has(l.id));
                 
                 if (newLogs.length > 0) {
-                    this.logs = [...newLogs, ...this.logs]
-                        .sort((a, b) => b.timestamp - a.timestamp);
+                    // เก็บ scroll position
+                    const container = document.getElementById('console-output');
+                    const oldHeight = container.scrollHeight;
+                    const oldScroll = container.scrollTop;
                     
-                    this.logs = this.logs.slice(0, 300); // ✅ ลดจาก 500
+                    this.logs = [...newLogs, ...this.logs];
+                    this.logs = this.logs.slice(0, 500);
                     
-                    this.loadedTimeRange.newest = Math.max(...this.logs.map(l => l.timestamp));
                     this.loadedTimeRange.oldest = Math.min(...this.logs.map(l => l.timestamp));
                     this.hasMoreOldLogs = result.meta.has_more;
                     
                     this.refreshDisplay();
                     this.updateStats();
+                    
+                    // คืน scroll position
+                    requestAnimationFrame(() => {
+                        const newHeight = container.scrollHeight;
+                        container.scrollTop = oldScroll + (newHeight - oldHeight);
+                    });
+                } else {
+                    this.hasMoreOldLogs = false;
                 }
+            } else {
+                this.hasMoreOldLogs = false;
             }
-        } catch (error) {
-            console.error('[Console] Load history failed:', error);
-            throw error;
+        } catch (e) {
+            console.warn('[Console] Load older logs failed:', e);
+        } finally {
+            this.isLoadingHistory = false;
+            this.setSyncStatus(false);
         }
     }
 
     // ============================================
-    // FIXED: Realtime with Error Handling
+    // Polling Realtime (แทน WebSocket)
     // ============================================
     
-    async connectRealtime() {
-        try {
-            if (!window.supabase) {
-                await this.loadSupabaseClient();
-            }
-            
-            if (!this.supabaseUrl || !this.isValidUrl(this.supabaseUrl)) {
-                console.warn('[Realtime] Invalid URL:', this.supabaseUrl);
-                return; // ✅ ไม่ throw ให้ค้าง
-            }
-            
-            let url = this.supabaseUrl;
-            if (!url.startsWith('http')) {
-                url = 'https://' + url;
-            }
-            url = url.replace(/\/$/, '');
-            
-            console.log('[Realtime] Connecting to:', url);
-            
-            this.supabaseClient = window.supabase.createClient(
-                url, 
-                this.supabaseAnonKey,
-                {
-                    realtime: {
-                        params: { eventsPerSecond: 10 }
-                    },
-                    db: { schema: 'public' }
-                }
-            );
-
-            const channelName = `console_logs:${this.sessionId}`;
-            
-            this.realtimeChannel = this.supabaseClient
-                .channel(channelName)
-                .on(
-                    'postgres_changes',
-                    {
-                        event: 'INSERT',
-                        schema: 'public',
-                        table: 'console_logs',
-                        filter: `session_id=eq.${this.sessionId}`
-                    },
-                    (payload) => {
-                        this.handleRealtimeInsert(payload.new);
-                    }
-                )
-                .subscribe((status) => {
-                    console.log('[Realtime] Status:', status);
-                    if (status === 'SUBSCRIBED') {
-                        this.isRealtimeConnected = true;
-                        this.updateConnectionStatus('connected');
-                    } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-                        this.isRealtimeConnected = false;
-                    }
-                });
-
-        } catch (error) {
-            console.error('[Realtime] Failed:', error);
-            this.isRealtimeConnected = false;
-            // ✅ ไม่ rethrow ให้ค้างระบบ
-        }
-    }
-
-    isValidUrl(string) {
-        try {
-            new URL(string);
-            return true;
-        } catch (_) {
-            return false;
-        }
-    }
-
-    async loadSupabaseClient() {
-        return new Promise((resolve, reject) => {
-            if (window.supabase) {
-                resolve();
-                return;
-            }
-            
-            const script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
-            script.onload = () => resolve();
-            script.onerror = () => reject(new Error('Failed to load'));
-            document.head.appendChild(script);
-        });
-    }
-
-    handleRealtimeInsert(data) {
-        try {
-            const log = {
-                id: data.id,
-                level: data.level,
-                category: data.category,
-                message: data.message,
-                source: data.source,
-                meta: data.meta || {},
-                stackTrace: data.stack_trace,
-                timestamp: new Date(data.created_at).getTime()
-            };
-
-            if (this.logs.some(l => l.id === log.id)) return;
-
-            this.logs.unshift(log);
-            if (this.logs.length > 300) this.logs.pop();
-            
-            this.loadedTimeRange.newest = Math.max(this.loadedTimeRange.newest || 0, log.timestamp);
-            
-            if (this.shouldDisplay(log)) {
-                this.renderLog(log, true);
-            }
-            
-            this.updateStats();
-        } catch (e) {
-            console.error('[Realtime] Insert failed:', e);
-        }
-    }
-
-    handleConnectionFailure(errorMessage) {
-        this.retryCount++;
-        this.isCloudConnected = false;
-        this.isRealtimeConnected = false;
+    startPolling() {
+        if (this.pollingInterval) return;
         
-        if (this.retryCount >= this.maxRetries) {
-            this.updateConnectionStatus('local');
-            setTimeout(() => this.connectToCloud(), 60000);
-        } else {
-            const delay = Math.min(1000 * Math.pow(2, this.retryCount), 10000);
-            setTimeout(() => this.connectToCloud(), delay);
+        console.log('[Console] Starting polling...');
+        
+        this.pollingInterval = setInterval(() => {
+            if (this.isCloudConnected && !document.hidden) {
+                this.pollNewLogs();
+            }
+        }, this.pollIntervalMs);
+    }
+
+    stopPolling() {
+        if (this.pollingInterval) {
+            clearInterval(this.pollingInterval);
+            this.pollingInterval = null;
+        }
+    }
+
+    async pollNewLogs() {
+        const now = Date.now();
+        if (now - this.lastPollTime < 5000) return; // ป้องกัน poll ถี่เกิน
+        this.lastPollTime = now;
+        
+        const after = this.loadedTimeRange.newest || (Date.now() - 60000);
+        
+        try {
+            const result = await this.fetchLogs({ 
+                limit: 30, 
+                after: after 
+            });
+            
+            if (result.logs.length > 0) {
+                const existingIds = new Set(this.logs.map(l => l.id));
+                const newLogs = result.logs.filter(l => !existingIds.has(l.id));
+                
+                if (newLogs.length > 0) {
+                    this.logs = [...newLogs, ...this.logs].slice(0, 500);
+                    this.loadedTimeRange.newest = Math.max(...this.logs.map(l => l.timestamp));
+                    
+                    // แสดง notification ถ้ามี error ใหม่
+                    const hasError = newLogs.some(l => l.level === 'error');
+                    const hasWarn = newLogs.some(l => l.level === 'warn');
+                    
+                    if (hasError) {
+                        this.showToast(`🔴 ${newLogs.length} new errors!`);
+                    } else if (hasWarn) {
+                        this.showToast(`⚠️ ${newLogs.length} new warnings`);
+                    }
+                    
+                    this.refreshDisplay();
+                    this.updateStats();
+                }
+            }
+        } catch (e) {
+            console.warn('[Poll] Failed:', e);
+            // ไม่ disconnect ถ้า poll  fail ครั้งเดียว
         }
     }
 
@@ -353,41 +292,39 @@ class FantroveConsolePro {
     // ============================================
     
     async fetchLogs(params = {}) {
-        const { limit = 50, before = null, after = null, fromStart = false } = params;
+        const { 
+            limit = 50, 
+            before = null, 
+            after = null, 
+            fromStart = false,
+            level = null 
+        } = params;
         
-        let url = `${this.apiUrl}/logs?session=${this.sessionId}&limit=${limit}`;
+        let url = `${this.apiUrl}/logs?limit=${limit}`;
         if (before) url += `&before=${before}`;
         if (after) url += `&after=${after}`;
         if (fromStart) url += `&from_start=true`;
+        if (level) url += `&level=${level}`;
         
         const res = await this.fetchWithTimeout(url, { method: 'GET' }, 10000);
         
         const responseText = await res.text();
         
         if (!res.ok) {
-            throw new Error(`HTTP ${res.status}`);
+            throw new Error(`HTTP ${res.status}: ${responseText.substring(0, 200)}`);
         }
         
         let data;
         try {
             data = JSON.parse(responseText);
         } catch (e) {
-            throw new Error('Invalid JSON');
+            throw new Error('Invalid JSON response');
         }
         
-        if (data.logs && Array.isArray(data.logs)) {
-            return {
-                logs: data.logs.map(log => this.normalizeLog(log)),
-                meta: data.meta || { has_more: false }
-            };
-        } else if (Array.isArray(data)) {
-            return {
-                logs: data.map(log => this.normalizeLog(log)),
-                meta: { has_more: data.length === limit }
-            };
-        }
-        
-        return { logs: [], meta: { has_more: false } };
+        return {
+            logs: (data.logs || []).map(log => this.normalizeLog(log)),
+            meta: data.meta || { has_more: false, summary: {} }
+        };
     }
 
     normalizeLog(log) {
@@ -399,7 +336,10 @@ class FantroveConsolePro {
             source: log.source,
             meta: log.meta || {},
             stackTrace: log.stack_trace || log.stackTrace,
-            timestamp: log.timestamp || new Date(log.created_at).getTime()
+            timestamp: log.timestamp || new Date(log.created_at).getTime(),
+            client: log.client || log.meta?.client || {},
+            url: log.url,
+            created_at: log.created_at
         };
     }
 
@@ -408,7 +348,7 @@ class FantroveConsolePro {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => {
                 controller.abort();
-                reject(new Error('Timeout'));
+                reject(new Error('Request timeout'));
             }, timeoutMs);
             
             fetch(url, { ...options, signal: controller.signal })
@@ -418,173 +358,46 @@ class FantroveConsolePro {
         });
     }
 
-    async loadOlderLogs() {
-        if (this.isLoadingHistory || !this.hasMoreOldLogs || !this.isCloudConnected) return;
-        
-        this.isLoadingHistory = true;
-        
-        try {
-            const result = await this.fetchLogs({ 
-                limit: 50, 
-                before: this.loadedTimeRange.oldest 
-            });
-            
-            if (result.logs.length > 0) {
-                this.loadedTimeRange.oldest = Math.min(...result.logs.map(l => l.timestamp));
-                this.hasMoreOldLogs = result.meta.has_more;
-                this.mergeLogs(result.logs, true);
-            } else {
-                this.hasMoreOldLogs = false;
-            }
-        } catch (e) {
-            console.warn('[Console] Load older failed:', e);
-        } finally {
-            this.isLoadingHistory = false;
-        }
-    }
-
-    mergeLogs(newLogs, prepend = false) {
-        const existingIds = new Set(this.logs.map(l => l.id));
-        const uniqueLogs = newLogs.filter(log => !existingIds.has(log.id));
-        
-        if (uniqueLogs.length === 0) return;
-        
-        if (prepend) {
-            const container = document.getElementById('console-output');
-            const oldHeight = container.scrollHeight;
-            const oldScroll = container.scrollTop;
-            
-            this.logs = [...uniqueLogs, ...this.logs];
-            
-            requestAnimationFrame(() => {
-                const newHeight = container.scrollHeight;
-                container.scrollTop = oldScroll + (newHeight - oldHeight);
-            });
-        } else {
-            this.logs = [...this.logs, ...uniqueLogs];
-        }
-        
-        this.logs = this.logs.slice(0, 300);
-        this.refreshDisplay();
-        this.updateStats();
-        this.saveToLocalCache();
-    }
-
     // ============================================
-    // Local Storage
-    // ============================================
-    
-    loadFromLocalStorage() {
-        try {
-            const savedLogs = localStorage.getItem(`fantrove_logs_${this.sessionId}`);
-            if (savedLogs) {
-                const parsed = JSON.parse(savedLogs);
-                const recent = parsed.filter(l => Date.now() - l.timestamp < 86400000 * 7);
-                this.logs = recent;
-                this.refreshDisplay();
-                this.updateStats();
-            }
-            
-            const backup = localStorage.getItem(`fantrove_backup_${this.sessionId}`);
-            if (backup) {
-                const parsed = JSON.parse(backup);
-                const recent = parsed.filter(l => Date.now() - l._savedAt < 86400000);
-                this.pendingLogs = recent;
-            }
-        } catch (e) {
-            console.warn('[Console] Local load failed:', e);
-        }
-    }
-
-    saveToLocalCache() {
-        try {
-            const cacheData = this.logs.slice(0, 200);
-            localStorage.setItem(`fantrove_logs_${this.sessionId}`, JSON.stringify(cacheData));
-        } catch (e) {}
-    }
-
-    saveToLocalBackup(log) {
-        try {
-            const logWithSession = { ...log, session_id: this.sessionId };
-            const backup = JSON.parse(localStorage.getItem(`fantrove_backup_${this.sessionId}`) || '[]');
-            backup.push({ ...logWithSession, _savedAt: Date.now() });
-            if (backup.length > 100) backup.shift();
-            localStorage.setItem(`fantrove_backup_${this.sessionId}`, JSON.stringify(backup));
-        } catch (e) {}
-    }
-
-    removeFromLocalBackup(count) {
-        try {
-            const backup = JSON.parse(localStorage.getItem(`fantrove_backup_${this.sessionId}`) || '[]');
-            const remaining = backup.slice(count);
-            localStorage.setItem(`fantrove_backup_${this.sessionId}`, JSON.stringify(remaining));
-        } catch (e) {}
-    }
-
-    // ============================================
-    // Event Handlers
-    // ============================================
-    
-    setupNetworkListeners() {
-        window.addEventListener('online', () => {
-            this.isOnline = true;
-            this.updateConnectionStatus('local');
-            setTimeout(() => this.connectToCloud(), 1000);
-        });
-        
-        window.addEventListener('offline', () => {
-            this.isOnline = false;
-            this.isCloudConnected = false;
-            this.isRealtimeConnected = false;
-            this.updateConnectionStatus('offline');
-        });
-    }
-
-    setupScrollHandler() {
-        const container = document.getElementById('console-output');
-        if (!container) return;
-        
-        let scrollTimeout;
-        container.addEventListener('scroll', () => {
-            clearTimeout(scrollTimeout);
-            scrollTimeout = setTimeout(() => {
-                if (container.scrollTop < 100 && this.hasMoreOldLogs && this.isCloudConnected) {
-                    this.loadOlderLogs();
-                }
-            }, 200);
-        });
-    }
-
-    // ============================================
-    // Core Functions
+    // Core Functions - Add Log
     // ============================================
     
     async addLog(log, saveToCloud = true, skipStorage = false) {
         try {
             log.id = log.id || crypto.randomUUID?.() || (Date.now() + Math.random()).toString(36);
             log.timestamp = log.timestamp || Date.now();
-            log.session_id = this.sessionId;
+            
+            // ใส่ client fingerprint
+            log.meta = {
+                ...(log.meta || {}),
+                fingerprint: this.clientFingerprint,
+                _clientTime: new Date().toISOString()
+            };
             
             const shouldSkipStorage = skipStorage || this.shouldSkipStorage(log);
             
+            // เพิ่มเข้า array (ใหม่อยู่บน)
             this.logs.unshift(log);
-            if (this.logs.length > 300) this.logs.pop();
+            if (this.logs.length > 500) this.logs.pop();
             
+            // แสดงถ้าไม่ skip
             if (this.isCapturing && this.shouldDisplay(log)) {
                 this.renderLog(log);
             }
             
             this.updateStats();
             
+            // อัพเดท category stats
             if (this.stats[log.category] !== undefined) {
                 this.stats[log.category]++;
             }
             
+            // ส่งไป cloud ถ้าต้องการ
             if (!shouldSkipStorage && saveToCloud && this.isInitialized) {
                 this.pendingLogs.push(log);
-                this.saveToLocalBackup(log);
                 
-                if ((log.level === 'error' || !this.isRealtimeConnected) && this.isCloudConnected && !this.isSyncing) {
+                // Sync ทันทีถ้าเป็น error
+                if (log.level === 'error' && this.isCloudConnected && !this.isSyncing) {
                     this.syncPendingLogs();
                 }
             }
@@ -604,9 +417,15 @@ class FantroveConsolePro {
         if (!this.searchQuery) return true;
         const query = this.searchQuery.toLowerCase();
         return (log.message || '').toLowerCase().includes(query) ||
-               (log.source || '').toLowerCase().includes(query);
+               (log.source || '').toLowerCase().includes(query) ||
+               (log.client?.browser || '').toLowerCase().includes(query) ||
+               (log.client?.device || '').toLowerCase().includes(query);
     }
 
+    // ============================================
+    // Rendering
+    // ============================================
+    
     renderLog(log, animate = true) {
         const output = document.getElementById('console-output');
         if (!output) return;
@@ -622,18 +441,42 @@ class FantroveConsolePro {
             hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'
         });
 
-        const levelColors = { error: 'error', warn: 'warn', info: 'info', debug: 'debug', log: '', success: '' };
+        const levelColors = { 
+            error: 'error', 
+            warn: 'warn', 
+            info: 'info', 
+            debug: 'debug', 
+            log: '', 
+            success: '' 
+        };
         const categoryClass = log.category || 'system';
         
-        let stackHtml = log.stackTrace ? `<div class="stack-trace">${this.escapeHtml(log.stackTrace)}</div>` : '';
+        // Client info
+        const client = log.client || {};
+        const clientInfo = client.device && client.browser 
+            ? `📱 ${client.device} • 🌐 ${client.browser} • 🌍 ${client.country || '??'}`
+            : '👤 Unknown';
         
+        // Stack trace
+        let stackHtml = log.stackTrace 
+            ? `<div class="stack-trace">${this.escapeHtml(log.stackTrace)}</div>` 
+            : '';
+        
+        // Meta data (กรองบาง field ออก)
         let metaHtml = '';
         if (log.meta && Object.keys(log.meta).length > 0) {
-            const metaStr = Object.entries(log.meta)
-                .filter(([k, v]) => v !== undefined && v !== null && k !== 'session_id')
-                .map(([k, v]) => `${k}: ${v}`)
-                .join(', ');
-            if (metaStr) metaHtml = `<div class="meta-data">${this.escapeHtml(metaStr)}</div>`;
+            const displayMeta = { ...log.meta };
+            delete displayMeta.client;
+            delete displayMeta.fingerprint;
+            
+            const metaEntries = Object.entries(displayMeta)
+                .filter(([k, v]) => v !== undefined && v !== null && typeof v !== 'object')
+                .slice(0, 5); // แสดงแค่ 5 อัน
+            
+            if (metaEntries.length > 0) {
+                const metaStr = metaEntries.map(([k, v]) => `${k}: ${v}`).join(', ');
+                metaHtml = `<div class="meta-data">${this.escapeHtml(metaStr)}</div>`;
+            }
         }
 
         entry.innerHTML = `
@@ -641,7 +484,10 @@ class FantroveConsolePro {
                 <span class="log-time">${time}</span>
                 <span class="log-level-badge ${levelColors[log.level] || ''}">${log.level}</span>
                 <span class="log-category ${categoryClass}">${log.category}</span>
-                <span class="log-source">${log.source || 'System'}</span>
+                <span class="log-source" title="${this.escapeHtml(log.url || '')}">${log.source || 'System'}</span>
+            </div>
+            <div class="log-client" style="font-size: 11px; color: var(--text-secondary); margin: 4px 0; padding: 2px 6px; background: var(--bg-tertiary); border-radius: 4px; display: inline-block;">
+                ${this.escapeHtml(clientInfo)}
             </div>
             <div class="log-content">${this.escapeHtml(log.message)}</div>
             ${metaHtml}
@@ -650,6 +496,7 @@ class FantroveConsolePro {
 
         output.insertBefore(entry, output.firstChild);
         
+        // จำกัด DOM elements
         while (output.children.length > 200) {
             output.removeChild(output.lastChild);
         }
@@ -666,89 +513,161 @@ class FantroveConsolePro {
         if (arg === null) return 'null';
         if (arg === undefined) return 'undefined';
         if (typeof arg === 'object') {
-            try { return JSON.stringify(arg); } catch (e) { return '[Object]'; }
+            try { 
+                return JSON.stringify(arg, null, 2); 
+            } catch (e) { 
+                return '[Object]'; 
+            }
         }
         return String(arg);
     }
 
+    refreshDisplay() {
+        const output = document.getElementById('console-output');
+        if (!output) return;
+        
+        output.innerHTML = '';
+        
+        const toShow = this.logs.filter(log => this.shouldDisplay(log));
+        
+        if (toShow.length === 0) {
+            output.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">🔍</div>
+                    <div class="empty-text">No matching logs</div>
+                    <div class="empty-hint">Try adjusting filters or search</div>
+                </div>
+            `;
+        } else {
+            toShow.forEach(log => this.renderLog(log, false));
+        }
+    }
+
+    // ============================================
+    // Error Capture
+    // ============================================
+    
     setupSmartErrorCapture() {
+        // Global error
         window.addEventListener('error', (event) => {
             if (this.isNoiseError(event)) return;
             this.captureError({
-                type: 'code', category: 'code', message: event.message,
-                filename: event.filename, lineno: event.lineno,
-                stack: event.error?.stack, isUserCode: this.isUserCode(event.filename)
+                type: 'code',
+                category: 'code',
+                message: event.message,
+                filename: event.filename,
+                lineno: event.lineno,
+                stack: event.error?.stack,
+                isUserCode: this.isUserCode(event.filename)
             });
         });
 
+        // Unhandled promise
         window.addEventListener('unhandledrejection', (event) => {
             if (this.isNoisePromise(event.reason)) return;
             this.captureError({
-                type: 'promise', category: 'code',
+                type: 'promise',
+                category: 'code',
                 message: event.reason?.message || String(event.reason),
-                stack: event.reason?.stack, isUserCode: true
+                stack: event.reason?.stack,
+                isUserCode: true
             });
         });
 
+        // Network errors
         this.setupSmartNetworkCapture();
 
+        // Console.error override
         const originalError = console.error;
         console.error = (...args) => {
             originalError.apply(console, args);
             if (!this.isCapturing) return;
+            
             const message = args.map(a => this.stringify(a)).join(' ');
             if (this.isNoiseMessage(message)) return;
+            
             const error = args.find(a => a instanceof Error);
             if (error) {
                 this.captureError({
-                    type: 'console', category: 'code', message: message,
-                    stack: error.stack, isUserCode: true
+                    type: 'console',
+                    category: 'code',
+                    message: message,
+                    stack: error.stack,
+                    isUserCode: true
                 });
             }
         };
     }
 
     isNoiseError(event) {
-        const noise = ['ResizeObserver loop', 'Script error.', 'The operation was aborted'];
+        const noise = [
+            'ResizeObserver loop',
+            'Script error.',
+            'The operation was aborted',
+            'Non-Error promise rejection'
+        ];
         return noise.some(n => event.message?.includes(n));
     }
 
     isNoisePromise(reason) {
         if (!reason) return true;
         const msg = String(reason.message || reason).toLowerCase();
-        return msg.includes('resizeobserver') || msg.includes('abort');
+        return msg.includes('resizeobserver') || 
+               msg.includes('abort') || 
+               msg.includes('canceled');
     }
 
     isNoiseMessage(msg) {
-        const noise = ['webpack', 'hot module', 'HMR', '[Vue warn]', '[WDS]', 'ResizeObserver'];
+        const noise = [
+            'webpack',
+            'hot module',
+            'HMR',
+            '[Vue warn]',
+            '[WDS]',
+            'ResizeObserver',
+            'Non-Error promise rejection'
+        ];
         return noise.some(n => msg.includes(n));
     }
 
     isUserCode(filename) {
         if (!filename) return true;
-        const thirdParty = ['node_modules', 'vendor', 'webpack', 'react-dom'];
+        const thirdParty = [
+            'node_modules',
+            'vendor',
+            'webpack',
+            'react-dom',
+            'vue',
+            'angular'
+        ];
         return !thirdParty.some(p => filename.includes(p));
     }
 
     setupSmartNetworkCapture() {
         const originalFetch = window.fetch;
         window.fetch = async (...args) => {
+            const url = args[0];
             try {
                 const response = await originalFetch.apply(window, args);
+                
                 if (response.status >= 500) {
                     this.captureError({
-                        type: 'http', category: 'network',
+                        type: 'http',
+                        category: 'network',
                         message: `Server Error ${response.status}`,
-                        url: args[0], status: response.status
+                        url: typeof url === 'string' ? url : url.url,
+                        status: response.status
                     });
                 }
+                
                 return response;
             } catch (error) {
                 if (error.name !== 'AbortError') {
                     this.captureError({
-                        type: 'network', category: 'network',
+                        type: 'network',
+                        category: 'network',
                         message: `Network Failed: ${error.message}`,
-                        url: args[0]
+                        url: typeof url === 'string' ? url : url?.url
                     });
                 }
                 throw error;
@@ -763,7 +682,10 @@ class FantroveConsolePro {
             source: errorData.filename || errorData.url || 'System',
             category: errorData.category || 'system',
             stackTrace: errorData.stack,
-            meta: { type: errorData.type },
+            meta: { 
+                type: errorData.type,
+                isUserCode: errorData.isUserCode
+            },
             timestamp: Date.now()
         };
         this.addLog(log);
@@ -772,33 +694,93 @@ class FantroveConsolePro {
     formatErrorMessage(data) {
         let msg = `[${data.category?.toUpperCase() || 'ERROR'}] `;
         if (data.filename) {
-            msg += `${data.message} (${data.filename.split('/').pop()})`;
+            const file = data.filename.split('/').pop();
+            msg += `${data.message} (${file}:${data.lineno || 0})`;
+        } else if (data.url) {
+            msg += `${data.message} (${data.url})`;
         } else {
             msg += data.message;
         }
         return msg;
     }
 
-    setupAPIMessageHandling() {
-        window.addEventListener('message', (e) => {
-            if (e.data?.type === 'FANTROVE_LOG') this.receiveAPILog(e.data.payload);
+    // ============================================
+    // Event Handlers
+    // ============================================
+    
+    setupNetworkListeners() {
+        window.addEventListener('online', () => {
+            this.isOnline = true;
+            this.updateConnectionStatus('local');
+            setTimeout(() => this.connectToCloud(), 1000);
         });
+        
+        window.addEventListener('offline', () => {
+            this.isOnline = false;
+            this.isCloudConnected = false;
+            this.stopPolling();
+            this.updateConnectionStatus('offline');
+        });
+    }
 
-        window.addEventListener('storage', (e) => {
-            if (e.key === 'fantrove_broadcast') {
-                try {
-                    const data = JSON.parse(e.newValue);
-                    if (data && !data._local) this.receiveAPILog(data);
-                } catch (err) {}
+    setupScrollHandler() {
+        const container = document.getElementById('console-output');
+        if (!container) return;
+        
+        let scrollTimeout;
+        container.addEventListener('scroll', () => {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                if (container.scrollTop < 100 && this.hasMoreOldLogs && this.isCloudConnected) {
+                    this.loadOlderLogs();
+                }
+            }, 200);
+        });
+    }
+
+    setupAPIMessageHandling() {
+        // รับข้อความจาก iframe หรือ window.postMessage
+        window.addEventListener('message', (e) => {
+            if (e.data?.type === 'FANTROVE_LOG') {
+                this.receiveAPILog(e.data.payload);
             }
         });
 
+        // Broadcast channel (ถ้ามี)
         if (typeof BroadcastChannel !== 'undefined') {
             this.channel = new BroadcastChannel('fantrove_console');
             this.channel.onmessage = (e) => {
-                if (e.data?.type === 'FANTROVE_LOG') this.receiveAPILog(e.data.payload);
+                if (e.data?.type === 'FANTROVE_LOG') {
+                    this.receiveAPILog(e.data.payload);
+                }
             };
         }
+    }
+
+    setupKeyboardShortcuts() {
+        document.addEventListener('keydown', (e) => {
+            // Ctrl/Cmd + K = focus search
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                const searchInput = document.getElementById('search-input');
+                if (searchInput) searchInput.focus();
+            }
+            
+            // Ctrl/Cmd + L = clear
+            if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
+                e.preventDefault();
+                this.clear();
+            }
+            
+            // Escape = clear search
+            if (e.key === 'Escape') {
+                const searchInput = document.getElementById('search-input');
+                if (searchInput && document.activeElement === searchInput) {
+                    searchInput.value = '';
+                    this.search('');
+                }
+            }
+        });
     }
 
     receiveAPILog(data) {
@@ -806,47 +788,24 @@ class FantroveConsolePro {
             level: data.level || 'info',
             message: data.message,
             source: data.source || 'API',
-            category: 'api',
+            category: data.category || 'api',
             meta: data.meta,
             timestamp: Date.now()
         };
         this.addLog(log, false);
     }
 
-    startEfficientSyncLoop() {
-        setInterval(() => {
-            if (this.isOnline && this.pendingLogs.length > 0 && !this.isRealtimeConnected) {
-                this.syncPendingLogs();
-            }
-        }, this.syncInterval);
-        
-        setInterval(() => {
-            if (this.isCloudConnected && !this.isRealtimeConnected && !document.hidden) {
-                this.checkNewLogsEfficient();
-            }
-        }, 15000);
-        
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden && this.isOnline) {
-                setTimeout(() => {
-                    this.syncPendingLogs();
-                    if (this.isCloudConnected && !this.isRealtimeConnected) {
-                        this.checkNewLogsEfficient();
-                    }
-                }, 1000);
-            }
-        });
-    }
-
+    // ============================================
+    // Sync & Connection
+    // ============================================
+    
     async syncPendingLogs() {
         if (this.pendingLogs.length === 0 || !this.isOnline || this.isSyncing) return;
         
-        if (!this.isCloudConnected) {
-            await this.connectToCloud();
-            if (!this.isCloudConnected) return;
-        }
+        if (!this.isCloudConnected) return;
         
         this.isSyncing = true;
+        this.setSyncStatus(true, 'Syncing...');
         
         const batch = this.pendingLogs.splice(0, 50);
         
@@ -861,31 +820,38 @@ class FantroveConsolePro {
                 15000
             );
             
-            if (res.ok) {
-                this.removeFromLocalBackup(batch.length);
-            } else {
-                this.pendingLogs.unshift(...batch);
+            if (!res.ok) {
+                const error = await res.text();
+                throw new Error(`HTTP ${res.status}: ${error}`);
             }
+            
+            const result = await res.json();
+            console.log('[Sync] Sent', result.count || batch.length, 'logs');
+            
         } catch (error) {
+            console.error('[Sync] Failed:', error);
+            // คืนค่าเข้า queue
             this.pendingLogs.unshift(...batch);
             this.isCloudConnected = false;
+            setTimeout(() => this.connectToCloud(), 5000);
         } finally {
             this.isSyncing = false;
+            this.setSyncStatus(false);
         }
     }
 
-    async checkNewLogsEfficient() {
-        const after = this.loadedTimeRange.newest || (Date.now() - 60000);
+    handleConnectionFailure(errorMessage) {
+        this.retryCount++;
+        this.isCloudConnected = false;
+        this.stopPolling();
         
-        try {
-            const result = await this.fetchLogs({ limit: 10, after });
-            
-            if (result.logs.length > 0) {
-                this.loadedTimeRange.newest = Math.max(...result.logs.map(l => l.timestamp));
-                this.mergeLogs(result.logs);
-            }
-        } catch (e) {
-            this.isCloudConnected = false;
+        if (this.retryCount >= this.maxRetries) {
+            this.updateConnectionStatus('local');
+            this.system('Switched to local mode', null, true);
+            setTimeout(() => this.connectToCloud(), 60000);
+        } else {
+            const delay = Math.min(1000 * Math.pow(2, this.retryCount), 10000);
+            setTimeout(() => this.connectToCloud(), delay);
         }
     }
 
@@ -905,6 +871,8 @@ class FantroveConsolePro {
             }
         } else {
             const btn = document.querySelector(`[data-level="${level}"]`);
+            if (!btn) return;
+            
             if (this.activeFilters.has(level)) {
                 this.activeFilters.delete(level);
                 btn.classList.remove('active');
@@ -921,21 +889,6 @@ class FantroveConsolePro {
         this.refreshDisplay();
     }
 
-    refreshDisplay() {
-        const output = document.getElementById('console-output');
-        if (!output) return;
-        
-        output.innerHTML = '';
-        
-        const toShow = this.logs.filter(log => this.shouldDisplay(log));
-        
-        if (toShow.length === 0) {
-            output.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-text">No matching logs</div></div>`;
-        } else {
-            toShow.forEach(log => this.renderLog(log, false));
-        }
-    }
-
     handleInput(e) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -948,19 +901,24 @@ class FantroveConsolePro {
         if (!input) return;
         
         const code = input.value.trim();
-        if (code) {
-            this.system('> ' + code);
-            try {
-                const result = eval(code);
-                if (result !== undefined) {
-                    this.system('< ' + this.stringify(result));
-                }
-            } catch (err) {
-                this.error('✖ ' + err.message);
+        if (!code) return;
+        
+        this.system('> ' + code);
+        
+        try {
+            // สร้าง function สำหรับ eval เพื่อความปลอดภัย
+            const result = (new Function('return ' + code))();
+            
+            if (result !== undefined) {
+                const resultStr = this.stringify(result);
+                this.system('< ' + resultStr);
             }
-            input.value = '';
-            input.style.height = 'auto';
+        } catch (err) {
+            this.error('✖ ' + err.message, { stack: err.stack });
         }
+        
+        input.value = '';
+        input.style.height = 'auto';
     }
 
     toggleCapture() {
@@ -970,41 +928,72 @@ class FantroveConsolePro {
         
         if (this.isCapturing) {
             btn.innerHTML = '<span class="btn-icon">⏸</span><span>Pause</span>';
+            btn.classList.remove('paused');
         } else {
             btn.innerHTML = '<span class="btn-icon">▶</span><span>Resume</span>';
+            btn.classList.add('paused');
         }
     }
 
     async clear() {
-        if (confirm('Clear all logs?')) {
-            this.logs = [];
-            this.stats = { code: 0, network: 0, system: 0, api: 0 };
-            this.refreshDisplay();
-            this.updateStats();
-            this.saveToLocalCache();
+        if (!confirm('Clear all logs? This cannot be undone.')) return;
+        
+        this.logs = [];
+        this.stats = { code: 0, network: 0, system: 0, api: 0 };
+        this.refreshDisplay();
+        this.updateStats();
+        
+        // แสดง empty state
+        const output = document.getElementById('console-output');
+        if (output) {
+            output.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📝</div>
+                    <div class="empty-text">Console cleared</div>
+                    <div class="empty-hint">New events will appear here</div>
+                </div>
+            `;
         }
     }
 
     exportLogs() {
         const data = {
             exported: new Date().toISOString(),
-            session: this.sessionId,
+            client: this.clientFingerprint,
             count: this.logs.length,
             logs: this.logs
         };
+        
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         a.download = `fantrove-logs-${Date.now()}.json`;
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
         URL.revokeObjectURL(url);
+        
+        this.showToast('📥 Exported ' + this.logs.length + ' logs');
     }
 
     updateStats() {
-        const counts = { all: this.logs.length, error: 0, warn: 0, info: 0, log: 0, debug: 0 };
-        this.logs.forEach(log => { if (counts[log.level] !== undefined) counts[log.level]++; });
+        const counts = { 
+            all: this.logs.length, 
+            error: 0, 
+            warn: 0, 
+            info: 0, 
+            log: 0, 
+            debug: 0 
+        };
         
+        this.logs.forEach(log => {
+            if (counts[log.level] !== undefined) {
+                counts[log.level]++;
+            }
+        });
+        
+        // อัพเดท DOM
         Object.keys(counts).forEach(key => {
             const el = document.getElementById(`count-${key}`);
             if (el) el.textContent = counts[key];
@@ -1026,11 +1015,31 @@ class FantroveConsolePro {
         if (!dot || !text) return;
         
         const styles = {
-            loading: { color: 'var(--accent-yellow)', text: '...', dot: '' },
-            connected: { color: 'var(--accent-green)', text: this.isRealtimeConnected ? 'Live' : 'Cloud', dot: '' },
-            local: { color: 'var(--accent-blue)', text: 'Local', dot: 'local' },
-            offline: { color: 'var(--accent-yellow)', text: 'Offline', dot: 'offline' },
-            error: { color: 'var(--accent-red)', text: 'Error', dot: 'error' }
+            loading: { 
+                color: 'var(--accent-yellow)', 
+                text: 'Connecting...', 
+                dot: '' 
+            },
+            connected: { 
+                color: 'var(--accent-green)', 
+                text: 'Global ●', 
+                dot: '' 
+            },
+            local: { 
+                color: 'var(--accent-blue)', 
+                text: 'Local', 
+                dot: 'local' 
+            },
+            offline: { 
+                color: 'var(--accent-yellow)', 
+                text: 'Offline', 
+                dot: 'offline' 
+            },
+            error: { 
+                color: 'var(--accent-red)', 
+                text: 'Error', 
+                dot: 'error' 
+            }
         };
         
         const style = styles[status] || styles.local;
@@ -1048,10 +1057,15 @@ class FantroveConsolePro {
             status.className = 'sync-status syncing';
         } else {
             const pending = this.pendingLogs.length;
-            if (!this.isOnline) status.textContent = `${pending} queued`;
-            else if (!this.isCloudConnected) status.textContent = `${pending} pending`;
-            else if (this.isRealtimeConnected) status.textContent = pending > 0 ? `${pending} sync` : 'Live';
-            else status.textContent = pending > 0 ? `${pending} sync` : 'OK';
+            
+            if (!this.isOnline) {
+                status.textContent = `${pending} queued`;
+            } else if (!this.isCloudConnected) {
+                status.textContent = `${pending} pending`;
+            } else {
+                status.textContent = pending > 0 ? `${pending} sync` : 'Live';
+            }
+            
             status.className = 'sync-status';
         }
     }
@@ -1074,13 +1088,36 @@ class FantroveConsolePro {
     }
 
     showToast(msg) {
+        // ลบ toast เก่า
         const existing = document.querySelector('.toast');
         if (existing) existing.remove();
+        
         const toast = document.createElement('div');
         toast.className = 'toast';
         toast.textContent = msg;
+        toast.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            color: var(--text-primary);
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s ease;
+        `;
+        
         document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 2000);
+        
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transition = 'opacity 0.3s';
+            setTimeout(() => toast.remove(), 300);
+        }, 2000);
     }
 
     retryConnection() {
@@ -1088,33 +1125,93 @@ class FantroveConsolePro {
         this.connectToCloud();
     }
 
-    // Logging methods
+    // ============================================
+    // Logging Methods
+    // ============================================
+    
     log(msg, meta, skipStorage = false) { 
-        this.addLog({ level: 'log', message: msg, source: 'Console', category: 'api', meta, timestamp: Date.now() }, true, skipStorage); 
+        this.addLog({ 
+            level: 'log', 
+            message: msg, 
+            source: 'Console', 
+            category: 'api', 
+            meta, 
+            timestamp: Date.now() 
+        }, true, skipStorage); 
     }
     
     info(msg, meta, skipStorage = false) { 
-        this.addLog({ level: 'info', message: msg, source: 'Console', category: 'api', meta, timestamp: Date.now() }, true, skipStorage); 
+        this.addLog({ 
+            level: 'info', 
+            message: msg, 
+            source: 'Console', 
+            category: 'api', 
+            meta, 
+            timestamp: Date.now() 
+        }, true, skipStorage); 
     }
     
     warn(msg, meta, skipStorage = false) { 
-        this.addLog({ level: 'warn', message: msg, source: 'Console', category: 'api', meta, timestamp: Date.now() }, true, skipStorage); 
+        this.addLog({ 
+            level: 'warn', 
+            message: msg, 
+            source: 'Console', 
+            category: 'api', 
+            meta, 
+            timestamp: Date.now() 
+        }, true, skipStorage); 
     }
     
     error(msg, meta, skipStorage = false) { 
-        this.addLog({ level: 'error', message: msg, source: 'Console', category: 'api', meta, timestamp: Date.now() }, true, skipStorage); 
+        this.addLog({ 
+            level: 'error', 
+            message: msg, 
+            source: 'Console', 
+            category: 'api', 
+            meta, 
+            timestamp: Date.now() 
+        }, true, skipStorage); 
     }
     
     debug(msg, meta, skipStorage = false) { 
-        this.addLog({ level: 'debug', message: msg, source: 'Console', category: 'api', meta, timestamp: Date.now() }, true, skipStorage); 
+        this.addLog({ 
+            level: 'debug', 
+            message: msg, 
+            source: 'Console', 
+            category: 'api', 
+            meta, 
+            timestamp: Date.now() 
+        }, true, skipStorage); 
     }
     
     system(msg, meta, skipStorage = false) { 
-        this.addLog({ level: 'info', message: msg, source: 'System', category: 'system', timestamp: Date.now() }, true, skipStorage); 
+        this.addLog({ 
+            level: 'info', 
+            message: msg, 
+            source: 'System', 
+            category: 'system', 
+            timestamp: Date.now() 
+        }, true, skipStorage); 
+    }
+
+    // ============================================
+    // Cleanup
+    // ============================================
+    
+    destroy() {
+        this.stopPolling();
+        
+        if (this.channel) {
+            this.channel.close();
+        }
     }
 }
 
-// ✅ FIXED: สร้าง instance หลัง DOM พร้อม
+// ============================================
+// Create Instance
+// ============================================
+
+// สร้าง instance หลัง DOM พร้อม
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         window.consolePro = new FantroveConsolePro();
@@ -1123,11 +1220,25 @@ if (document.readyState === 'loading') {
     window.consolePro = new FantroveConsolePro();
 }
 
+// Global API
 window.FantroveConsole = {
-    log: (m, meta) => window.consolePro && window.consolePro.log(m, meta),
-    info: (m, meta) => window.consolePro && window.consolePro.info(m, meta),
-    warn: (m, meta) => window.consolePro && window.consolePro.warn(m, meta),
-    error: (m, meta) => window.consolePro && window.consolePro.error(m, meta),
-    debug: (m, meta) => window.consolePro && window.consolePro.debug(m, meta),
-    success: (m, meta) => window.consolePro && window.consolePro.addLog({ level: 'success', message: m, source: 'API', category: 'api', meta, timestamp: Date.now() })
+    log: (m, meta) => window.consolePro?.log(m, meta),
+    info: (m, meta) => window.consolePro?.info(m, meta),
+    warn: (m, meta) => window.consolePro?.warn(m, meta),
+    error: (m, meta) => window.consolePro?.error(m, meta),
+    debug: (m, meta) => window.consolePro?.debug(m, meta),
+    success: (m, meta) => window.consolePro?.addLog({ 
+        level: 'success', 
+        message: m, 
+        source: 'API', 
+        category: 'api', 
+        meta, 
+        timestamp: Date.now() 
+    }),
+    getStatus: () => ({
+        connected: window.consolePro?.isCloudConnected,
+        capturing: window.consolePro?.isCapturing,
+        pending: window.consolePro?.pendingLogs.length,
+        logs: window.consolePro?.logs.length
+    })
 };
