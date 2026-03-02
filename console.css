@@ -507,10 +507,36 @@ body {
     text-align: center;
 }
 
-.filter-btn.active .badge {
-    background: currentColor;
-    color: var(--bg-primary);
+/* Alternative: Outline Badge Style - เห็นชัดทุกสถานการณ์ */
+
+.filter-btn .badge {
+    background: transparent;
+    color: currentColor;
+    border: 1.5px solid currentColor;
+    padding: 1px 5px;
+    font-weight: 600;
 }
+
+.filter-btn.active .badge {
+    background: white;
+    color: var(--bg-primary);
+    border-color: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+/* Level-specific */
+.filter-btn[data-level="error"].active .badge {
+    background: var(--accent-red);
+    color: white;
+    border-color: var(--accent-red);
+}
+
+.filter-btn[data-level="warn"].active .badge {
+    background: var(--accent-yellow);
+    color: #000;
+    border-color: var(--accent-yellow);
+}
+
 
 /* Search Box */
 .search-box {
