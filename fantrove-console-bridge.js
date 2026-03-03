@@ -1,20 +1,34 @@
 /**
- * Fantrove Console Bridge - Fixed Session Support
+ * Fantrove Console Bridge - Global Mode (No Session)
+ * สำหรับเว็บไซต์ที่ต้องการส่ง logs ไปยัง Global Console
  */
 
 (function() {
     'use strict';
 
     const WORKER_URL = 'https://fantrove-console-api.nontakorn2600.workers.dev';
-    
-    // ✅ FIXED: ใช้ session ID เดียวกับ console.js เสมอ
-    const SESSION_ID = (function() {
-        let id = localStorage.getItem('fantrove_session_id');
-        if (!id) {
-            id = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            localStorage.setItem('fantrove_session_id', id);
+
+    // ใช้ Client Fingerprint แทน Session ID
+    const CLIENT_FP = (function() {
+        try {
+            // สร้าง fingerprint จาก browser info
+            const ua = navigator.userAgent;
+            const screen = `${window.screen.width}x${window.screen.height}`;
+            const lang = navigator.language;
+            const colorDepth = window.screen.colorDepth;
+            const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const fp = btoa(`${ua}-${screen}-${lang}-${colorDepth}-${tz}`).substring(0, 20);
+
+            // เก็บใน localStorage เพื่อ consistency ระหว่าง reload
+            let stored = localStorage.getItem('fantrove_client_fp');
+            if (!stored) {
+                stored = fp;
+                localStorage.setItem('fantrove_client_fp', stored);
+            }
+            return stored;
+        } catch (e) {
+            return 'unknown_' + Date.now().toString(36);
         }
-        return id;
     })();
 
     const queue = [];
@@ -29,12 +43,12 @@
         setupNetworkCapture();
         setupOnlineListeners();
         loadPendingFromStorage();
-        
+
         checkHealth().then(healthy => {
             isInitialized = true;
             if (healthy) flushQueue();
         });
-        
+
         startHealthCheckLoop();
     }
 
@@ -42,15 +56,15 @@
         try {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 5000);
-            
+
             const response = await fetch(`${WORKER_URL}/health`, {
                 method: 'GET',
                 headers: { 'Accept': 'application/json' },
                 signal: controller.signal
             });
-            
+
             clearTimeout(timeoutId);
-            
+
             if (response.ok) {
                 const data = await response.json();
                 isApiHealthy = true;
@@ -69,11 +83,11 @@
     function startHealthCheckLoop() {
         setInterval(async () => {
             if (!isOnline) return;
-            
+
             if (Date.now() - lastHealthCheck > HEALTH_CHECK_INTERVAL) {
                 const wasHealthy = isApiHealthy;
                 await checkHealth();
-                
+
                 if (!wasHealthy && isApiHealthy) {
                     flushQueue();
                 }
@@ -88,7 +102,7 @@
                 if (healthy) flushQueue();
             });
         });
-        
+
         window.addEventListener('offline', () => {
             isOnline = false;
             isApiHealthy = false;
@@ -97,13 +111,13 @@
 
     function loadPendingFromStorage() {
         try {
-            // ✅ FIXED: โหลดเฉพาะของ session ตัวเอง
-            const backup = localStorage.getItem(`fantrove_bridge_backup_${SESSION_ID}`);
+            // โหลดเฉพาะของ client นี้ (ใช้ fingerprint เป็น key)
+            const backup = localStorage.getItem(`fantrove_bridge_backup_${CLIENT_FP}`);
             if (backup) {
                 const logs = JSON.parse(backup);
                 if (Array.isArray(logs)) {
                     queue.push(...logs);
-                    localStorage.removeItem(`fantrove_bridge_backup_${SESSION_ID}`);
+                    localStorage.removeItem(`fantrove_bridge_backup_${CLIENT_FP}`);
                 }
             }
         } catch (e) {}
@@ -112,20 +126,25 @@
     function savePendingToStorage() {
         try {
             if (queue.length > 0) {
-                localStorage.setItem(`fantrove_bridge_backup_${SESSION_ID}`, JSON.stringify(queue.slice(-100)));
+                localStorage.setItem(`fantrove_bridge_backup_${CLIENT_FP}`, JSON.stringify(queue.slice(-100)));
             }
         } catch (e) {}
     }
 
-    // ✅ FIXED: ทุก log ต้องมี session_id
+    // ส่ง log โดยใช้ fingerprint แทน session_id
     function send(level, message, meta, source) {
         const payload = {
-            session_id: SESSION_ID, // ✅ บังคับใส่ทุกครั้ง
+            // ไม่มี session_id แล้ว - ใช้ fingerprint ใน meta แทน
             level: level,
             category: detectCategory(source, level),
             message: String(message),
             source: source || 'App',
-            meta: meta || {},
+            meta: {
+                ...(meta || {}),
+                fingerprint: CLIENT_FP,  // ใส่ fingerprint ใน meta
+                url: location.href,
+                userAgent: navigator.userAgent
+            },
             user_agent: navigator.userAgent,
             url: location.href,
             timestamp: Date.now()
@@ -163,23 +182,25 @@
 
     async function flushQueue() {
         if (queue.length === 0 || !isOnline || !isApiHealthy) return;
-        
+
         if (!await checkHealth()) return;
-        
+
         const batch = queue.splice(0, 50);
-        
+
         try {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000);
-            
-            // ✅ FIXED: ส่ง session_id ในแต่ละ log ของ batch
+
             const response = await fetch(`${WORKER_URL}/logs/batch`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     logs: batch.map(log => ({
                         ...log,
-                        session_id: SESSION_ID // ensure ทุกอันมี session_id
+                        meta: {
+                            ...log.meta,
+                            fingerprint: CLIENT_FP  // ensure ทุกอันมี fingerprint
+                        }
                     }))
                 }),
                 signal: controller.signal
@@ -188,7 +209,7 @@
             clearTimeout(timeoutId);
 
             if (!response.ok) throw new Error('Batch failed');
-            
+
             const result = await response.json();
             if (result.saved > 0) {
                 removeFromLocalBackup(result.saved);
@@ -202,9 +223,9 @@
 
     function removeFromLocalBackup(count) {
         try {
-            const backup = JSON.parse(localStorage.getItem(`fantrove_bridge_backup_${SESSION_ID}`) || '[]');
+            const backup = JSON.parse(localStorage.getItem(`fantrove_bridge_backup_${CLIENT_FP}`) || '[]');
             const remaining = backup.slice(count);
-            localStorage.setItem(`fantrove_bridge_backup_${SESSION_ID}`, JSON.stringify(remaining));
+            localStorage.setItem(`fantrove_bridge_backup_${CLIENT_FP}`, JSON.stringify(remaining));
         } catch (e) {}
     }
 
@@ -218,7 +239,7 @@
     function setupErrorCapture() {
         window.addEventListener('error', (event) => {
             if (isNoise(event.message)) return;
-            
+
             send('error', formatError(event), {
                 filename: event.filename,
                 line: event.lineno,
@@ -229,7 +250,7 @@
 
         window.addEventListener('unhandledrejection', (event) => {
             if (isNoise(String(event.reason))) return;
-            
+
             send('error', `Unhandled Promise: ${event.reason?.message || event.reason}`, {
                 stack: cleanStack(event.reason?.stack)
             }, 'PromiseError');
@@ -280,7 +301,7 @@
         return stack.split('\n').filter(l => !l.includes('node_modules')).slice(0, 5).join('\n');
     }
 
-    // ✅ FIXED: ทุก method จะส่ง session_id อัตโนมัติ
+    // Global API - ไม่มี session แล้ว
     window.FantroveConsole = {
         log: (msg, meta) => send('log', msg, meta, 'API'),
         info: (msg, meta) => send('info', msg, meta, 'API'),
@@ -289,12 +310,12 @@
         debug: (msg, meta) => send('debug', msg, meta, 'API'),
         success: (msg, meta) => send('success', msg, meta, 'API'),
         captureException: (err, ctx) => send('error', err.message, { stack: err.stack, context: ctx }, 'ManualCapture'),
-        getSessionId: () => SESSION_ID, // ✅ NEW: ให้ภายนอกเรียกดู session ได้
+        getClientFingerprint: () => CLIENT_FP,  // เปลี่ยนจาก getSessionId
         getStatus: () => ({ 
             online: isOnline, 
             apiHealthy: isApiHealthy, 
             pending: queue.length,
-            sessionId: SESSION_ID
+            clientFingerprint: CLIENT_FP  // เปลี่ยนจาก sessionId
         }),
         forceSync: () => flushQueue()
     };

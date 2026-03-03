@@ -1,5 +1,5 @@
 /* ============================================
-   Fantrove Console Pro - Platform Design
+   Fantrove Console Pro - Global Mode (No Session)
    Modern, Professional, Dark Theme
    ============================================ */
 
@@ -12,18 +12,18 @@
     --bg-elevated: #222230;
     --bg-hover: #2a2a3a;
     --bg-active: #323245;
-    
+
     /* Border Colors */
     --border-subtle: rgba(255, 255, 255, 0.06);
     --border-default: rgba(255, 255, 255, 0.1);
     --border-strong: rgba(255, 255, 255, 0.15);
-    
+
     /* Text Colors */
     --text-primary: #f0f0f5;
     --text-secondary: #a0a0b0;
     --text-tertiary: #606070;
     --text-muted: #404050;
-    
+
     /* Accent Colors - Vibrant */
     --accent-blue: #3b82f6;
     --accent-blue-glow: rgba(59, 130, 246, 0.3);
@@ -37,17 +37,17 @@
     --accent-purple-glow: rgba(139, 92, 246, 0.3);
     --accent-cyan: #06b6d4;
     --accent-cyan-glow: rgba(6, 182, 212, 0.3);
-    
+
     /* Status Colors */
     --status-online: #10b981;
     --status-away: #f59e0b;
     --status-busy: #ef4444;
     --status-offline: #6b7280;
-    
+
     /* Typography */
     --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
     --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    
+
     /* Spacing Scale */
     --space-1: 4px;
     --space-2: 8px;
@@ -56,26 +56,26 @@
     --space-5: 20px;
     --space-6: 24px;
     --space-8: 32px;
-    
+
     /* Border Radius */
     --radius-sm: 6px;
     --radius-md: 8px;
     --radius-lg: 12px;
     --radius-xl: 16px;
     --radius-full: 9999px;
-    
+
     /* Shadows */
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
     --shadow-glow-blue: 0 0 20px var(--accent-blue-glow);
     --shadow-glow-red: 0 0 20px var(--accent-red-glow);
-    
+
     /* Transitions */
     --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
     --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
     --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
-    
+
     /* Safe Areas */
     --safe-top: env(safe-area-inset-top);
     --safe-bottom: env(safe-area-inset-bottom);
@@ -496,25 +496,17 @@ body {
     box-shadow: 0 0 12px var(--accent-purple-glow);
 }
 
-.badge {
-    background: var(--bg-primary);
-    color: var(--text-secondary);
-    padding: 2px 6px;
-    border-radius: var(--radius-full);
-    font-size: 10px;
-    font-weight: 600;
-    min-width: 18px;
-    text-align: center;
-}
-
-/* Alternative: Outline Badge Style - เห็นชัดทุกสถานการณ์ */
-
+/* Badge Style - Outline */
 .filter-btn .badge {
     background: transparent;
     color: currentColor;
     border: 1.5px solid currentColor;
     padding: 1px 5px;
+    border-radius: var(--radius-full);
+    font-size: 10px;
     font-weight: 600;
+    min-width: 18px;
+    text-align: center;
 }
 
 .filter-btn.active .badge {
@@ -524,7 +516,7 @@ body {
     box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
 
-/* Level-specific */
+/* Level-specific badge colors */
 .filter-btn[data-level="error"].active .badge {
     background: var(--accent-red);
     color: white;
@@ -537,6 +529,17 @@ body {
     border-color: var(--accent-yellow);
 }
 
+.filter-btn[data-level="info"].active .badge {
+    background: var(--accent-blue);
+    color: white;
+    border-color: var(--accent-blue);
+}
+
+.filter-btn[data-level="debug"].active .badge {
+    background: var(--accent-purple);
+    color: white;
+    border-color: var(--accent-purple);
+}
 
 /* Search Box */
 .search-box {
@@ -769,10 +772,10 @@ body {
     white-space: nowrap;
 }
 
-/* Client Info */
+/* Client Info - Fingerprint Style */
 .log-client {
     font-size: 11px;
-    color: var(--text-tertiary);
+    color: var(--text-secondary);
     padding: var(--space-1) var(--space-2);
     background: var(--bg-tertiary);
     border-radius: var(--radius-sm);
@@ -781,6 +784,12 @@ body {
     gap: var(--space-2);
     border: 1px solid var(--border-subtle);
     width: fit-content;
+    font-family: var(--font-mono);
+}
+
+.log-client::before {
+    content: '🔑';
+    font-size: 10px;
 }
 
 /* Log Content */
@@ -940,9 +949,10 @@ body {
     font-weight: 500;
 }
 
-#session-id-display {
+#client-info-display {
     font-family: var(--font-mono);
     color: var(--text-muted);
+    font-size: 10px;
 }
 
 .input-wrapper {
@@ -1032,6 +1042,7 @@ body {
 .footer-stats {
     display: flex;
     gap: var(--space-5);
+    flex-wrap: wrap;
 }
 
 .stat {
@@ -1053,6 +1064,10 @@ body {
 
 .stat-value.warn {
     color: var(--accent-yellow);
+}
+
+.stat-value.success {
+    color: var(--accent-green);
 }
 
 #storage-info {
@@ -1102,49 +1117,49 @@ body {
     .header {
         padding: var(--space-4) var(--space-6);
     }
-    
+
     .brand {
         font-size: 18px;
     }
-    
+
     .toolbar {
         padding: var(--space-4) var(--space-6);
     }
-    
+
     .filter-btn {
         padding: var(--space-2) var(--space-4);
         font-size: 13px;
     }
-    
+
     .search-box input {
         width: 260px;
     }
-    
+
     .search-box input:focus {
         width: 360px;
     }
-    
+
     .log-entry {
         padding: var(--space-4) var(--space-6);
         flex-direction: row;
         align-items: flex-start;
         gap: var(--space-4);
     }
-    
+
     .log-header {
         flex-direction: column;
         min-width: 140px;
         gap: var(--space-1);
     }
-    
+
     .log-content {
         flex: 1;
     }
-    
+
     .input-section {
         padding: var(--space-5) var(--space-6);
     }
-    
+
     .footer {
         padding: var(--space-3) var(--space-6);
     }
