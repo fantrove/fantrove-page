@@ -74,7 +74,7 @@
       // Virtual scroll
       vsOverscanPx                : 320,
       vsPoolMax                   : 40,
-      vsEstimatedItemHeight       : 96,
+      vsEstimatedItemHeight       : 110,
     },
     TIMING: {
       debounceMs              : 120,

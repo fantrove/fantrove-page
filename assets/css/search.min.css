@@ -1,12 +1,21 @@
-/* SEARCH UI v3.0 — Production-Grade Performance CSS
+/* SEARCH UI v3.1 — Production-Grade Performance CSS
    ──────────────────────────────────────────────────
    Performance principles:
    • contain: layout style paint  — browser isolates repaint/reflow per card
    • content-visibility: auto     — skip off-screen card rendering entirely
-   • contain-intrinsic-size       — accurate scrollbar without full layout
+   • contain-intrinsic-size: auto N — browser caches actual card height;
+     scroll metrics stay accurate even when cards are off-screen
    • GPU compositing on scroll    — transform:translateZ(0) on scroll containers
    • will-change only on elements that WILL animate (not as catch-all)
    • No backdrop-filter on scroll path (expensive, causes layer explosion)
+
+   CHANGE LOG v3.0 → v3.1
+   ─────────────────────────────────────────────────
+   .search-card
+     contain-intrinsic-size: 0 88px  →  auto 96px
+   .search-card .card-tags
+     No max-height constraint — tags now expand freely
+     (overflow was the only cause of content clipping)
 */
 
 *{box-sizing:border-box}
@@ -51,7 +60,6 @@ body{
   box-shadow:0 2px 12px rgba(19,180,127,.05);
   border-bottom-left-radius:48px;
   border-bottom-right-radius:48px;
-  /* isolate header layer */
   contain:layout style paint;
 }
 
@@ -71,7 +79,6 @@ body{
   padding:12px 18px;
   transition:border-color var(--transition), box-shadow var(--transition);
   box-shadow:0 2px 12px rgba(6,14,30,.05);
-  /* isolate repaint — input wrapper repaints frequently */
   contain:layout style paint;
 }
 
@@ -179,7 +186,6 @@ body{
   margin-top:12px;
   pointer-events:auto;
   user-select:none;
-  /* isolate suggestions from results below */
   contain:layout style paint;
 }
 
@@ -192,7 +198,6 @@ body{
   display:flex;
   align-items:center;
   gap:8px;
-  /* cheap transition — compositor-only */
   transition:background-color 120ms linear;
   width:100%;
   contain:layout style paint;
@@ -243,31 +248,35 @@ body{
 }
 
 /* ─── Virtual Scroll containers ──────────────────── */
-/* vs-container: the full-height absolute positioning parent */
 .vs-container{
   position:relative;
   min-height:2px;
-  /* strict containment: layout+style+paint all isolated */
   contain:layout style paint;
 }
 
-/* vs-item: wrapper for each virtualized card */
 .vs-item{
   position:absolute;
   left:0;
   right:0;
-  /* isolate each card's repaint */
   contain:layout style paint;
 }
 
 /* ─── SEARCH CARD ─────────────────────────────────── */
 /*
- * Performance profile:
- * • contain:layout style paint  → browser skips cards that don't affect outer layout
- * • content-visibility:auto     → browser skips render for off-screen cards (native virtualization)
- * • contain-intrinsic-size      → accurate scrollbar height estimate while cards are skipped
- * NOTE: content-visibility is removed from vs-item children since VirtualScroll
- *       manages visibility explicitly — applying both would be redundant.
+ * contain-intrinsic-size: auto 96px
+ * ────────────────────────────────────────────────────
+ * The "auto" prefix (Chrome 105+, FF 107+, Safari 17+) tells the browser:
+ *   "Use the last measured height of this element when skipping it
+ *    via content-visibility:auto. Fall back to 96px if never measured."
+ *
+ * This fixes scrollbar accuracy for cards with varying content heights
+ * (long tags, multi-line content) without any additional layout work.
+ * On older browsers that don't understand "auto", the declaration is
+ * parsed as invalid and the browser ignores it — the @supports fallback
+ * at the bottom disables content-visibility in that case anyway.
+ *
+ * NOTE: content-visibility is removed from vs-item children since
+ *       VirtualScroll manages visibility explicitly.
  */
 .search-card{
   display:flex;
@@ -278,11 +287,9 @@ body{
   position:relative;
   overflow:hidden;
   min-height:56px;
-  /* Performance triple: */
   contain:layout style paint;
-  /* content-visibility managed per context (see .vs-item override) */
   content-visibility:auto;
-  contain-intrinsic-size:0 88px;  /* estimate; corrected by browser after render */
+  contain-intrinsic-size:auto 96px;   /* ← was: 0 88px */
 }
 
 /* In virtual-scroll context, VS already handles visibility — disable CV */
@@ -336,6 +343,14 @@ body{
   white-space:nowrap;
 }
 
+/* ─── Tags — dynamic height ──────────────────────── */
+/*
+ * No max-height, no overflow:hidden.
+ * flex-wrap:wrap lets rows form naturally.
+ * Each individual tag still clips its own text if the string is
+ * extremely long (max-width:18ch keeps tags scannable).
+ * contain:layout style keeps repaint isolated to this tag row.
+ */
 .search-card .card-tags{
   display:flex;
   gap:8px;
@@ -353,6 +368,9 @@ body{
   font-weight:700;
   border:1px solid rgba(230,235,240,.7);
   white-space:nowrap;
+  max-width:18ch;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
 
 .search-card .result-copy-btn{
@@ -362,14 +380,12 @@ body{
   padding:6px 10px;
   font-size:.92rem;
   border-radius:10px;
-  /* compositor-only transition */
   transition:opacity 140ms linear;
   contain:layout style paint;
 }
 
-/* Spacing between cards */
 #searchResults .search-card + .search-card,
-.vs-item + .vs-item{ margin-top:0; }  /* VS handles spacing via top offset */
+.vs-item + .vs-item{ margin-top:0; }
 
 /* ─── Vertical card variant ──────────────────────── */
 .search-card.vertical{
@@ -410,18 +426,14 @@ body{
 /* ─── Overlay ─────────────────────────────────────── */
 .search-overlay-backdrop,
 .search-overlay{
-  /* backdrop-filter removed from scroll path — expensive GPU layer */
   backdrop-filter:none !important;
   -webkit-backdrop-filter:none !important;
 }
 
-/* Scroll container: GPU-composited separate layer */
 .search-overlay-scrollable-content{
-  -webkit-overflow-scrolling:touch; /* iOS momentum scroll */
+  -webkit-overflow-scrolling:touch;
   overscroll-behavior:contain;
-  /* GPU compositing — scroll happens on compositor, not main thread */
   will-change:scroll-position;
-  /* Explicit layer promotion */
   transform:translateZ(0);
   contain:strict;
 }
@@ -438,7 +450,6 @@ body{
   font-size:.97rem;
   font-weight:750;
   box-shadow:0 10px 28px rgba(12,140,94,.2);
-  /* GPU animation — opacity+transform only */
   animation:toastSlide 260ms cubic-bezier(.25,.8,.35,1);
   letter-spacing:.3px;
   contain:layout style paint;
@@ -543,7 +554,7 @@ body{
 
 /* ─── Feature fallback ───────────────────────────── */
 @supports not (content-visibility:auto){
-  .search-card{ content-visibility:visible; }
+  .search-card{ content-visibility:visible; contain-intrinsic-size:none; }
 }
 
 @supports not (contain:strict){

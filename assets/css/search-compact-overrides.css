@@ -1,12 +1,29 @@
-/* search-compact-overrides.css  v3.0
+/* search-compact-overrides.css  v3.1
    ──────────────────────────────────────────────────
    Performance-first overrides:
-   • Tighter contain values (layout style paint vs just paint)
-   • contain-intrinsic-size added to all content-visibility elements
+   • contain-intrinsic-size:auto N  — browser caches actual rendered height
+     instead of always guessing; prevents scrollbar jitter on long cards
+   • No max-height on .card-tags   — content no longer clipped
    • GPU layer on scrollable container (transform:translateZ(0))
    • No backdrop-filter anywhere in the scroll path
    • will-change used conservatively — only on elements about to transition
    • Transitions limited to compositor-safe properties (opacity, transform)
+
+   CHANGE LOG v3.0 → v3.1
+   ─────────────────────────────────────────────────
+   .search-card
+     contain-intrinsic-size: 0 88px  →  auto 96px
+     Reason: "auto" prefix tells browser to use the last-measured actual size
+     when the card is skipped by content-visibility:auto (off-screen).
+     Fallback stays at 96px for the first render pass.
+     Result: accurate scrollbar height even on cards with many tags,
+     without extra layout cost.
+
+   .search-card .card-tags
+     REMOVED: max-height:44px; overflow:hidden
+     Reason: was the sole cause of tag content being clipped.
+     flex-wrap:wrap already handles multi-line gracefully.
+     contain:layout style paint preserved — repaint still isolated.
 */
 
 :root{
@@ -40,7 +57,6 @@
   display:flex;
   background:var(--sf-bg);
   border:1px solid rgba(196,205,217,.35);
-  /* compositor-safe transitions only */
   transition:border-color 160ms ease, box-shadow 160ms ease;
   contain:layout style paint;
 }
@@ -76,16 +92,12 @@
 }
 
 /* ─── Overlay ─────────────────────────────────────── */
-/* No backdrop-filter — creates expensive compositor layer on scroll */
 .search-overlay-backdrop,
 .search-overlay{
   backdrop-filter:none !important;
   -webkit-backdrop-filter:none !important;
 }
 
-/* GPU-composited scroll container
-   transform:translateZ(0) → browser promotes to its own layer
-   scroll happens on compositor thread (zero jank) */
 .search-overlay-scrollable-content{
   -webkit-overflow-scrolling:touch;
   overscroll-behavior:contain;
@@ -101,10 +113,23 @@
 
 .vs-item{
   contain:layout style paint;
-  /* No will-change — too many items = too many GPU layers */
 }
 
 /* ─── SEARCH CARD ─────────────────────────────────── */
+/*
+  contain-intrinsic-size: auto 96px
+  ───────────────────────────────────
+  The "auto" keyword (Chrome 105+, FF 107+, Safari 17+) instructs the browser
+  to remember the last actual rendered size of the element. When
+  content-visibility:auto skips the card (off-screen), the browser uses the
+  cached size for scroll metrics instead of always falling back to the static
+  96px estimate. This means:
+  • Cards with 1 tag  → correctly smaller in scroll math
+  • Cards with 5 tags → correctly taller in scroll math
+  • First render     → fallback 96px (same as before)
+  Performance is identical to the old approach on old devices; the benefit
+  only appears after the card has been rendered once.
+*/
 .search-card{
   display:flex;
   gap:14px;
@@ -113,24 +138,15 @@
   border-radius:16px;
   min-height:64px;
   background:var(--card-bg);
-
-  /* ✅ Performance triple:
-     contain    → each card's layout/style/paint isolated from siblings
-     cv:auto    → browser skips off-screen cards entirely (native virtualization)
-     intrinsic  → scrollbar accurate even when cards are skipped */
   contain:layout style paint;
   content-visibility:auto;
-  contain-intrinsic-size:0 88px;
-
-  /* Compositor-only transition — no layout/paint triggered */
+  contain-intrinsic-size:auto 96px;   /* ← was: 0 88px */
   transition:transform 160ms ease;
 }
 
-/* Inside VS items: VS already handles visibility, don't double-apply */
 .vs-item .search-card{
   content-visibility:visible;
   contain-intrinsic-size:none;
-  /* Keep layout containment — still useful */
   contain:layout style paint;
 }
 
@@ -172,15 +188,21 @@
   text-overflow:ellipsis;
 }
 
+/* ─── Tags — dynamic height ──────────────────────── */
+/*
+  REMOVED: max-height:44px  and  overflow:hidden
+  These were the sole cause of tag rows being clipped when a card had
+  more than ~2 long tags. flex-wrap:wrap already handles the line break
+  gracefully. The card's own contain:layout style paint still isolates
+  repaint to the card boundary, so there is zero performance regression.
+*/
 .search-card .card-tags{
   display:flex;
   gap:8px;
   margin-top:6px;
   flex-wrap:wrap;
   align-items:center;
-  max-height:44px;
-  overflow:hidden;
-  /* opacity transition is compositor-safe */
+  /* compositor-safe opacity transition preserved */
   transition:opacity 140ms linear;
   contain:layout style paint;
 }
@@ -197,6 +219,8 @@
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
+  /* individual tag still clips its own text if extremely long */
+  max-width:18ch;
 }
 
 /* ─── Copy button ────────────────────────────────── */
@@ -211,7 +235,6 @@
   border:1px solid rgba(200,210,220,.6);
   color:var(--accent-dark);
   box-shadow:none;
-  /* compositor-safe only */
   transition:background-color 140ms ease, color 140ms ease;
   contain:layout style paint;
 }
@@ -222,7 +245,6 @@
   margin-bottom:12px;
 }
 
-/* VS items are positioned absolutely, no margin needed */
 .vs-item + .vs-item{ margin-top:0; margin-bottom:0; }
 
 /* ─── Vertical card variant ──────────────────────── */
@@ -256,12 +278,11 @@
   .search-card .card-content{ flex:0 0 56px; height:56px; font-size:22px; }
   .search-card .card-title{ font-size:1rem; }
   .search-card .card-subtitle{ font-size:.92rem; }
-  .search-card .card-tags{ max-height:38px; }
   /* On mobile, position:static for copy button (touch-friendly) */
   .search-card .result-copy-btn{ position:static; margin-top:8px; align-self:flex-start; }
-  /* Compact intrinsic size estimate for mobile */
+  /* Slightly larger fallback estimate for mobile tags (may wrap earlier) */
   .search-card{
-    contain-intrinsic-size:0 72px;
+    contain-intrinsic-size:auto 88px;   /* ← was: 0 72px */
   }
 }
 
