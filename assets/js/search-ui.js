@@ -1235,6 +1235,17 @@
   // SEARCH SERVICE
   // =========================================================
   const SearchService = {
+    // ── Scheduler primitives (same as search-engine.js v4.0) ───
+    _sched: (typeof scheduler !== 'undefined' && scheduler) || null,
+
+    _scheduleUserVisible(fn) {
+      if (this._sched?.postTask) return this._sched.postTask(fn, { priority: 'user-visible' });
+      return new Promise((resolve, reject) => {
+        requestAnimationFrame(() => { try { resolve(fn()); } catch (e) { reject(e); } });
+      });
+    },
+
+    // ── doSearch — user-visible priority, tab-guard ─────────────
     doSearch(e, preventPush, options) {
       try {
         e?.preventDefault?.();
@@ -1261,36 +1272,34 @@
             if (sg) sg.style.display = '';
             ReadyModeService.renderReadyModeSuggestions();
           }
-          // ── PATCH 1: Classic behavior — always close overlay on empty query ──
           if (State.overlayOpen) OverlayService.close('manual');
           return;
         }
 
-        PerfMonitor.mark('search-start');
-        let out = { results:[], keywords:[] };
-        try { if (window.SearchEngine?.search) out = window.SearchEngine.search(q, State.selectedType) || out; } catch {}
-        State.currentResults   = out.results || [];
-        State.allKeywordsCache = out.keywords || [];
-        PerfMonitor.measure('search-latency', 'search-start');
+        // Schedule search as user-visible priority so it never starves behind
+        // background tasks (Fuse index build, etc.)
+        this._scheduleUserVisible(() => {
+          try {
+            PerfMonitor.mark('search-start');
+            let out = { results:[], keywords:[] };
+            try { if (window.SearchEngine?.search) out = window.SearchEngine.search(q, State.selectedType) || out; } catch {}
+            State.currentResults   = out.results || [];
+            State.allKeywordsCache = out.keywords || [];
+            PerfMonitor.measure('search-latency', 'search-start');
 
-        FilterService.setupCategoryFilter(RenderingService.extractResultCategories(State.currentResults), 'all');
+            FilterService.setupCategoryFilter(RenderingService.extractResultCategories(State.currentResults), 'all');
 
-        const stObj = { q, type:State.selectedType||'all', category:'all' };
-        if (!preventPush && !State.suppressHistoryPush && !URLService.isEqual(stObj, State.lastCommittedSearchState)) {
-          URLService.commit(stObj); State.searchHistoryPushed = true;
-        }
+            const stObj = { q, type:State.selectedType||'all', category:'all' };
+            if (!preventPush && !State.suppressHistoryPush && !URLService.isEqual(stObj, State.lastCommittedSearchState)) {
+              URLService.commit(stObj); State.searchHistoryPushed = true;
+            }
 
-        // ── PATCH 2: Classic behavior — close overlay BEFORE rendering ──
-        // Input wrapper returns to original position, header/nav restored,
-        // then results render into main #searchResults as normal.
-        if (State.overlayOpen) {
-          OverlayService.close('manual');
-        }
+            if (State.overlayOpen) OverlayService.close('manual');
 
-        PerfMonitor.mark('render-start');
-        RenderingService.renderResults(State.currentResults, State.currentResults.length === 0);
-        // Note: actual render-cost is measured inside renderResults → _batchRender (inside rAF)
-        // This outer mark is intentionally kept as search-to-render-call latency only
+            PerfMonitor.mark('render-start');
+            RenderingService.renderResults(State.currentResults, State.currentResults.length === 0);
+          } catch (err) { console.error('doSearch inner failed', err); }
+        }).catch(err => { console.error('doSearch failed', err); });
 
       } catch (e) { console.error('doSearch failed', e); }
     },
