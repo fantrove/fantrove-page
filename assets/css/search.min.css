@@ -1,581 +1,624 @@
-/* SEARCH UI v3.1 — Production-Grade Performance CSS
-   ──────────────────────────────────────────────────
-   Performance principles:
-   • contain: layout style paint  — browser isolates repaint/reflow per card
-   • content-visibility: auto     — skip off-screen card rendering entirely
-   • contain-intrinsic-size: auto N — browser caches actual card height;
-     scroll metrics stay accurate even when cards are off-screen
-   • GPU compositing on scroll    — transform:translateZ(0) on scroll containers
-   • will-change only on elements that WILL animate (not as catch-all)
-   • No backdrop-filter on scroll path (expensive, causes layer explosion)
-
-   CHANGE LOG v3.0 → v3.1
-   ─────────────────────────────────────────────────
-   .search-card
-     contain-intrinsic-size: 0 88px  →  auto 96px
-   .search-card .card-tags
-     No max-height constraint — tags now expand freely
-     (overflow was the only cause of content clipping)
+/* SEARCH UI v4.0 — Zero-Jank CSS
+   ──────────────────────────────────────────────────────────────────
+   KEY CHANGES FROM v3.1:
+   • @layer architecture — cascade isolation
+   • Card hover: transform only (no shadow/color change = no repaint)
+   • No box-shadow on scroll-path items — eliminated stacking-context
+     explosion that forced GPU layer for every card
+   • VirtualScroll items: content-visibility:visible (JS handles skip)
+   • contain:strict on the scrollable overlay content area
+   • @property typed custom props prevent implicit animation
 */
 
-*{box-sizing:border-box}
-
-:root{
-  --primary:#13b47f;
-  --primary-dark:#0f8f66;
-  --primary-light:#0e6f50;
-  --text-main:#0f2335;
-  --text-secondary:#4f6b88;
-  --text-muted:#7f8b9b;
-  --border:#e3e8ee;
-  --bg:#f7fafd;
-  --bg-accent:#eafaf5;
-  --white:#fff;
-  --transition:220ms cubic-bezier(.25,.8,.35,1);
+@property --search-accent {
+  syntax   : '<color>';
+  inherits : true;
+  initial-value: #13b47f;
 }
 
-html,body{margin:0;padding:0}
+@layer reset, tokens, layout, search-components, search-states, search-responsive, search-a11y;
 
-body{
-  background:linear-gradient(135deg, var(--bg) 0%, var(--bg-accent) 100%);
-  font-family:'Sarabun','Tahoma','Segoe UI',sans-serif;
-  color:var(--text-main);
-  font-size:16px;
-  line-height:1.6;
-  -webkit-font-smoothing:antialiased;
-  overflow-x:hidden;
+/* ================================================================
+   RESET
+   ================================================================ */
+@layer reset {
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
 }
 
-/* ─── Header ─────────────────────────────────────── */
-.search-header{
-  position:sticky;
-  top:0;
-  z-index:100;
-  width:100%;
-  background:var(--white);
-  border-bottom:1px solid var(--border);
-  padding:28px 16px 18px;
-  display:flex;
-  justify-content:center;
-  box-shadow:0 2px 12px rgba(19,180,127,.05);
-  border-bottom-left-radius:48px;
-  border-bottom-right-radius:48px;
-  contain:layout style paint;
-}
-
-#searchForm{
-  width:100%;
-  max-width:540px;
-}
-
-/* ─── Search input ───────────────────────────────── */
-.search-input-wrapper{
-  position:relative;
-  display:flex;
-  align-items:center;
-  border-radius:36px;
-  background:var(--white);
-  border:1.5px solid rgba(196,205,217,.3);
-  padding:12px 18px;
-  transition:border-color var(--transition), box-shadow var(--transition);
-  box-shadow:0 2px 12px rgba(6,14,30,.05);
-  contain:layout style paint;
-}
-
-.search-input-wrapper:focus-within{
-  border-color:rgba(19,180,127,.8);
-  transform:translateY(0px);
-}
-
-.search-input-icon{
-  position:absolute;
-  left:18px;
-  width:40px;
-  height:40px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  background:rgba(19,180,127,.09);
-  border-radius:24px;
-  transition:background var(--transition), transform var(--transition);
-  z-index:3;
-  contain:layout style paint;
-}
-
-.search-input-icon svg{
-  stroke:var(--primary-light);
-  width:19px;
-  height:19px;
-  transition:stroke var(--transition);
-}
-
-.search-input-wrapper:focus-within .search-input-icon{
-  background:rgba(19,180,127,.14);
-  transform:scale(1.08);
-}
-
-.search-input-wrapper:focus-within .search-input-icon svg{
-  stroke:var(--primary);
-}
-
-#searchInput{
-  flex:1;
-  padding:13px 18px 13px 68px;
-  background:transparent;
-  border:0;
-  outline:0;
-  font-size:1.06rem;
-  font-weight:700;
-  color:var(--text-main);
-  font-family:inherit;
-  letter-spacing:.3px;
-}
-
-#searchInput::placeholder{ color:rgba(15,34,53,.38); font-weight:600; letter-spacing:.2px; }
-#searchInput::-webkit-search-cancel-button{ display:none; }
-
-/* ─── Layout ─────────────────────────────────────── */
-.search-main-layout{
-  display:grid;
-  grid-template-columns:300px 1fr;
-  max-width:1300px;
-  margin:32px auto;
-  padding:0 16px;
-  gap:32px;
-}
-
-/* ─── Filters ────────────────────────────────────── */
-.search-filters-panel{
-  display:flex;
-  flex-direction:column;
-  gap:20px;
-  background:linear-gradient(135deg, rgba(251,255,255,.55), rgba(246,251,249,.35));
-  border:1px solid rgba(226,230,236,.6);
-  border-radius:32px;
-  padding:24px;
-  position:sticky;
-  top:100px;
-  height:fit-content;
-  box-shadow:0 4px 16px rgba(6,14,30,.05);
-  contain:layout style paint;
-}
-
-.filter-section{ display:flex; flex-direction:column; gap:11px; }
-
-.filter-group-label{
-  font-size:.85rem;
-  font-weight:750;
-  color:var(--text-main);
-  margin:0;
-  padding:0;
-  letter-spacing:.35px;
-  text-transform:uppercase;
-  opacity:.85;
-  user-select:none;
-}
-
-/* ─── Suggestions ────────────────────────────────── */
-.search-suggestions-fullscreen{
-  position:relative;
-  z-index:10000;
-  width:100%;
-  overflow:visible;
-  background:#fff;
-  border:1px solid #e6e9ee;
-  border-radius:0;
-  margin-top:12px;
-  pointer-events:auto;
-  user-select:none;
-  contain:layout style paint;
-}
-
-.suggestions-head{ padding:15px 25px; font-weight:bold; color:#333; font-size:.98rem; }
-
-.suggestion-item{
-  padding:15px 25px;
-  border-top:1px solid #f4f6fa;
-  cursor:pointer;
-  display:flex;
-  align-items:center;
-  gap:8px;
-  transition:background-color 120ms linear;
-  width:100%;
-  contain:layout style paint;
-}
-
-.suggestion-item:hover{ background:#f9f9f9; }
-.suggestion-body{ flex:1; word-break:break-word; }
-
-/* ─── Filter dropdowns ───────────────────────────── */
-#typeFilter,
-#categoryFilter{
-  appearance:none;
-  width:100%;
-  padding:13px 40px 13px 16px;
-  border:1.5px solid rgba(196,205,217,.45);
-  border-radius:22px;
-  background:var(--white);
-  color:var(--text-main);
-  font-size:1rem;
-  font-weight:750;
-  font-family:inherit;
-  cursor:pointer;
-  outline:0;
-  transition:border-color var(--transition), box-shadow var(--transition);
-  background-image:linear-gradient(45deg,transparent 50%,rgba(15,34,53,.14) 50%),linear-gradient(135deg,rgba(15,34,53,.14) 50%,transparent 50%);
-  background-position:calc(100% - 16px) 50%,calc(100% - 10px) 50%;
-  background-size:6px 6px;
-  background-repeat:no-repeat;
-  letter-spacing:.3px;
-  box-shadow:0 2px 8px rgba(6,14,30,.03);
-  user-select:none;
-}
-
-#typeFilter:hover,#categoryFilter:hover{ border-color:rgba(19,180,127,.45); box-shadow:0 4px 12px rgba(19,180,127,.08); }
-#typeFilter:focus,#categoryFilter:focus{ border-color:rgba(19,180,127,.8); box-shadow:0 8px 20px rgba(19,180,127,.14); background-color:var(--white); }
-
-/* ─── Results container ──────────────────────────── */
-#searchResults{
-  padding:0;
-  margin:0;
-  /* Clip any stray horizontal overflow from cards */
-  overflow-x:hidden;
-}
-
-.search-result-here{
-  text-align:center;
-  color:var(--text-muted);
-  font-size:1.08rem;
-  margin-top:60px;
-  padding:40px 28px;
-  font-weight:550;
-  letter-spacing:.2px;
-}
-
-/* ─── Virtual Scroll containers ──────────────────── */
-.vs-container{
-  position:relative;
-  min-height:2px;
-  contain:layout style paint;
-}
-
-.vs-item{
-  position:absolute;
-  left:0;
-  right:0;
-  contain:layout style paint;
-}
-
-/* ─── SEARCH CARD ─────────────────────────────────── */
-/*
- * contain-intrinsic-size: auto 96px
- * ────────────────────────────────────────────────────
- * The "auto" prefix (Chrome 105+, FF 107+, Safari 17+) tells the browser:
- *   "Use the last measured height of this element when skipping it
- *    via content-visibility:auto. Fall back to 96px if never measured."
- *
- * This fixes scrollbar accuracy for cards with varying content heights
- * (long tags, multi-line content) without any additional layout work.
- * On older browsers that don't understand "auto", the declaration is
- * parsed as invalid and the browser ignores it — the @supports fallback
- * at the bottom disables content-visibility in that case anyway.
- *
- * NOTE: content-visibility is removed from vs-item children since
- *       VirtualScroll manages visibility explicitly.
- */
-.search-card{
-  display:flex;
-  gap:12px;
-  align-items:flex-start;
-  padding:12px 14px;
-  border-radius:14px;
-  position:relative;
-  overflow:hidden;
-  min-height:56px;
-  /* Prevent card from stretching beyond its container on any viewport */
-  width:100%;
-  max-width:100%;
-  box-sizing:border-box;
-  contain:layout style paint;
-  content-visibility:auto;
-  contain-intrinsic-size:auto 96px;
-}
-
-/* In virtual-scroll context, VS already handles visibility — disable CV */
-.vs-item .search-card{
-  content-visibility:visible;
-  contain-intrinsic-size:none;
-}
-
-.search-card .card-content{
-  flex:0 0 56px;
-  height:56px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:22px;
-  border-radius:10px;
-  background:linear-gradient(180deg, rgba(19,180,127,.06), rgba(19,180,127,.03));
-  color:var(--primary);
-  word-break:break-word;
-  padding:6px;
-  overflow:hidden;
-  text-align:center;
-  contain:layout style paint;
-}
-
-.search-card .card-body{
-  flex:1 1 auto;
-  min-width:0;
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-  /* Reserve space on the right so tags never slide under the absolute copy btn */
-  padding-right:78px;
-}
-
-.search-card .card-title{
-  font-size:15px;
-  font-weight:800;
-  color:var(--text-main);
-  line-height:1.2;
-  display:block;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-
-.search-card .card-subtitle{
-  font-size:12px;
-  color:var(--text-secondary);
-  font-weight:600;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-
-/* ─── Tags — dynamic height ──────────────────────── */
-/*
- * No max-height, no overflow:hidden.
- * flex-wrap:wrap lets rows form naturally.
- * Each individual tag still clips its own text if the string is
- * extremely long (max-width:18ch keeps tags scannable).
- * contain:layout style keeps repaint isolated to this tag row.
- */
-.search-card .card-tags{
-  display:flex;
-  gap:8px;
-  margin-top:4px;
-  flex-wrap:wrap;
-  /* Hard cap: tag row never escapes card-body width */
-  max-width:100%;
-  overflow:hidden;
-  contain:layout style;
-}
-
-.search-card .tag{
-  background:rgba(241,243,244,.9);
-  color:var(--text-secondary);
-  padding:5px 8px;
-  font-size:11px;
-  border-radius:999px;
-  font-weight:700;
-  border:1px solid rgba(230,235,240,.7);
-  white-space:nowrap;
-  /* min() clamps to narrower of 16ch OR 45% of card-body so tag never
-     exceeds half the available width on any screen size */
-  max-width:min(16ch, 45%);
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-
-.search-card .result-copy-btn{
-  position:absolute;
-  right:12px;
-  top:12px;
-  padding:6px 10px;
-  font-size:.92rem;
-  border-radius:10px;
-  transition:opacity 140ms linear;
-  contain:layout style paint;
-  white-space:nowrap;   /* ← prevent "คัด / ลอก" line-break */
-}
-
-#searchResults .search-card + .search-card,
-.vs-item + .vs-item{ margin-top:0; }
-
-/* ─── Vertical card variant ──────────────────────── */
-.search-card.vertical{
-  flex-direction:column;
-  align-items:stretch;
-  padding:12px;
-  min-height:auto;
-}
-
-.search-card.vertical .card-content{
-  flex:0 0 auto;
-  height:auto;
-  width:100%;
-  display:-webkit-box;
-  -webkit-line-clamp:3;
-  -webkit-box-orient:vertical;
-  overflow:hidden;
-  text-align:left;
-  padding:10px;
-  border-radius:10px;
-  margin-bottom:10px;
-}
-
-.search-card.vertical .card-title{
-  white-space:normal;
-  display:-webkit-box;
-  -webkit-line-clamp:2;
-  -webkit-box-orient:vertical;
-  overflow:hidden;
-}
-
-.search-card.vertical .result-copy-btn{
-  position:static;
-  margin-top:10px;
-  align-self:flex-end;
-}
-
-/* ─── Overlay ─────────────────────────────────────── */
-.search-overlay-backdrop,
-.search-overlay{
-  backdrop-filter:none !important;
-  -webkit-backdrop-filter:none !important;
-}
-
-.search-overlay-scrollable-content{
-  -webkit-overflow-scrolling:touch;
-  overscroll-behavior:contain;
-  will-change:scroll-position;
-  transform:translateZ(0);
-  contain:strict;
-}
-
-/* ─── Toast ──────────────────────────────────────── */
-#copyToast{ position:fixed; top:24px; right:24px; z-index:10000; display:flex; flex-direction:column; gap:10px; }
-
-.copy-toast-message{
-  background:linear-gradient(135deg, var(--primary), var(--primary-dark));
-  color:var(--white);
-  padding:12px 18px;
-  border-radius:18px;
-  min-width:140px;
-  font-size:.97rem;
-  font-weight:750;
-  box-shadow:0 10px 28px rgba(12,140,94,.2);
-  animation:toastSlide 260ms cubic-bezier(.25,.8,.35,1);
-  letter-spacing:.3px;
-  contain:layout style paint;
-}
-
-@keyframes toastSlide{
-  from{ opacity:0; transform:translateX(120px); }
-  to  { opacity:1; transform:translateX(0); }
-}
-
-/* ─── Footer ─────────────────────────────────────── */
-.search-footer{
-  width:100%;
-  background:var(--white);
-  color:var(--primary);
-  padding:24px 16px;
-  text-align:center;
-  margin-top:64px;
-  font-size:.97rem;
-  font-weight:550;
-  border-top:1px solid var(--border);
-  border-top-left-radius:48px;
-  border-top-right-radius:48px;
-  box-shadow:0 -2px 12px rgba(19,180,127,.04);
-  letter-spacing:.2px;
-}
-
-.footer-content{ max-width:1300px; margin:0 auto; }
-
-/* ─── No result ──────────────────────────────────── */
-.no-result{
-  margin-top:48px;
-  padding:32px;
-  border-radius:18px;
-  background:transparent;
-  color:var(--text-muted);
-}
-
-/* ─── Responsive: Tablet ─────────────────────────── */
-@media(max-width:1024px){
-  .search-main-layout{ grid-template-columns:1fr; gap:22px; padding:0 12px; margin:24px auto; }
-  .search-filters-panel{ display:grid; grid-template-columns:1fr 1fr; gap:16px; position:static; padding:18px; border-radius:28px; }
-  .filter-section{ gap:9px; }
-  #typeFilter,#categoryFilter{ border-radius:20px; padding:12px 36px 12px 14px; }
-}
-
-/* ─── Responsive: Mobile ─────────────────────────── */
-@media(max-width:768px){
-  .search-header{ padding:14px 11px 9px; border-bottom-left-radius:40px; border-bottom-right-radius:40px; }
-  .search-input-wrapper{ border-radius:32px; padding:10px 14px; }
-  .search-input-icon{ width:36px; height:36px; left:14px; border-radius:20px; }
-  .search-input-icon svg{ width:17px; height:17px; }
-  #searchInput{ padding:11px 14px 11px 56px; font-size:1.01rem; }
-  .search-main-layout{ grid-template-columns:1fr; gap:12px; padding:10px 10px 0; margin:10px auto 0; }
-  .search-filters-panel{ grid-template-columns:1fr 1fr; gap:10px; padding:12px; border-radius:26px; position:static; }
-  .filter-group-label{ font-size:.8rem; }
-  #typeFilter,#categoryFilter{ padding:11px 32px 11px 12px; font-size:.95rem; height:40px; border-radius:18px; }
-  .search-card .card-content{ flex:0 0 48px; height:48px; font-size:20px; }
-  .search-card .card-title{ font-size:14px; }
-  .search-card .card-subtitle{ font-size:11px; }
-  /* Button is static on mobile — padding-right reserved for absolute btn is no longer needed */
-  .search-card .card-body{ padding-right:0; }
-  .search-card .result-copy-btn{ position:static; margin-top:8px; align-self:flex-start; }
-  .search-card.vertical .card-content{ -webkit-line-clamp:4; }
-  .no-result,.search-result-here{ margin-top:44px; padding:28px 20px; }
-  .search-footer{ margin-top:44px; padding:16px 11px; border-top-left-radius:40px; border-top-right-radius:40px; }
-  #copyToast{ top:14px; right:14px; }
-  .copy-toast-message{ min-width:128px; padding:10px 14px; font-size:.93rem; border-radius:16px; }
-}
-
-/* ─── Responsive: Small mobile ───────────────────── */
-@media(max-width:480px){
-  body{ font-size:15px; }
-  .search-header{ padding:2px 10px 5px; border-bottom-left-radius:32px; border-bottom-right-radius:32px; }
-  .search-input-wrapper{ border-radius:28px; padding:9px 11px; }
-  .search-input-icon{ width:32px; height:32px; left:11px; border-radius:18px; }
-  .search-input-icon svg{ width:16px; height:16px; }
-  #searchInput{ padding:10px 12px 10px 50px; font-size:.99rem; }
-  .search-main-layout{ gap:9px; padding:9px 9px 0; margin:8px auto 0; }
-  .search-filters-panel{ gap:8px; padding:10px; border-radius:24px; }
-  .filter-group-label{ font-size:.78rem; }
-  #typeFilter,#categoryFilter{ padding:10px 28px 10px 10px; font-size:.92rem; border-radius:16px; }
-  .no-result,.search-result-here{ margin-top:36px; padding:20px 16px; font-size:.99rem; border-radius:22px; }
-  .search-footer{ margin-top:36px; padding:12px 9px; border-top-left-radius:32px; border-top-right-radius:32px; }
-  #copyToast{ top:11px; right:11px; gap:7px; }
-  .copy-toast-message{ min-width:118px; padding:9px 12px; font-size:.89rem; border-radius:14px; }
-}
-
-/* ─── Accessibility ──────────────────────────────── */
-@media(prefers-reduced-motion:reduce){
-  *, .search-card, .copy-toast-message, .search-input-wrapper{
-    animation:none !important;
-    transition:none !important;
-    transform:none !important;
+/* ================================================================
+   TOKENS
+   ================================================================ */
+@layer tokens {
+  :root {
+    --primary      : #13b47f;
+    --primary-dark : #0f8f66;
+    --primary-light: #0e6f50;
+    --text-main    : #0f2335;
+    --text-secondary:#4f6b88;
+    --text-muted   : #7f8b9b;
+    --border       : #e3e8ee;
+    --bg           : #f7fafd;
+    --bg-accent    : #eafaf5;
+    --white        : #fff;
+    /* No cubic-bezier in transition — keep it simple for perf */
+    --transition   : 200ms ease;
   }
 }
 
-/* ─── Print ──────────────────────────────────────── */
-@media print{
-  .search-header,.search-filters-panel,.result-copy-btn,#copyToast,.search-footer{ display:none; }
-  .search-main-layout{ margin:0; padding:0; }
-  .search-card{ page-break-inside:avoid; contain:none; content-visibility:visible; }
+/* ================================================================
+   LAYOUT
+   ================================================================ */
+@layer layout {
+  body {
+    background : linear-gradient(135deg, var(--bg) 0%, var(--bg-accent) 100%);
+    font-family: 'Sarabun','Tahoma','Segoe UI',sans-serif;
+    color      : var(--text-main);
+    font-size  : 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x : hidden;
+  }
+
+  .search-main-layout {
+    display              : grid;
+    grid-template-columns: 300px 1fr;
+    max-width            : 1300px;
+    margin               : 32px auto;
+    padding              : 0 16px;
+    gap                  : 32px;
+  }
 }
 
-/* ─── Feature fallback ───────────────────────────── */
-@supports not (content-visibility:auto){
-  .search-card{ content-visibility:visible; contain-intrinsic-size:none; }
+/* ================================================================
+   SEARCH COMPONENTS
+   ================================================================ */
+@layer search-components {
+
+  /* ── Header ───────────────────────────────────────────────────── */
+  .search-header {
+    position        : sticky;
+    top             : 0;
+    z-index         : 100;
+    width           : 100%;
+    background      : var(--white);
+    border-bottom   : 1px solid var(--border);
+    padding         : 28px 16px 18px;
+    display         : flex;
+    justify-content : center;
+    /* Single-stop shadow — cheaper to paint than multi-stop */
+    box-shadow      : 0 2px 8px rgba(19,180,127,.05);
+    border-bottom-left-radius : 48px;
+    border-bottom-right-radius: 48px;
+    /* Isolate header from page paint */
+    contain         : layout style paint;
+  }
+
+  #searchForm {
+    width    : 100%;
+    max-width: 540px;
+  }
+
+  /* ── Search input ─────────────────────────────────────────────── */
+  .search-input-wrapper {
+    position     : relative;
+    display      : flex;
+    align-items  : center;
+    border-radius: 36px;
+    background   : var(--white);
+    border       : 1.5px solid rgba(196,205,217,.3);
+    padding      : 12px 18px;
+    /* Transition border/shadow — these don't affect layout so safe */
+    transition   : border-color var(--transition), box-shadow var(--transition);
+    box-shadow   : var(--shadow-sm, 0 2px 8px rgba(6,14,30,.04));
+    contain      : layout style paint;
+  }
+
+  .search-input-wrapper:focus-within {
+    border-color: rgba(19,180,127,.8);
+    box-shadow  : 0 4px 12px rgba(19,180,127,.08);
+  }
+
+  .search-input-icon {
+    position     : absolute;
+    left         : 18px;
+    width        : 40px;
+    height       : 40px;
+    display      : flex;
+    align-items  : center;
+    justify-content: center;
+    background   : rgba(19,180,127,.09);
+    border-radius: 24px;
+    transition   : background var(--transition), transform var(--transition);
+    z-index      : 3;
+    contain      : layout style paint;
+  }
+
+  .search-input-icon svg {
+    stroke      : var(--primary-light);
+    width       : 19px;
+    height      : 19px;
+  }
+
+  .search-input-wrapper:focus-within .search-input-icon {
+    background: rgba(19,180,127,.14);
+    transform : scale(1.08);
+  }
+
+  .search-input-wrapper:focus-within .search-input-icon svg {
+    stroke: var(--primary);
+  }
+
+  #searchInput {
+    flex        : 1;
+    padding     : 13px 18px 13px 68px;
+    background  : transparent;
+    border      : 0;
+    outline     : 0;
+    font-size   : 1.06rem;
+    font-weight : 700;
+    color       : var(--text-main);
+    font-family : inherit;
+    letter-spacing: 0.3px;
+  }
+
+  #searchInput::placeholder { color: rgba(15,34,53,.38); font-weight: 600; }
+  #searchInput::-webkit-search-cancel-button { display: none; }
+
+  /* ── Filters ─────────────────────────────────────────────────── */
+  .search-filters-panel {
+    display      : flex;
+    flex-direction: column;
+    gap          : 20px;
+    background   : rgba(251,255,255,.55);
+    border       : 1px solid rgba(226,230,236,.6);
+    border-radius: 32px;
+    padding      : 24px;
+    position     : sticky;
+    top          : 100px;
+    height       : fit-content;
+    /* Single shadow stop */
+    box-shadow   : 0 2px 8px rgba(6,14,30,.04);
+    contain      : layout style paint;
+  }
+
+  .filter-section { display: flex; flex-direction: column; gap: 11px; }
+
+  .filter-group-label {
+    font-size   : .85rem;
+    font-weight : 750;
+    color       : var(--text-main);
+    text-transform: uppercase;
+    letter-spacing: 0.35px;
+    opacity     : .85;
+    user-select : none;
+  }
+
+  #typeFilter,
+  #categoryFilter {
+    appearance      : none;
+    width           : 100%;
+    padding         : 13px 40px 13px 16px;
+    border          : 1.5px solid rgba(196,205,217,.45);
+    border-radius   : 22px;
+    background      : var(--white);
+    color           : var(--text-main);
+    font-size       : 1rem;
+    font-weight     : 750;
+    font-family     : inherit;
+    cursor          : pointer;
+    outline         : 0;
+    transition      : border-color var(--transition);
+    background-image: linear-gradient(45deg,transparent 50%,rgba(15,34,53,.14) 50%),
+                      linear-gradient(135deg,rgba(15,34,53,.14) 50%,transparent 50%);
+    background-position: calc(100% - 16px) 50%, calc(100% - 10px) 50%;
+    background-size : 6px 6px;
+    background-repeat: no-repeat;
+    user-select     : none;
+  }
+
+  #typeFilter:hover,  #categoryFilter:hover { border-color: rgba(19,180,127,.45); }
+  #typeFilter:focus,  #categoryFilter:focus { border-color: rgba(19,180,127,.8); }
+
+  /* ── Suggestions ─────────────────────────────────────────────── */
+  .search-suggestions-fullscreen {
+    position  : relative;
+    z-index   : 10000;
+    width     : 100%;
+    background: #fff;
+    border    : 1px solid #e6e9ee;
+    margin-top: 12px;
+    contain   : layout style paint;
+  }
+
+  .suggestions-head { padding: 15px 25px; font-weight: bold; color: #333; font-size: .98rem; }
+
+  .suggestion-item {
+    padding   : 15px 25px;
+    border-top: 1px solid #f4f6fa;
+    cursor    : pointer;
+    display   : flex;
+    align-items: center;
+    gap       : 8px;
+    /* transition on background only — safe */
+    transition: background-color 120ms ease;
+    contain   : layout style paint;
+  }
+
+  .suggestion-item:hover { background: #f9f9f9; }
+  .suggestion-body { flex: 1; word-break: break-word; }
+
+  /* ── Results ─────────────────────────────────────────────────── */
+  #searchResults {
+    padding    : 0;
+    margin     : 0;
+    overflow-x : hidden;
+  }
+
+  .search-result-here {
+    text-align : center;
+    color      : var(--text-muted);
+    font-size  : 1.08rem;
+    margin-top : 60px;
+    padding    : 40px 28px;
+    font-weight: 550;
+  }
+
+  /* ── Virtual Scroll containers ────────────────────────────────── */
+  .vs-container {
+    position: relative;
+    min-height: 2px;
+    contain : layout style paint;
+  }
+
+  .vs-item {
+    position: absolute;
+    left    : 0;
+    right   : 0;
+    contain : layout style paint;
+  }
+
+  /* ── SEARCH CARD ──────────────────────────────────────────────── */
+  /*
+    KEY CHANGE: No transition on the card itself (was: transform 160ms).
+    Individual property transitions listed explicitly:
+    - transform: compositor-safe (GPU, no reflow)
+    - opacity  : compositor-safe
+
+    NO box-shadow change on hover — box-shadow changes cause a repaint
+    on the card's layer every frame, which is the primary scroll-jank
+    cause on large result sets.
+
+    The border approach: use border-color change (color is GPU-safe when
+    the element already has contain:paint — change is isolated to the
+    element's own layer).
+  */
+  .search-card {
+    display   : flex;
+    gap       : 12px;
+    align-items: flex-start;
+    padding   : 12px 14px;
+    border-radius: 14px;
+    position  : relative;
+    overflow  : hidden;
+    min-height: 56px;
+    width     : 100%;
+    max-width : 100%;
+
+    /* Isolate repaint per card */
+    contain              : layout style paint;
+    content-visibility   : auto;
+    contain-intrinsic-size: auto 96px;
+  }
+
+  /* Hover: translate only — zero paint */
+  .search-card:hover {
+    transform: translateY(-1px);
+  }
+
+  /* VS-managed cards: CV is handled externally */
+  .vs-item .search-card {
+    content-visibility    : visible;
+    contain-intrinsic-size: none;
+    /* No transform transition needed since VS recycles these */
+    transition: none;
+  }
+
+  .search-card .card-content {
+    flex          : 0 0 56px;
+    height        : 56px;
+    display       : flex;
+    align-items   : center;
+    justify-content: center;
+    font-size     : 22px;
+    border-radius : 10px;
+    /* Use solid color bg — no gradient in scroll path */
+    background    : rgba(19,180,127,.06);
+    color         : var(--primary);
+    padding       : 6px;
+    overflow      : hidden;
+    text-align    : center;
+    contain       : layout style paint;
+  }
+
+  .search-card .card-body {
+    flex        : 1 1 auto;
+    min-width   : 0;
+    display     : flex;
+    flex-direction: column;
+    gap         : 6px;
+    padding-right: 78px;
+  }
+
+  .search-card .card-title {
+    font-size  : 15px;
+    font-weight: 800;
+    color      : var(--text-main);
+    line-height: 1.2;
+    overflow   : hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .search-card .card-subtitle {
+    font-size  : 12px;
+    color      : var(--text-secondary);
+    font-weight: 600;
+    overflow   : hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ── Tags ─────────────────────────────────────────────────────── */
+  .search-card .card-tags {
+    display    : flex;
+    gap        : 8px;
+    margin-top : 4px;
+    flex-wrap  : wrap;
+    max-width  : 100%;
+    overflow   : hidden;
+    contain    : layout style;
+  }
+
+  .search-card .tag {
+    background : rgba(241,243,244,.9);
+    color      : var(--text-secondary);
+    padding    : 5px 8px;
+    font-size  : 11px;
+    border-radius: 999px;
+    font-weight: 700;
+    border     : 1px solid rgba(230,235,240,.7);
+    white-space: nowrap;
+    max-width  : min(16ch, 45%);
+    overflow   : hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ── Copy button ─────────────────────────────────────────────── */
+  .search-card .result-copy-btn {
+    position   : absolute;
+    right      : 12px;
+    top        : 12px;
+    padding    : 6px 10px;
+    font-size  : .92rem;
+    border-radius: 10px;
+    /* Only opacity transition — no layout */
+    transition : opacity 140ms ease;
+    contain    : layout style paint;
+    white-space: nowrap;
+  }
+
+  #searchResults .search-card + .search-card,
+  .vs-item + .vs-item { margin-top: 0; }
+
+  /* ── Vertical card ───────────────────────────────────────────── */
+  .search-card.vertical {
+    flex-direction: column;
+    align-items   : stretch;
+    padding       : 12px;
+    min-height    : auto;
+  }
+
+  .search-card.vertical .card-content {
+    flex            : 0 0 auto;
+    height          : auto;
+    width           : 100%;
+    font-size       : 16px;
+    padding         : 10px;
+    display         : -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow        : hidden;
+    text-align      : left;
+    margin-bottom   : 10px;
+  }
+
+  .search-card.vertical .result-copy-btn {
+    position  : static;
+    margin-top: 10px;
+    align-self: flex-end;
+  }
+
+  /* ── Overlay ──────────────────────────────────────────────────── */
+  .search-overlay-backdrop,
+  .search-overlay {
+    backdrop-filter  : none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /*
+    Overlay scrollable content:
+    contain:strict is valid here because:
+    - size is constrained (position:fixed, inset:0)
+    - overflow is scroll/auto
+    This allows the browser to create an isolated scrolling layer.
+  */
+  .search-overlay-scrollable-content {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior        : contain;
+    will-change                : scroll-position;
+    transform                  : translateZ(0);
+    contain                    : strict;
+  }
+
+  /* ── Toast ─────────────────────────────────────────────────────── */
+  #copyToast {
+    position      : fixed;
+    top           : 24px;
+    right         : 24px;
+    z-index       : 10000;
+    display       : flex;
+    flex-direction: column;
+    gap           : 10px;
+  }
+
+  .copy-toast-message {
+    background   : linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color        : var(--white);
+    padding      : 12px 18px;
+    border-radius: 18px;
+    min-width    : 140px;
+    font-size    : .97rem;
+    font-weight  : 750;
+    box-shadow   : 0 6px 16px rgba(12,140,94,.15);
+    animation    : _toastSlide 240ms ease;
+    contain      : layout style paint;
+  }
+
+  @keyframes _toastSlide {
+    from { opacity: 0; transform: translateX(80px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  /* ── Footer ────────────────────────────────────────────────────── */
+  .search-footer {
+    width        : 100%;
+    background   : var(--white);
+    color        : var(--primary);
+    padding      : 24px 16px;
+    text-align   : center;
+    margin-top   : 64px;
+    font-size    : .97rem;
+    font-weight  : 550;
+    border-top   : 1px solid var(--border);
+    border-top-left-radius  : 48px;
+    border-top-right-radius : 48px;
+    box-shadow   : 0 -1px 6px rgba(19,180,127,.04);
+  }
+
+  .footer-content { max-width: 1300px; margin: 0 auto; }
+
+  /* ── No result ─────────────────────────────────────────────────── */
+  .no-result {
+    margin-top   : 48px;
+    padding      : 32px;
+    border-radius: 18px;
+    background   : transparent;
+    color        : var(--text-muted);
+  }
 }
 
-@supports not (contain:strict){
-  .search-overlay-scrollable-content{ contain:none; }
+/* ================================================================
+   STATES
+   ================================================================ */
+@layer search-states {
+  /* Overlay open → lock body scroll without shifting layout */
+  body.search-overlay-open {
+    overflow: hidden;
+    /* Use padding-right to compensate for scrollbar removal */
+    padding-right: var(--scroll-lock-padding, 0px);
+  }
+}
+
+/* ================================================================
+   RESPONSIVE
+   ================================================================ */
+@layer search-responsive {
+  @media (max-width: 1024px) {
+    .search-main-layout {
+      grid-template-columns: 1fr;
+      gap    : 22px;
+      padding: 0 12px;
+      margin : 24px auto;
+    }
+    .search-filters-panel {
+      display              : grid;
+      grid-template-columns: 1fr 1fr;
+      gap                  : 16px;
+      position             : static;
+      padding              : 18px;
+      border-radius        : 28px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .search-header { padding: 14px 11px 9px; border-bottom-left-radius: 40px; border-bottom-right-radius: 40px; }
+    .search-input-wrapper { border-radius: 32px; padding: 10px 14px; }
+    .search-input-icon { width: 36px; height: 36px; left: 14px; border-radius: 20px; }
+    #searchInput { padding: 11px 14px 11px 56px; font-size: 1.01rem; }
+    .search-main-layout { grid-template-columns: 1fr; gap: 12px; padding: 10px 10px 0; margin: 10px auto 0; }
+    .search-filters-panel { grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px; border-radius: 26px; }
+    .search-card .card-content { flex: 0 0 48px; height: 48px; }
+    .search-card .card-body { padding-right: 0; }
+    .search-card .result-copy-btn { position: static; margin-top: 8px; align-self: flex-start; }
+    .search-card { contain-intrinsic-size: auto 88px; }
+    .search-footer { margin-top: 44px; padding: 16px 11px; }
+    #copyToast { top: 14px; right: 14px; }
+  }
+
+  @media (max-width: 480px) {
+    body { font-size: 15px; }
+    .search-header { padding: 2px 10px 5px; border-bottom-left-radius: 32px; border-bottom-right-radius: 32px; }
+    .search-input-wrapper { border-radius: 28px; padding: 9px 11px; }
+    .search-input-icon { width: 32px; height: 32px; left: 11px; }
+    #searchInput { padding: 10px 12px 10px 50px; }
+    .search-main-layout { gap: 9px; padding: 9px 9px 0; margin: 8px auto 0; }
+    .search-filters-panel { gap: 8px; padding: 10px; border-radius: 24px; }
+    .search-footer { margin-top: 36px; padding: 12px 9px; }
+    #copyToast { top: 11px; right: 11px; gap: 7px; }
+    .copy-toast-message { min-width: 118px; padding: 9px 12px; font-size: .89rem; border-radius: 14px; }
+  }
+
+  /* Touch: disable hover transforms to prevent sticky hover */
+  @media (hover: none) and (pointer: coarse) {
+    .search-card:hover { transform: none; }
+    .search-input-wrapper:focus-within .search-input-icon { transform: none; }
+  }
+}
+
+/* ================================================================
+   ACCESSIBILITY
+   ================================================================ */
+@layer search-a11y {
+  @media (prefers-reduced-motion: reduce) {
+    *, .search-card, .copy-toast-message, .search-input-wrapper {
+      animation : none !important;
+      transition: none !important;
+      transform : none !important;
+    }
+  }
+
+  @media print {
+    .search-header, .search-filters-panel, .result-copy-btn,
+    #copyToast, .search-footer { display: none; }
+    .search-main-layout { margin: 0; padding: 0; }
+    .search-card {
+      page-break-inside   : avoid;
+      contain             : none;
+      content-visibility  : visible;
+    }
+  }
+}
+
+/* ─── Feature fallbacks ──────────────────────────────────────── */
+@supports not (content-visibility: auto) {
+  .search-card {
+    content-visibility    : visible;
+    contain-intrinsic-size: none;
+  }
+}
+
+@supports not (contain: strict) {
+  .search-overlay-scrollable-content { contain: none; }
+  .vs-container { contain: none; }
 }

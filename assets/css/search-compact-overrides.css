@@ -1,32 +1,16 @@
-/* search-compact-overrides.css  v3.1
-   ──────────────────────────────────────────────────
-   Performance-first overrides:
-   • contain-intrinsic-size:auto N  — browser caches actual rendered height
-     instead of always guessing; prevents scrollbar jitter on long cards
-   • No max-height on .card-tags   — content no longer clipped
-   • GPU layer on scrollable container (transform:translateZ(0))
-   • No backdrop-filter anywhere in the scroll path
-   • will-change used conservatively — only on elements about to transition
-   • Transitions limited to compositor-safe properties (opacity, transform)
+/* search-compact-overrides.css v4.0 — Zero-Jank Compact Mode
+   ──────────────────────────────────────────────────────────────
+   Overrides for embedded/compact search layout.
 
-   CHANGE LOG v3.0 → v3.1
-   ─────────────────────────────────────────────────
-   .search-card
-     contain-intrinsic-size: 0 88px  →  auto 96px
-     Reason: "auto" prefix tells browser to use the last-measured actual size
-     when the card is skipped by content-visibility:auto (off-screen).
-     Fallback stays at 96px for the first render pass.
-     Result: accurate scrollbar height even on cards with many tags,
-     without extra layout cost.
-
-   .search-card .card-tags
-     REMOVED: max-height:44px; overflow:hidden
-     Reason: was the sole cause of tag content being clipped.
-     flex-wrap:wrap already handles multi-line gracefully.
-     contain:layout style paint preserved — repaint still isolated.
+   KEY CHANGES:
+   • Card hover: no box-shadow change — transform only
+   • Input transitions: border-color + box-shadow only (no layout)
+   • backdrop-filter removed from all paths
+   • contain:strict on scrollable content
+   • No will-change on static elements
 */
 
-:root{
+:root {
   --sf-bg       : #ffffff;
   --card-bg     : #ffffff;
   --muted       : #7f8b9b;
@@ -36,282 +20,260 @@
   --tag-bg      : rgba(241,243,244,.95);
 }
 
-/* ─── Header ─────────────────────────────────────── */
-.search-header{
-  padding:5px 12px 5px;
-  border-bottom:1px solid var(--border-soft);
-  background:var(--sf-bg);
-  box-shadow:none;
-  contain:layout style paint;
+/* ─── Header ─────────────────────────────────────────────────── */
+.search-header {
+  padding      : 5px 12px 5px;
+  border-bottom: 1px solid var(--border-soft);
+  background   : var(--sf-bg);
+  box-shadow   : none;
+  contain      : layout style paint;
 }
 
-/* ─── Input wrapper ──────────────────────────────── */
-.search-input-wrapper{
-  border-radius:28px;
-  padding:8px 12px;
-  max-width:520px;
-  margin:0 auto;
-  align-items:center;
-  gap:8px;
-  height:44px;
-  display:flex;
-  background:var(--sf-bg);
-  border:1px solid rgba(196,205,217,.35);
-  transition:border-color 160ms ease, box-shadow 160ms ease;
-  contain:layout style paint;
+/* ─── Input wrapper ──────────────────────────────────────────── */
+.search-input-wrapper {
+  border-radius: 28px;
+  padding      : 8px 12px;
+  max-width    : 520px;
+  margin       : 0 auto;
+  align-items  : center;
+  gap          : 8px;
+  height       : 44px;
+  display      : flex;
+  background   : var(--sf-bg);
+  border       : 1px solid rgba(196,205,217,.35);
+  /* Only transition non-layout props */
+  transition   : border-color 160ms ease, box-shadow 160ms ease;
+  contain      : layout style paint;
 }
 
-.search-input-wrapper:focus-within{
-  border-color:rgba(19,180,127,.75);
-  box-shadow:0 6px 14px rgba(19,180,127,.06);
+.search-input-wrapper:focus-within {
+  border-color: rgba(19,180,127,.75);
+  box-shadow  : 0 4px 10px rgba(19,180,127,.06);
 }
 
-.search-input-icon{
-  left:10px;
-  width:36px;
-  height:36px;
-  background:rgba(19,180,127,.06);
-  border-radius:10px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  flex-shrink:0;
-  contain:layout style paint;
+.search-input-icon {
+  left           : 10px;
+  width          : 36px;
+  height         : 36px;
+  background     : rgba(19,180,127,.06);
+  border-radius  : 10px;
+  display        : flex;
+  align-items    : center;
+  justify-content: center;
+  flex-shrink    : 0;
+  contain        : layout style paint;
 }
 
-.search-input-icon svg{ width:16px; height:16px; stroke-width:1.8; }
+.search-input-icon svg { width: 16px; height: 16px; stroke-width: 1.8; }
 
-#searchInput{
-  padding:8px 12px 8px 56px;
-  font-size:.96rem;
-  font-weight:700;
-  line-height:1;
-  border:0;
-  background:transparent;
-  outline:none;
+#searchInput {
+  padding    : 8px 12px 8px 56px;
+  font-size  : .96rem;
+  font-weight: 700;
+  line-height: 1;
+  border     : 0;
+  background : transparent;
+  outline    : none;
 }
 
-/* ─── Overlay ─────────────────────────────────────── */
+/* ─── Overlay ────────────────────────────────────────────────── */
 .search-overlay-backdrop,
-.search-overlay{
-  backdrop-filter:none !important;
-  -webkit-backdrop-filter:none !important;
+.search-overlay {
+  backdrop-filter  : none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
-.search-overlay-scrollable-content{
-  -webkit-overflow-scrolling:touch;
-  overscroll-behavior:contain;
-  will-change:scroll-position;
-  transform:translateZ(0);
-  contain:strict;
+.search-overlay-scrollable-content {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior        : contain;
+  will-change                : scroll-position;
+  transform                  : translateZ(0);
+  contain                    : strict;
 }
 
-/* ─── Virtual scroll wrappers ────────────────────── */
-.vs-container{
-  contain:layout style paint;
+/* ─── Virtual scroll wrappers ────────────────────────────────── */
+.vs-container { contain: layout style paint; }
+.vs-item      { contain: layout style paint; }
+
+/* ─── SEARCH CARD ─────────────────────────────────────────────── */
+.search-card {
+  display                : flex;
+  gap                    : 14px;
+  align-items            : flex-start;
+  padding                : 16px 18px;
+  border-radius          : 16px;
+  min-height             : 64px;
+  background             : var(--card-bg);
+  width                  : 100%;
+  max-width              : 100%;
+  box-sizing             : border-box;
+  contain                : layout style paint;
+  content-visibility     : auto;
+  contain-intrinsic-size : auto 96px;
+  /* No transition on the card — hover handled per-property below */
 }
 
-.vs-item{
-  contain:layout style paint;
+/* Hover: transform only — zero repaint */
+.search-card:hover {
+  transform: translateY(-1px);
 }
 
-/* ─── SEARCH CARD ─────────────────────────────────── */
-/*
-  contain-intrinsic-size: auto 96px
-  ───────────────────────────────────
-  The "auto" keyword (Chrome 105+, FF 107+, Safari 17+) instructs the browser
-  to remember the last actual rendered size of the element. When
-  content-visibility:auto skips the card (off-screen), the browser uses the
-  cached size for scroll metrics instead of always falling back to the static
-  96px estimate. This means:
-  • Cards with 1 tag  → correctly smaller in scroll math
-  • Cards with 5 tags → correctly taller in scroll math
-  • First render     → fallback 96px (same as before)
-  Performance is identical to the old approach on old devices; the benefit
-  only appears after the card has been rendered once.
-*/
-.search-card{
-  display:flex;
-  gap:14px;
-  align-items:flex-start;
-  padding:16px 18px;
-  border-radius:16px;
-  min-height:64px;
-  background:var(--card-bg);
-  width:100%;
-  max-width:100%;
-  box-sizing:border-box;
-  contain:layout style paint;
-  content-visibility:auto;
-  contain-intrinsic-size:auto 96px;
-  transition:transform 160ms ease;
+.vs-item .search-card {
+  content-visibility    : visible;
+  contain-intrinsic-size: none;
+  transition            : none;
 }
 
-.vs-item .search-card{
-  content-visibility:visible;
-  contain-intrinsic-size:none;
-  contain:layout style paint;
+/* ─── Card content (emoji preview box) ──────────────────────── */
+.search-card .card-content {
+  flex           : 0 0 72px;
+  height         : 72px;
+  font-size      : 28px;
+  border-radius  : 12px;
+  padding        : 8px;
+  display        : flex;
+  align-items    : center;
+  justify-content: center;
+  background     : rgba(19,180,127,.04);
+  color          : var(--accent);
+  contain        : layout style paint;
 }
 
-/* ─── Card content (emoji preview box) ──────────── */
-.search-card .card-content{
-  flex:0 0 72px;
-  height:72px;
-  font-size:28px;
-  border-radius:12px;
-  padding:8px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  background:rgba(19,180,127,.04);
-  color:var(--accent);
-  contain:layout style paint;
+/* ─── Card body ──────────────────────────────────────────────── */
+.search-card .card-body { gap: 6px; flex: 1 1 auto; min-width: 0; padding-right: 78px; }
+
+.search-card .card-title {
+  font-size  : 1.05rem;
+  font-weight: 800;
+  color      : #0f2335;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow   : hidden;
+  text-overflow: ellipsis;
 }
 
-/* ─── Card body ──────────────────────────────────── */
-.search-card .card-body{ gap:6px; flex:1 1 auto; min-width:0; padding-right:78px; }
-
-.search-card .card-title{
-  font-size:1.05rem;
-  font-weight:800;
-  color:#0f2335;
-  line-height:1.25;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
+.search-card .card-subtitle {
+  font-size : .95rem;
+  color     : var(--muted);
+  font-weight: 700;
+  opacity   : .9;
+  white-space: nowrap;
+  overflow  : hidden;
+  text-overflow: ellipsis;
 }
 
-.search-card .card-subtitle{
-  font-size:.95rem;
-  color:var(--muted);
-  font-weight:700;
-  opacity:.9;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
+/* ─── Tags ───────────────────────────────────────────────────── */
+.search-card .card-tags {
+  display    : flex;
+  gap        : 8px;
+  margin-top : 6px;
+  flex-wrap  : wrap;
+  align-items: center;
+  max-width  : 100%;
+  overflow   : hidden;
+  contain    : layout style paint;
 }
 
-/* ─── Tags — dynamic height ──────────────────────── */
-/*
-  REMOVED: max-height:44px  and  overflow:hidden
-  These were the sole cause of tag rows being clipped when a card had
-  more than ~2 long tags. flex-wrap:wrap already handles the line break
-  gracefully. The card's own contain:layout style paint still isolates
-  repaint to the card boundary, so there is zero performance regression.
-*/
-.search-card .card-tags{
-  display:flex;
-  gap:8px;
-  margin-top:6px;
-  flex-wrap:wrap;
-  align-items:center;
-  max-width:100%;
-  overflow:hidden;
-  transition:opacity 140ms linear;
-  contain:layout style paint;
+.search-card .tag {
+  background    : var(--tag-bg);
+  color         : var(--muted);
+  padding       : 4px 8px;
+  font-size     : 11px;
+  border-radius : 999px;
+  font-weight   : 700;
+  border        : 1px solid rgba(230,235,240,.75);
+  line-height   : 1;
+  white-space   : nowrap;
+  overflow      : hidden;
+  text-overflow : ellipsis;
+  max-width     : min(16ch, 45%);
 }
 
-.search-card .tag{
-  background:var(--tag-bg);
-  color:var(--muted);
-  padding:4px 8px;
-  font-size:11px;
-  border-radius:999px;
-  font-weight:700;
-  border:1px solid rgba(230,235,240,.75);
-  line-height:1;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  max-width:min(16ch, 45%);
+/* ─── Copy button ────────────────────────────────────────────── */
+.search-card .result-copy-btn {
+  position     : absolute;
+  right        : 12px;
+  top          : 12px;
+  padding      : 6px 10px;
+  font-size    : .88rem;
+  border-radius: 10px;
+  background   : #fbfffd;
+  border       : 1px solid rgba(200,210,220,.6);
+  color        : var(--accent-dark);
+  box-shadow   : none;
+  /* Only opacity transition */
+  transition   : opacity 140ms ease;
+  contain      : layout style paint;
+  white-space  : nowrap;
 }
 
-/* ─── Copy button ────────────────────────────────── */
-.search-card .result-copy-btn{
-  position:absolute;
-  right:12px;
-  top:12px;
-  padding:6px 10px;
-  font-size:.88rem;
-  border-radius:10px;
-  background:#fbfffd;
-  border:1px solid rgba(200,210,220,.6);
-  color:var(--accent-dark);
-  box-shadow:none;
-  transition:background-color 140ms ease, color 140ms ease;
-  contain:layout style paint;
-  white-space:nowrap;   /* ← prevent "คัด / ลอก" line-break */
+/* ─── Spacing between cards ──────────────────────────────────── */
+#searchResults .search-card + .search-card {
+  margin-top   : 12px;
+  margin-bottom: 12px;
 }
 
-/* ─── Spacing between cards ──────────────────────── */
-#searchResults .search-card + .search-card{
-  margin-top:12px;
-  margin-bottom:12px;
+.vs-item + .vs-item { margin-top: 0; margin-bottom: 0; }
+
+/* ─── Vertical card variant ──────────────────────────────────── */
+.search-card.vertical { padding: 14px; }
+
+.search-card.vertical .card-content {
+  height         : auto;
+  width          : 100%;
+  font-size      : 16px;
+  padding        : 10px;
+  display        : -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow       : hidden;
 }
 
-.vs-item + .vs-item{ margin-top:0; margin-bottom:0; }
-
-/* ─── Vertical card variant ──────────────────────── */
-.search-card.vertical{ padding:14px; }
-
-.search-card.vertical .card-content{
-  height:auto;
-  width:100%;
-  font-size:16px;
-  padding:10px;
-  display:-webkit-box;
-  -webkit-line-clamp:3;
-  -webkit-box-orient:vertical;
-  overflow:hidden;
+/* ─── Empty state ────────────────────────────────────────────── */
+.no-result {
+  margin-top   : 48px;
+  padding      : 32px;
+  border-radius: 18px;
+  background   : transparent;
+  color        : var(--muted);
 }
 
-/* ─── Empty state ────────────────────────────────── */
-.no-result{
-  margin-top:48px;
-  padding:32px;
-  border-radius:18px;
-  background:transparent;
-  color:var(--muted);
+/* ─── Responsive: Mobile ─────────────────────────────────────── */
+@media (max-width: 768px) {
+  .search-input-wrapper { padding: 8px 10px; height: 42px; border-radius: 18px; }
+  .search-input-icon { width: 32px; height: 32px; left: 8px; }
+  #searchInput { padding: 8px 10px 8px 48px; font-size: .98rem; }
+  .search-card .card-content { flex: 0 0 56px; height: 56px; font-size: 22px; }
+  .search-card .card-body { padding-right: 0; }
+  .search-card .result-copy-btn { position: static; margin-top: 8px; align-self: flex-start; }
+  .search-card { contain-intrinsic-size: auto 88px; }
 }
 
-/* ─── Responsive: Mobile ─────────────────────────── */
-@media(max-width:768px){
-  .search-input-wrapper{ padding:8px 10px; height:42px; border-radius:18px; }
-  .search-input-icon{ width:32px; height:32px; left:8px; }
-  #searchInput{ padding:8px 10px 8px 48px; font-size:.98rem; }
-  .search-card .card-content{ flex:0 0 56px; height:56px; font-size:22px; }
-  .search-card .card-title{ font-size:1rem; }
-  .search-card .card-subtitle{ font-size:.92rem; }
-  /* Button is static on mobile — release the padding reserved for absolute btn */
-  .search-card .card-body{ padding-right:0; }
-  /* On mobile, position:static for copy button (touch-friendly) */
-  .search-card .result-copy-btn{ position:static; margin-top:8px; align-self:flex-start; }
-  /* Slightly larger fallback estimate for mobile tags (may wrap earlier) */
-  .search-card{
-    contain-intrinsic-size:auto 88px;
-  }
+/* ─── Touch: no sticky hover ─────────────────────────────────── */
+@media (hover: none) and (pointer: coarse) {
+  .search-card:hover { transform: none; }
 }
 
-/* ─── Reduced motion ─────────────────────────────── */
-@media(prefers-reduced-motion:reduce){
+/* ─── Reduced motion ─────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
   .search-card,
   .search-input-wrapper,
   .search-card .result-copy-btn,
-  .search-card .card-tags{
-    transition:none !important;
-    transform:none !important;
+  .search-card .card-tags {
+    transition: none !important;
+    transform : none !important;
   }
 }
 
-/* ─── Feature fallback ───────────────────────────── */
-@supports not (content-visibility:auto){
-  .search-card{
-    content-visibility:visible;
-    contain-intrinsic-size:none;
+/* ─── Feature fallback ───────────────────────────────────────── */
+@supports not (content-visibility: auto) {
+  .search-card {
+    content-visibility    : visible;
+    contain-intrinsic-size: none;
   }
 }
 
-@supports not (contain:strict){
-  .search-overlay-scrollable-content{ contain:none; }
-  .vs-container{ contain:none; }
+@supports not (contain: strict) {
+  .search-overlay-scrollable-content { contain: none; }
+  .vs-container { contain: none; }
 }
