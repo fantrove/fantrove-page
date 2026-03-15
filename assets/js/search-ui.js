@@ -22,7 +22,11 @@
   ✅ IntersectionObserver removed from hot path — VS handles visibility natively
 
   UX
-  ✅ Results appear inside the overlay (no jarring overlay-close-to-main transition)
+  ✅ Classic overlay behavior restored:
+     - Overlay closes after search → header/nav/layout back to normal
+     - Results render in main #searchResults
+     - Search query stays in input
+     - History recorded as before
   ✅ Suggestions hide when results arrive; re-appear when input is cleared
   ✅ Overlay closes via escape / back / backdrop as before
 
@@ -30,6 +34,14 @@
   ✅ All public API methods preserved
   ✅ ConDataService timing fix (v2.2) retained
   ✅ CSS class names unchanged
+
+  PATCH v3.0.1 — Classic overlay-close-on-search restored
+  ─────────────────────────────────────────────────────────
+  Changed in SearchService.doSearch():
+  1. Empty-query branch: always close overlay (was: only if options.closeOverlay)
+  2. Results branch: close overlay BEFORE rendering so input/header return to
+     normal position, then render into main #searchResults
+     (was: keep overlay open, render inside overlay)
 */
 (function () {
   'use strict';
@@ -213,49 +225,29 @@
   // =========================================================
   // VIRTUAL SCROLL ENGINE
   // =========================================================
-  //
-  // Architecture:
-  //   viewport  = overflow:auto container  (State.scrollableContent)
-  //   host      = where results live       (State.resultsContainer)
-  //   container = position:relative div    (appended to host, height = totalHeight)
-  //   items     = absolute children        (only visible ones in DOM)
-  //   pool      = recycled nodes           (reused before new allocation)
-  //
-  // Scroll calculation:
-  //   containerOffset = distance from viewport top to container top
-  //   visibleRange    = [scrollTop - containerOffset ± overscan]
-  //   → binary-search offsets[] for start/end indices → O(log n)
-  //
-  // Height measurement:
-  //   Estimated first (CONFIG.RENDER.vsEstimatedItemHeight).
-  //   Actual measured via requestIdleCallback to avoid layout thrash.
-  //   Scroll position adjusted to prevent jumps when heights correct.
-  // =========================================================
   const VirtualScrollEngine = {
     OVERSCAN     : CONFIG.RENDER.vsOverscanPx,
     POOL_MAX     : CONFIG.RENDER.vsPoolMax,
     EST_H        : CONFIG.RENDER.vsEstimatedItemHeight,
 
-    _vp          : null,   // viewport element
-    _host        : null,   // host element
-    _box         : null,   // position:relative container
+    _vp          : null,
+    _host        : null,
+    _box         : null,
     _items       : [],
-    _fn          : null,   // renderFn(item, lang) → html string
+    _fn          : null,
     _lang        : 'en',
 
-    _hgt         : null,   // Float32Array  heights[i]
-    _off         : null,   // Float64Array  offsets[i] (cumulative; length = n+1)
+    _hgt         : null,
+    _off         : null,
     _total       : 0,
 
-    _vis         : null,   // Map<index, HTMLElement>
+    _vis         : null,
     _pool        : [],
 
     _raf         : null,
     _onScroll    : null,
-    _vpObs       : null,   // ResizeObserver on viewport
-    _sgObs       : null,   // ResizeObserver on suggestions container
-
-    // ── Public ───────────────────────────────────────
+    _vpObs       : null,
+    _sgObs       : null,
 
     mount(viewport, host, items, renderFn, lang) {
       this.destroy();
@@ -270,23 +262,19 @@
       this._hgt = new Float32Array(this._items.length).fill(this.EST_H);
       this._buildOff();
 
-      // Absolute-positioned container
       const box = document.createElement('div');
       box.className = 'vs-container';
       box.style.cssText = `position:relative;height:${this._total}px;min-height:2px;contain:layout style;`;
       host.appendChild(box);
       this._box = box;
 
-      // Passive scroll listener — NEVER blocks scroll thread
       this._onScroll = () => this._sched();
       viewport.addEventListener('scroll', this._onScroll, { passive: true });
 
-      // ResizeObserver: viewport resize (keyboard show/hide, orientation)
       if ('ResizeObserver' in window) {
         this._vpObs = new ResizeObserver(() => this._sched());
         this._vpObs.observe(viewport);
 
-        // Suggestions box collapsing changes our container's Y position
         const sg = viewport.querySelector('#' + CONFIG.DOM.suggestionContainerId);
         if (sg) {
           this._sgObs = new ResizeObserver(() => this._sched());
@@ -310,8 +298,6 @@
       this._vis   = null;
     },
 
-    // ── Private ──────────────────────────────────────
-
     _sched() {
       if (this._raf) return;
       this._raf = requestAnimationFrame(() => { this._raf = null; this._render(); });
@@ -324,7 +310,6 @@
       this._total = this._off[n] || 0;
     },
 
-    // Binary search: last index i where off[i] <= target
     _find(target) {
       if (!this._off || this._off.length < 2) return 0;
       let lo = 0, hi = this._off.length - 2;
@@ -335,7 +320,6 @@
       return lo;
     },
 
-    // Walk offsetParent chain to find container's Y within viewport
     _coOff() {
       let off = 0, el = this._box;
       while (el && el !== this._vp) { off += el.offsetTop; el = el.offsetParent; }
@@ -354,13 +338,11 @@
       const si   = this._find(Math.max(0, lo));
       const ei   = Math.min(this._items.length - 1, this._find(Math.max(0, hi)) + 1);
 
-      // ── Phase 1: collect recycles (reads only, no writes) ──
       const recycle = [];
       for (const [idx, el] of this._vis) {
         if (idx < si || idx > ei) recycle.push([idx, el]);
       }
 
-      // ── Phase 2: all DOM writes ──
       const frag  = document.createDocumentFragment();
       const meas  = [];
 
@@ -392,14 +374,12 @@
 
       if (frag.hasChildNodes()) this._box.appendChild(frag);
 
-      // ── Phase 3: lazy height correction ──
       if (meas.length) this._measure(meas);
     },
 
     _measure(indices) {
       const exec = () => {
         if (!this._vis) return;
-        // All reads first
         const reads = [];
         for (const i of indices) {
           const el = this._vis.get(i);
@@ -407,7 +387,6 @@
           const h = el.firstElementChild?.offsetHeight || el.offsetHeight;
           if (h > 4) reads.push([i, h]);
         }
-        // Then compute updates
         let changed = false;
         const st    = this._vp?.scrollTop || 0;
         const co    = this._coOff();
@@ -415,14 +394,13 @@
         for (const [i, h] of reads) {
           const diff = h - this._hgt[i];
           if (Math.abs(diff) <= 4) continue;
-          if (this._off[i] + co < st) adj += diff;  // above viewport → adjust scroll
+          if (this._off[i] + co < st) adj += diff;
           this._hgt[i] = h;
           changed = true;
         }
         if (!changed) return;
         this._buildOff();
         if (this._box) this._box.style.height = this._total + 'px';
-        // Reposition affected nodes
         for (const [idx, el] of this._vis) {
           const t = this._off[idx] + 'px';
           if (el.style.top !== t) el.style.top = t;
@@ -501,7 +479,7 @@
   };
 
   // =========================================================
-  // KEYBOARD DETECTION  (ResizeObserver-first)
+  // KEYBOARD DETECTION
   // =========================================================
   const KeyboardService = {
     _ro: null,
@@ -510,7 +488,6 @@
       try {
         State.lastWindowInnerHeight = window.innerHeight || 0;
 
-        // ResizeObserver on visualViewport is the modern, accurate way
         if ('visualViewport' in window) {
           this._ro = new ResizeObserver(() => { try { this._update(); } catch {} });
           this._ro.observe(document.documentElement);
@@ -657,12 +634,10 @@
   };
 
   // =========================================================
-  // RENDERING SERVICE  (v3 — virtual-scroll + DocumentFragment)
+  // RENDERING SERVICE
   // =========================================================
   const RenderingService = {
 
-    // ── Build a single card HTML string ─────────────────────
-    // v3 improvement: vertical class determined by text length (zero layout reads)
     renderResultItem(item, lang) {
       try {
         const itemData  = item.item || item;
@@ -681,7 +656,6 @@
         const nameStr = names.filter(Boolean).join(' / ');
         const text    = itemText || itemApi || '-';
 
-        // Vertical layout heuristic — no layout reads needed
         const words    = text.trim().split(/\s+/);
         const vertical = text.includes('\n') || text.length > 45 || words.length > 7;
 
@@ -701,14 +675,11 @@
       } catch { return `<div class="result-item"><div class="result-content-area">-</div></div>`; }
     },
 
-    // ── Clean up virtual scroll engine ──────────────────────
     disconnectRenderObserver() {
       VirtualScrollEngine.destroy();
-      // Remove legacy sentinel if present
       DOMService.remove(DOMService.get(CONFIG.DOM.sentinelId));
     },
 
-    // ── Extract category list from results ──────────────────
     extractResultCategories(results) {
       try {
         const lang = LanguageService.getLang();
@@ -721,11 +692,9 @@
       } catch { return []; }
     },
 
-    // ── Main render entry point ──────────────────────────────
     renderResults(results, showSuggestionsIfNoResult = false) {
       try {
-        // When overlay is open → render inside overlay (State.resultsContainer)
-        // When overlay is closed → render into main page #searchResults
+        // After overlay closes, State.overlayOpen is false → always use main #searchResults
         const container = (State.overlayOpen && State.resultsContainer)
           ? State.resultsContainer
           : DOMService.get(CONFIG.DOM.searchResultsId);
@@ -741,7 +710,6 @@
         this.disconnectRenderObserver();
         State.currentFilteredResults = filtered;
 
-        // ── No results ──────────────────────────────────────
         if (!filtered.length) {
           let html = `<div class="no-result">${LanguageService.t('not_found')}</div>`;
           if (showSuggestionsIfNoResult) {
@@ -759,33 +727,18 @@
           const cfEl = DOMService.get(CONFIG.DOM.categoryFilterId);
           if (cfEl) cfEl.style.display = '';
           UIService.updateUILanguage();
-          // Hide suggestions when results take over
           this._hideSuggestions();
           return;
         }
 
-        // ── With results ────────────────────────────────────
         DOMService.setHTML(container, '');
         this._hideSuggestions();
 
-        // Use VirtualScrollEngine when overlay is open (has scrollable viewport)
-        if (State.overlayOpen && State.scrollableContent) {
-          VirtualScrollEngine.mount(
-            State.scrollableContent,
-            container,
-            filtered,
-            (item, l) => this.renderResultItem(item, l),
-            lang
-          );
-        } else {
-          // Main page: DocumentFragment batch (single DOM insertion = single reflow)
-          // requestAnimationFrame ensures we don't block the current frame
-          requestAnimationFrame(() => {
-            this._batchRender(filtered, container, lang);
-          });
-        }
+        // Overlay is already closed at this point → always use DocumentFragment batch
+        requestAnimationFrame(() => {
+          this._batchRender(filtered, container, lang);
+        });
 
-        // Copy handler (attach once)
         if (!window._copyResultTextHandlerSet) {
           Handlers.copyClick = e => {
             const btn = e.target.closest('.result-copy-btn');
@@ -799,18 +752,12 @@
       } catch (e) { console.error('renderResults failed', e); }
     },
 
-    // ── DocumentFragment batch (main-page fallback) ──────────
-    // Renders all items via <template> (single parse) + DocumentFragment (single insert)
     _batchRender(items, container, lang) {
       try {
-        // Build full HTML string
         const html = items.map(item => this.renderResultItem(item, lang)).join('');
-        // Parse via <template> (no layout, no script execution, WHATWG-safe)
         const tpl = document.createElement('template');
         tpl.innerHTML = html;
-        // Single DOM insertion
         container.appendChild(tpl.content);
-        // Copy handler
         if (!window._copyResultTextHandlerSet) {
           Handlers.copyClick = e => {
             const btn = e.target.closest('.result-copy-btn');
@@ -822,7 +769,6 @@
       } catch (e) { console.error('_batchRender failed', e); }
     },
 
-    // ── Hide suggestions when results take over ──────────────
     _hideSuggestions() {
       try {
         const sg = DOMService.get(CONFIG.DOM.suggestionContainerId);
@@ -969,7 +915,7 @@
             if (KeyboardService.isKeyboardOpen()) return;
             const inp = DOMService.get(CONFIG.DOM.searchInputId);
             const cur = (inp?.value||'').trim(), last = (State.preOverlayState?.q||'').trim();
-            if (cur!==last && cur.length) SearchService.doSearch(null,false,{keepOverlay:false});
+            if (cur!==last && cur.length) SearchService.doSearch(null, false);
             else OverlayService.close('backdrop');
           }
         };
@@ -1009,7 +955,6 @@
           document.body.appendChild(ov);
         } else { ov.innerHTML = ''; }
 
-        // Input wrapper (pinned top)
         const wc = DOMService.create('div', null, 'search-overlay-input-wrapper', {
           width:'100%', zIndex:'10001', background:'#ffffff', flexShrink:'0',
           padding:'2px 10px 5px', borderBottom:'1px solid #f0f0f0',
@@ -1021,11 +966,9 @@
         ov.appendChild(wc);
         State.wrapperContainer = wc;
 
-        // Scrollable content (GPU-composited layer)
         const sc = DOMService.create('div', null, 'search-overlay-scrollable-content', {
           flex:'1', width:'100%', overflow:'auto', overscrollBehavior:'contain',
           zIndex:'10000', willChange:'scroll-position',
-          // CSS transform creates a new stacking context for GPU compositing
           transform:'translateZ(0)',
         });
 
@@ -1041,7 +984,6 @@
         State.scrollableContent = sc;
         State.resultsContainer  = rc;
 
-        // Suggestion event delegation
         Handlers.suggestionKeydown = ev => SuggestionService.handleKeydown(ev, sg);
         Handlers.suggestionClick   = ev => SuggestionService.handleClick(ev);
         DOMService.on(sg, 'keydown', Handlers.suggestionKeydown);
@@ -1092,7 +1034,6 @@
 
         if (src !== 'popstate') URLService.syncOnClose();
 
-        // Destroy virtual scroller (removes event listeners)
         VirtualScrollEngine.destroy();
         KeyboardAutoToggleService.disableAutoToggle();
 
@@ -1153,7 +1094,6 @@
         if (!q.trim()) {
           document.body.style.marginBottom = '';
           const placeholder = `<div class="search-result-here" style="text-align:center;color:#969ca8;font-size:1.07em;margin-top:30px;">${LanguageService.t('search_result_here')}</div>`;
-          // Show placeholder in the right container
           const rc = (State.overlayOpen && State.resultsContainer) ? State.resultsContainer : DOMService.get(CONFIG.DOM.searchResultsId);
           if (rc) DOMService.setHTML(rc, placeholder);
           VirtualScrollEngine.destroy();
@@ -1162,14 +1102,13 @@
           const cleared = { q:'', type:'all', category:'all' };
           if (!preventPush && !State.suppressHistoryPush && !URLService.isEqual(cleared, State.lastCommittedSearchState))
             URLService.commit(cleared);
-          // On empty query, show suggestions again
           if (State.overlayOpen) {
             const sg = DOMService.get(CONFIG.DOM.suggestionContainerId);
             if (sg) sg.style.display = '';
             ReadyModeService.renderReadyModeSuggestions();
           }
-          // Close only if explicitly requested
-          if (State.overlayOpen && options.closeOverlay) OverlayService.close('manual');
+          // ── PATCH 1: Classic behavior — always close overlay on empty query ──
+          if (State.overlayOpen) OverlayService.close('manual');
           return;
         }
 
@@ -1185,13 +1124,14 @@
           URLService.commit(stObj); State.searchHistoryPushed = true;
         }
 
-        // ✅ v3.0: Results shown inside overlay (no jarring close transition)
-        // Overlay stays open; user sees results directly.
-        // Close only via escape / back / backdrop.
-        RenderingService.renderResults(State.currentResults, State.currentResults.length === 0);
+        // ── PATCH 2: Classic behavior — close overlay BEFORE rendering ──
+        // Input wrapper returns to original position, header/nav restored,
+        // then results render into main #searchResults as normal.
+        if (State.overlayOpen) {
+          OverlayService.close('manual');
+        }
 
-        // Only close if caller explicitly requests it (e.g. direct Enter on main page)
-        if (State.overlayOpen && options.closeOverlay) OverlayService.close('manual');
+        RenderingService.renderResults(State.currentResults, State.currentResults.length === 0);
 
       } catch (e) { console.error('doSearch failed', e); }
     },
@@ -1277,7 +1217,7 @@
   };
 
   // =========================================================
-  // DATA LOADER  (ConDataService timing fix from v2.2)
+  // DATA LOADER
   // =========================================================
   function _waitForConDataService(ms) {
     return new Promise(resolve => {
@@ -1359,15 +1299,12 @@
 
       }).catch(e => { console.error('[SearchUI] init failed', e); State.apiData = State.apiData||{}; });
 
-      // Form submit
       const form = DOMService.get(CONFIG.DOM.searchFormId);
       if (form) { Handlers.formSubmit = e => { e.preventDefault(); SearchService.doSearch(); UIService.closeKB(); }; DOMService.on(form, 'submit', Handlers.formSubmit); }
 
-      // Enter on main input (before overlay opens)
       const inp = DOMService.get(CONFIG.DOM.searchInputId);
       if (inp) { const kd = e => { if (e.key==='Enter') { e.preventDefault(); SearchService.doSearch(); UIService.closeKB(); } }; Handlers.inputKeydown = kd; DOMService.on(inp,'keydown',kd); }
 
-      // Popstate
       Handlers.popstate = e => {
         try {
           const s = e.state||{};
@@ -1473,7 +1410,6 @@
     resetKeyboardGap:            () => GapBasedKeyboardService.resetGap(),
     isKeyboardGapExpired:        () => GapBasedKeyboardService.isGapExpired(),
     isKeyboardScrollIdle:        () => GapBasedKeyboardService.isScrollIdle(),
-    // VS diagnostics
     getVSStats: () => ({
       itemCount:   VirtualScrollEngine._items.length,
       visibleCount:VirtualScrollEngine._vis?.size || 0,
