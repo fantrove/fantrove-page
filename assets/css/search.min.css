@@ -321,6 +321,8 @@ body{
   display:flex;
   flex-direction:column;
   gap:6px;
+  /* Reserve space on the right so tags never slide under the absolute copy btn */
+  padding-right:78px;
 }
 
 .search-card .card-title{
@@ -382,6 +384,7 @@ body{
   border-radius:10px;
   transition:opacity 140ms linear;
   contain:layout style paint;
+  white-space:nowrap;   /* ← prevent "คัด / ลอก" line-break */
 }
 
 #searchResults .search-card + .search-card,

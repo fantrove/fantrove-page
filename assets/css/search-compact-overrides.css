@@ -166,7 +166,7 @@
 }
 
 /* ─── Card body ──────────────────────────────────── */
-.search-card .card-body{ gap:6px; flex:1 1 auto; min-width:0; }
+.search-card .card-body{ gap:6px; flex:1 1 auto; min-width:0; padding-right:78px; }
 
 .search-card .card-title{
   font-size:1.05rem;
@@ -237,6 +237,7 @@
   box-shadow:none;
   transition:background-color 140ms ease, color 140ms ease;
   contain:layout style paint;
+  white-space:nowrap;   /* ← prevent "คัด / ลอก" line-break */
 }
 
 /* ─── Spacing between cards ──────────────────────── */
