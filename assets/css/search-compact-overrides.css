@@ -1,311 +1,290 @@
-:root {
-  --sf-bg: #ffffff;
-  --card-bg: #FFFFFF;
-  --muted: #7f8b9b;
-  --accent: #13b47f;
-  --accent-dark: #0f8f66;
-  --border-soft: rgba(226,230,236,.7);
-  --tag-bg: rgba(241,243,244,.95);
+/* search-compact-overrides.css  v3.0
+   ──────────────────────────────────────────────────
+   Performance-first overrides:
+   • Tighter contain values (layout style paint vs just paint)
+   • contain-intrinsic-size added to all content-visibility elements
+   • GPU layer on scrollable container (transform:translateZ(0))
+   • No backdrop-filter anywhere in the scroll path
+   • will-change used conservatively — only on elements about to transition
+   • Transitions limited to compositor-safe properties (opacity, transform)
+*/
+
+:root{
+  --sf-bg       : #ffffff;
+  --card-bg     : #ffffff;
+  --muted       : #7f8b9b;
+  --accent      : #13b47f;
+  --accent-dark : #0f8f66;
+  --border-soft : rgba(226,230,236,.7);
+  --tag-bg      : rgba(241,243,244,.95);
 }
 
-/* ---------- HEADER ---------- */
-
-.search-header {
-  padding: 5px 12px 5px;
-  border-bottom: 1px solid var(--border-soft);
-  background: var(--sf-bg);
-  box-shadow: none;
+/* ─── Header ─────────────────────────────────────── */
+.search-header{
+  padding:5px 12px 5px;
+  border-bottom:1px solid var(--border-soft);
+  background:var(--sf-bg);
+  box-shadow:none;
+  contain:layout style paint;
 }
 
-/* ---------- INPUT ---------- */
-
-.search-input-wrapper {
-  border-radius: 28px;
-  padding: 8px 12px;
-  max-width: 520px;
-  margin: 0 auto;
-  align-items: center;
-  gap: 8px;
-  height: 44px;
-  display: flex;
-  background: var(--sf-bg);
-  border: 1px solid rgba(196,205,217,.35);
-  transition: border-color 160ms ease, box-shadow 160ms ease;
-
-  /* isolate repaint only */
-  contain: paint;
+/* ─── Input wrapper ──────────────────────────────── */
+.search-input-wrapper{
+  border-radius:28px;
+  padding:8px 12px;
+  max-width:520px;
+  margin:0 auto;
+  align-items:center;
+  gap:8px;
+  height:44px;
+  display:flex;
+  background:var(--sf-bg);
+  border:1px solid rgba(196,205,217,.35);
+  /* compositor-safe transitions only */
+  transition:border-color 160ms ease, box-shadow 160ms ease;
+  contain:layout style paint;
 }
 
-.search-input-wrapper:focus-within {
-  border-color: rgba(19,180,127,.75);
-  box-shadow: 0 6px 14px rgba(19,180,127,.06);
+.search-input-wrapper:focus-within{
+  border-color:rgba(19,180,127,.75);
+  box-shadow:0 6px 14px rgba(19,180,127,.06);
 }
 
-.search-input-icon {
-  left: 10px;
-  width: 36px;
-  height: 36px;
-  background: rgba(19,180,127,.06);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+.search-input-icon{
+  left:10px;
+  width:36px;
+  height:36px;
+  background:rgba(19,180,127,.06);
+  border-radius:10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-shrink:0;
+  contain:layout style paint;
 }
 
-.search-input-icon svg {
-  width: 16px;
-  height: 16px;
-  stroke-width: 1.8;
+.search-input-icon svg{ width:16px; height:16px; stroke-width:1.8; }
+
+#searchInput{
+  padding:8px 12px 8px 56px;
+  font-size:.96rem;
+  font-weight:700;
+  line-height:1;
+  border:0;
+  background:transparent;
+  outline:none;
 }
 
-#searchInput {
-  padding: 8px 12px 8px 56px;
-  font-size: 0.96rem;
-  font-weight: 700;
-  line-height: 1;
-  border: 0;
-  background: transparent;
-  outline: none;
+/* ─── Overlay ─────────────────────────────────────── */
+/* No backdrop-filter — creates expensive compositor layer on scroll */
+.search-overlay-backdrop,
+.search-overlay{
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
 }
 
-/* ===================================================== */
-/* 🔥 SEARCH CARD — HOT PATH (ULTRA SAFE + ULTRA LIGHT) */
-/* ===================================================== */
-
-.search-card {
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
-  padding: 16px 18px;
-  border-radius: 16px;
-
-  min-height: 64px;
-
-  background: var(--card-bg);
-
-  /* 🚀 ไม่ render นอก viewport */
-  content-visibility: auto;
-
-  /* 🎯 isolate repaint เท่านั้น (ไม่แตะ layout/size) */
-  contain: paint;
-
-  /* cheap-only */
-  transition: transform 160ms ease;
+/* GPU-composited scroll container
+   transform:translateZ(0) → browser promotes to its own layer
+   scroll happens on compositor thread (zero jank) */
+.search-overlay-scrollable-content{
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+  will-change:scroll-position;
+  transform:translateZ(0);
+  contain:strict;
 }
 
-/* ---------- LEFT PREVIEW ---------- */
-
-.search-card .card-content {
-  flex: 0 0 72px;
-  height: 72px;
-
-  font-size: 28px;
-  border-radius: 12px;
-  padding: 8px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  background: rgba(19,180,127,0.04);
-  color: var(--accent);
-
-  /* isolate paint only */
-  contain: paint;
+/* ─── Virtual scroll wrappers ────────────────────── */
+.vs-container{
+  contain:layout style paint;
 }
 
-/* ---------- BODY ---------- */
-
-.search-card .card-body {
-  gap: 6px;
-  flex: 1 1 auto;
-  min-width: 0;
+.vs-item{
+  contain:layout style paint;
+  /* No will-change — too many items = too many GPU layers */
 }
 
-/* ---------- TITLE ---------- */
+/* ─── SEARCH CARD ─────────────────────────────────── */
+.search-card{
+  display:flex;
+  gap:14px;
+  align-items:flex-start;
+  padding:16px 18px;
+  border-radius:16px;
+  min-height:64px;
+  background:var(--card-bg);
 
-.search-card .card-title {
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: #0f2335;
-  line-height: 1.25;
+  /* ✅ Performance triple:
+     contain    → each card's layout/style/paint isolated from siblings
+     cv:auto    → browser skips off-screen cards entirely (native virtualization)
+     intrinsic  → scrollbar accurate even when cards are skipped */
+  contain:layout style paint;
+  content-visibility:auto;
+  contain-intrinsic-size:0 88px;
 
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* Compositor-only transition — no layout/paint triggered */
+  transition:transform 160ms ease;
 }
 
-/* ---------- SUBTITLE ---------- */
-
-.search-card .card-subtitle {
-  font-size: 0.95rem;
-  color: var(--muted);
-  font-weight: 700;
-  opacity: 0.9;
-
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+/* Inside VS items: VS already handles visibility, don't double-apply */
+.vs-item .search-card{
+  content-visibility:visible;
+  contain-intrinsic-size:none;
+  /* Keep layout containment — still useful */
+  contain:layout style paint;
 }
 
-/* ---------- TAGS ---------- */
-
-.search-card .card-tags {
-  display: flex;
-  gap: 8px;
-  margin-top: 6px;
-  flex-wrap: wrap;
-  align-items: center;
-
-  max-height: 44px;
-  overflow: hidden;
-
-  /* cheap-only */
-  transition: opacity 140ms linear;
-
-  /* isolate repaint only */
-  contain: paint;
+/* ─── Card content (emoji preview box) ──────────── */
+.search-card .card-content{
+  flex:0 0 72px;
+  height:72px;
+  font-size:28px;
+  border-radius:12px;
+  padding:8px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(19,180,127,.04);
+  color:var(--accent);
+  contain:layout style paint;
 }
 
-.search-card .tag {
-  background: var(--tag-bg);
-  color: var(--muted);
-  padding: 4px 8px;
+/* ─── Card body ──────────────────────────────────── */
+.search-card .card-body{ gap:6px; flex:1 1 auto; min-width:0; }
 
-  font-size: 11px;
-  border-radius: 999px;
-  font-weight: 700;
-  border: 1px solid rgba(230,235,240,0.75);
-
-  line-height: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.search-card .card-title{
+  font-size:1.05rem;
+  font-weight:800;
+  color:#0f2335;
+  line-height:1.25;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
 
-/* ---------- COPY BUTTON ---------- */
-
-.search-card .result-copy-btn {
-  position: absolute;
-  right: 12px;
-  top: 12px;
-
-  padding: 6px 10px;
-  font-size: 0.88rem;
-  border-radius: 10px;
-
-  background: #fbfffd;
-  border: 1px solid rgba(200,210,220,0.6);
-  color: var(--accent-dark);
-
-  box-shadow: none;
-
-  transition: background 140ms ease, color 140ms ease;
-
-  /* isolate repaint only */
-  contain: paint;
+.search-card .card-subtitle{
+  font-size:.95rem;
+  color:var(--muted);
+  font-weight:700;
+  opacity:.9;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
 
-/* ---------- VERTICAL VARIANT ---------- */
-
-.search-card.vertical {
-  padding: 14px;
+.search-card .card-tags{
+  display:flex;
+  gap:8px;
+  margin-top:6px;
+  flex-wrap:wrap;
+  align-items:center;
+  max-height:44px;
+  overflow:hidden;
+  /* opacity transition is compositor-safe */
+  transition:opacity 140ms linear;
+  contain:layout style paint;
 }
 
-.search-card.vertical .card-content {
-  height: auto;
-  width: 100%;
-
-  font-size: 16px;
-  padding: 10px;
-
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-
-  overflow: hidden;
+.search-card .tag{
+  background:var(--tag-bg);
+  color:var(--muted);
+  padding:4px 8px;
+  font-size:11px;
+  border-radius:999px;
+  font-weight:700;
+  border:1px solid rgba(230,235,240,.75);
+  line-height:1;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
 
-/* ---------- SPACING ---------- */
-
-#searchResults .search-card + .search-card {
-  margin-top: 12px;
-  margin-bottom: 12px;
+/* ─── Copy button ────────────────────────────────── */
+.search-card .result-copy-btn{
+  position:absolute;
+  right:12px;
+  top:12px;
+  padding:6px 10px;
+  font-size:.88rem;
+  border-radius:10px;
+  background:#fbfffd;
+  border:1px solid rgba(200,210,220,.6);
+  color:var(--accent-dark);
+  box-shadow:none;
+  /* compositor-safe only */
+  transition:background-color 140ms ease, color 140ms ease;
+  contain:layout style paint;
 }
 
-/* ---------- EMPTY ---------- */
-
-.no-result {
-  margin-top: 48px;
-  padding: 32px;
-  border-radius: 18px;
-  background: transparent;
-  color: var(--muted);
+/* ─── Spacing between cards ──────────────────────── */
+#searchResults .search-card + .search-card{
+  margin-top:12px;
+  margin-bottom:12px;
 }
 
-/* ---------- RESPONSIVE ---------- */
+/* VS items are positioned absolutely, no margin needed */
+.vs-item + .vs-item{ margin-top:0; margin-bottom:0; }
 
-@media (max-width: 768px) {
-  .search-input-wrapper {
-    padding: 8px 10px;
-    height: 42px;
-    border-radius: 18px;
-  }
+/* ─── Vertical card variant ──────────────────────── */
+.search-card.vertical{ padding:14px; }
 
-  .search-input-icon {
-    width: 32px;
-    height: 32px;
-    left: 8px;
-  }
+.search-card.vertical .card-content{
+  height:auto;
+  width:100%;
+  font-size:16px;
+  padding:10px;
+  display:-webkit-box;
+  -webkit-line-clamp:3;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
 
-  #searchInput {
-    padding: 8px 10px 8px 48px;
-    font-size: 0.98rem;
-  }
+/* ─── Empty state ────────────────────────────────── */
+.no-result{
+  margin-top:48px;
+  padding:32px;
+  border-radius:18px;
+  background:transparent;
+  color:var(--muted);
+}
 
-  .search-card .card-content {
-    flex: 0 0 56px;
-    height: 56px;
-    font-size: 22px;
-  }
-
-  .search-card .card-title {
-    font-size: 1rem;
-  }
-
-  .search-card .card-subtitle {
-    font-size: 0.92rem;
-  }
-
-  .search-card .card-tags {
-    max-height: 38px;
+/* ─── Responsive: Mobile ─────────────────────────── */
+@media(max-width:768px){
+  .search-input-wrapper{ padding:8px 10px; height:42px; border-radius:18px; }
+  .search-input-icon{ width:32px; height:32px; left:8px; }
+  #searchInput{ padding:8px 10px 8px 48px; font-size:.98rem; }
+  .search-card .card-content{ flex:0 0 56px; height:56px; font-size:22px; }
+  .search-card .card-title{ font-size:1rem; }
+  .search-card .card-subtitle{ font-size:.92rem; }
+  .search-card .card-tags{ max-height:38px; }
+  /* On mobile, position:static for copy button (touch-friendly) */
+  .search-card .result-copy-btn{ position:static; margin-top:8px; align-self:flex-start; }
+  /* Compact intrinsic size estimate for mobile */
+  .search-card{
+    contain-intrinsic-size:0 72px;
   }
 }
 
-/* ---------- REDUCED MOTION ---------- */
-
-@media (prefers-reduced-motion: reduce) {
+/* ─── Reduced motion ─────────────────────────────── */
+@media(prefers-reduced-motion:reduce){
   .search-card,
   .search-input-wrapper,
-  .search-card .result-copy-btn {
-    transition: none !important;
-    transform: none !important;
+  .search-card .result-copy-btn,
+  .search-card .card-tags{
+    transition:none !important;
+    transform:none !important;
   }
 }
 
-/* ---------- OVERLAY / BACKDROP ---------- */
-
-.search-overlay-backdrop,
-.search-overlay {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+/* ─── Feature fallback ───────────────────────────── */
+@supports not (content-visibility:auto){
+  .search-card{
+    content-visibility:visible;
+    contain-intrinsic-size:none;
+  }
 }
 
-/* ---------- FALLBACK ---------- */
-
-@supports not (content-visibility: auto) {
-  .search-card {
-    content-visibility: visible;
-  }
+@supports not (contain:strict){
+  .search-overlay-scrollable-content{ contain:none; }
+  .vs-container{ contain:none; }
 }

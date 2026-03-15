@@ -1,5 +1,13 @@
-/* FANTROVE SEARCH - ULTRA MODERN CURVED MINIMAL DESIGN
-   Maximum curves with contemporary aesthetic & professional details */
+/* SEARCH UI v3.0 — Production-Grade Performance CSS
+   ──────────────────────────────────────────────────
+   Performance principles:
+   • contain: layout style paint  — browser isolates repaint/reflow per card
+   • content-visibility: auto     — skip off-screen card rendering entirely
+   • contain-intrinsic-size       — accurate scrollbar without full layout
+   • GPU compositing on scroll    — transform:translateZ(0) on scroll containers
+   • will-change only on elements that WILL animate (not as catch-all)
+   • No backdrop-filter on scroll path (expensive, causes layer explosion)
+*/
 
 *{box-sizing:border-box}
 
@@ -29,7 +37,7 @@ body{
   overflow-x:hidden;
 }
 
-/* Header - Heavy curves */
+/* ─── Header ─────────────────────────────────────── */
 .search-header{
   position:sticky;
   top:0;
@@ -43,6 +51,8 @@ body{
   box-shadow:0 2px 12px rgba(19,180,127,.05);
   border-bottom-left-radius:48px;
   border-bottom-right-radius:48px;
+  /* isolate header layer */
+  contain:layout style paint;
 }
 
 #searchForm{
@@ -50,7 +60,7 @@ body{
   max-width:540px;
 }
 
-/* Main search input - Ultra rounded pill */
+/* ─── Search input ───────────────────────────────── */
 .search-input-wrapper{
   position:relative;
   display:flex;
@@ -59,17 +69,17 @@ body{
   background:var(--white);
   border:1.5px solid rgba(196,205,217,.3);
   padding:12px 18px;
-  transition:all var(--transition);
+  transition:border-color var(--transition), box-shadow var(--transition);
   box-shadow:0 2px 12px rgba(6,14,30,.05);
+  /* isolate repaint — input wrapper repaints frequently */
+  contain:layout style paint;
 }
 
 .search-input-wrapper:focus-within{
   border-color:rgba(19,180,127,.8);
-  /* box-shadow:0 12px 36px rgba(19,180,127,.15); */
   transform:translateY(0px);
 }
 
-/* Search icon - Heavily rounded */
 .search-input-icon{
   position:absolute;
   left:18px;
@@ -80,8 +90,9 @@ body{
   justify-content:center;
   background:rgba(19,180,127,.09);
   border-radius:24px;
-  transition:all var(--transition);
+  transition:background var(--transition), transform var(--transition);
   z-index:3;
+  contain:layout style paint;
 }
 
 .search-input-icon svg{
@@ -113,17 +124,10 @@ body{
   letter-spacing:.3px;
 }
 
-#searchInput::placeholder{
-  color:rgba(15,34,53,.38);
-  font-weight:600;
-  letter-spacing:.2px;
-}
+#searchInput::placeholder{ color:rgba(15,34,53,.38); font-weight:600; letter-spacing:.2px; }
+#searchInput::-webkit-search-cancel-button{ display:none; }
 
-#searchInput::-webkit-search-cancel-button{
-  display:none;
-}
-
-/* Layout */
+/* ─── Layout ─────────────────────────────────────── */
 .search-main-layout{
   display:grid;
   grid-template-columns:300px 1fr;
@@ -133,83 +137,71 @@ body{
   gap:32px;
 }
 
-/* Filters panel - Very rounded */
+/* ─── Filters ────────────────────────────────────── */
 .search-filters-panel{
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  background:linear-gradient(135deg, rgba(251, 255, 255, 0.55), rgba(246, 251, 249, 0.35));
-  border: 1px solid rgba(226,230,236,.6);
-  border-radius: 32px;
-  padding: 24px;
-  position: sticky;
-  top: 100px;
-  height: fit-content;
-  box-shadow: 0 4px 16px rgba(6,14,30,.05);
-}
-
-.filter-section{
   display:flex;
   flex-direction:column;
-  gap:11px;
+  gap:20px;
+  background:linear-gradient(135deg, rgba(251,255,255,.55), rgba(246,251,249,.35));
+  border:1px solid rgba(226,230,236,.6);
+  border-radius:32px;
+  padding:24px;
+  position:sticky;
+  top:100px;
+  height:fit-content;
+  box-shadow:0 4px 16px rgba(6,14,30,.05);
+  contain:layout style paint;
 }
 
+.filter-section{ display:flex; flex-direction:column; gap:11px; }
+
 .filter-group-label{
-  font-size:.99rem;
+  font-size:.85rem;
   font-weight:750;
   color:var(--text-main);
   margin:0;
   padding:0;
   letter-spacing:.35px;
   text-transform:uppercase;
-  font-size:.85rem;
   opacity:.85;
-  user-select: none;
+  user-select:none;
 }
 
-/* ===== SUGGESTIONS CONTAINER ===== */
-.search-suggestions-fullscreen {
-  position: relative;
-  z-index: 10000;
-  width: 100%;
-  overflow: visible;
-  background: #fff;
-  border: 1px solid #e6e9ee;
-  /* box-shadow: 0 8px 30px rgba(19, 23, 40, 0.12); */
-  border-radius: 0px;
-  margin-top: 12px;
-  pointer-events: auto;
-  user-select: none;
+/* ─── Suggestions ────────────────────────────────── */
+.search-suggestions-fullscreen{
+  position:relative;
+  z-index:10000;
+  width:100%;
+  overflow:visible;
+  background:#fff;
+  border:1px solid #e6e9ee;
+  border-radius:0;
+  margin-top:12px;
+  pointer-events:auto;
+  user-select:none;
+  /* isolate suggestions from results below */
+  contain:layout style paint;
 }
 
-.suggestions-head {
-  padding: 15px 25px;
-  font-weight: bold;
-  color: #333;
-  font-size: 0.98rem;
+.suggestions-head{ padding:15px 25px; font-weight:bold; color:#333; font-size:.98rem; }
+
+.suggestion-item{
+  padding:15px 25px;
+  border-top:1px solid #f4f6fa;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  /* cheap transition — compositor-only */
+  transition:background-color 120ms linear;
+  width:100%;
+  contain:layout style paint;
 }
 
-.suggestion-item {
-  padding: 15px 25px;
-  border-top: 1px solid #f4f6fa;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all var(--transition);
-  width: 100%;
-}
+.suggestion-item:hover{ background:#f9f9f9; }
+.suggestion-body{ flex:1; word-break:break-word; }
 
-.suggestion-item:hover {
-  background: #F9F9F9;
-}
-
-.suggestion-body {
-  flex: 1;
-  word-break: break-word;
-}
-
-/* Select dropdowns - Heavily rounded */
+/* ─── Filter dropdowns ───────────────────────────── */
 #typeFilter,
 #categoryFilter{
   appearance:none;
@@ -224,36 +216,21 @@ body{
   font-family:inherit;
   cursor:pointer;
   outline:0;
-  transition:all var(--transition);
+  transition:border-color var(--transition), box-shadow var(--transition);
   background-image:linear-gradient(45deg,transparent 50%,rgba(15,34,53,.14) 50%),linear-gradient(135deg,rgba(15,34,53,.14) 50%,transparent 50%);
   background-position:calc(100% - 16px) 50%,calc(100% - 10px) 50%;
   background-size:6px 6px;
   background-repeat:no-repeat;
   letter-spacing:.3px;
   box-shadow:0 2px 8px rgba(6,14,30,.03);
-  user-select: none;
+  user-select:none;
 }
 
-#typeFilter:hover,
-#categoryFilter:hover{
-  border-color:rgba(19,180,127,.45);
-  background-color:rgba(19,180,127,.015);
-  box-shadow:0 4px 12px rgba(19,180,127,.08);
-}
+#typeFilter:hover,#categoryFilter:hover{ border-color:rgba(19,180,127,.45); box-shadow:0 4px 12px rgba(19,180,127,.08); }
+#typeFilter:focus,#categoryFilter:focus{ border-color:rgba(19,180,127,.8); box-shadow:0 8px 20px rgba(19,180,127,.14); background-color:var(--white); }
 
-#typeFilter:focus,
-#categoryFilter:focus{
-  border-color:rgba(19,180,127,.8);
-  box-shadow:0 8px 20px rgba(19,180,127,.14);
-  background-color:var(--white);
-}
-
-/* Results container */
-#searchResults{
-  padding:0;
-  margin:0;
-}
-
+/* ─── Results container ──────────────────────────── */
+#searchResults{ padding:0; margin:0; }
 
 .search-result-here{
   text-align:center;
@@ -265,16 +242,192 @@ body{
   letter-spacing:.2px;
 }
 
-/* Toast notification - Very rounded */
-#copyToast{
-  position:fixed;
-  top:24px;
-  right:24px;
-  z-index:10000;
+/* ─── Virtual Scroll containers ──────────────────── */
+/* vs-container: the full-height absolute positioning parent */
+.vs-container{
+  position:relative;
+  min-height:2px;
+  /* strict containment: layout+style+paint all isolated */
+  contain:layout style paint;
+}
+
+/* vs-item: wrapper for each virtualized card */
+.vs-item{
+  position:absolute;
+  left:0;
+  right:0;
+  /* isolate each card's repaint */
+  contain:layout style paint;
+}
+
+/* ─── SEARCH CARD ─────────────────────────────────── */
+/*
+ * Performance profile:
+ * • contain:layout style paint  → browser skips cards that don't affect outer layout
+ * • content-visibility:auto     → browser skips render for off-screen cards (native virtualization)
+ * • contain-intrinsic-size      → accurate scrollbar height estimate while cards are skipped
+ * NOTE: content-visibility is removed from vs-item children since VirtualScroll
+ *       manages visibility explicitly — applying both would be redundant.
+ */
+.search-card{
+  display:flex;
+  gap:12px;
+  align-items:flex-start;
+  padding:12px 14px;
+  border-radius:14px;
+  position:relative;
+  overflow:hidden;
+  min-height:56px;
+  /* Performance triple: */
+  contain:layout style paint;
+  /* content-visibility managed per context (see .vs-item override) */
+  content-visibility:auto;
+  contain-intrinsic-size:0 88px;  /* estimate; corrected by browser after render */
+}
+
+/* In virtual-scroll context, VS already handles visibility — disable CV */
+.vs-item .search-card{
+  content-visibility:visible;
+  contain-intrinsic-size:none;
+}
+
+.search-card .card-content{
+  flex:0 0 56px;
+  height:56px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:22px;
+  border-radius:10px;
+  background:linear-gradient(180deg, rgba(19,180,127,.06), rgba(19,180,127,.03));
+  color:var(--primary);
+  word-break:break-word;
+  padding:6px;
+  overflow:hidden;
+  text-align:center;
+  contain:layout style paint;
+}
+
+.search-card .card-body{
+  flex:1 1 auto;
+  min-width:0;
   display:flex;
   flex-direction:column;
-  gap:10px;
+  gap:6px;
 }
+
+.search-card .card-title{
+  font-size:15px;
+  font-weight:800;
+  color:var(--text-main);
+  line-height:1.2;
+  display:block;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.search-card .card-subtitle{
+  font-size:12px;
+  color:var(--text-secondary);
+  font-weight:600;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.search-card .card-tags{
+  display:flex;
+  gap:8px;
+  margin-top:4px;
+  flex-wrap:wrap;
+  contain:layout style;
+}
+
+.search-card .tag{
+  background:rgba(241,243,244,.9);
+  color:var(--text-secondary);
+  padding:5px 8px;
+  font-size:11px;
+  border-radius:999px;
+  font-weight:700;
+  border:1px solid rgba(230,235,240,.7);
+  white-space:nowrap;
+}
+
+.search-card .result-copy-btn{
+  position:absolute;
+  right:12px;
+  top:12px;
+  padding:6px 10px;
+  font-size:.92rem;
+  border-radius:10px;
+  /* compositor-only transition */
+  transition:opacity 140ms linear;
+  contain:layout style paint;
+}
+
+/* Spacing between cards */
+#searchResults .search-card + .search-card,
+.vs-item + .vs-item{ margin-top:0; }  /* VS handles spacing via top offset */
+
+/* ─── Vertical card variant ──────────────────────── */
+.search-card.vertical{
+  flex-direction:column;
+  align-items:stretch;
+  padding:12px;
+  min-height:auto;
+}
+
+.search-card.vertical .card-content{
+  flex:0 0 auto;
+  height:auto;
+  width:100%;
+  display:-webkit-box;
+  -webkit-line-clamp:3;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+  text-align:left;
+  padding:10px;
+  border-radius:10px;
+  margin-bottom:10px;
+}
+
+.search-card.vertical .card-title{
+  white-space:normal;
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+
+.search-card.vertical .result-copy-btn{
+  position:static;
+  margin-top:10px;
+  align-self:flex-end;
+}
+
+/* ─── Overlay ─────────────────────────────────────── */
+.search-overlay-backdrop,
+.search-overlay{
+  /* backdrop-filter removed from scroll path — expensive GPU layer */
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+}
+
+/* Scroll container: GPU-composited separate layer */
+.search-overlay-scrollable-content{
+  -webkit-overflow-scrolling:touch; /* iOS momentum scroll */
+  overscroll-behavior:contain;
+  /* GPU compositing — scroll happens on compositor, not main thread */
+  will-change:scroll-position;
+  /* Explicit layer promotion */
+  transform:translateZ(0);
+  contain:strict;
+}
+
+/* ─── Toast ──────────────────────────────────────── */
+#copyToast{ position:fixed; top:24px; right:24px; z-index:10000; display:flex; flex-direction:column; gap:10px; }
 
 .copy-toast-message{
   background:linear-gradient(135deg, var(--primary), var(--primary-dark));
@@ -285,16 +438,18 @@ body{
   font-size:.97rem;
   font-weight:750;
   box-shadow:0 10px 28px rgba(12,140,94,.2);
+  /* GPU animation — opacity+transform only */
   animation:toastSlide 260ms cubic-bezier(.25,.8,.35,1);
   letter-spacing:.3px;
+  contain:layout style paint;
 }
 
 @keyframes toastSlide{
-  from{opacity:0;transform:translateX(120px)}
-  to{opacity:1;transform:translateX(0)}
+  from{ opacity:0; transform:translateX(120px); }
+  to  { opacity:1; transform:translateX(0); }
 }
 
-/* Footer - Heavy rounded top */
+/* ─── Footer ─────────────────────────────────────── */
 .search-footer{
   width:100%;
   background:var(--white);
@@ -311,543 +466,86 @@ body{
   letter-spacing:.2px;
 }
 
-.footer-content{
-  max-width:1300px;
-  margin:0 auto;
+.footer-content{ max-width:1300px; margin:0 auto; }
+
+/* ─── No result ──────────────────────────────────── */
+.no-result{
+  margin-top:48px;
+  padding:32px;
+  border-radius:18px;
+  background:transparent;
+  color:var(--text-muted);
 }
 
-/* ===== RESPONSIVE ===== */
-
-/* Tablet 1024px and below */
+/* ─── Responsive: Tablet ─────────────────────────── */
 @media(max-width:1024px){
-  .search-main-layout{
-    grid-template-columns:1fr;
-    gap:22px;
-    padding:0 12px;
-    margin:24px auto;
-  }
-
-  .search-filters-panel{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:16px;
-    position:static;
-    top:auto;
-    padding:18px;
-    border-radius:28px;
-    box-shadow:0 2px 12px rgba(6,14,30,.04);
-  }
-
-  .filter-section{
-    gap:9px;
-  }
-
-  #typeFilter,
-  #categoryFilter{
-    border-radius:20px;
-    padding:12px 36px 12px 14px;
-  }
-
-  .result-item{
-    border-radius:26px;
-    padding:18px 18px 18px 24px;
-  }
-
-  .result-copy-btn{
-    border-radius:14px;
-    padding:8px 12px;
-    font-size:.94rem;
-  }
-
-  .no-result,
-  .search-result-here{
-    border-radius:26px;
-    margin-top:48px;
-    padding:32px 24px;
-  }
+  .search-main-layout{ grid-template-columns:1fr; gap:22px; padding:0 12px; margin:24px auto; }
+  .search-filters-panel{ display:grid; grid-template-columns:1fr 1fr; gap:16px; position:static; padding:18px; border-radius:28px; }
+  .filter-section{ gap:9px; }
+  #typeFilter,#categoryFilter{ border-radius:20px; padding:12px 36px 12px 14px; }
 }
 
-/* Mobile 768px and below */
+/* ─── Responsive: Mobile ─────────────────────────── */
 @media(max-width:768px){
-  .search-header{
-    padding:14px 11px 9px;
-    border-bottom-left-radius:40px;
-    border-bottom-right-radius:40px;
-  }
-
-  .search-input-wrapper{
-    border-radius:32px;
-    padding:10px 14px;
-  }
-
-  .search-input-icon{
-    width:36px;
-    height:36px;
-    left:14px;
-    border-radius:20px;
-  }
-
-  .search-input-icon svg{
-    width:17px;
-    height:17px;
-  }
-
-  #searchInput{
-    padding:11px 14px 11px 56px;
-    font-size:1.01rem;
-  }
-
-  .search-main-layout{
-    grid-template-columns:1fr;
-    gap:12px;
-    padding:10px 10px 0;
-    margin:10px auto 0;
-  }
-
-  .search-filters-panel{
-    grid-template-columns:1fr 1fr;
-    gap:10px;
-    padding:12px;
-    border-radius:26px;
-    top:auto;
-    position:static;
-    box-shadow:0 2px 8px rgba(6,14,30,.03);
-  }
-
-  .filter-group-label{
-    font-size:.8rem;
-  }
-
-  #typeFilter,
-  #categoryFilter{
-    padding:11px 32px 11px 12px;
-    font-size:.95rem;
-    height:40px;
-    border-radius:18px;
-  }
-
-  #searchResults{
-    padding:0 2px;
-  }
-
-  .result-item{
-    padding:14px 14px 14px 18px;
-    padding-right:14px;
-    margin-bottom:12px;
-    border-radius:24px;
-  }
-
-  .result-content-area{
-    margin-left:6px;
-    gap:7px;
-  }
-
-  .result-text{
-    font-size:1.04rem;
-  }
-
-  .result-names{
-    font-size:.93rem;
-  }
-
-  .result-api{
-    padding:6px 11px;
-    font-size:.88rem;
-    border-radius:14px;
-  }
-
-  .result-meta{
-    gap:9px;
-    font-size:.87rem;
-  }
-
-  .result-meta-label{
-    padding:6px 11px;
-    border-radius:16px 0 0 16px;
-  }
-
-  .result-meta-label+.result-meta-value{
-    padding:6px 11px;
-    border-radius:0 16px 16px 0;
-  }
-
-  .result-meta-value:not(.result-meta-label+.result-meta-value){
-    padding:6px 11px;
-    border-radius:16px;
-  }
-
-  .result-copy-btn{
-    position:static;
-    background:linear-gradient(135deg, #f5f9fb, #eef7f2);
-    color:var(--primary-light);
-    border:1.5px solid rgba(19,180,127,.13);
-    margin-top:10px;
-    align-self:flex-start;
-    box-shadow:none;
-    padding:7px 11px;
-    font-size:.92rem;
-    border-radius:12px;
-  }
-
-  .result-text-area{
-    flex-direction:column;
-    align-items:flex-start;
-    gap:10px;
-  }
-
-  .no-result,
-  .search-result-here{
-    margin-top:44px;
-    padding:28px 20px;
-    font-size:1.03rem;
-    border-radius:24px;
-  }
-
-  .search-footer{
-    margin-top:44px;
-    padding:16px 11px;
-    font-size:.94rem;
-    border-top-left-radius:40px;
-    border-top-right-radius:40px;
-  }
-
-  #copyToast{
-    top:14px;
-    right:14px;
-  }
-
-  .copy-toast-message{
-    min-width:128px;
-    padding:10px 14px;
-    font-size:.93rem;
-    border-radius:16px;
-  }
-}
-
-/* Small mobile 480px and below */
-@media(max-width:480px){
-  body{font-size:15px}
-
-  .search-header{
-    padding:2px 10px 5px 10px;
-    border-bottom-left-radius:32px;
-    border-bottom-right-radius:32px;
-  }
-
-  .search-input-wrapper{
-    border-radius:28px;
-    padding:9px 11px;
-  }
-
-  .search-input-icon{
-    width:32px;
-    height:32px;
-    left:11px;
-    border-radius:18px;
-  }
-
-  .search-input-icon svg{
-    width:16px;
-    height:16px;
-  }
-
-  #searchInput{
-    padding:10px 12px 10px 50px;
-    font-size:.99rem;
-  }
-
-  #searchInput::placeholder{
-    font-size:.92rem;
-  }
-
-  .search-main-layout{
-    gap:9px;
-    padding:9px 9px 0;
-    margin:8px auto 0;
-  }
-
-  .search-filters-panel{
-    gap:8px;
-    padding:10px;
-    border-radius:24px;
-  }
-
-  .filter-group-label{
-    font-size:.78rem;
-  }
-
-  #typeFilter,
-  #categoryFilter{
-    padding:10px 28px 10px 10px;
-    font-size:.92rem;
-    border-radius:16px;
-  }
-
-  .result-item{
-    padding:11px 11px 11px 15px;
-    margin-bottom:9px;
-    border-radius:22px;
-  }
-
-  .result-item::before{
-    border-radius:0 5px 5px 0;
-  }
-
-  .result-content-area{
-    gap:5px;
-  }
-
-  .result-text{
-    font-size:.99rem;
-  }
-
-  .result-names{
-    font-size:.89rem;
-  }
-
-  .result-api{
-    padding:5px 9px;
-    font-size:.82rem;
-    border-radius:12px;
-  }
-
-  .result-meta{
-    gap:7px;
-    font-size:.82rem;
-    margin-top:1px;
-  }
-
-  .result-meta-label{
-    padding:5px 9px;
-    border-radius:14px 0 0 14px;
-  }
-
-  .result-meta-label+.result-meta-value{
-    padding:5px 9px;
-    border-radius:0 14px 14px 0;
-  }
-
-  .result-meta-value:not(.result-meta-label+.result-meta-value){
-    padding:5px 9px;
-    border-radius:14px;
-  }
-
-  .result-copy-btn{
-    padding:6px 9px;
-    font-size:.87rem;
-    gap:4px;
-    border-radius:10px;
-  }
-
-  .no-result,
-  .search-result-here{
-    margin-top:36px;
-    padding:20px 16px;
-    font-size:.99rem;
-    border-radius:22px;
-  }
-
-  .search-footer{
-    margin-top:36px;
-    padding:12px 9px;
-    font-size:.9rem;
-    border-top-left-radius:32px;
-    border-top-right-radius:32px;
-  }
-
-  #copyToast{
-    top:11px;
-    right:11px;
-    gap:7px;
-  }
-
-  .copy-toast-message{
-    min-width:118px;
-    padding:9px 12px;
-    font-size:.89rem;
-    border-radius:14px;
-  }
-}
-
-/* Accessibility */
-@media(prefers-reduced-motion:reduce){
-  *{animation:none !important;transition:none !important}
-}
-
-@media print{
-  .search-header,.search-filters-panel,.result-copy-btn,#copyToast,.search-footer{display:none}
-  .search-main-layout{margin:0;padding:0}
-  .result-item{page-break-inside:avoid}
-}
-
-/* ===========================
-   NEW: Compact "Search Card" styles
-   Based on beta.html design but adapted to Fantrove theme.
-   Keep .result-item present for compatibility; .search-card provides new compact appearance.
-   =========================== */
-
-.search-card{
-  display:flex;
-  gap:12px;
-  align-items:flex-start;
-  padding:12px 14px;
-  border-radius:14px;
-  /*background:linear-gradient(180deg, #fff, #fcfffd);
-  border:1px solid rgba(220,230,235,.75);
-  box-shadow:0 6px 18px rgba(12,14,30,.04);*/
-  position:relative;
-  overflow:hidden;
-  min-height:56px;
-}
-
-/* prominent content box on the left (emoji / small preview) */
-.search-card .card-content{
-  flex:0 0 56px;
-  height:56px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:22px;
-  border-radius:10px;
-  background:linear-gradient(180deg, rgba(19,180,127,.06), rgba(19,180,127,.03));
-  color:var(--primary);
-  box-shadow:inset 0 -1px 0 rgba(0,0,0,.02);
-  word-break:break-word;
-  padding:6px;
-  overflow:hidden;
-  text-align:center;
-}
-
-/* main body */
-.search-card .card-body{
-  flex:1 1 auto;
-  min-width:0;
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
-
-/* title (primary) */
-.search-card .card-title{
-  font-size:15px;
-  font-weight:800;
-  color:var(--text-main);
-  line-height:1.2;
-  display:block;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-
-/* subtitle (secondary) */
-.search-card .card-subtitle{
-  font-size:12px;
-  color:var(--text-secondary);
-  font-weight:600;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-
-/* tags row */
-.search-card .card-tags{
-  display:flex;
-  gap:8px;
-  margin-top:4px;
-  flex-wrap:wrap;
-}
-
-.search-card .tag{
-  background:rgba(241,243,244,.9);
-  color:var(--text-secondary);
-  padding:5px 8px;
-  font-size:11px;
-  border-radius:999px;
-  font-weight:700;
-  border:1px solid rgba(230,235,240,.7);
-}
-
-/* make copy button smaller and anchored bottom-right on wide screens */
-.search-card .result-copy-btn{
-  position:absolute;
-  right:12px;
-  top:12px;
-  padding:6px 10px;
-  font-size:0.92rem;
-  border-radius:10px;
-  box-shadow:0 6px 18px rgba(12,14,30,.04);
-}
-
-/* ===========================
-   SMART LAYOUT: vertical variant when card-content is long/overflow
-   =========================== */
-
-/* vertical layout: content on top, body below */
-.search-card.vertical{
-  flex-direction:column;
-  align-items:stretch;
-  padding:12px;
-  min-height:auto;
-}
-
-.search-card.vertical .card-content{
-  flex:0 0 auto;
-  height:auto;
-  width:100%;
-  display:block;
-  text-align:left;
-  padding:10px;
-  border-radius:10px;
-  margin-bottom:10px;
-  white-space:normal;
-  -webkit-line-clamp:3;
-  -webkit-box-orient:vertical;
-  display:-webkit-box;
-  overflow:hidden;
-}
-
-.search-card.vertical .card-body{
-  padding-top:0;
-}
-
-.search-card.vertical .card-title{
-  white-space:normal;
-  display:block;
-  -webkit-line-clamp:2;
-  -webkit-box-orient:vertical;
-  display:-webkit-box;
-  overflow:hidden;
-}
-
-.search-card.vertical .result-copy-btn{
-  position:static;
-  margin-top:10px;
-  align-self:flex-end;
-  box-shadow:none;
-}
-
-/* responsive adjustments */
-@media (max-width:768px){
-  .search-card{
-    padding:10px;
-    gap:10px;
-  }
-  .search-card .card-content{
-    flex:0 0 48px;
-    height:48px;
-    font-size:20px;
-  }
-  .search-card .card-title{
-    font-size:14px;
-  }
+  .search-header{ padding:14px 11px 9px; border-bottom-left-radius:40px; border-bottom-right-radius:40px; }
+  .search-input-wrapper{ border-radius:32px; padding:10px 14px; }
+  .search-input-icon{ width:36px; height:36px; left:14px; border-radius:20px; }
+  .search-input-icon svg{ width:17px; height:17px; }
+  #searchInput{ padding:11px 14px 11px 56px; font-size:1.01rem; }
+  .search-main-layout{ grid-template-columns:1fr; gap:12px; padding:10px 10px 0; margin:10px auto 0; }
+  .search-filters-panel{ grid-template-columns:1fr 1fr; gap:10px; padding:12px; border-radius:26px; position:static; }
+  .filter-group-label{ font-size:.8rem; }
+  #typeFilter,#categoryFilter{ padding:11px 32px 11px 12px; font-size:.95rem; height:40px; border-radius:18px; }
+  .search-card .card-content{ flex:0 0 48px; height:48px; font-size:20px; }
+  .search-card .card-title{ font-size:14px; }
   .search-card .card-subtitle{ font-size:11px; }
-  .search-card .result-copy-btn{
-    position:static;
-    margin-top:8px;
-    align-self:flex-start;
-  }
+  .search-card .result-copy-btn{ position:static; margin-top:8px; align-self:flex-start; }
+  .search-card.vertical .card-content{ -webkit-line-clamp:4; }
+  .no-result,.search-result-here{ margin-top:44px; padding:28px 20px; }
+  .search-footer{ margin-top:44px; padding:16px 11px; border-top-left-radius:40px; border-top-right-radius:40px; }
+  #copyToast{ top:14px; right:14px; }
+  .copy-toast-message{ min-width:128px; padding:10px 14px; font-size:.93rem; border-radius:16px; }
+}
 
-  .search-card.vertical .card-content{
-    -webkit-line-clamp:4;
+/* ─── Responsive: Small mobile ───────────────────── */
+@media(max-width:480px){
+  body{ font-size:15px; }
+  .search-header{ padding:2px 10px 5px; border-bottom-left-radius:32px; border-bottom-right-radius:32px; }
+  .search-input-wrapper{ border-radius:28px; padding:9px 11px; }
+  .search-input-icon{ width:32px; height:32px; left:11px; border-radius:18px; }
+  .search-input-icon svg{ width:16px; height:16px; }
+  #searchInput{ padding:10px 12px 10px 50px; font-size:.99rem; }
+  .search-main-layout{ gap:9px; padding:9px 9px 0; margin:8px auto 0; }
+  .search-filters-panel{ gap:8px; padding:10px; border-radius:24px; }
+  .filter-group-label{ font-size:.78rem; }
+  #typeFilter,#categoryFilter{ padding:10px 28px 10px 10px; font-size:.92rem; border-radius:16px; }
+  .no-result,.search-result-here{ margin-top:36px; padding:20px 16px; font-size:.99rem; border-radius:22px; }
+  .search-footer{ margin-top:36px; padding:12px 9px; border-top-left-radius:32px; border-top-right-radius:32px; }
+  #copyToast{ top:11px; right:11px; gap:7px; }
+  .copy-toast-message{ min-width:118px; padding:9px 12px; font-size:.89rem; border-radius:14px; }
+}
+
+/* ─── Accessibility ──────────────────────────────── */
+@media(prefers-reduced-motion:reduce){
+  *, .search-card, .copy-toast-message, .search-input-wrapper{
+    animation:none !important;
+    transition:none !important;
+    transform:none !important;
   }
+}
+
+/* ─── Print ──────────────────────────────────────── */
+@media print{
+  .search-header,.search-filters-panel,.result-copy-btn,#copyToast,.search-footer{ display:none; }
+  .search-main-layout{ margin:0; padding:0; }
+  .search-card{ page-break-inside:avoid; contain:none; content-visibility:visible; }
+}
+
+/* ─── Feature fallback ───────────────────────────── */
+@supports not (content-visibility:auto){
+  .search-card{ content-visibility:visible; }
+}
+
+@supports not (contain:strict){
+  .search-overlay-scrollable-content{ contain:none; }
 }
