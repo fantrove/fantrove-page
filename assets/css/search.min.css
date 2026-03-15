@@ -235,7 +235,12 @@ body{
 #typeFilter:focus,#categoryFilter:focus{ border-color:rgba(19,180,127,.8); box-shadow:0 8px 20px rgba(19,180,127,.14); background-color:var(--white); }
 
 /* ─── Results container ──────────────────────────── */
-#searchResults{ padding:0; margin:0; }
+#searchResults{
+  padding:0;
+  margin:0;
+  /* Clip any stray horizontal overflow from cards */
+  overflow-x:hidden;
+}
 
 .search-result-here{
   text-align:center;
@@ -287,9 +292,13 @@ body{
   position:relative;
   overflow:hidden;
   min-height:56px;
+  /* Prevent card from stretching beyond its container on any viewport */
+  width:100%;
+  max-width:100%;
+  box-sizing:border-box;
   contain:layout style paint;
   content-visibility:auto;
-  contain-intrinsic-size:auto 96px;   /* ← was: 0 88px */
+  contain-intrinsic-size:auto 96px;
 }
 
 /* In virtual-scroll context, VS already handles visibility — disable CV */
@@ -358,6 +367,9 @@ body{
   gap:8px;
   margin-top:4px;
   flex-wrap:wrap;
+  /* Hard cap: tag row never escapes card-body width */
+  max-width:100%;
+  overflow:hidden;
   contain:layout style;
 }
 
@@ -370,7 +382,9 @@ body{
   font-weight:700;
   border:1px solid rgba(230,235,240,.7);
   white-space:nowrap;
-  max-width:18ch;
+  /* min() clamps to narrower of 16ch OR 45% of card-body so tag never
+     exceeds half the available width on any screen size */
+  max-width:min(16ch, 45%);
   overflow:hidden;
   text-overflow:ellipsis;
 }
@@ -513,6 +527,8 @@ body{
   .search-card .card-content{ flex:0 0 48px; height:48px; font-size:20px; }
   .search-card .card-title{ font-size:14px; }
   .search-card .card-subtitle{ font-size:11px; }
+  /* Button is static on mobile — padding-right reserved for absolute btn is no longer needed */
+  .search-card .card-body{ padding-right:0; }
   .search-card .result-copy-btn{ position:static; margin-top:8px; align-self:flex-start; }
   .search-card.vertical .card-content{ -webkit-line-clamp:4; }
   .no-result,.search-result-here{ margin-top:44px; padding:28px 20px; }

@@ -138,9 +138,12 @@
   border-radius:16px;
   min-height:64px;
   background:var(--card-bg);
+  width:100%;
+  max-width:100%;
+  box-sizing:border-box;
   contain:layout style paint;
   content-visibility:auto;
-  contain-intrinsic-size:auto 96px;   /* ← was: 0 88px */
+  contain-intrinsic-size:auto 96px;
   transition:transform 160ms ease;
 }
 
@@ -202,7 +205,8 @@
   margin-top:6px;
   flex-wrap:wrap;
   align-items:center;
-  /* compositor-safe opacity transition preserved */
+  max-width:100%;
+  overflow:hidden;
   transition:opacity 140ms linear;
   contain:layout style paint;
 }
@@ -219,8 +223,7 @@
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
-  /* individual tag still clips its own text if extremely long */
-  max-width:18ch;
+  max-width:min(16ch, 45%);
 }
 
 /* ─── Copy button ────────────────────────────────── */
@@ -279,11 +282,13 @@
   .search-card .card-content{ flex:0 0 56px; height:56px; font-size:22px; }
   .search-card .card-title{ font-size:1rem; }
   .search-card .card-subtitle{ font-size:.92rem; }
+  /* Button is static on mobile — release the padding reserved for absolute btn */
+  .search-card .card-body{ padding-right:0; }
   /* On mobile, position:static for copy button (touch-friendly) */
   .search-card .result-copy-btn{ position:static; margin-top:8px; align-self:flex-start; }
   /* Slightly larger fallback estimate for mobile tags (may wrap earlier) */
   .search-card{
-    contain-intrinsic-size:auto 88px;   /* ← was: 0 72px */
+    contain-intrinsic-size:auto 88px;
   }
 }
 
