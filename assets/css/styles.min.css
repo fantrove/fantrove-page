@@ -1,3 +1,27 @@
+/*
+  styles.min.css  v3.2 — Search-Aligned CSS Containment
+  ──────────────────────────────────────────────────────
+  New in v3.2 (aligned with search-system technology):
+
+  .card
+    + contain: layout style paint    → isolates repaint/reflow per card
+    + content-visibility: auto       → browser skips off-screen cards natively
+    + contain-intrinsic-size: auto N → accurate scroll metrics when skipped
+
+  :where(.button-content)
+    + contain: layout style paint    → isolates button repaint
+
+  .card-content-container
+  .button-content-container
+    + contain: layout style          → isolates group-level layout
+
+  #main-buttons-container
+  #sub-buttons-container
+    + transform: translateZ(0)       → GPU compositor layer (same as search overlay)
+    + will-change: scroll-position   → horizontal scroll on compositor thread
+    + -webkit-overflow-scrolling     → iOS momentum scroll
+*/
+
 :root {
   --app-theme-indigo: #00CEB0;
   --app-theme-indigo-hover: #54CBAB;
@@ -62,9 +86,7 @@ main {
 
 /* ========== HI / HJ ========== */
 
-.hi {
-  padding: 0 10px;
-}
+.hi { padding: 0 10px; }
 
 .hj {
   border-radius: 40px;
@@ -107,6 +129,14 @@ main {
     transform 200ms cubic-bezier(0.4, 0, 0.2, 1),
     border-color 0.18s,
     color 0.18s;
+
+  /*
+   * CSS Containment — same as search-card
+   * contain: layout style paint isolates each button's repaint from siblings.
+   * No content-visibility here: buttons live in a horizontal flex container
+   * where all are visible simultaneously, so browser skip would be wrong.
+   */
+  contain: layout style paint;
 }
 
 :where(.button-content:hover) {
@@ -144,6 +174,22 @@ main {
     border-color var(--app-motion-natural),
     box-shadow var(--app-motion-natural),
     transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /*
+   * CSS Containment triple — same as .search-card
+   * ─────────────────────────────────────────────
+   * contain: layout style paint
+   *   → browser skips cards that don't affect outer layout/paint
+   * content-visibility: auto
+   *   → browser entirely skips render of off-screen cards (native virtualization)
+   * contain-intrinsic-size: auto 222px
+   *   → "auto" tells browser to remember last actual height after first render
+   *     so scrollbar stays accurate even when cards are skipped.
+   *     222px is the fallback for the first render pass (matches max-height).
+   */
+  contain: layout style paint;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 222px;
 }
 
 :where(.card > *) {
@@ -220,7 +266,17 @@ main {
   scrollbar-width: none;
   -ms-overflow-style: none;
   overscroll-behavior-x: contain;
+
+  /*
+   * GPU-composited horizontal scroll — identical to search overlay technique.
+   * transform:translateZ(0) promotes these containers to their own compositor
+   * layers so scrolling never touches the main thread.
+   * will-change:scroll-position hints to browser to prepare the GPU layer early.
+   * -webkit-overflow-scrolling:touch enables iOS momentum scroll.
+   */
   -webkit-overflow-scrolling: touch;
+  will-change: scroll-position;
+  transform: translateZ(0);
 }
 
 #main-buttons-container {
@@ -256,6 +312,12 @@ main {
   color: var(--app-text-heading);
 }
 
+/*
+ * Content group containers
+ * contain: layout style  — isolate group layout from page layout.
+ * (No paint isolation here: groups are opaque white blocks — paint
+ * boundary is already at the wrapper level.)
+ */
 .card-content-container,
 .button-content-container {
   display: flex !important;
@@ -266,6 +328,7 @@ main {
   justify-content: center !important;
   align-items: center !important;
   border-radius: 25px;
+  contain: layout style;
 }
 
 .button-content-container {
@@ -288,15 +351,8 @@ main {
   animation: fadeOut 0.25s ease-out forwards;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-@keyframes fadeOut {
-  from { opacity: 1; }
-  to   { opacity: 0; }
-}
+@keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
 
 /* ========== RESPONSIVE ========== */
 
@@ -323,34 +379,27 @@ main {
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
+  /* Disable GPU compositing hints on reduced-motion environments */
+  #main-buttons-container,
+  #sub-buttons-container {
+    will-change: auto;
+    transform: none;
+  }
+  :where(.card) {
+    transition: none !important;
+    transform: none !important;
+  }
 }
 
 /* ========== SCROLLBAR ========== */
 
-::-webkit-scrollbar {
-  height: 7px;
-  width: 7px;
-  background: #f6f7fb;
-  border-radius: 6px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #e0e7f2;
-  border-radius: 6px;
-  transition: background 0.10s;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #c8d0e7;
-}
+::-webkit-scrollbar          { height: 7px; width: 7px; background: #f6f7fb; border-radius: 6px; }
+::-webkit-scrollbar-thumb    { background: #e0e7f2; border-radius: 6px; transition: background 0.10s; }
+::-webkit-scrollbar-thumb:hover { background: #c8d0e7; }
 
 /* ========== IMAGE WRAPPER ========== */
 
-.img-d1 {
-  padding: 0 30px;
-  z-index: -2;
-}
-
+.img-d1 { padding: 0 30px; z-index: -2; }
 .img-d1 img {
   width: 100%;
   border-radius: 25px;
@@ -358,10 +407,37 @@ main {
   image-rendering: crisp-edges;
 }
 
-/* ========== FALLBACK FOR OLD BROWSERS ========== */
+/* ========== FEATURE FALLBACKS ========== */
+
+/*
+ * Browsers that don't support content-visibility:auto (Safari < 17, older Firefox)
+ * fall back to always-visible rendering — behavior unchanged, just no skip optimisation.
+ */
 @supports not (content-visibility: auto) {
-  .button-content,
-  .card {
+  :where(.card) {
     content-visibility: visible;
+    contain-intrinsic-size: none;
+  }
+}
+
+/*
+ * Browsers that don't support contain:strict (very old WebKit)
+ * fall back to no containment on containers.
+ */
+@supports not (contain: layout style) {
+  .card-content-container,
+  .button-content-container {
+    contain: none;
+  }
+  :where(.button-content) {
+    contain: none;
+  }
+}
+
+/* Browsers without will-change support */
+@supports not (will-change: scroll-position) {
+  #main-buttons-container,
+  #sub-buttons-container {
+    will-change: auto;
   }
 }

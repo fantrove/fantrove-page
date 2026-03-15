@@ -7,14 +7,12 @@
 
 /* ---------- ROOT VARIABLES ---------- */
 :root {
-  /* Colors */
   --primary-color: #FFFFFF;
   --background-color: #FFFFFF;
   --text-color: #52638a;
   --text-primary: #00CEB0;
   --text-secondary: #52638a;
 
-  /* Nav */
   --hover-color: rgba(19, 180, 127, 0.08);
   --nav-bg-color: var(--background-color);
   --nav-hover-bg: rgba(255, 255, 255, 0.12);
@@ -28,13 +26,8 @@
   --nav-underline-color: #ffffff;
   --nav-button-radius: 25px;
 
-  /* Transition */
   --transition-fast: 0.2s ease;
-
-  /* Shadow */
   --shadow-color: rgba(0, 0, 0, 0.05);
-
-  /* Loading */
   --loading-bg: #fff;
   --spinner-primary: #4285f4;
   --spinner-secondary: #eee;
@@ -55,6 +48,8 @@ header {
   width: 100%;
   background: var(--background-color);
   margin-bottom: 30px;
+  /* Isolate header layer — same contain pattern as search header */
+  contain: layout style paint;
 }
 
 .logo {
@@ -98,6 +93,18 @@ nav ul {
   white-space: nowrap;
   scrollbar-width: none;
   border-bottom: 0.8px solid rgba(19, 180, 127, 0.3);
+
+  /*
+   * GPU-composited scroll — same technique as search overlay scroll container.
+   * transform:translateZ(0) promotes nav to its own compositor layer so
+   * horizontal scrolling runs on the compositor thread (zero main-thread jank).
+   * overscroll-behavior:contain prevents swipe-back on iOS / Chrome Android.
+   * -webkit-overflow-scrolling:touch enables momentum scroll on older iOS.
+   */
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  will-change: scroll-position;
+  transform: translateZ(0);
 }
 
 nav ul::-webkit-scrollbar {
@@ -124,6 +131,8 @@ nav ul li button {
   white-space: nowrap;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+  /* Isolate button repaint — same as search suggestion-item */
+  contain: layout style paint;
 }
 
 nav ul li button:hover {
@@ -179,14 +188,8 @@ nav ul li button.active::after {
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(-20px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* ---------- LOADING SPINNER ---------- */
@@ -205,17 +208,8 @@ nav ul li button.active::after {
   visibility: visible;
 }
 
-.content-loading-fade-in {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-}
-
-.content-loading-fade-out {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
+.content-loading-fade-in  { opacity: 1; visibility: visible;  pointer-events: auto; }
+.content-loading-fade-out { opacity: 0; visibility: hidden; pointer-events: none; }
 
 .spinner-svg {
   display: flex;
@@ -224,22 +218,9 @@ nav ul li button.active::after {
   margin-bottom: 14px;
 }
 
-.spinner-svg svg {
-  width: 48px;
-  height: 48px;
-}
-
-.spinner-svg-bg {
-  stroke: var(--spinner-secondary);
-  stroke-width: 6;
-}
-
-.spinner-svg-fg {
-  stroke: var(--spinner-primary);
-  stroke-width: 6;
-  stroke-linecap: round;
-  transform-origin: 50% 50%;
-}
+.spinner-svg svg      { width: 48px; height: 48px; }
+.spinner-svg-bg       { stroke: var(--spinner-secondary); stroke-width: 6; }
+.spinner-svg-fg       { stroke: var(--spinner-primary); stroke-width: 6; stroke-linecap: round; transform-origin: 50% 50%; }
 
 .loading-message {
   font-size: 0.82rem;
@@ -249,160 +230,63 @@ nav ul li button.active::after {
   margin-top: 0;
 }
 
-/* ---------- RESPONSIVE FONT SIZES ---------- */
-@media (min-width: 600px) {
-  body {
-    font-size: 16px;
-  }
-  nav {
-    margin-top: 5px;
-  }
-}
-
-@media (min-width: 768px) {
-  body {
-    font-size: 16px;
-  }
-}
-
-@media (min-width: 1024px) {
-  body {
-    font-size: 16px;
-  }
-  nav {
-    margin-top: 5px;
-  }
-}
-
-@media (min-width: 1280px) {
-  body {
-    font-size: 16px;
-  }
-}
-
-@media (min-width: 1440px) {
-  body {
-    font-size: 16px;
-  }
-}
-
-@media (min-width: 1920px) {
-  body {
-    font-size: 16px;
-  }
-}
+/* ---------- RESPONSIVE ---------- */
+@media (min-width: 600px)  { body { font-size: 16px; } nav { margin-top: 5px; } }
+@media (min-width: 768px)  { body { font-size: 16px; } }
+@media (min-width: 1024px) { body { font-size: 16px; } nav { margin-top: 5px; } }
+@media (min-width: 1280px) { body { font-size: 16px; } }
+@media (min-width: 1440px) { body { font-size: 16px; } }
+@media (min-width: 1920px) { body { font-size: 16px; } }
 
 /* ---------- ULTRA LOW-END OPTIMIZATIONS ---------- */
-
-/* ปิดทุก transition บนอุปกรณ์ที่ตั้งค่าไม่เอา animation */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  
-  .error-message {
-    animation: none !important;
-    opacity: 1;
-  }
+  .error-message { animation: none !important; opacity: 1; }
+  /* Disable GPU-compositing hints on reduced-motion devices (usually e-ink / assistive) */
+  nav ul { will-change: auto; transform: none; }
 }
 
-/* ปิดทุก effect บนอุปกรณ์สเปคต่ำ */
 @media (update: slow), (max-device-pixel-ratio: 1.5) {
-  .logo {
-    text-shadow: none !important;
-  }
-  
-  nav ul li button {
-    transition: none !important;
-  }
-  
-  .error-message {
-    animation: none !important;
-    opacity: 1;
-  }
-  
-  .content-loading-spinner {
-    transition: none !important;
-  }
+  .logo { text-shadow: none !important; }
+  nav ul li button { transition: none !important; }
+  .error-message { animation: none !important; opacity: 1; }
+  .content-loading-spinner { transition: none !important; }
 }
 
-/* ปรับสำหรับหน้าจอเล็กสุด */
 @media (max-width: 320px), (max-height: 480px) {
-  .logo {
-    font-size: 20px;
-    padding: 15px 0 0;
-  }
-  
-  nav ul li button {
-    padding: 8px 10px;
-    font-size: 0.85em;
-  }
-  
-  .navbar-toggle {
-    left: 12px;
-    top: 20px;
-  }
-  
-  .error-message {
-    right: 10px;
-    padding: 10px 15px;
-    font-size: 0.9em;
-  }
+  .logo { font-size: 20px; padding: 15px 0 0; }
+  nav ul li button { padding: 8px 10px; font-size: 0.85em; }
+  .navbar-toggle { left: 12px; top: 20px; }
+  .error-message { right: 10px; padding: 10px 15px; font-size: 0.9em; }
 }
 
-/* ปรับสำหรับ Android รุ่นเก่าและ RAM น้อย */
 @media (hover: none) and (pointer: coarse) {
-  nav ul li button {
-    transition: none !important;
-  }
-  
-  nav ul li button:active {
-    opacity: 0.8;
-  }
-  
-  .navbar-toggle:active {
-    opacity: 0.7;
-  }
+  nav ul li button { transition: none !important; }
+  nav ul li button:active { opacity: 0.8; }
+  .navbar-toggle:active { opacity: 0.7; }
 }
 
-/* ปิด text-shadow บนอุปกรณ์ที่มีปัญหา rendering */
 @supports not (text-shadow: 0 0 3px rgba(0, 255, 171, 0.5)) {
-  .logo {
-    text-shadow: none;
-  }
+  .logo { text-shadow: none; }
 }
 
-/* ปรับสำหรับ e-ink devices และ monochrome */
 @media (monochrome: 1), (prefers-contrast: high) {
-  .logo {
-    text-shadow: none;
-    color: #000;
-  }
-  
-  nav ul li button.active {
-    border-width: 2px;
-    border-color: #000;
-  }
+  .logo { text-shadow: none; color: #000; }
+  nav ul li button.active { border-width: 2px; border-color: #000; }
 }
 
-/* ปรับสำหรับ print mode */
 @media print {
-  header,
-  nav,
-  .navbar-toggle,
-  .content-loading-spinner {
-    display: none !important;
-  }
-  
-  .error-message {
-    position: static;
-    box-shadow: none;
-    border: 1px solid #000;
-    animation: none !important;
-  }
+  header, nav, .navbar-toggle, .content-loading-spinner { display: none !important; }
+  .error-message { position: static; box-shadow: none; border: 1px solid #000; animation: none !important; }
+}
+
+/* ---------- FEATURE FALLBACK ---------- */
+/* Older browsers that don't support will-change / transform compositing hints */
+@supports not (will-change: scroll-position) {
+  nav ul { will-change: auto; }
 }
