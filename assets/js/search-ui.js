@@ -91,6 +91,11 @@
     },
     STORAGE : { historyKey: 'searchHistory_v1', langKey: 'selectedLang' },
     DB      : { path: '/assets/db/db.min.json' },   // fallback only
+    PERF    : {
+      enabled            : false,   // off by default — enable via __searchUI.perf.enable()
+      longTaskThresholdMs: 50,       // tasks longer than this are flagged
+      maxMeasures        : 200,      // cap stored measures to prevent memory growth
+    },
     LANG    : { default: 'en', autoDetect: true },
     TEXTS: {
       th: {
@@ -614,6 +619,152 @@
   };
 
   // =========================================================
+  // PERF MONITOR  — lightweight, opt-in, zero overhead when disabled
+  // =========================================================
+  //
+  //  Usage:
+  //    __searchUI.perf.enable()           → start collecting
+  //    __searchUI.perf.disable()          → stop collecting
+  //    __searchUI.perf.getReport()        → { measures, datasetSize, indexReady, longTasks }
+  //    __searchUI.perf.reset()            → clear stored data
+  //    __searchUI.perf.log()              → pretty-print report to console
+  //
+  //  Automatic measurements (when enabled):
+  //    search-latency     time from doSearch() call to results rendered
+  //    render-cost        time to insert cards into DOM
+  //    index-build        time for Fuse index to finish building
+  //    index-progress     % chunks processed (from SearchEngine callback)
+  //
+  //  LongTask detection (when enabled + browser supports):
+  //    PerformanceObserver watches for tasks > CONFIG.PERF.longTaskThresholdMs
+  //    These are the frames that cause visible jank
+  //
+  const PerfMonitor = (function () {
+    const _measures    = [];   // { name, duration, ts }
+    let   _longTasks   = [];   // { duration, ts }
+    let   _datasetSize = 0;
+    let   _observer    = null;
+    let   _pendingMarks = {};  // { markName: startTime }
+
+    function _enabled() { return CONFIG.PERF.enabled; }
+
+    function _push(name, duration) {
+      if (_measures.length >= CONFIG.PERF.maxMeasures) _measures.shift();
+      _measures.push({ name, duration: Math.round(duration * 100) / 100, ts: Date.now() });
+    }
+
+    function _startObserver() {
+      if (_observer || !('PerformanceObserver' in window)) return;
+      try {
+        _observer = new PerformanceObserver(list => {
+          for (const entry of list.getEntries()) {
+            if (entry.duration >= CONFIG.PERF.longTaskThresholdMs) {
+              _longTasks.push({ duration: Math.round(entry.duration), ts: Date.now() });
+              if (_longTasks.length > 50) _longTasks.shift();
+            }
+          }
+        });
+        _observer.observe({ entryTypes: ['longtask'] });
+      } catch (_) {
+        // longtask not supported on all browsers — silent fail
+        _observer = null;
+      }
+    }
+
+    function _stopObserver() {
+      try { _observer?.disconnect(); } catch (_) {}
+      _observer = null;
+    }
+
+    return {
+      enable() {
+        CONFIG.PERF.enabled = true;
+        _startObserver();
+      },
+      disable() {
+        CONFIG.PERF.enabled = false;
+        _stopObserver();
+      },
+      toggle() {
+        if (CONFIG.PERF.enabled) this.disable(); else this.enable();
+        return CONFIG.PERF.enabled;
+      },
+
+      // ── mark / measure API (mirrors performance.mark) ──────
+      mark(name) {
+        if (!_enabled()) return;
+        _pendingMarks[name] = performance.now();
+      },
+      measure(name, startMark) {
+        if (!_enabled()) return;
+        const start = _pendingMarks[startMark];
+        if (start == null) return;
+        const duration = performance.now() - start;
+        delete _pendingMarks[startMark];
+        _push(name, duration);
+      },
+
+      // ── dataset size (set from init) ────────────────────────
+      setDatasetSize(n) { _datasetSize = n || 0; },
+
+      // ── index progress from SearchEngine callback ───────────
+      onIndexProgress(pct, count) {
+        if (!_enabled()) return;
+        // Only record milestones (25 / 50 / 75 / 100%) to keep noise low
+        if (pct === 25 || pct === 50 || pct === 75 || pct === 100) {
+          _push('index-progress-' + pct + 'pct', count);
+        }
+      },
+      onIndexReady() {
+        if (!_enabled()) return;
+        _push('index-ready', _datasetSize);
+      },
+
+      // ── report ──────────────────────────────────────────────
+      getReport() {
+        const avgSearch = (() => {
+          const s = _measures.filter(m => m.name === 'search-latency');
+          if (!s.length) return null;
+          return Math.round(s.reduce((a, b) => a + b.duration, 0) / s.length * 10) / 10;
+        })();
+        return {
+          enabled          : _enabled(),
+          datasetSize      : _datasetSize,
+          indexReady       : window.SearchEngine?.isIndexReady?.() || false,
+          isBuilding       : window.SearchEngine?.isBuilding?.()   || false,
+          searchCount      : _measures.filter(m => m.name === 'search-latency').length,
+          avgSearchMs      : avgSearch,
+          renderCount      : _measures.filter(m => m.name === 'render-cost').length,
+          longTaskCount    : _longTasks.length,
+          longTasks        : _longTasks.slice(-10),
+          measures         : _measures.slice(-50),
+          enginePerfEntries: window.SearchEngine?.getPerfEntries?.() || [],
+        };
+      },
+      reset() {
+        _measures.length    = 0;
+        _longTasks.length   = 0;
+        _pendingMarks       = {};
+        _datasetSize        = 0;
+      },
+      log() {
+        const r = this.getReport();
+        console.group('%c[SearchUI PerfMonitor]', 'color:#13b47f;font-weight:bold');
+        console.log('Dataset size  :', r.datasetSize, 'items');
+        console.log('Index ready   :', r.indexReady, r.isBuilding ? '(building…)' : '');
+        console.log('Search count  :', r.searchCount);
+        console.log('Avg search    :', r.avgSearchMs != null ? r.avgSearchMs + ' ms' : '—');
+        console.log('Render count  :', r.renderCount);
+        console.log('Long tasks    :', r.longTaskCount, '(>' + CONFIG.PERF.longTaskThresholdMs + 'ms)');
+        if (r.longTasks.length) console.table(r.longTasks);
+        if (r.measures.length)  console.table(r.measures.slice(-20));
+        console.groupEnd();
+        return r;
+      },
+    };
+  })();
+
+  // =========================================================
   // HIGHLIGHT
   // =========================================================
   const HighlightService = {
@@ -735,8 +886,11 @@
         this._hideSuggestions();
 
         // Overlay is already closed at this point → always use DocumentFragment batch
+        // render-start mark placed inside rAF so measurement spans actual DOM work
         requestAnimationFrame(() => {
+          PerfMonitor.mark('render-start');
           this._batchRender(filtered, container, lang);
+          PerfMonitor.measure('render-cost', 'render-start');
         });
 
         if (!window._copyResultTextHandlerSet) {
@@ -755,7 +909,7 @@
     _batchRender(items, container, lang) {
       try {
         const html = items.map(item => this.renderResultItem(item, lang)).join('');
-        const tpl = document.createElement('template');
+        const tpl  = document.createElement('template');
         tpl.innerHTML = html;
         container.appendChild(tpl.content);
         if (!window._copyResultTextHandlerSet) {
@@ -1112,10 +1266,12 @@
           return;
         }
 
+        PerfMonitor.mark('search-start');
         let out = { results:[], keywords:[] };
         try { if (window.SearchEngine?.search) out = window.SearchEngine.search(q, State.selectedType) || out; } catch {}
         State.currentResults   = out.results || [];
         State.allKeywordsCache = out.keywords || [];
+        PerfMonitor.measure('search-latency', 'search-start');
 
         FilterService.setupCategoryFilter(RenderingService.extractResultCategories(State.currentResults), 'all');
 
@@ -1131,7 +1287,10 @@
           OverlayService.close('manual');
         }
 
+        PerfMonitor.mark('render-start');
         RenderingService.renderResults(State.currentResults, State.currentResults.length === 0);
+        // Note: actual render-cost is measured inside renderResults → _batchRender (inside rAF)
+        // This outer mark is intentionally kept as search-to-render-call latency only
 
       } catch (e) { console.error('doSearch failed', e); }
     },
@@ -1246,6 +1405,16 @@
   // =========================================================
   function initializeSearchEngine() {
     try {
+      // Auto-enable PerfMonitor when URL contains ?searchperf=1
+      // Usage: add ?searchperf=1 to any page URL, open DevTools console,
+      // then run __searchUI.perf.log() after a few searches
+      try {
+        if (new URLSearchParams(location.search).get('searchperf') === '1') {
+          PerfMonitor.enable();
+          console.info('[SearchUI] PerfMonitor auto-enabled via ?searchperf=1 — run __searchUI.perf.log() to view report');
+        }
+      } catch (_) {}
+
       KeyboardService.initKeyboardDetection();
 
       loadData().then(data => {
@@ -1253,8 +1422,17 @@
         if (!Array.isArray(State.apiData.type))
           console.warn('[SearchUI] Data missing .type[] — check ConDataService', State.apiData);
 
+        // Count total items for PerfMonitor dataset tracking
+        const totalItems = (State.apiData.type || []).reduce((sum, t) =>
+          sum + (t.category || []).reduce((s2, c) => s2 + (c.data || []).length, 0), 0);
+        PerfMonitor.setDatasetSize(totalItems);
+
         const initFn = window.SearchEngine?.init || (() => Promise.resolve());
-        return initFn(State.apiData, {}).catch(e => console.error('SearchEngine.init failed', e));
+        return initFn(State.apiData, {
+          // Wire PerfMonitor into chunked index build callbacks
+          onIndexProgress: (pct, count) => PerfMonitor.onIndexProgress(pct, count),
+          onIndexReady   : ()           => PerfMonitor.onIndexReady(),
+        }).catch(e => console.error('SearchEngine.init failed', e));
 
       }).then(() => {
         try { State.allKeywordsCache = window.SearchEngine?.generateAllKeywords?.() || []; } catch { State.allKeywordsCache = []; }
@@ -1410,11 +1588,20 @@
     resetKeyboardGap:            () => GapBasedKeyboardService.resetGap(),
     isKeyboardGapExpired:        () => GapBasedKeyboardService.isGapExpired(),
     isKeyboardScrollIdle:        () => GapBasedKeyboardService.isScrollIdle(),
+    // Virtual scroll diagnostics
     getVSStats: () => ({
-      itemCount:   VirtualScrollEngine._items.length,
-      visibleCount:VirtualScrollEngine._vis?.size || 0,
-      poolSize:    VirtualScrollEngine._pool.length,
-      totalHeight: VirtualScrollEngine._total,
+      itemCount   : VirtualScrollEngine._items.length,
+      visibleCount: VirtualScrollEngine._vis?.size || 0,
+      poolSize    : VirtualScrollEngine._pool.length,
+      totalHeight : VirtualScrollEngine._total,
+    }),
+    // Performance monitor (enable/disable/report)
+    perf: PerfMonitor,
+    // Search engine index health
+    getIndexStats: () => ({
+      ready    : window.SearchEngine?.isIndexReady?.() || false,
+      building : window.SearchEngine?.isBuilding?.()   || false,
+      docCount : window.SearchEngine?.getDocCount?.()  || 0,
     }),
   });
 
