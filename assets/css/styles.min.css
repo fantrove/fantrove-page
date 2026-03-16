@@ -1,3 +1,24 @@
+/* styles.min.css — Research-backed CSS optimization
+ *
+ * Key decisions:
+ *  • content-visibility is at .cm-group level (JS-injected wrapper)
+ *    NOT on .card / .button-content directly.
+ *    Reason: nesting content-visibility creates stacking issues.
+ *    The wrapper handles "skip rendering"; inner elements handle paint isolation.
+ *
+ *  • contain:layout style paint on .card → each card is a paint island
+ *    Hover/active on one card never repaints siblings.
+ *
+ *  • contain:layout style on .button-content → layout isolated
+ *    Adding/removing buttons doesn't reflow sibling buttons.
+ *
+ *  • No global will-change → managed per-element only during animation
+ *    (contentManager removes it via animationend)
+ *
+ *  • No * { transition:none } or * { animation:none } overrides
+ *    Only our scoped classes in prefers-reduced-motion block
+ */
+
 :root {
   --c-teal:        #00CEB0;
   --c-teal-border: rgba(0,206,176,0.15);
@@ -41,10 +62,14 @@ main {
 
 /* ========== HI / HJ ========== */
 .hi { padding: 0 10px; }
-.hj { border-radius: 40px; background: #fff; border: 0.5px solid rgba(0,0,0,0.1); }
+.hj {
+  border-radius: 40px;
+  background: #fff;
+  border: 0.5px solid rgba(0,0,0,0.1);
+}
 
 /* ========== CONTENT BUTTON ========== */
-/* :where() keeps specificity at 0 — easy to override, no cascade wars */
+/* :where() = specificity 0 → easy external override without !important */
 :where(.button-content) {
   box-sizing: border-box;
   width: auto !important;
@@ -66,9 +91,10 @@ main {
   cursor: pointer;
   text-align: center;
   -webkit-tap-highlight-color: transparent;
-  /* border-color only — no transform, no box-shadow, no opacity → zero layout cost */
+  /* border-color only: no transform, no opacity, no box-shadow
+     → change triggers compositor-only operation, zero layout cost */
   transition: border-color 0.12s;
-  /* contain=layout+style: each button isolated — prevents container reflow on change */
+  /* Layout isolation: adding/removing one button doesn't reflow others */
   contain: layout style;
 }
 :where(.button-content:hover)  { border-color: var(--c-teal-strong); }
@@ -87,11 +113,13 @@ main {
   background: #fff;
   border: 1px solid var(--c-teal-border);
   transition: border-color 0.12s;
-  /* contain:paint gives each card its own paint layer — no sibling repaints */
+  /* contain:paint → each card is its own paint layer.
+     Hover on card A will NOT repaint card B, C, D...
+     This is the CSS equivalent of iOS layer isolation. */
   contain: layout style paint;
-  /* NOTE: content-visibility is applied at .cm-wrap level (the parent wrapper),
-     NOT here on .card itself, to avoid nested content-visibility stacking issues.
-     This is intentional: .cm-wrap handles skip-rendering; .card handles paint isolation. */
+  /* NOTE: content-visibility is NOT set here.
+     It lives on the parent .cm-group wrapper (injected by contentManager).
+     Nesting content-visibility causes rendering order bugs in Chromium. */
 }
 :where(.card:hover)  { border-color: var(--c-teal-strong); }
 :where(.card:active) { opacity: 0.85; }
@@ -100,22 +128,32 @@ main {
   width: 100%;
   height: auto;
   object-fit: cover;
-  /* Prevents image decode blocking main thread */
   image-rendering: auto;
+  /* Prevent image from blocking card's contain:paint boundary */
+  display: block;
 }
-.card-content { padding: 12px; display: flex; flex-direction: column; }
+
+.card-content {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  /* Clamp to prevent overflow breaking contain:paint boundary */
+  overflow: hidden;
+}
+
 .card-title {
   font-size: 13px;
   font-weight: 700;
   color: var(--c-heading);
   margin-bottom: 4px;
   line-height: 1.5;
-  /* overflow clamp prevents layout instability from long titles */
+  /* line-clamp: prevents tall titles from expanding card beyond intrinsic estimate */
   overflow: hidden;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
+
 .card-description {
   font-size: 11.3px;
   color: var(--c-body);
@@ -144,8 +182,16 @@ main {
 
 /* ========== GROUP HEADER ========== */
 .group-header { padding: 10px; width: 100%; }
-.group-header-text { font-size: 1.2rem; font-weight: 600; color: #464646; }
-.group-header-description { margin: 0.5rem 0 0; font-size: 1rem; color: var(--c-heading); }
+.group-header-text {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #464646;
+}
+.group-header-description {
+  margin: 0.5rem 0 0;
+  font-size: 1rem;
+  color: var(--c-heading);
+}
 
 /* ========== SECTION CONTAINERS ========== */
 .card-content-container,
@@ -158,14 +204,13 @@ main {
   justify-content: center !important;
   align-items: center !important;
   border-radius: 25px;
+  /* Layout isolation for the whole section */
   contain: layout style;
 }
 .button-content-container { gap: 5px !important; }
 .card-content-container   { gap: 6px !important; }
 
-/* ========== FADE-IN (scoped to cm-wrap, opacity-only = GPU composited) ========== */
-/* Managed by contentManager.js (_CM_CSS_ID style tag).
-   .hdr-fade kept for backward compat with other modules. */
+/* ========== FADE-IN (backward compat for other modules) ========== */
 .hdr-fade {
   animation: _hdr_fadeIn 0.15s ease-out both;
 }
@@ -178,7 +223,11 @@ main {
   .card-content { padding-left: 10px; }
 }
 @media (max-width: 450px) {
-  .container { padding-left: 0.7rem; padding-right: 0.7rem; border-radius: 25px; }
+  .container {
+    padding-left: 0.7rem;
+    padding-right: 0.7rem;
+    border-radius: 25px;
+  }
 }
 
 /* ========== SCROLLBAR ========== */
@@ -191,19 +240,12 @@ main {
 .img-d1 img { width: 100%; border-radius: 25px; }
 
 /* ========== REDUCED MOTION ========== */
+/* Scoped only to our classes — never touches external animations */
 @media (prefers-reduced-motion: reduce) {
-  .hdr-fade          { animation: none; }
-  :where(.button-content) { transition: none; }
-  :where(.card)      { transition: none; }
-  .button-sub        { transition: none; }
-  #content-loading-overlay { transition: none; }
+  .hdr-fade                   { animation: none; }
+  .cm-in, .cm-in.cm-done      { animation: none; will-change: auto; }
+  :where(.button-content)     { transition: none; }
+  :where(.card)               { transition: none; }
+  .button-sub                 { transition: none; }
+  #content-loading-overlay    { transition: none; }
 }
-
-/*
-  ✅ content-visibility:auto is at .cm-wrap (contentManager injects it).
-     Not here to avoid double-nesting which breaks skip-rendering semantics.
-  ✅ No global will-change — applied per-element only while animating.
-  ✅ No * { animation: none } or * { transition: none } — scoped only.
-  ✅ contain:paint on .card → sibling cards don't trigger each other's repaint.
-  ✅ contain:layout+style on .button-content → each button is layout-isolated.
-*/
