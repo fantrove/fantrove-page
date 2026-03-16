@@ -1,5 +1,5 @@
 /**
- * lang-links.js v2.0 - Smart Link Language Prefix Manager
+ * lang-links.js v2.1 - Smart Link Language Prefix Manager
  * 
  * หน้าที่:
  * 1. อัพเดทลิงก์ทั้งหมดในหน้าให้มี prefix ภาษาตามที่เลือก
@@ -7,6 +7,7 @@
  * 3. ไม่แตะต้องลิงก์ภายนอก, mailto, tel, assets, APIs
  * 
  * การทำงาน:
+ * - localhost → ปิดตัวเองทันที ไม่ทำอะไรเลย
  * - ตอน DOM ready: อัพเดทลิงก์ทั้งหมดให้มี prefix ตาม localStorage
  * - ตอนคลิก: ถ้าเป็น internal link ไม่มี prefix → เติม prefix → navigate
  * - ตอน languageChange: อัพเดทลิงก์ทั้งหมดใหม่ตามภาษาใหม่
@@ -17,13 +18,32 @@
 (function() {
   "use strict";
   
+  /**
+   * ตรวจสอบว่าเป็น local dev หรือไม่
+   * ถ้าใช่ → ปิดระบบทั้งหมดทันที ไม่เติม prefix ใดๆ เลย
+   */
+  function isLocalDev() {
+    try {
+      const host = location.hostname || '';
+      return host === 'localhost' || host === '127.0.0.1' ||
+        host === '0.0.0.0' || host.endsWith('.local');
+    } catch (e) {
+      return false;
+    }
+  }
+  
+  // ==================== LOCALHOST BYPASS ====================
+  // ถ้าเป็น localhost → ออกทันที ไม่ทำอะไรทั้งสิ้น ไม่มี prefix ใดๆ
+  if (isLocalDev()) return;
+  // ==================== END BYPASS ====================
+  
   const SUPPORTED_LANGS = ['en', 'th'];
   const DEFAULT_LANG = 'en';
   const LS_KEY = 'selectedLang';
   
   // Paths ที่ไม่ควรใส่ prefix
   const SKIP_PATHS = [
-    '/assets/', '/static/', '/api/', '/_next/', 
+    '/assets/', '/static/', '/api/', '/_next/',
     '/favicon.ico', '/robots.txt', '/sitemap.xml',
     '/sw.js', '/manifest.json', '/.well-known/'
   ];
@@ -77,22 +97,25 @@
   }
   
   /**
-   * เพิ่ม prefix ภาษาให้กับ URL
+   * แทนที่ prefix ภาษาเดิม หรือเพิ่ม prefix ใหม่
    */
-  function addLangPrefix(href, lang) {
+  function setLangPrefix(href, lang) {
     try {
       const url = new URL(href, location.origin);
-      
-      // ถ้ามี prefix อยู่แล้ว ไม่ต้องทำอะไร
-      if (hasLangPrefix(url.pathname)) return href;
       
       // ถ้าไม่ควรใส่ prefix ให้ path นี้
       if (!shouldPrefixPath(url.pathname)) return href;
       
-      // สร้าง path ใหม่
-      const newPath = '/' + lang + (url.pathname === '/' ? '' : url.pathname);
-      url.pathname = newPath;
+      let newPath;
+      if (hasLangPrefix(url.pathname)) {
+        // แทนที่ prefix เดิมด้วย prefix ใหม่
+        newPath = url.pathname.replace(/^\/(en|th)(\/|$)/, '/' + lang + '$2');
+      } else {
+        // เพิ่ม prefix ใหม่
+        newPath = '/' + lang + (url.pathname === '/' ? '' : url.pathname);
+      }
       
+      url.pathname = newPath;
       return url.toString();
     } catch (e) {
       return href;
@@ -100,7 +123,7 @@
   }
   
   /**
-   * อัพเดทลิงก์ทั้งหมดใน root ให้มี prefix ภาษา
+   * อัพเดทลิงก์ทั้งหมดใน root ให้มี prefix ภาษาที่ถูกต้อง
    */
   function updateAllLinks(root, lang) {
     const links = root.querySelectorAll('a[href]');
@@ -109,7 +132,7 @@
       if (!href) return;
       if (!isInternalLink(href)) return;
       
-      const newHref = addLangPrefix(href, lang);
+      const newHref = setLangPrefix(href, lang);
       if (newHref !== href) {
         link.setAttribute('href', newHref);
       }
@@ -117,9 +140,9 @@
   }
   
   /**
-   * Intercept การคลิกลิงก์
+   * Intercept การคลิกลิงก์ - เติม/แก้ prefix ก่อน navigate
    */
-  function interceptLinkClicks(lang) {
+  function interceptLinkClicks() {
     document.addEventListener('click', function(e) {
       try {
         const link = e.target.closest('a[href]');
@@ -129,27 +152,23 @@
         if (!href) return;
         if (!isInternalLink(href)) return;
         
-        // ถ้าลิงก์มี prefix อยู่แล้ว ให้ผ่านไปตามปกติ
-        if (hasLangPrefix(new URL(href, location.origin).pathname)) {
-          return;
-        }
+        const url = new URL(href, location.origin);
+        if (!shouldPrefixPath(url.pathname)) return;
         
-        // ถ้าไม่ควรใส่ prefix
-        if (!shouldPrefixPath(new URL(href, location.origin).pathname)) {
-          return;
-        }
+        const currentLang = getCurrentLang();
+        const urlLang = (url.pathname.match(/^\/(en|th)(\/|$)/) || [])[1];
         
-        // เติม prefix และ navigate
+        // ถ้า prefix ตรงกับภาษาปัจจุบันแล้ว ไม่ต้องทำอะไร
+        if (urlLang === currentLang) return;
+        
+        // เติม/แก้ prefix แล้ว navigate
         e.preventDefault();
-        const newHref = addLangPrefix(href, lang);
+        const newHref = setLangPrefix(href, currentLang);
         
-        // ใช้ history.pushState เพื่อให้เป็น SPA-like navigation
         try {
-          history.pushState({ lang: lang, ts: Date.now() }, '', newHref);
-          // Dispatch popstate-like event ให้ languageManager จับได้
-          window.dispatchEvent(new PopStateEvent('popstate', { state: { lang: lang } }));
+          history.pushState({ lang: currentLang, ts: Date.now() }, '', newHref);
+          window.dispatchEvent(new PopStateEvent('popstate', { state: { lang: currentLang } }));
         } catch (err) {
-          // Fallback ถ้า pushState ไม่ได้
           window.location.href = newHref;
         }
         
@@ -157,19 +176,6 @@
         // Ignore errors
       }
     }, true); // Use capture phase
-  }
-  
-  /**
-   * ตรวจสอบว่าเป็น local dev หรือไม่ (disable aggressive features)
-   */
-  function isLocalDev() {
-    try {
-      const host = location.hostname || '';
-      return host === 'localhost' || host === '127.0.0.1' || 
-             host === '0.0.0.0' || host.endsWith('.local');
-    } catch (e) { 
-      return false; 
-    }
   }
   
   /**
@@ -181,10 +187,8 @@
     // อัพเดทลิงก์ทั้งหมด
     updateAllLinks(document, lang);
     
-    // Intercept การคลิก (ยกเว้น local dev)
-    if (!isLocalDev()) {
-      interceptLinkClicks(lang);
-    }
+    // Intercept การคลิก
+    interceptLinkClicks();
     
     // ฟัง event languageChange เพื่ออัพเดทลิงก์ใหม่
     window.addEventListener('languageChange', function(e) {
