@@ -8,17 +8,6 @@ import { scrollManager, performanceOptimizer, navigationManager, buttonManager, 
 import unifiedCopy from './unifiedCopyToClipboard.js';
 import router from './router.js';
 
-// Optional runtime adapter (may have already been loaded by header.min.js)
-// This provides window._headerV2_runtime with poolManager/createVirtualScroller etc.
-let setupHeaderRuntimeAdapters;
-try {
- // dynamic import to avoid bundling errors if file not present
- // note: we don't await here to avoid blocking initialization; we will call setup if available
- import('./runtime/registerOptimizations.js').then(mod => {
-  try { if (mod && typeof mod.default === 'function') { mod.default(window); } } catch (e) {}
- }).catch(() => {});
-} catch (e) {}
-
 export async function init() {
  // Bootstrapping flag: indicates initial app bootstrap / canonical navigation phase.
  // Other modules should avoid mutating history while this flag is true.
@@ -64,20 +53,6 @@ export async function init() {
  const logo = ensureElement('.logo', 'div', 'logo');
  
  window._headerV2_elements = { header, navList, subButtonsContainer, contentLoading, logo };
- 
- // Attempt to ensure runtime adapter exists (double-check)
- try {
-  // If header.min.js didn't call registerOptimizations early, call it here (safe no-op if already applied)
-  try {
-   // dynamic import attempt, but only call if global not present
-   if (!window._headerV2_runtime) {
-    // We import and call default synchronously via then; do not await blocking init
-    import('./runtime/registerOptimizations.js').then(mod => {
-     try { if (mod && typeof mod.default === 'function') mod.default(window); } catch (e) {}
-    }).catch(() => {});
-   }
-  } catch (e) {}
- } catch (e) {}
  
  // ✅ Show overlay early via canonical manager
  try { window._headerV2_contentLoadingManager && window._headerV2_contentLoadingManager.show(); } catch {}
@@ -158,33 +133,11 @@ export async function init() {
    }
   } catch (e) {}
   
-  // Runtime prewarm: pre-create pooled DOM nodes (if runtime adapter present)
-  try {
-   const rt = window._headerV2_runtime;
-   if (rt && rt.poolManager) {
-    // prewarm some nodes (non-blocking)
-    try {
-     if (typeof rt.poolManager.prewarm === 'function') {
-      rt.poolManager.prewarm('card', 8);
-      rt.poolManager.prewarm('button', 12);
-     }
-    } catch (e) {}
-   }
-  } catch (e) {}
-  
-  // Register service worker for caching con-data and static assets (optional, safe)
-  try {
-   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/assets/js/header-modules/runtime/service-worker.js').catch(() => {});
-   }
-  } catch (e) {}
-  
   // Warmup dataManager (prefetch light assets + category indexes)
   try {
    if (window._headerV2_dataManager && typeof window._headerV2_dataManager._warmup === 'function') {
     window._headerV2_dataManager._warmup().catch(() => {});
    } else {
-    // call default instance if available
     dataManagerDefault._warmup && dataManagerDefault._warmup().catch(() => {});
    }
   } catch (e) {}
@@ -208,7 +161,6 @@ export async function init() {
   } catch (e) {
    window._headerV2_utils.showNotification('เกิดข้อผิดพลาดในการนำทางเริ่มต้น', 'error');
    console.error('initial navigation error', e);
-   // ensure bootstrapping flag cleared on error path too
    window._headerV2_bootstrapping = false;
   }
  } catch (error) {

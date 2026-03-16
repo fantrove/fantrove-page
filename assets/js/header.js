@@ -1,4 +1,4 @@
-// header.min.js
+// header.js
 // ✅ ปรับปรุง: Parallel module loading, improved error handling, robust module base resolution and diagnostics
 (function() {
     // Resolve module base reliably from the script tag that loaded this file.
@@ -27,9 +27,6 @@
     
     const MODULE_BASE = detectModuleBase();
     
-    // Ensure runtime adapter is loaded first (it is lightweight and prepares window._headerV2_runtime)
-    const RUNTIME_MODULE = 'runtime/registerOptimizations.js';
-    
     const MODULES = [
         'overlay.js',
         'utils.js',
@@ -43,20 +40,6 @@
     
     async function loadAll() {
         try {
-            // Load runtime adapter first and call its default setup if present.
-            try {
-                await import(MODULE_BASE + RUNTIME_MODULE).then((rmod) => {
-                    try {
-                        // some builds export default function; call with window
-                        if (rmod && typeof rmod.default === 'function') {
-                            try { rmod.default(window); } catch (e) {}
-                        }
-                    } catch (e) {}
-                }).catch(() => { /* ignore if not present */ });
-            } catch (e) {
-                // non-fatal
-            }
-            
             // Parallel module loading (relative to resolved MODULE_BASE)
             const imports = MODULES.map(m => import(MODULE_BASE + m));
             const mods = await Promise.all(imports);
@@ -70,7 +53,7 @@
                 await window.headerV2_initializeApp();
             }
         } catch (err) {
-            console.error('header.min.js bootstrap error', err);
+            console.error('header.js bootstrap error', err);
             
             // Diagnostic: attempt to fetch each module to show status/snippet (helps find HTML 404)
             try {
