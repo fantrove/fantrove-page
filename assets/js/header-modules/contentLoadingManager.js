@@ -1,191 +1,133 @@
-// contentLoadingManager.js — Optimized
-// - Removed will-change on overlay (causes compositor layer bloat)
-// - Lighter fade transition (0.2s instead of 0.36s)
-// - Single style injection
-// - Passive state tracking
+// contentLoadingManager.js — featherweight
+//
+// Changes vs previous:
+//  - Styles are scoped to #content-loading-overlay only
+//  - No will-change injection
+//  - No global animation rule injection
+//  - Faster fade (0.15s)
+//  - Spinner uses prefixed @keyframes _hdr_spin (no collision)
 
-const LOADING_ID = 'content-loading-overlay';
-const STYLE_ID   = 'content-loading-overlay-styles';
-const DEFAULT_Z  = 15000;
-const FADE_MS    = 200; // shorter = less perceived lag
+const ID      = 'content-loading-overlay';
+const FADE_MS = 150;
+const Z       = 15000;
 
 const contentLoadingManager = {
   LOADING_CONTAINER_ID: 'content-loading',
-  spinnerElement: null,
-  _autoHideTimer: null,
-  _currentOptions: null,
+  _el: null,
   _shown: false,
+  _timer: null,
 
-  _ensureStyles() {
-    if (document.getElementById(STYLE_ID)) return;
+  _injectStyles() {
+    if (document.getElementById('_hdr_ov_css')) return;
     const s = document.createElement('style');
-    s.id = STYLE_ID;
-    // No will-change — overlay is not an animated layer that needs GPU promotion
+    s.id = '_hdr_ov_css';
+    // All rules prefixed with #content-loading-overlay — zero global bleed
     s.textContent = `
-#${LOADING_ID}{
-  position:fixed;inset:0;width:100vw;height:100vh;
-  display:flex;align-items:center;justify-content:center;
-  background:rgba(255,255,255,0.96);
-  opacity:1;z-index:${DEFAULT_Z};
-  transition:opacity ${FADE_MS}ms ease;
-  -webkit-font-smoothing:antialiased;
-}
-#${LOADING_ID}.hidden{opacity:0;pointer-events:none;}
-#${LOADING_ID} .content-loading-spinner{
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-}
-#${LOADING_ID} .spinner-svg{
-  margin-bottom:12px;width:52px;height:52px;
-  display:inline-flex;align-items:center;justify-content:center;
-}
-#${LOADING_ID} .spinner-svg svg{width:100%;height:100%;}
-#${LOADING_ID} .spinner-svg-fg{
-  stroke:#4285f4;stroke-width:5;stroke-linecap:round;
-  stroke-dasharray:90 125;
-  animation:_spin 1s linear infinite;fill:none;
-}
-#${LOADING_ID} .spinner-svg-bg{stroke:#eee;stroke-width:5;fill:none;}
-#${LOADING_ID} .loading-message{
-  font-size:1rem;color:#2196f3;text-align:center;
-  margin-top:6px;font-weight:500;opacity:0.92;
-}
-@keyframes _spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-`;
+#${ID}{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+background:rgba(255,255,255,.96);z-index:${Z};opacity:1;transition:opacity ${FADE_MS}ms ease;
+contain:strict;}
+#${ID}.h{opacity:0;pointer-events:none;}
+#${ID} .w{display:flex;flex-direction:column;align-items:center;}
+#${ID} .s{width:48px;height:48px;margin-bottom:10px;}
+#${ID} .s svg{width:100%;height:100%;}
+#${ID} .bg{stroke:#eee;stroke-width:5;fill:none;}
+#${ID} .fg{stroke:#4285f4;stroke-width:5;stroke-linecap:round;stroke-dasharray:90 125;fill:none;
+animation:_hdr_spin .9s linear infinite;}
+@keyframes _hdr_spin{to{transform:rotate(360deg)}}
+#${ID} .m{font-size:.88rem;color:#2196f3;font-weight:500;}`;
     document.head.appendChild(s);
   },
 
-  _buildOverlay(message) {
-    let el = document.getElementById(LOADING_ID);
-    if (el) {
-      const m = el.querySelector('.loading-message');
-      if (m && message) m.textContent = message;
-      return el;
-    }
+  _build(msg) {
+    let el = document.getElementById(ID);
+    if (el) { this._setMsg(el, msg); return el; }
 
     el = document.createElement('div');
-    el.id = LOADING_ID;
+    el.id = ID;
     el.setAttribute('role', 'status');
     el.setAttribute('aria-live', 'polite');
-    el.classList.add('hidden');
-
-    el.innerHTML = `
-<div class="content-loading-spinner">
-  <div class="spinner-svg" aria-hidden="true">
-    <svg viewBox="0 0 48 48">
-      <circle class="spinner-svg-bg" cx="24" cy="24" r="20"/>
-      <circle class="spinner-svg-fg" cx="24" cy="24" r="20"/>
-    </svg>
-  </div>
-  <div class="loading-message">${message || this._defaultMsg()}</div>
-</div>`;
-
+    el.classList.add('h'); // start hidden
+    el.innerHTML =
+      `<div class="w"><div class="s" aria-hidden="true"><svg viewBox="0 0 48 48">` +
+      `<circle class="bg" cx="24" cy="24" r="20"/><circle class="fg" cx="24" cy="24" r="20"/>` +
+      `</svg></div><div class="m">${msg || this._msg()}</div></div>`;
     document.body.appendChild(el);
-    // Force style recalc so transition works on first show
-    el.offsetHeight; // eslint-disable-line no-unused-expressions
+    el.offsetHeight; // force style recalc before removing 'h'
     return el;
   },
 
-  _defaultMsg() {
-    return localStorage.getItem('selectedLang') === 'th' ? 'กำลังโหลด...' : 'Loading...';
+  _setMsg(el, msg) {
+    const m = el.querySelector('.m');
+    if (m) m.textContent = msg || this._msg();
   },
 
-  _zIndex(opts) {
-    if (typeof opts?.zIndex === 'number') return opts.zIndex;
-    return DEFAULT_Z;
+  _msg() {
+    return localStorage.getItem('selectedLang') === 'th' ? 'กำลังโหลด...' : 'Loading...';
   },
 
   show(opts = '') {
     try {
-      let msg = '', options = {};
-      if (typeof opts === 'string') { msg = opts; }
-      else if (opts && typeof opts === 'object') { msg = opts.message || ''; options = opts; }
-
-      this._ensureStyles();
-      const z = this._zIndex(options);
-      const el = this._buildOverlay(msg);
+      const msg = typeof opts === 'string' ? opts : (opts?.message || '');
+      const z   = typeof opts?.zIndex === 'number' ? opts.zIndex : Z;
+      this._injectStyles();
+      const el = this._build(msg);
       el.style.zIndex = String(z);
-
-      const m = el.querySelector('.loading-message');
-      if (m) m.textContent = msg || this._defaultMsg();
-
-      el.classList.remove('hidden');
-      this.spinnerElement = el;
+      this._setMsg(el, msg);
+      el.classList.remove('h');
+      this._el = el;
       this._shown = true;
-      this._currentOptions = { ...options, zIndex: z };
-
-      this._clearAutoHide();
-      if (options.autoHideAfterMs > 0) {
-        this._autoHideTimer = setTimeout(() => { try { this.hide(); } catch (_) {} }, options.autoHideAfterMs);
-      }
-
+      this._clearTimer();
+      if (opts?.autoHideAfterMs > 0)
+        this._timer = setTimeout(() => { try { this.hide(); } catch(_){} }, opts.autoHideAfterMs);
       // Proxy globals
       try {
-        window.showInstantLoadingOverlay = (o) => this.show(o);
-        window.removeInstantLoadingOverlay = () => this.hide();
-        window.__instantLoadingOverlayShown = true;
+        window.__instantLoadingOverlayShown  = true;
         window.__removeInstantLoadingOverlay = () => this.hide();
-      } catch (_) {}
-
+        window.showInstantLoadingOverlay     = (o) => this.show(o);
+        window.removeInstantLoadingOverlay   = () => this.hide();
+      } catch(_) {}
       return el;
-    } catch (err) {
-      console.error('contentLoadingManager.show', err);
-      return null;
-    }
+    } catch(e) { console.error('clm.show', e); return null; }
   },
 
   hide() {
     try {
-      if (!this._shown && !document.getElementById(LOADING_ID)) return;
-      const el = this.spinnerElement || document.getElementById(LOADING_ID);
-      if (!el) { this._shown = false; return; }
-
-      el.classList.add('hidden');
-
+      const el = this._el || document.getElementById(ID);
+      this._clearTimer();
+      this._shown = false;
+      this._el = null;
+      try { window.__instantLoadingOverlayShown = false; } catch(_) {}
+      if (!el) return;
+      el.classList.add('h');
       setTimeout(() => {
-        try { const e = document.getElementById(LOADING_ID); if (e?.parentNode) e.parentNode.removeChild(e); } catch (_) {}
+        try { const e=document.getElementById(ID); if(e?.parentNode) e.parentNode.removeChild(e); }
+        catch(_) {}
       }, FADE_MS + 20);
-
-      this._clearAutoHide();
-      this._shown = false;
-      this.spinnerElement = null;
-      this._currentOptions = null;
-      try { window.__instantLoadingOverlayShown = false; } catch (_) {}
-    } catch (err) {
-      console.error('contentLoadingManager.hide', err);
-      this._shown = false;
-      this.spinnerElement = null;
-    }
+    } catch(e) { console.error('clm.hide', e); this._shown = false; this._el = null; }
   },
 
   updateMessage(msg) {
-    try {
-      const el = this.spinnerElement || document.getElementById(LOADING_ID);
-      if (!el) return;
-      const m = el.querySelector('.loading-message');
-      if (m) m.textContent = msg || this._defaultMsg();
-    } catch (_) {}
+    const el = this._el || document.getElementById(ID);
+    if (el) this._setMsg(el, msg);
   },
 
   isShown() {
-    try {
-      const el = document.getElementById(LOADING_ID);
-      return !!el && !el.classList.contains('hidden');
-    } catch (_) { return false; }
+    try { const e=document.getElementById(ID); return !!e && !e.classList.contains('h'); }
+    catch(_) { return false; }
   },
 
-  _clearAutoHide() {
-    if (this._autoHideTimer) { clearTimeout(this._autoHideTimer); this._autoHideTimer = null; }
+  _clearTimer() {
+    if (this._timer) { clearTimeout(this._timer); this._timer = null; }
   }
 };
 
-// Expose globally
 try {
   if (typeof window !== 'undefined') {
     if (!window._headerV2_contentLoadingManager) window._headerV2_contentLoadingManager = contentLoadingManager;
     window.showInstantLoadingOverlay  = (o) => contentLoadingManager.show(o);
     window.removeInstantLoadingOverlay = () => contentLoadingManager.hide();
   }
-} catch (_) {}
+} catch(_) {}
 
 export { contentLoadingManager };
 export default contentLoadingManager;

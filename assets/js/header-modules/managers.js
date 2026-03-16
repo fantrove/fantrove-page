@@ -1,181 +1,127 @@
-// managers.js — Performance-optimized
-// Changes:
-//  - scrollManager: removed overlapping MutationObserver+ResizeObserver+scroll listeners
-//    replaced with single passive scroll listener + IntersectionObserver for sticky
-//  - performanceOptimizer: removed redundant error boundary (already in init)
-//  - buttonManager: removed nested awaits in click handlers, added passive listeners
-//  - All event listeners marked passive where possible
+// managers.js — featherweight
+//
+// Key principles:
+//  1. scrollManager: single passive scroll + single RAF tick (no observer stack)
+//  2. NO global animation/transition overrides — ever
+//  3. All event listeners marked { passive: true } where allowed
+//  4. No MutationObserver on subNav — was causing reflow on every DOM change
+//  5. performanceOptimizer: removed duplicate error boundary (init.js already has it)
 
 export const scrollManager = {
-  state: { ticking: false, isSubNavFixed: false },
-  constants: { SUB_NAV_TOP_SPACING: 0, Z_INDEX: { SUB_NAV: 999 } },
+  _ticking: false,
+  _fixed: false,
+  _Z: 999,
 
-  createStickyStyles() {
-    if (document.getElementById('sticky-styles')) return;
+  _injectStyles() {
+    if (document.getElementById('_hdr_sticky_css')) return;
     const s = document.createElement('style');
-    s.id = 'sticky-styles';
-    const hz = (this.constants.Z_INDEX.SUB_NAV || 999) + 2;
+    s.id = '_hdr_sticky_css';
+    const hz = this._Z + 2;
     s.textContent = `
 header{position:relative;z-index:${hz};contain:layout style;}
-#sub-nav{position:sticky;top:${this.constants.SUB_NAV_TOP_SPACING}px;left:0;right:0;z-index:${this.constants.Z_INDEX.SUB_NAV};}
-#sub-nav.fixed{background:rgba(255,255,255,1);border-bottom:0.5px solid rgba(19,180,127,0.18);border-radius:0 0 30px 30px;}
-#sub-nav.fixed #sub-buttons-container{padding:6px 16px!important;border-radius:0 0 30px 30px;}
-#sub-nav.fixed.hi{padding:0!important;}
-#sub-nav.fixed .hj{border-color:rgba(0,0,0,0);background:transparent;}
-    `;
+#sub-nav{position:sticky;top:0;left:0;right:0;z-index:${this._Z};}
+#sub-nav.fx{background:rgba(255,255,255,1);border-bottom:0.5px solid rgba(19,180,127,0.18);border-radius:0 0 30px 30px;}
+#sub-nav.fx #sub-buttons-container{padding:6px 16px!important;border-radius:0 0 30px 30px;}
+#sub-nav.fx.hi{padding:0!important;}
+#sub-nav.fx .hj{border-color:rgba(0,0,0,0);background:transparent;}`;
     document.head.appendChild(s);
   },
 
-  handleSubNav() {
-    const subNav = document.getElementById('sub-nav');
-    if (!subNav) return;
-    const scrollY = window.pageYOffset;
-    const top = subNav.getBoundingClientRect().top + scrollY;
-    const trigger = top - this.constants.SUB_NAV_TOP_SPACING;
-
-    if (scrollY >= trigger && !this.state.isSubNavFixed) {
-      subNav.classList.add('fixed');
-      this.state.isSubNavFixed = true;
-    } else if (scrollY < trigger && this.state.isSubNavFixed) {
-      subNav.classList.remove('fixed');
-      this.state.isSubNavFixed = false;
-    }
+  _tick() {
+    const sn = document.getElementById('sub-nav');
+    if (!sn) return;
+    const top = sn.getBoundingClientRect().top;
+    if (top <= 0 && !this._fixed) { sn.classList.add('fx'); this._fixed = true; }
+    else if (top > 0 && this._fixed) { sn.classList.remove('fx'); this._fixed = false; }
   },
 
   init() {
-    try {
-      this.createStickyStyles();
-
-      // Single passive scroll listener — no RAF nesting
-      window.addEventListener('scroll', () => {
-        if (this.state.ticking) return;
-        this.state.ticking = true;
-        requestAnimationFrame(() => {
-          try { this.handleSubNav(); } catch (_) {}
-          this.state.ticking = false;
-        });
-      }, { passive: true });
-
-      // Visibility change (no cost when hidden)
-      document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) try { this.handleSubNav(); } catch (_) {}
-      }, { passive: true });
-
-      // Initial check
-      if (window.pageYOffset > 0) this.handleSubNav();
-    } catch (e) {
-      console.error('scrollManager.init', e);
-    }
+    this._injectStyles();
+    window.addEventListener('scroll', () => {
+      if (this._ticking) return;
+      this._ticking = true;
+      requestAnimationFrame(() => { try { this._tick(); } catch(_){} this._ticking = false; });
+    }, { passive: true });
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) try { this._tick(); } catch(_) {}
+    }, { passive: true });
+    if (window.pageYOffset > 0) this._tick();
   }
 };
 
 export const performanceOptimizer = {
-  setupLazyLoading() {
-    // Native lazy loading is sufficient for modern browsers
-    if ('loading' in HTMLImageElement.prototype) {
-      document.querySelectorAll('img:not([loading])').forEach(img => { img.loading = 'lazy'; });
-      return;
-    }
-    // Fallback: IntersectionObserver
-    const obs = new IntersectionObserver((entries, o) => {
-      entries.forEach(en => {
-        if (en.isIntersecting) {
-          const img = en.target;
-          if (img.dataset.src) { img.src = img.dataset.src; img.removeAttribute('data-src'); }
-          o.unobserve(img);
-        }
-      });
-    }, { rootMargin: '300px' });
-    document.querySelectorAll('img[data-src]').forEach(img => obs.observe(img));
-  },
-
-  setupErrorBoundary() {
-    const notify = _debounce((msg) => {
-      try { window._headerV2_utils?.showNotification(msg, 'error'); } catch (_) {}
-    }, 1000);
-    window.addEventListener('error', (ev) => {
-      notify('เกิดข้อผิดพลาดที่ไม่คาดคิด');
-      console.error('Captured error', ev.error || ev);
-    }, { passive: true });
-    window.addEventListener('unhandledrejection', (ev) => {
-      notify('เกิดข้อผิดพลาดในการเชื่อมต่อ');
-      console.error('Unhandled rejection', ev.reason);
-    }, { passive: true });
-  },
-
   init() {
-    try {
-      this.setupLazyLoading();
-      this.setupErrorBoundary();
-    } catch (e) {
-      console.error('performanceOptimizer.init', e);
+    // Lazy-load images (native first)
+    if ('loading' in HTMLImageElement.prototype) {
+      document.querySelectorAll('img:not([loading])').forEach(i => { i.loading = 'lazy'; });
     }
-  }
+    // Error boundary deduplication — 1s throttle
+    let _errT;
+    const notify = (msg) => {
+      clearTimeout(_errT);
+      _errT = setTimeout(() => { try { window._headerV2_utils?.showNotification(msg,'error'); } catch(_){} }, 1000);
+    };
+    window.addEventListener('error', (e) => { notify('เกิดข้อผิดพลาดที่ไม่คาดคิด'); console.error(e.error||e); }, { passive:true });
+    window.addEventListener('unhandledrejection', (e) => { notify('เกิดข้อผิดพลาดในการเชื่อมต่อ'); console.error(e.reason); }, { passive:true });
+  },
+
+  // Keep stubs for backward-compat callers
+  setupErrorBoundary() { /* handled in init() */ },
+  setupLazyLoading()   { /* handled in init() */ },
 };
 
 export const subNavManager = {
   ensureSubNavContainer() {
-    let subNav = document.getElementById('sub-nav');
-    if (!subNav) {
-      subNav = document.createElement('div');
-      subNav.id = 'sub-nav';
-      subNav.className = 'hi';
-      const header = document.querySelector('header');
-      if (header?.nextSibling) header.parentNode.insertBefore(subNav, header.nextSibling);
-      else document.body.insertBefore(subNav, document.body.firstChild);
+    let sn = document.getElementById('sub-nav');
+    if (!sn) {
+      sn = document.createElement('div');
+      sn.id = 'sub-nav';
+      sn.className = 'hi';
+      const h = document.querySelector('header');
+      if (h?.nextSibling) h.parentNode.insertBefore(sn, h.nextSibling);
+      else document.body.prepend(sn);
     }
 
-    let hj = subNav.querySelector('.hj');
-    if (!hj) {
-      hj = document.createElement('div');
-      hj.className = 'hj';
-      subNav.appendChild(hj);
-    }
+    let hj = sn.querySelector('.hj');
+    if (!hj) { hj = document.createElement('div'); hj.className = 'hj'; sn.appendChild(hj); }
 
-    const existing = document.querySelector('#sub-buttons-container');
-    if (existing && !hj.contains(existing)) {
-      try { hj.appendChild(existing); } catch (_) {}
-    }
+    // Move existing #sub-buttons-container into hj if it's outside
+    const ext = document.querySelector('#sub-buttons-container');
+    if (ext && !hj.contains(ext)) try { hj.appendChild(ext); } catch(_) {}
 
     let sbc = hj.querySelector('#sub-buttons-container');
     if (!sbc) {
-      // clean up duplicates
+      // Remove any orphaned duplicates
       document.querySelectorAll('#sub-buttons-container').forEach(el => {
-        if (!subNav.contains(el)) try { el.parentNode?.removeChild(el); } catch (_) {}
+        if (!sn.contains(el)) try { el.parentNode?.removeChild(el); } catch(_) {}
       });
       sbc = document.createElement('div');
       sbc.id = 'sub-buttons-container';
       hj.appendChild(sbc);
     }
 
-    if (window._headerV2_elements) {
-      window._headerV2_elements.subNav = subNav;
-      window._headerV2_elements.subNavInner = hj;
-      window._headerV2_elements.subButtonsContainer = sbc;
-    }
+    const el = window._headerV2_elements;
+    if (el) { el.subNav = sn; el.subNavInner = hj; el.subButtonsContainer = sbc; }
     return sbc;
   },
 
   hideSubNav() {
-    const subNav = document.getElementById('sub-nav');
-    if (subNav) {
-      subNav.style.display = 'none';
-      const c = subNav.querySelector('#sub-buttons-container');
-      if (c) c.innerHTML = '';
-    }
+    const sn = document.getElementById('sub-nav');
+    if (!sn) return;
+    sn.style.display = 'none';
+    const c = sn.querySelector('#sub-buttons-container');
+    if (c) c.innerHTML = '';
     if (window._headerV2_elements?.subButtonsContainer)
       window._headerV2_elements.subButtonsContainer.innerHTML = '';
   },
 
   showSubNav() {
-    let subNav = document.getElementById('sub-nav');
-    if (!subNav) { this.ensureSubNavContainer(); subNav = document.getElementById('sub-nav'); }
-    if (subNav) subNav.style.display = '';
+    let sn = document.getElementById('sub-nav');
+    if (!sn) { this.ensureSubNavContainer(); sn = document.getElementById('sub-nav'); }
+    if (sn) sn.style.display = '';
   },
 
-  clearSubButtons() {
-    this.ensureSubNavContainer().innerHTML = '';
-  }
+  clearSubButtons() { this.ensureSubNavContainer().innerHTML = ''; }
 };
 
 export const buttonManager = {
@@ -186,17 +132,13 @@ export const buttonManager = {
     if (this.buttonConfig) { await this.renderMainButtons(); return; }
     const cached = window._headerV2_dataManager.getCached('buttonConfig');
     if (cached) { this.buttonConfig = cached; await this.renderMainButtons(); return; }
-
-    const response = await window._headerV2_dataManager.fetchWithRetry(
+    const res = await window._headerV2_dataManager.fetchWithRetry(
       window._headerV2_dataManager.constants.BUTTONS_CONFIG_PATH, {}, 2
     );
-    this.buttonConfig = response;
-    window._headerV2_dataManager.setCache('buttonConfig', response);
+    this.buttonConfig = res;
+    window._headerV2_dataManager.setCache('buttonConfig', res);
     await this.renderMainButtons();
-    try {
-      const nm = window._headerV2_router || window._headerV2_navigationManager;
-      nm?.updateButtonStates?.();
-    } catch (_) {}
+    try { (window._headerV2_router||window._headerV2_navigationManager)?.updateButtonStates?.(); } catch(_) {}
   },
 
   async renderMainButtons() {
@@ -205,339 +147,277 @@ export const buttonManager = {
     const navList = window._headerV2_elements.navList;
     navList.innerHTML = '';
     this.state.buttonMap = new Map();
-    let defaultButton = null;
+    let def = null;
     const frag = document.createDocumentFragment();
 
-    for (const button of mainButtons) {
-      const label = button[`${lang}_label`];
+    for (const cfg of mainButtons) {
+      const label = cfg[`${lang}_label`];
       if (!label) continue;
-
-      const li = document.createElement('li');
+      const li  = document.createElement('li');
       const btn = document.createElement('button');
       btn.textContent = label;
       btn.className = 'main-button';
-      const url = button.url || button.jsonFile;
+      const url = cfg.url || cfg.jsonFile;
       btn.setAttribute('data-url', url);
-      if (button.className) btn.classList.add(button.className);
-      this.state.buttonMap.set(url, { button: btn, config: button, element: btn });
-      if (button.isDefault) defaultButton = { button: btn, config: button };
+      if (cfg.className) btn.classList.add(cfg.className);
+      this.state.buttonMap.set(url, { button: btn, config: cfg });
+      if (cfg.isDefault) def = { button: btn, config: cfg };
 
       btn.addEventListener('click', async (ev) => {
         ev.preventDefault();
-        // Immediate UI feedback
+        // Immediate visual feedback — no transition needed
         navList.querySelectorAll('button').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         this.state.currentMainButton = btn;
         this.state.currentMainButtonUrl = url;
-
         const router = window._headerV2_router || window._headerV2_navigationManager;
-        if (router?.navigateTo) {
+        if (router?.navigateTo)
           await router.navigateTo(url, { skipUrlUpdate: !!window._headerV2_bootstrapping });
-        }
-      }, { passive: false }); // must be non-passive to call preventDefault
+      }); // non-passive: needs preventDefault
 
       li.appendChild(btn);
       frag.appendChild(li);
     }
-
     navList.appendChild(frag);
 
     if (!window._headerV2_bootstrapping) {
-      await this.handleInitialUrl(window.location.search, this.state.buttonMap, defaultButton);
-    } else {
-      try {
-        if (defaultButton?.button) {
-          defaultButton.button.classList.add('active');
-          this.state.currentMainButton = defaultButton.button;
-          this.state.currentMainButtonUrl = defaultButton.config?.url || defaultButton.config?.jsonFile;
-        }
-      } catch (_) {}
+      await this._handleInitialUrl(window.location.search, def);
+    } else if (def?.button) {
+      def.button.classList.add('active');
+      this.state.currentMainButton     = def.button;
+      this.state.currentMainButtonUrl  = def.config?.url || def.config?.jsonFile;
     }
   },
 
-  async handleInitialUrl(url, buttonMap, defaultButton) {
+  async _handleInitialUrl(url, def) {
     try {
-      if (!url || url === '?') {
-        if (defaultButton) await this.triggerMainButtonClick(defaultButton.button);
-        return;
-      }
-      const params = new URLSearchParams(url.startsWith('?') ? url : `?${url}`);
-      const mainRoute = (params.get('type') || '').replace(/__$/, '');
-      const subRoute  = params.get('page') || '';
+      if (!url || url === '?') { if (def) await this.triggerMainButtonClick(def.button); return; }
+      const p = new URLSearchParams(url.startsWith('?') ? url : `?${url}`);
+      const main = (p.get('type') || '').replace(/__$/, '');
+      const sub  = p.get('page') || '';
+      const md   = this.state.buttonMap.get(main);
+      if (!md) { if (def) await this.triggerMainButtonClick(def.button); return; }
 
-      const mainData = buttonMap.get(mainRoute);
-      if (!mainData) { if (defaultButton) await this.triggerMainButtonClick(defaultButton.button); return; }
-
-      const { button: mainBtn, config: mainCfg } = mainData;
       const router = window._headerV2_router || window._headerV2_navigationManager;
+      const valid = await router.validateUrl(url).catch(() => false);
+      if (!valid) { if (def) await this.triggerMainButtonClick(def.button); return; }
 
-      try {
-        const valid = await router.validateUrl(url);
-        if (!valid) throw new Error('invalid');
-        router.state.currentMainRoute = mainRoute;
-        router.state.currentSubRoute  = subRoute || '';
-        this.state.currentMainButton  = mainBtn;
-        await this.activateMainButton(mainBtn, mainCfg);
-        if (mainCfg.subButtons?.length) {
-          if (subRoute) await this.handleInitialSubRoute(mainCfg, mainRoute, subRoute);
-          else          await this.handleDefaultSubButton(mainCfg, mainRoute);
-          subNavManager.showSubNav();
-        } else {
-          subNavManager.hideSubNav();
-        }
-        router.scrollActiveButtonsIntoView?.();
-      } catch (_) {
-        if (defaultButton) await this.triggerMainButtonClick(defaultButton.button);
-      }
-    } catch (_) {
-      if (defaultButton) await this.triggerMainButtonClick(defaultButton.button);
-    }
+      router.state.currentMainRoute = main;
+      router.state.currentSubRoute  = sub || '';
+      this.state.currentMainButton  = md.button;
+      await this._activateMain(md.button, md.config);
+      if (md.config.subButtons?.length) {
+        if (sub) await this._handleInitialSub(md.config, main, sub);
+        else     await this._handleDefaultSub(md.config, main);
+        subNavManager.showSubNav();
+      } else subNavManager.hideSubNav();
+      router.scrollActiveButtonsIntoView?.();
+    } catch(_) { if (def) await this.triggerMainButtonClick(def.button); }
   },
 
-  async activateMainButton(mainButton, mainConfig) {
-    const navList = window._headerV2_elements.navList;
-    navList.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-    mainButton.classList.add('active');
-    this.state.currentMainButton = mainButton;
+  async _activateMain(btn, cfg) {
+    window._headerV2_elements.navList.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    this.state.currentMainButton = btn;
     await window._headerV2_contentManager.clearContent();
-
-    if (mainConfig.subButtons?.length) {
-      subNavManager.showSubNav();
-      await this.renderSubButtons(
-        mainConfig.subButtons,
-        mainConfig.url || mainConfig.jsonFile,
-        localStorage.getItem('selectedLang') || 'en'
-      );
-    } else {
-      subNavManager.hideSubNav();
-    }
-    if (mainConfig.jsonFile) {
-      await window._headerV2_contentManager.renderContent([{ jsonFile: mainConfig.jsonFile }]);
-    }
-  },
-
-  async handleInitialSubRoute(mainConfig, mainRoute, subRoute) {
-    await new Promise(r => setTimeout(r, 60));
     const lang = localStorage.getItem('selectedLang') || 'en';
-    if (!mainConfig.subButtons?.length) { subNavManager.hideSubNav(); return; }
+    if (cfg.subButtons?.length) {
+      subNavManager.showSubNav();
+      await this.renderSubButtons(cfg.subButtons, cfg.url || cfg.jsonFile, lang);
+    } else subNavManager.hideSubNav();
+    if (cfg.jsonFile)
+      await window._headerV2_contentManager.renderContent([{ jsonFile: cfg.jsonFile }]);
+  },
 
+  async _handleInitialSub(cfg, main, sub) {
+    await new Promise(r => setTimeout(r, 60));
+    if (!cfg.subButtons?.length) { subNavManager.hideSubNav(); return; }
     subNavManager.showSubNav();
-    await this.renderSubButtons(mainConfig.subButtons, mainRoute, lang);
-    const fullUrl = `${mainRoute}-${subRoute}`;
-    const subBtn = window._headerV2_elements.subButtonsContainer?.querySelector(`button[data-url="${fullUrl}"]`);
-    const subCfg = mainConfig.subButtons.find(b => b.url === subRoute || b.jsonFile === subRoute);
-    if (subBtn && subCfg) {
-      window._headerV2_elements.subButtonsContainer
-        ?.querySelectorAll('.button-sub').forEach(b => b.classList.remove('active'));
-      subBtn.classList.add('active');
-      this.state.currentSubButton = subBtn;
-      if (subCfg.jsonFile) {
+    await this.renderSubButtons(cfg.subButtons, main, localStorage.getItem('selectedLang')||'en');
+    const fullUrl = `${main}-${sub}`;
+    const el  = window._headerV2_elements.subButtonsContainer?.querySelector(`button[data-url="${fullUrl}"]`);
+    const scf = cfg.subButtons.find(b => b.url === sub || b.jsonFile === sub);
+    if (el && scf) {
+      window._headerV2_elements.subButtonsContainer?.querySelectorAll('.button-sub')
+        .forEach(b => b.classList.remove('active'));
+      el.classList.add('active');
+      this.state.currentSubButton = el;
+      if (scf.jsonFile) {
         await window._headerV2_contentManager.clearContent();
-        await window._headerV2_contentManager.renderContent([{ jsonFile: subCfg.jsonFile }]);
+        await window._headerV2_contentManager.renderContent([{ jsonFile: scf.jsonFile }]);
       }
-      this._scrollSubIntoView(subBtn);
+      this._scrollSub(el);
     }
   },
 
-  async handleDefaultSubButton(mainConfig, mainRoute) {
-    if (!mainConfig.subButtons?.length) { subNavManager.hideSubNav(); return; }
+  async _handleDefaultSub(cfg, main) {
+    if (!cfg.subButtons?.length) { subNavManager.hideSubNav(); return; }
     subNavManager.showSubNav();
-    const defSub = mainConfig.subButtons.find(b => b.isDefault);
-    if (defSub) {
-      const fullUrl = `${mainRoute}-${defSub.url || defSub.jsonFile}`;
+    const d = cfg.subButtons.find(b => b.isDefault);
+    if (d) {
       const router = window._headerV2_router || window._headerV2_navigationManager;
-      await router.navigateTo(fullUrl, { skipUrlUpdate: !!window._headerV2_bootstrapping });
+      await router.navigateTo(`${main}-${d.url||d.jsonFile}`,
+        { skipUrlUpdate: !!window._headerV2_bootstrapping });
     }
   },
 
-  async triggerMainButtonClick(button, opts = {}) {
-    if (!button) return;
-    const url = button.getAttribute('data-url');
-    const navList = window._headerV2_elements.navList;
-    navList.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-    button.classList.add('active');
-    this.state.currentMainButton = button;
+  async triggerMainButtonClick(btn) {
+    if (!btn) return;
+    const url = btn.getAttribute('data-url');
+    window._headerV2_elements.navList.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    this.state.currentMainButton    = btn;
     this.state.currentMainButtonUrl = url;
     const router = window._headerV2_router || window._headerV2_navigationManager;
     try { await router.navigateTo(url, { skipUrlUpdate: !!window._headerV2_bootstrapping }); }
-    catch (e) { console.error('triggerMainButtonClick', e); }
+    catch(e) { console.error('triggerMainButtonClick', e); }
   },
 
-  async triggerSubButtonClick(button) {
-    if (!button) return;
-    const container = window._headerV2_elements.subButtonsContainer;
-    container?.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-    button.classList.add('active');
-    this.state.currentSubButton = button;
-    const url = button.getAttribute('data-url');
+  async triggerSubButtonClick(btn) {
+    if (!btn) return;
+    window._headerV2_elements.subButtonsContainer?.querySelectorAll('button')
+      .forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    this.state.currentSubButton = btn;
+    const url = btn.getAttribute('data-url');
     const router = window._headerV2_router || window._headerV2_navigationManager;
     try { await router.navigateTo(url, { skipUrlUpdate: !!window._headerV2_bootstrapping }); }
-    catch (e) { console.error('triggerSubButtonClick', e); }
+    catch(e) { console.error('triggerSubButtonClick', e); }
   },
 
-  async renderSubButtons(subButtons, mainUrl, lang) {
-    if (!subButtons?.length) { subNavManager.hideSubNav(); return; }
+  async renderSubButtons(subBtns, mainUrl, lang) {
+    if (!subBtns?.length) { subNavManager.hideSubNav(); return; }
     subNavManager.showSubNav();
-    const container = subNavManager.ensureSubNavContainer();
-    container.innerHTML = '';
+    const ctr = subNavManager.ensureSubNavContainer();
+    ctr.innerHTML = '';
 
-    const currentUrl = window.location.search;
-    let activeSubUrl = '';
-    if (currentUrl.startsWith('?')) {
-      const p = new URLSearchParams(currentUrl);
-      const m = (p.get('type') || '').replace(/__$/, '');
-      const s = p.get('page') || '';
-      if (m && s) activeSubUrl = `${m}-${s}`;
-    }
+    // Determine active sub from URL
+    const p = new URLSearchParams(window.location.search.startsWith('?')
+      ? window.location.search : `?${window.location.search}`);
+    const curMain = (p.get('type') || '').replace(/__$/, '');
+    const curSub  = p.get('page') || '';
+    const activeUrl = curMain && curSub ? `${curMain}-${curSub}` : '';
 
-    let defaultSub = null;
+    let defBtn = null;
     const frag = document.createDocumentFragment();
 
-    subButtons.forEach(button => {
-      const label = button[`${lang}_label`];
+    subBtns.forEach(cfg => {
+      const label = cfg[`${lang}_label`];
       if (!label) return;
-
       const btn = document.createElement('button');
       btn.className = 'button-sub sub-button';
-      if (button.className) btn.classList.add(button.className);
+      if (cfg.className) btn.classList.add(cfg.className);
       btn.textContent = label;
-      const fullUrl = button.url
-        ? `${mainUrl}-${button.url}`
-        : `${mainUrl}-${button.jsonFile}`;
+      const fullUrl = `${mainUrl}-${cfg.url || cfg.jsonFile}`;
       btn.setAttribute('data-url', fullUrl);
-      if (button.isDefault) defaultSub = btn;
-      if (fullUrl === activeSubUrl) btn.classList.add('active');
+      if (cfg.isDefault) defBtn = btn;
+      if (fullUrl === activeUrl) btn.classList.add('active');
 
       btn.addEventListener('click', async () => {
-        container.querySelectorAll('.button-sub').forEach(b => b.classList.remove('active'));
+        ctr.querySelectorAll('.button-sub').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         this.state.currentSubButton = btn;
         const router = window._headerV2_router || window._headerV2_navigationManager;
-        if (router?.navigateTo) {
+        if (router?.navigateTo)
           await router.navigateTo(fullUrl, { skipUrlUpdate: !!window._headerV2_bootstrapping });
-        }
       }, { passive: true });
 
       frag.appendChild(btn);
     });
+    ctr.appendChild(frag);
 
-    container.appendChild(frag);
-
-    const needsDefault = !activeSubUrl || !container.querySelector('.button-sub.active');
-    if (needsDefault && defaultSub) {
-      // Defer to avoid blocking current render tick
-      setTimeout(() => {
-        try { this.triggerSubButtonClick(defaultSub); } catch (_) {}
-      }, 0);
-    }
-  },
-
-  updateButtonState(button, isSub) {
-    const group = isSub
-      ? window._headerV2_elements.subButtonsContainer
-      : window._headerV2_elements.navList;
-    group?.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-    button.classList.add('active');
-    if (isSub) { this.state.currentSubButton = button; this._scrollSubIntoView(button); }
-    else         this.state.currentMainButton = button;
+    const needDef = !activeUrl || !ctr.querySelector('.button-sub.active');
+    if (needDef && defBtn)
+      setTimeout(() => { try { this.triggerSubButtonClick(defBtn); } catch(_){} }, 0);
   },
 
   findMainButtonConfig(url) {
     return this.buttonConfig?.mainButtons?.find(b => b.url === url || b.jsonFile === url);
   },
 
-  findSubButtonConfig(fullUrl) {
-    const [m, s] = fullUrl.split('-');
-    return this.findMainButtonConfig(m)?.subButtons?.find(b => b.url === s || b.jsonFile === s);
-  },
-
-  _scrollSubIntoView(btn) {
-    if (!btn) return;
-    const container = window._headerV2_elements.subButtonsContainer;
-    if (!container) return;
+  _scrollSub(btn) {
+    const ctr = window._headerV2_elements?.subButtonsContainer;
+    if (!ctr || !btn) return;
     requestAnimationFrame(() => {
       try {
-        const cl = container.getBoundingClientRect().left;
+        const cl = ctr.getBoundingClientRect().left;
         const bl = btn.getBoundingClientRect().left;
-        const target = container.scrollLeft + (bl - cl) - 20;
-        if (Math.abs(container.scrollLeft - target) > 1)
-          container.scrollTo({ left: target, behavior: 'smooth' });
-      } catch (_) {}
+        const t  = ctr.scrollLeft + (bl - cl) - 20;
+        if (Math.abs(ctr.scrollLeft - t) > 1)
+          ctr.scrollTo({ left: t, behavior: 'smooth' });
+      } catch(_) {}
     });
   },
 
-  updateButtonsLanguage(newLang) {
+  updateButtonsLanguage(lang) {
     try {
       const { mainButtons } = this.buttonConfig;
-      const navList = window._headerV2_elements.navList;
-      navList.querySelectorAll('button').forEach((btn, i) => {
-        const cfg = mainButtons[i];
-        if (cfg?.[`${newLang}_label`]) btn.textContent = cfg[`${newLang}_label`];
+      window._headerV2_elements.navList.querySelectorAll('button').forEach((b, i) => {
+        const l = mainButtons[i]?.[`${lang}_label`];
+        if (l) b.textContent = l;
       });
       if (this.state.currentMainButton) {
         const cfg = this.findMainButtonConfig(this.state.currentMainButton.getAttribute('data-url'));
         if (cfg?.subButtons?.length) {
           subNavManager.showSubNav();
-          this.renderSubButtons(cfg.subButtons, cfg.url || cfg.jsonFile, newLang);
-        } else {
-          subNavManager.hideSubNav();
-        }
-      } else {
-        subNavManager.hideSubNav();
-      }
-    } catch (_) {
-      window._headerV2_utils?.showNotification('อัพเดทภาษาของปุ่มไม่สำเร็จ', 'error');
-    }
+          this.renderSubButtons(cfg.subButtons, cfg.url || cfg.jsonFile, lang);
+        } else subNavManager.hideSubNav();
+      } else subNavManager.hideSubNav();
+    } catch(_) {}
+  },
+
+  // Aliases for backward compat
+  activateMainButton(btn, cfg)           { return this._activateMain(btn, cfg); },
+  handleInitialUrl(url, map, def)        { return this._handleInitialUrl(url, def); },
+  handleInitialSubRoute(cfg, m, s)       { return this._handleInitialSub(cfg, m, s); },
+  handleDefaultSubButton(cfg, m)         { return this._handleDefaultSub(cfg, m); },
+  scrollActiveSubButtonIntoView(btn)     { return this._scrollSub(btn); },
+  updateButtonState(btn, isSub) {
+    const g = isSub
+      ? window._headerV2_elements.subButtonsContainer
+      : window._headerV2_elements.navList;
+    g?.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    if (isSub) { this.state.currentSubButton = btn; this._scrollSub(btn); }
+    else         this.state.currentMainButton = btn;
   }
 };
 
-// navigationManager — thin proxy to router (backward compat)
+// navigationManager — pure proxy to router (backward compat)
 export const navigationManager = {
-  state: { isNavigating: false, currentMainRoute: '', currentSubRoute: '', previousUrl: '', lastScrollPosition: 0 },
-
-  normalizeUrl(url)    { return window._headerV2_router?.normalizeUrl?.(url) || ''; },
-  parseUrl(url)        { return window._headerV2_router?.parseUrl?.(url) || { main: '', sub: '' }; },
-  validateUrl(url)     { return window._headerV2_router?.validateUrl?.(url) || Promise.resolve(false); },
-  getDefaultRoute()    { return window._headerV2_router?.getDefaultRoute?.() || Promise.resolve(''); },
-  changeURL(url, f)    { return window._headerV2_router?.changeURL?.(url, f) || Promise.resolve(); },
-  navigateTo(r, o)     { return window._headerV2_router?.navigateTo?.(r, o) || Promise.resolve(); },
+  state: { isNavigating:false, currentMainRoute:'', currentSubRoute:'', previousUrl:'', lastScrollPosition:0 },
+  normalizeUrl(u)  { return window._headerV2_router?.normalizeUrl?.(u) || ''; },
+  parseUrl(u)      { return window._headerV2_router?.parseUrl?.(u) || { main:'', sub:'' }; },
+  validateUrl(u)   { return window._headerV2_router?.validateUrl?.(u) || Promise.resolve(false); },
+  getDefaultRoute(){ return window._headerV2_router?.getDefaultRoute?.() || Promise.resolve(''); },
+  changeURL(u,f)   { return window._headerV2_router?.changeURL?.(u,f) || Promise.resolve(); },
+  navigateTo(r,o)  { return window._headerV2_router?.navigateTo?.(r,o) || Promise.resolve(); },
 
   updateButtonStates(url) {
     try {
       const { main, sub } = this.parseUrl(url || window.location.search);
       const el = window._headerV2_elements;
-      el?.navList?.querySelectorAll('button').forEach(b => {
-        b.classList.toggle('active', b.getAttribute('data-url') === main);
-      });
-      el?.subButtonsContainer?.querySelectorAll('button').forEach(b => {
-        b.classList.toggle('active', b.getAttribute('data-url') === `${main}-${sub}`);
-      });
+      el?.navList?.querySelectorAll('button').forEach(b =>
+        b.classList.toggle('active', b.getAttribute('data-url') === main));
+      el?.subButtonsContainer?.querySelectorAll('button').forEach(b =>
+        b.classList.toggle('active', b.getAttribute('data-url') === `${main}-${sub}`));
       window._headerV2_router?.scrollActiveButtonsIntoView?.();
-    } catch (_) {}
+    } catch(_) {}
   },
 
   scrollActiveButtonsIntoView() {
     ['nav ul', '#sub-buttons-container'].forEach(sel => {
-      const container = document.querySelector(sel);
-      if (!container) return;
-      const active = container.querySelector('button.active');
-      if (!active) return;
+      const c = document.querySelector(sel);
+      const a = c?.querySelector('button.active');
+      if (!c || !a) return;
       requestAnimationFrame(() => {
         try {
-          const cb = container.getBoundingClientRect();
-          const ab = active.getBoundingClientRect();
-          const left = container.scrollLeft + (ab.left - cb.left) - 20;
-          container.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
-        } catch (_) {}
+          const cb = c.getBoundingClientRect(), ab = a.getBoundingClientRect();
+          c.scrollTo({ left: Math.max(0, c.scrollLeft + ab.left - cb.left - 20), behavior: 'smooth' });
+        } catch(_) {}
       });
     });
   }
 };
-
-// ---- Helpers ----
-function _debounce(fn, wait) {
-  let t;
-  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
-}
 
 export default { scrollManager, performanceOptimizer, subNavManager, buttonManager, navigationManager };

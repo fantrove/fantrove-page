@@ -2,118 +2,93 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8" />
-  <!-- Critical: tell browser NOT to try 3G scaling or content detection -->
+  <script src="assets/js/lang-proxy.js"></script>
+  <script src="assets/js/lang-sync.js"></script>
   <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
   <title>Discover | Fantrove Verse</title>
-
-  <!-- Theme color -->
   <meta name="theme-color" content="#13b47f" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 
-  <!--
-    PERFORMANCE STRATEGY:
-    1. Critical CSS inlined (header + styles) to avoid render-blocking
-    2. Scripts deferred or async — none block parsing
-    3. Removed will-change from CSS (was causing compositor layer bloat)
-    4. Resource hints for fonts and critical assets
-  -->
-
-  <!-- DNS prefetch + preconnect for external resources -->
+  <!-- Preconnect for critical external origins -->
   <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
   <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
   <link rel="dns-prefetch" href="https://pagead2.googlesyndication.com" />
 
-  <!-- Critical CSS: preload and swap to non-render-blocking -->
+  <!-- Critical CSS: preload → swap (non-render-blocking) -->
   <link rel="preload" href="/assets/css/header.min.css" as="style" onload="this.rel='stylesheet'" />
   <noscript><link rel="stylesheet" href="/assets/css/header.min.css" /></noscript>
 
   <link rel="preload" href="/assets/css/styles.min.css" as="style" onload="this.rel='stylesheet'" />
   <noscript><link rel="stylesheet" href="/assets/css/styles.min.css" /></noscript>
 
-  <!-- Non-critical CSS: load async -->
+  <!-- Non-critical CSS: async -->
   <link rel="stylesheet" href="/assets/css/bg.min.css" media="print" onload="this.media='all'" />
   <noscript><link rel="stylesheet" href="/assets/css/bg.min.css" /></noscript>
 
-  <!-- Font: load async — display=swap prevents FOIT -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Sofia&display=swap" media="print" onload="this.media='all'" />
+  <!-- Font: async + display=swap → no FOIT, no blocking -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Sofia&display=swap"
+        media="print" onload="this.media='all'" />
 
-  <!-- Favicon -->
   <link rel="icon" type="image/x-icon" href="/assets/images/fantrove-hub360.ico" />
 
-  <!--
-    BODY OPACITY: avoid opacity:0 trick — it causes full repaint on reveal.
-    Use content-visibility instead (set on body via JS after load).
-    Keep opacity here only as absolute fallback for FOUC.
-  -->
   <style>
-    /* Prevent FOUC — minimal inline critical reset */
-    html { background: #fff; }
-    body { margin: 0; opacity: 1; }
-    /* Promote scroll container to own layer — smoother scrolling on mobile */
-    html, body {
+    /*
+      Minimal critical inline CSS:
+      - NO body opacity:0 — causes full repaint + JS overhead on reveal
+      - header min-height reserves space → prevents CLS
+      - Smooth scroll on html, overscroll-behavior prevents bounce jank
+    */
+    html {
+      background: #fff;
       overscroll-behavior-y: none;
+    }
+    body {
+      margin: 0;
       -webkit-overflow-scrolling: touch;
     }
-    /* Reserve space for header to avoid CLS */
-    header { min-height: 90px; contain: layout style; }
+    header { min-height: 88px; contain: layout style; }
+    /* Sub-nav hidden by default (JS shows it when needed) */
+    #sub-nav { display: none; }
   </style>
 
-  <!--
-    GTM: moved to end of <head> with defer pattern.
-    If GTM is required for consent, keep it here but mark scripts async/defer below.
-  -->
+  <!-- GTM dataLayer bootstrap (no network request) -->
   <script>
-    // GTM bootstrap (minimal — just pushes to dataLayer; actual script loads async below)
     window.dataLayer = window.dataLayer || [];
     dataLayer.push({'gtm.start': new Date().getTime(), event: 'gtm.js'});
   </script>
-  <!-- GTM script: async so it never blocks parsing -->
+  <!-- GTM loader: async — never blocks parse -->
   <script async src="https://www.googletagmanager.com/gtm.js?id=GTM-PJ397CLS"></script>
 
-  <!-- Cookiebot: keep synchronous only if legally required for consent blocking -->
-  <script
-    id="Cookiebot"
+  <!-- Cookiebot: async (legal requirement still met) -->
+  <script id="Cookiebot"
     src="https://consent.cookiebot.com/uc.js"
     data-cbid="16a70d79-a7a7-4b66-89da-afb49e453c67"
     data-blockingmode="auto"
     type="text/javascript"
-    async
-  ></script>
+    async></script>
 
-  <!-- Google Ads: async -->
+  <!-- GA4 + Ads: async -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8233915433564101" crossorigin="anonymous"></script>
-
-  <!-- GA4: async -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-R4DGR81NZ6"></script>
   <script>
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
     gtag('config', 'G-R4DGR81NZ6');
     gtag('consent', 'default', {
-      ad_personalization: 'denied',
-      ad_storage: 'denied',
-      ad_user_data: 'denied',
-      analytics_storage: 'denied',
-      functionality_storage: 'denied',
-      personalization_storage: 'denied',
-      security_storage: 'granted',
-      wait_for_update: 500
+      ad_personalization: 'denied', ad_storage: 'denied',
+      ad_user_data: 'denied', analytics_storage: 'denied',
+      functionality_storage: 'denied', personalization_storage: 'denied',
+      security_storage: 'granted', wait_for_update: 500
     });
     gtag('set', 'ads_data_redaction', true);
     gtag('set', 'url_passthrough', false);
   </script>
 </head>
 
-<!--
-  body: removed opacity:0 inline style.
-  The old opacity trick causes a full repaint when JS sets opacity:1,
-  which is extremely expensive on low-end devices.
-  Native CSS animation or a tiny inline script handles FOUC better.
--->
 <body>
-  <!-- GTM noscript: required by GTM spec -->
+  <!-- GTM noscript -->
   <noscript>
     <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PJ397CLS"
             height="0" width="0" style="display:none;visibility:hidden"></iframe>
@@ -123,14 +98,12 @@
   <header>
     <div class="logo" data-translate="logo-header"></div>
     <nav>
-      <ul id="nav-list">
-        <!-- Populated by JS -->
-      </ul>
+      <ul id="nav-list"></ul>
     </nav>
   </header>
 
-  <!-- Sub-nav: placed immediately after header for sticky to work correctly -->
-  <div id="sub-nav" class="hi" style="display:none">
+  <!-- Sub-nav (hidden by default; JS reveals when active) -->
+  <div id="sub-nav" class="hi">
     <div class="hj">
       <div id="sub-buttons-container"></div>
     </div>
@@ -142,32 +115,22 @@
   </main>
 
   <!--
-    SCRIPT LOADING ORDER (optimized):
-    1. Language system — synchronous (needed before render)
-    2. Render engine — synchronous (needed before render)
-    3. Everything else — defer (parsed in parallel, executed after DOMContentLoaded)
-
-    REMOVED: back-to-top.min.js, copyNotification.min.js from blocking load;
-    they are now deferred.
+    SCRIPT STRATEGY:
+    - Language scripts: sync (must run before first paint to avoid flicker)
+    - render-engine.js: sync (assumed needed for first paint)
+    - Everything else: defer — parsed in parallel with HTML, run after DOMContentLoaded
+      This ensures the HTML parser is never blocked.
   -->
-
-  <!-- Language system: must be sync for correct initial render -->
-  <script src="/assets/js/lang-proxy.js"></script>
-  <script src="/assets/js/lang-sync.js"></script>
   <script src="/assets/js/language.min.js"></script>
-
-  <!-- Render engine + intelligent system: sync if they affect initial paint, else defer -->
   <script src="/assets/js/render-engine.js"></script>
-  <script defer src="/assets/js/intelligent-system.min.js"></script>
 
-  <!-- All other JS: defer so they don't block HTML parsing or first paint -->
+  <script defer src="/assets/js/intelligent-system.min.js"></script>
   <script defer src="/assets/js/version.min.js"></script>
   <script defer src="/assets/js/header.js"></script>
   <script defer src="/assets/js/modern-navigation.min.js"></script>
   <script defer src="/assets/js/back-to-top.min.js"></script>
   <script defer src="/assets/js/copyNotification.min.js"></script>
   <script defer src="/assets/js/lang-links.js"></script>
-  <script defer src="/assets/js/fantrove-console-bridge.js"></script>
-
+  <script defer src="/fantrove-console-bridge.js"></script>
 </body>
 </html>

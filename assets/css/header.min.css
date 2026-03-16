@@ -5,27 +5,16 @@
   font-display: swap;
 }
 
-/* ---------- ROOT VARIABLES ---------- */
+/* ---------- VARIABLES (header-scoped) ---------- */
 :root {
-  --primary-color: #FFFFFF;
-  --background-color: #FFFFFF;
-  --text-color: #52638a;
-  --text-primary: #00CEB0;
-  --text-secondary: #52638a;
-  --hover-color: rgba(19,180,127,0.08);
-  --nav-bg-color: var(--background-color);
-  --nav-active-bg: #FFFFFF;
-  --nav-text-default: #FFFFFF;
-  --nav-text-active: #ffffff;
-  --nav-button-radius: 25px;
-  --transition-fast: 0.15s ease;
-  --shadow-color: rgba(0,0,0,0.05);
-  --loading-bg: #fff;
-  --spinner-primary: #4285f4;
-  --spinner-secondary: #eee;
+  --text-primary:     #00CEB0;
+  --text-secondary:   #52638a;
+  --nav-btn-radius:   25px;
+  --spinner-primary:  #4285f4;
+  --spinner-secondary:#eee;
 }
 
-/* ---------- GLOBAL ---------- */
+/* ---------- GLOBAL RESET (minimal) ---------- */
 body { margin: 0; padding: 0; }
 
 /* ---------- HEADER ---------- */
@@ -35,10 +24,9 @@ header {
   flex-direction: column;
   align-items: flex-start;
   width: 100%;
-  background: var(--background-color);
+  background: #fff;
   margin-bottom: 30px;
-  /* contain layout to avoid full-page reflow */
-  contain: layout style;
+  contain: layout style;   /* isolate: no layout bleed to rest of page */
 }
 
 .logo {
@@ -46,71 +34,63 @@ header {
   font-size: 26px;
   padding: 20px 0 0;
   color: var(--text-primary);
-  /* removed text-shadow — expensive on low-end GPU */
+  /* no text-shadow — GPU expensive on low-end */
   white-space: nowrap;
   display: flex;
   align-items: center;
   margin-left: 10px;
   pointer-events: none;
 }
-
 .logo span { pointer-events: auto; user-select: text; }
-.logo img { height: var(--height); margin-left: 5px; }
+.logo img  { height: var(--height); margin-left: 5px; }
 
 /* ---------- NAV ---------- */
 nav {
   width: 100%;
-  background: none;
   margin-top: 7px;
-  overflow-x: hidden;
-  /* isolate stacking context */
   contain: layout style;
 }
 
 nav ul {
   display: flex;
-  list-style-type: none;
+  list-style: none;
   margin: 0;
   padding: 7px 7px 0;
-  justify-content: flex-start;
   overflow-x: auto;
   white-space: nowrap;
   scrollbar-width: none;
   border-bottom: 0.8px solid rgba(19,180,127,0.3);
-  /* prevent momentum scroll janks */
-  -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
 }
-
 nav ul::-webkit-scrollbar { display: none; }
 nav ul li { flex: none; }
 
+/* Buttons: zero transition cost */
 nav ul li button {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 11px 13px;
-  border-radius: var(--nav-button-radius);
+  border-radius: var(--nav-btn-radius);
   font-size: 0.9em;
   background: transparent;
   border: 1px solid transparent;
   color: var(--text-secondary);
   cursor: pointer;
-  position: relative;
   white-space: nowrap;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-  /* NO transition on nav buttons — causes jank on scroll */
+  /* intentionally NO transition — instant = no jank */
 }
 
-nav ul li button:hover {
-  background: rgba(0,0,0,0.05);
-}
+nav ul li button:active { background: rgba(0,0,0,0.04); }
 
 nav ul li button.active {
   color: var(--text-primary);
   background: rgba(248,255,253,1);
-  border: 1px solid #00CEB082;
+  border-color: #00CEB082;
 }
 
 nav ul li button.active::after {
@@ -131,7 +111,6 @@ nav ul li button.active::after {
   flex-direction: column;
   gap: 4px;
   cursor: pointer;
-  outline: none;
   -webkit-tap-highlight-color: transparent;
   position: fixed;
   left: 16px;
@@ -140,93 +119,72 @@ nav ul li button.active::after {
   z-index: 10008;
 }
 
-/* ---------- ERROR MESSAGE ---------- */
+/* ---------- ERROR ---------- */
 .error-message {
   position: fixed;
   top: 50%;
   right: 20px;
-  background-color: #ff4444;
-  color: white;
+  background: #ff4444;
+  color: #fff;
   padding: 15px 20px;
   border-radius: 5px;
   z-index: 1000;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
-/* ---------- LOADING SPINNER ---------- */
-.content-loading-spinner {
+/* ---------- LOADING OVERLAY (fully scoped to #content-loading-overlay) ---------- */
+#content-loading-overlay {
   position: fixed;
   inset: 0;
   display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.96);
+  z-index: 15000;
+  transition: opacity 0.18s ease;
+  /* contain=strict keeps overlay in its own stacking layer cheaply */
+  contain: strict;
+}
+#content-loading-overlay.hidden { opacity: 0; pointer-events: none; }
+
+#content-loading-overlay .cls {
+  display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  background: var(--loading-bg);
-  z-index: 1000;
-  width: 100%;
-  height: 100%;
 }
-
-.spinner-svg {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 14px;
-}
-.spinner-svg svg { width: 48px; height: 48px; }
-.spinner-svg-bg { stroke: var(--spinner-secondary); stroke-width: 6; }
-.spinner-svg-fg {
+#content-loading-overlay .svg-wrap { width: 48px; height: 48px; margin-bottom: 10px; }
+#content-loading-overlay .svg-wrap svg { width: 100%; height: 100%; }
+#content-loading-overlay .svg-bg { stroke: var(--spinner-secondary); stroke-width: 5; fill: none; }
+#content-loading-overlay .svg-fg {
   stroke: var(--spinner-primary);
-  stroke-width: 6;
+  stroke-width: 5;
   stroke-linecap: round;
-  transform-origin: 50% 50%;
+  stroke-dasharray: 90 125;
+  fill: none;
+  animation: _hdr_spin 0.9s linear infinite;
 }
+/* Prefixed keyframe — never collides with external keyframes */
+@keyframes _hdr_spin { to { transform: rotate(360deg); } }
 
-.loading-message {
-  font-size: 0.82rem;
-  color: #444;
+#content-loading-overlay .msg {
+  font-size: 0.88rem;
+  color: #2196f3;
   font-weight: 500;
-  text-align: center;
 }
 
 /* ---------- RESPONSIVE ---------- */
-@media (min-width: 600px) { body { font-size: 16px; } nav { margin-top: 5px; } }
-@media (min-width: 1024px) { body { font-size: 16px; } nav { margin-top: 5px; } }
-
-/* ---------- REDUCED MOTION / LOW-END DEVICE ---------- */
-@media (prefers-reduced-motion: reduce),
-       (hover: none) and (pointer: coarse) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-/* Low-end / slow refresh screens */
-@media (update: slow) {
-  .logo { text-shadow: none !important; }
-  nav ul li button { transition: none !important; }
-  .content-loading-spinner { transition: none !important; }
-}
-
-/* Very small screens */
-@media (max-width: 320px), (max-height: 480px) {
+@media (min-width: 600px)  { nav { margin-top: 5px; } }
+@media (min-width: 1024px) { nav { margin-top: 5px; } }
+@media (max-width: 320px)  {
   .logo { font-size: 20px; padding: 15px 0 0; }
   nav ul li button { padding: 8px 10px; font-size: 0.85em; }
   .navbar-toggle { left: 12px; top: 20px; }
-  .error-message { right: 10px; padding: 10px 15px; font-size: 0.9em; }
 }
-
-/* High-contrast / monochrome */
-@media (monochrome: 1), (prefers-contrast: high) {
-  .logo { text-shadow: none; color: #000; }
-  nav ul li button.active { border-width: 2px; border-color: #000; }
-}
-
-/* Print */
 @media print {
-  header, nav, .navbar-toggle, .content-loading-spinner { display: none !important; }
-  .error-message { position: static; box-shadow: none; border: 1px solid #000; }
+  header, nav, .navbar-toggle, #content-loading-overlay { display: none !important; }
 }
+
+/*
+  ✅ NO global * { animation: ... } or * { transition: none } rules here.
+  ✅ All rules are scoped to header, nav, .logo, #content-loading-overlay.
+  ✅ External systems (bottom nav, modals, third-party widgets) are unaffected.
+*/

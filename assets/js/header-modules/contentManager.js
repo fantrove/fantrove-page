@@ -1,450 +1,339 @@
-// contentManager.js — Performance-optimized rewrite
-// Key changes vs original:
-//  - Removed inline learning worker (unnecessary overhead)
-//  - Simplified element pool (no timer, no complex cleanup)
-//  - Single IntersectionObserver only (removed parallel scroll fallback)
-//  - Removed nested RAF chains
-//  - Batch DOM writes in single fragment per tick
-//  - Removed will-change injection (CSS handles it now)
-//  - Smaller adaptive batch sizes for low-end devices
-//  - Removed fade-in opacity animation on every element (CSS handles it)
+// contentManager.js — featherweight rewrite
+//
+// Design goals:
+//  1. Zero global side-effects (no injecting global styles, no will-change on everything)
+//  2. Single IntersectionObserver for lazy batching
+//  3. No nested RAF / no adaptive frame sampling — device tier set once at load
+//  4. Uses CSS class 'hdr-fade' (scoped in styles.min.css) instead of inline opacity
+//  5. Element pool: flat LIFO array, no timers
+//  6. Does NOT touch prefers-reduced-motion globally — CSS handles it scoped
 
 export const contentManager = {
-  _renderSession: 0,
-  _abortController: null,
-  _virtualNodes: [],
+  _session: 0,
+  _abort: null,
+  _nodes: [],       // mounted wrapper nodes
   _items: [],
-  _renderedSet: new Set(),
-  _sentinelObserver: null,
-  _isRenderingNextBatch: false,
-  _SENTINEL_ID: 'headerv2-render-sentinel',
+  _rendered: null,  // Set
+  _observer: null,
+  _busy: false,
+  _SENTINEL: 'hdrv2-sentinel',
 
-  // ---- Device detection (once) ----
-  _deviceTier: (() => {
-    const mem = navigator.deviceMemory;
-    const cores = navigator.hardwareConcurrency || 2;
-    if (mem && mem <= 1) return 'low';
-    if (mem && mem <= 2) return 'mid';
-    if (cores <= 2) return 'mid';
-    return 'high';
+  // ── Device tier (once, at import time) ──────────────────────────────────
+  _tier: (() => {
+    const m = navigator.deviceMemory;
+    const c = navigator.hardwareConcurrency || 2;
+    if ((m && m <= 1) || c <= 2) return 0;   // low
+    if ((m && m <= 2) || c <= 4) return 1;   // mid
+    return 2;                                  // high
   })(),
 
-  _batchSize() {
-    // Keep batches small — better frame pacing
-    if (this._deviceTier === 'low') return 3;
-    if (this._deviceTier === 'mid') return 5;
-    return 8;
+  _batch() {
+    // Small batches = smooth frame pacing on weak CPUs
+    return [3, 5, 10][this._tier];
   },
 
-  // ---- Element pool (simple LIFO, no timer) ----
-  _pool: [],
-  _poolMax: 30,
+  _maxDOM() {
+    // Limit live DOM nodes — key for low-RAM devices
+    return [10, 18, 30][this._tier];
+  },
 
-  _acquire() {
+  // ── Pool (flat, no timer) ────────────────────────────────────────────────
+  _pool: [],
+  _POOL_CAP: 20,
+
+  _get() {
     const n = this._pool.pop() || document.createElement('div');
     n.className = '';
     n.style.cssText = '';
+    n.removeAttribute('id');
     return n;
   },
 
-  _release(n) {
+  _put(n) {
     if (!n) return;
-    try {
-      n.innerHTML = '';
-      n.className = '';
-      n.style.cssText = '';
-      n.removeAttribute('id');
-    } catch (_) {}
-    if (this._pool.length < this._poolMax) this._pool.push(n);
+    try { n.innerHTML = ''; n.className = ''; n.style.cssText = ''; n.removeAttribute('id'); } catch (_) {}
+    if (this._pool.length < this._POOL_CAP) this._pool.push(n);
   },
 
-  // ---- Clear ----
+  // ── Clear ────────────────────────────────────────────────────────────────
   async clearContent() {
-    this._renderSession++;
-    const session = this._renderSession;
+    this._session++;
+    if (this._abort) { try { this._abort.abort(); } catch (_) {} this._abort = null; }
+    this._busy = false;
 
-    if (this._abortController) {
-      try { this._abortController.abort(); } catch (_) {}
-      this._abortController = null;
-    }
+    if (this._observer) { try { this._observer.disconnect(); } catch (_) {} this._observer = null; }
 
-    this._isRenderingNextBatch = false;
+    const s = document.getElementById(this._SENTINEL);
+    if (s?.parentNode) try { s.parentNode.removeChild(s); } catch (_) {}
 
-    // disconnect observer
-    if (this._sentinelObserver) {
-      try { this._sentinelObserver.disconnect(); } catch (_) {}
-      this._sentinelObserver = null;
-    }
-
-    // remove sentinel
-    try {
-      const s = document.getElementById(this._SENTINEL_ID);
-      if (s && s.parentNode) s.parentNode.removeChild(s);
-    } catch (_) {}
-
-    // hide overlay
     try { window._headerV2_contentLoadingManager.hide(); } catch (_) {}
 
-    // release pooled nodes
-    for (const node of this._virtualNodes) {
-      try { if (node.parentNode) node.parentNode.removeChild(node); } catch (_) {}
-      this._release(node);
+    for (const n of this._nodes) {
+      try { if (n.parentNode) n.parentNode.removeChild(n); } catch (_) {}
+      this._put(n);
     }
-    this._virtualNodes.length = 0;
+    this._nodes.length = 0;
     this._items = [];
-    this._renderedSet = new Set();
-
-    return session;
+    this._rendered = new Set();
   },
 
-  // ---- Main render ----
+  // ── Render ───────────────────────────────────────────────────────────────
   async renderContent(data) {
-    if (!Array.isArray(data)) throw new Error('Content data should be array');
+    if (!Array.isArray(data)) throw new Error('data must be array');
 
-    const container = document.getElementById(
+    const ctr = document.getElementById(
       window._headerV2_contentLoadingManager.LOADING_CONTAINER_ID
     );
-    if (!container) return;
+    if (!ctr) return;
 
     await this.clearContent();
+    const session = this._session;
 
     // Show overlay
     try {
-      const subNavEl = document.getElementById('sub-nav');
-      let behindSubNav = false;
-      if (subNavEl) {
-        try {
-          const st = window.getComputedStyle(subNavEl);
-          const vis = st.display !== 'none' && subNavEl.offsetHeight > 0;
-          const hasBtns = !!(subNavEl.querySelector('#sub-buttons-container')?.childNodes.length);
-          if (vis && hasBtns) behindSubNav = true;
-        } catch (_) {}
+      let behind = false;
+      const sn = document.getElementById('sub-nav');
+      if (sn) {
+        const st = window.getComputedStyle(sn);
+        behind = st.display !== 'none' && sn.offsetHeight > 0
+          && !!sn.querySelector('#sub-buttons-container')?.childNodes.length;
       }
-      window._headerV2_contentLoadingManager.show({ behindSubNav });
+      window._headerV2_contentLoadingManager.show({ behindSubNav: behind });
     } catch (_) {}
 
-    this._renderSession++;
-    const session = this._renderSession;
-    this._abortController = new AbortController();
-    const { signal } = this._abortController;
-
+    this._abort = new AbortController();
+    const { signal } = this._abort;
     const items = data.slice();
     this._items = items;
 
-    // ---- Batch render helper ----
-    const renderBatch = async (startIdx, batchSz) => {
-      if (signal.aborted || session !== this._renderSession) return 0;
-
-      const end = Math.min(items.length, startIdx + batchSz);
-      if (startIdx >= end) return 0;
+    // ── Batch render fn ──────────────────────────────────────────────────
+    const renderBatch = async (from, size) => {
+      if (signal.aborted || session !== this._session) return 0;
+      const to = Math.min(items.length, from + size);
+      if (from >= to) return 0;
 
       const frag = document.createDocumentFragment();
-      let created = 0;
+      let n = 0;
 
-      for (let i = startIdx; i < end; i++) {
-        if (signal.aborted || session !== this._renderSession) break;
-        if (this._renderedSet.has(i)) continue;
+      for (let i = from; i < to; i++) {
+        if (signal.aborted || session !== this._session) break;
+        if (this._rendered.has(i)) continue;
 
         let item = items[i];
 
-        // Handle jsonFile indirection
-        if (item && item.jsonFile && !item._fetched) {
+        // Resolve jsonFile reference
+        if (item?.jsonFile && !item._fetched) {
           try {
-            const fetched = await window._headerV2_dataManager
-              .fetchWithRetry(item.jsonFile, { cache: true }, 3)
-              .catch(err => { throw err; });
-
-            if (Array.isArray(fetched)) {
+            const res = await window._headerV2_dataManager
+              .fetchWithRetry(item.jsonFile, {}, 3);
+            if (Array.isArray(res)) {
               item._fetched = true;
-              items.splice(i, 1, ...fetched);
-              end = Math.min(items.length, startIdx + batchSz); // recalc
-              i--;
-              continue;
-            } else {
-              items.splice(i, 1, fetched);
-              item = fetched;
+              items.splice(i, 1, ...res);
+              i--; continue;
             }
-          } catch (err) {
-            console.error('jsonFile fetch error', err);
-          }
+            items[i] = res; item = res;
+          } catch (e) { console.error('jsonFile', e); }
         }
 
         item = items[i];
-        if (!item || this._renderedSet.has(i)) continue;
+        if (!item || this._rendered.has(i)) continue;
 
-        const wrapper = this._acquire();
-        wrapper.id = item.id || `ci-${i}`;
+        const wrap = this._get();
+        wrap.id = item.id || `hi-${i}`;
 
-        const inner = this.createContainer(item);
+        const inner = this._mkContainer(item);
         try {
-          if (item.group?.categoryId || item.group?.items || item.categoryId) {
-            const grp = item.group || { categoryId: item.categoryId, type: item.type || 'button' };
-            await this.renderGroupItems(inner, grp);
-          } else {
-            await this.renderSingleItem(inner, item);
-          }
-        } catch (err) {
-          console.error('render item error', err);
-        }
+          const grp = item.group || (item.categoryId
+            ? { categoryId: item.categoryId, type: item.type || 'button' }
+            : null);
+          if (grp) await this.renderGroupItems(inner, grp);
+          else      await this.renderSingleItem(inner, item);
+        } catch (e) { console.error('render item', e); }
 
-        wrapper.appendChild(inner);
-        // CSS class triggers lightweight fade-in (opacity only)
-        wrapper.classList.add('fade-in');
-        frag.appendChild(wrapper);
-        this._virtualNodes.push(wrapper);
-        this._renderedSet.add(i);
-        created++;
+        wrap.appendChild(inner);
+        // Use scoped CSS class — never touches global animation state
+        wrap.classList.add('hdr-fade');
+        frag.appendChild(wrap);
+        this._nodes.push(wrap);
+        this._rendered.add(i);
+        n++;
       }
 
-      if (frag.childNodes.length > 0) {
-        container.appendChild(frag);
-      }
+      if (frag.childNodes.length) ctr.appendChild(frag);
 
-      // Trim DOM: keep last N nodes to limit memory
-      const MAX = this._deviceTier === 'low' ? 12 : (this._deviceTier === 'mid' ? 20 : 30);
-      while (this._virtualNodes.length > MAX) {
-        const old = this._virtualNodes.shift();
+      // Trim old nodes to stay under maxDOM budget
+      const cap = this._maxDOM();
+      while (this._nodes.length > cap) {
+        const old = this._nodes.shift();
         try { if (old.parentNode) old.parentNode.removeChild(old); } catch (_) {}
-        this._release(old);
+        this._put(old);
       }
-
-      return created;
+      return n;
     };
 
-    // ---- Initial batch ----
-    await renderBatch(0, this._batchSize());
-    let rendered = this._renderedSet.size;
+    // ── First batch ──────────────────────────────────────────────────────
+    await renderBatch(0, this._batch());
+    let done = this._rendered.size;
 
-    if (rendered >= items.length) {
+    if (done >= items.length) {
       try { window._headerV2_contentLoadingManager.hide(); } catch (_) {}
       return;
     }
 
-    // ---- Sentinel for lazy loading remaining items ----
-    let sentinel = document.getElementById(this._SENTINEL_ID);
+    // ── Sentinel + IntersectionObserver for remaining ────────────────────
+    let sentinel = document.getElementById(this._SENTINEL);
     if (!sentinel) {
       sentinel = document.createElement('div');
-      sentinel.id = this._SENTINEL_ID;
+      sentinel.id = this._SENTINEL;
       sentinel.style.cssText = 'width:1px;height:1px;opacity:0;pointer-events:none;';
     }
-    container.appendChild(sentinel);
+    ctr.appendChild(sentinel);
 
-    if (this._sentinelObserver) {
-      try { this._sentinelObserver.disconnect(); } catch (_) {}
-    }
+    const schedule = typeof requestIdleCallback === 'function'
+      ? (fn) => requestIdleCallback(fn, { timeout: 300 })
+      : (fn) => setTimeout(fn, 16);
 
-    this._sentinelObserver = new IntersectionObserver((entries) => {
-      if (signal.aborted || session !== this._renderSession) return;
-      if (this._isRenderingNextBatch) return;
+    this._observer = new IntersectionObserver((entries) => {
+      if (signal.aborted || session !== this._session || this._busy) return;
       if (!entries[0]?.isIntersecting) return;
 
-      this._isRenderingNextBatch = true;
-
-      // Use rIC when available to avoid blocking main thread
-      const schedule = (fn) =>
-        'requestIdleCallback' in window
-          ? requestIdleCallback(fn, { timeout: 300 })
-          : setTimeout(fn, 16);
-
+      this._busy = true;
       schedule(async () => {
         try {
-          if (signal.aborted || session !== this._renderSession) return;
-          await renderBatch(rendered, this._batchSize());
-          rendered = this._renderedSet.size;
+          if (signal.aborted || session !== this._session) return;
+          await renderBatch(done, this._batch());
+          done = this._rendered.size;
 
-          if (rendered >= items.length) {
-            try { sentinel.parentNode && sentinel.parentNode.removeChild(sentinel); } catch (_) {}
-            if (this._sentinelObserver) {
-              this._sentinelObserver.disconnect();
-              this._sentinelObserver = null;
-            }
-            try { window._headerV2_contentLoadingManager.hide(); } catch (_) {}
+          try { sentinel.parentNode?.removeChild(sentinel); } catch (_) {}
+          if (done < items.length) {
+            ctr.appendChild(sentinel);
           } else {
-            // Re-append sentinel to trigger next load
-            try { sentinel.parentNode && sentinel.parentNode.removeChild(sentinel); } catch (_) {}
-            container.appendChild(sentinel);
+            if (this._observer) { this._observer.disconnect(); this._observer = null; }
+            try { window._headerV2_contentLoadingManager.hide(); } catch (_) {}
           }
-        } catch (err) {
-          console.error('lazy batch error', err);
-        } finally {
-          this._isRenderingNextBatch = false;
-        }
+        } catch (e) { console.error('lazy batch', e); }
+        finally { this._busy = false; }
       });
-    }, {
-      root: null,
-      rootMargin: '600px', // preload far ahead
-      threshold: 0
-    });
+    }, { root: null, rootMargin: '500px', threshold: 0 });
 
-    this._sentinelObserver.observe(sentinel);
+    this._observer.observe(sentinel);
   },
 
-  // ---- Container factory ----
-  createContainer(item) {
-    const c = document.createElement('div');
-    if (item.group?.type === 'button' || item.type === 'button' || item.group?.categoryId) {
-      c.className = 'button-content-container';
-    } else {
-      c.className = 'card-content-container';
+  // ── Container ────────────────────────────────────────────────────────────
+  _mkContainer(item) {
+    const d = document.createElement('div');
+    const isBtnType = item.group?.type === 'button' || item.type === 'button'
+      || (item.group?.categoryId && !item.group?.type);
+    d.className = isBtnType ? 'button-content-container' : 'card-content-container';
+    if (item.group?.containerClass) d.classList.add(item.group.containerClass);
+    return d;
+  },
+
+  // ── Group ────────────────────────────────────────────────────────────────
+  async renderGroupItems(ctr, grp) {
+    const dm = window._headerV2_data_manager || window._headerV2_dataManager;
+    const isCard = grp.type === 'card';
+
+    if (grp.categoryId) {
+      const { data, header } = await dm.fetchCategoryGroup(grp.categoryId);
+      if (header) ctr.appendChild(this._mkHeader(header));
+      for (const item of data)
+        ctr.appendChild(isCard ? await this._mkCard(item) : await this._mkBtn(item));
+      return;
     }
-    if (item.group?.containerClass) c.classList.add(item.group.containerClass);
-    return c;
-  },
 
-  // ---- Group render ----
-  async renderGroupItems(container, group) {
-    if (!group.categoryId && !group.items) throw new Error('Group must have categoryId or items');
-
-    if (group.categoryId) {
-      const dm = window._headerV2_data_manager || window._headerV2_dataManager;
-      const { data, header } = await dm.fetchCategoryGroup(group.categoryId);
-      if (header) container.appendChild(this.createGroupHeader(header));
-
-      if (group.type === 'card') {
-        for (const item of data) {
-          const el = await this.createCard(item);
-          if (el) container.appendChild(el);
-        }
-      } else {
-        for (const item of data) {
-          const el = await this.createButton(item);
-          if (el) container.appendChild(el);
-        }
-      }
-    } else if (Array.isArray(group.items)) {
-      if (group.header) container.appendChild(this.createGroupHeader(group.header));
-      if (group.type === 'card') {
-        for (const item of group.items) {
-          const el = await this.createCard(item);
-          if (el) container.appendChild(el);
-        }
-      } else {
-        for (const item of group.items) {
-          const el = await this.createButton(item);
-          if (el) container.appendChild(el);
-        }
-      }
+    if (Array.isArray(grp.items)) {
+      if (grp.header) ctr.appendChild(this._mkHeader(grp.header));
+      for (const item of grp.items)
+        ctr.appendChild(isCard ? await this._mkCard(item) : await this._mkBtn(item));
     }
   },
 
-  // ---- Header factory ----
-  createGroupHeader(headerConfig) {
+  // ── Header element ────────────────────────────────────────────────────────
+  _mkHeader(cfg) {
+    const lang = localStorage.getItem('selectedLang') || 'en';
     const wrap = document.createElement('div');
     wrap.className = 'group-header';
-    const lang = localStorage.getItem('selectedLang') || 'en';
-
-    if (typeof headerConfig === 'string') {
-      const h = document.createElement('h2');
-      h.className = 'group-header-text';
-      h.textContent = headerConfig;
-      wrap.appendChild(h);
+    if (typeof cfg === 'string') {
+      wrap.innerHTML = `<h2 class="group-header-text">${cfg}</h2>`;
       return wrap;
     }
-
-    if (headerConfig.className) wrap.classList.add(headerConfig.className);
+    if (cfg.className) wrap.classList.add(cfg.className);
 
     const h = document.createElement('h2');
     h.className = 'group-header-text';
-    h.textContent = typeof headerConfig.title === 'object'
-      ? (headerConfig.title[lang] || headerConfig.title.en || '')
-      : (headerConfig.title || '');
+    h.textContent = _txt(cfg.title, lang);
     wrap.appendChild(h);
 
-    if (headerConfig.description) {
-      const d = document.createElement('p');
-      d.className = 'group-header-description';
-      d.textContent = typeof headerConfig.description === 'object'
-        ? (headerConfig.description[lang] || headerConfig.description.en || '')
-        : (headerConfig.description || '');
-      wrap.appendChild(d);
+    if (cfg.description) {
+      const p = document.createElement('p');
+      p.className = 'group-header-description';
+      p.textContent = _txt(cfg.description, lang);
+      wrap.appendChild(p);
     }
 
-    // Language update listener (attached once via WeakMap-style check)
-    if (!wrap._langBound) {
-      wrap._langBound = true;
+    // Language listener — attached once per element
+    if (!wrap._ll) {
+      wrap._ll = true;
       window.addEventListener('languageChange', (ev) => {
         const nl = ev.detail?.language || 'en';
         const ht = wrap.querySelector('.group-header-text');
-        if (ht && typeof headerConfig.title === 'object') {
-          ht.textContent = headerConfig.title[nl] || headerConfig.title.en || ht.textContent;
-        }
+        if (ht && cfg.title) ht.textContent = _txt(cfg.title, nl);
         const hd = wrap.querySelector('.group-header-description');
-        if (hd && typeof headerConfig.description === 'object') {
-          hd.textContent = headerConfig.description[nl] || headerConfig.description.en || hd.textContent;
-        }
+        if (hd && cfg.description) hd.textContent = _txt(cfg.description, nl);
       }, { passive: true });
     }
-
     return wrap;
   },
 
-  // ---- Single item ----
-  async renderSingleItem(container, item) {
+  async renderSingleItem(ctr, item) {
     if (item.categoryId) {
-      await this.renderGroupItems(container, {
-        categoryId: item.categoryId,
-        type: item.type || 'button'
-      });
+      await this.renderGroupItems(ctr, { categoryId: item.categoryId, type: item.type || 'button' });
       return;
     }
-    const el = item.type === 'button'
-      ? await this.createButton(item)
-      : await this.createCard(item);
-    if (el) container.appendChild(el);
+    ctr.appendChild(item.type === 'button'
+      ? await this._mkBtn(item)
+      : await this._mkCard(item));
   },
 
-  // ---- Button factory ----
-  async createButton(config) {
+  // ── Button ────────────────────────────────────────────────────────────────
+  async _mkBtn(cfg) {
     const btn = document.createElement('button');
     btn.className = 'button-content';
 
-    let finalContent = '';
-    let apiCode = config.api || null;
-    let type = config.type || null;
+    let text = '', api = cfg.api || null, type = cfg.type || null;
 
     try {
-      if (apiCode) {
+      if (api) {
         const db = await (window._headerV2_data_manager?.loadApiDatabase?.()
           || window._headerV2_dataManager.loadApiDatabase());
-        const apiNode = _findApi(db, apiCode);
-        if (apiNode) {
-          finalContent = apiNode.text;
-          type = type || 'emoji';
-        } else {
-          finalContent = apiCode;
-        }
-      } else if (config.content) {
-        finalContent = config.content;
-        type = 'symbol';
-      } else if (config.text) {
-        finalContent = config.text;
-        type = 'symbol';
+        const node = _findApi(db, api);
+        text = node?.text || api;
+        type = type || 'emoji';
       } else {
-        throw new Error('Button requires api, content or text');
+        text = cfg.content || cfg.text || '';
+        type = type || 'symbol';
+        if (!text) throw new Error('no content');
       }
-      btn.textContent = finalContent;
-    } catch (_) {
-      btn.textContent = 'Error';
-    }
+      btn.textContent = text;
+    } catch (_) { btn.textContent = '?'; }
 
+    const finalText = text, finalApi = api, finalType = type;
     btn.addEventListener('click', async () => {
       try {
-        await (window.unifiedCopyToClipboard || unifiedCopyToClipboard)({
-          text: finalContent,
-          api: apiCode,
-          type,
-          name: apiCode || ''
+        await (window.unifiedCopyToClipboard)({
+          text: finalText, api: finalApi, type: finalType, name: finalApi || ''
         });
       } catch (_) {
-        window._headerV2_utils.showNotification('Copy failed', 'error');
+        window._headerV2_utils?.showNotification('Copy failed', 'error');
       }
     }, { passive: true });
 
     return btn;
   },
 
-  // ---- Card factory ----
-  async createCard(cfg) {
+  // ── Card ──────────────────────────────────────────────────────────────────
+  async _mkCard(cfg) {
     const lang = localStorage.getItem('selectedLang') || 'en';
     const card = document.createElement('div');
     card.className = 'card';
@@ -455,70 +344,64 @@ export const contentManager = {
       img.src = cfg.image;
       img.loading = 'lazy';
       img.decoding = 'async';
-      img.alt = cfg.imageAlt?.[lang] || cfg.imageAlt?.en || '';
+      img.alt = _txt(cfg.imageAlt, lang);
       card.appendChild(img);
     }
 
-    const content = document.createElement('div');
-    content.className = 'card-content';
+    const body = document.createElement('div');
+    body.className = 'card-content';
+    body.innerHTML =
+      `<div class="card-title">${_esc(_txt(cfg.title || cfg.name, lang))}</div>` +
+      `<div class="card-description">${_esc(_txt(cfg.description, lang))}</div>`;
+    card.appendChild(body);
 
-    const title = document.createElement('div');
-    title.className = 'card-title';
-    title.textContent = _getText(cfg.title || cfg.name, lang);
-    content.appendChild(title);
-
-    const desc = document.createElement('div');
-    desc.className = 'card-description';
-    desc.textContent = _getText(cfg.description, lang);
-    content.appendChild(desc);
-
-    card.appendChild(content);
-
-    if (cfg.link) {
-      card.addEventListener('click', () => {
-        window.open(cfg.link, '_blank', 'noopener,noreferrer');
-      }, { passive: true });
-    }
+    if (cfg.link)
+      card.addEventListener('click', () => window.open(cfg.link, '_blank', 'noopener,noreferrer'),
+        { passive: true });
     if (cfg.className) card.classList.add(cfg.className);
-
     return card;
   },
 
-  // ---- Language update ----
+  // ── Language update ───────────────────────────────────────────────────────
   updateCardsLanguage(lang) {
-    const cards = document.querySelectorAll('.card');
-    for (const card of cards) {
-      const t = card.querySelector('.card-title');
+    document.querySelectorAll('.card').forEach(c => {
+      const t = c.querySelector('.card-title');
       if (t) { const v = t.dataset[`title${lang.toUpperCase()}`]; if (v) t.textContent = v; }
-      const d = card.querySelector('.card-description');
+      const d = c.querySelector('.card-description');
       if (d) { const v = d.dataset[`desc${lang.toUpperCase()}`]; if (v) d.textContent = v; }
-    }
-  }
+    });
+  },
+
+  // Legacy alias
+  createContainer(item) { return this._mkContainer(item); },
+  async createButton(cfg) { return this._mkBtn(cfg); },
+  async createCard(cfg)   { return this._mkCard(cfg); },
 };
 
-// ---- Helpers (module-level, no closure overhead per call) ----
-function _findApi(obj, code) {
+// ── Pure helpers (no closure overhead per call) ───────────────────────────────
+function _findApi(obj, code, depth = 0) {
+  if (depth > 40) return null;
   if (Array.isArray(obj)) {
-    for (const item of obj) {
-      const r = _findApi(item, code);
-      if (r) return r;
-    }
+    for (const x of obj) { const r = _findApi(x, code, depth+1); if (r) return r; }
   } else if (obj && typeof obj === 'object') {
     if (obj.api === code) return obj;
     for (const k in obj) {
-      if (Object.prototype.hasOwnProperty.call(obj, k)) {
-        const r = _findApi(obj[k], code);
-        if (r) return r;
-      }
+      if (!Object.prototype.hasOwnProperty.call(obj, k)) continue;
+      const r = _findApi(obj[k], code, depth+1);
+      if (r) return r;
     }
   }
   return null;
 }
 
-function _getText(val, lang) {
-  if (!val) return '';
-  if (typeof val === 'object') return val[lang] || val.en || '';
-  return val;
+function _txt(v, lang) {
+  if (!v) return '';
+  if (typeof v === 'object') return v[lang] || v.en || '';
+  return String(v);
+}
+
+function _esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 export default contentManager;

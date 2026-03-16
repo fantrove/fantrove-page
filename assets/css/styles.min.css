@@ -1,70 +1,52 @@
 :root {
-  --app-theme-indigo: #00CEB0;
-  --app-theme-indigo-hover: #54CBAB;
-  --app-theme-indigo-light: #54CBAB;
-  --app-theme-indigo-lighter: rgba(96,81,255,0.04);
-  --app-theme-indigo-border: rgba(0,206,176,0.15);
-  --app-theme-indigo-border-strong: rgba(0,206,176,0.8);
-  --app-theme-indigo-border2: rgba(0,206,176,0.3);
-  --app-text-heading: #494E59;
-  --app-text-body: #52638A;
-  --app-text-light: #6F6F82;
-  --app-surface-primary: #FFFFFF;
-  --app-surface-secondary: #FAFBFF;
-  --app-border-subtle: #EAEAF1;
-  --app-border-hover: #DCDCE6;
-  --app-elevation-small: 0 1px 3px rgba(0,0,0,0.1);
-  --app-elevation-medium: 0 3px 6px rgba(0,0,0,0.1);
-  --app-motion-quick: 0.1s ease-out;
-  --app-motion-natural: 0.15s ease-out;
-  --app-card-padding: 15px;
-  --app-card-radius: 15px;
-  --app-button-radius: 12px;
-  --app-pill-radius: 25px;
+  --c-teal:        #00CEB0;
+  --c-teal-border: rgba(0,206,176,0.15);
+  --c-teal-strong: rgba(0,206,176,0.8);
+  --c-heading:     #494E59;
+  --c-body:        #52638A;
+  --c-surface:     #FFFFFF;
+  --r-card:        30px;
+  --r-btn:         27px;
+  --r-pill:        25px;
+  --t-fast:        0.1s ease-out;
 }
 
 /* ========== BASE ========== */
 main {
   margin-top: 30px;
   margin-bottom: 80px;
-  /* isolate paint from scroll */
   contain: layout style;
 }
 
-/* ========== BUTTON SUB ========== */
+/* ========== SUB BUTTON ========== */
 .button-sub {
   margin: 0;
   padding: 11px 13px;
-  background: var(--app-surface-primary);
-  color: var(--app-text-body);
+  background: var(--c-surface);
+  color: var(--c-body);
   border: 1px solid transparent;
-  border-radius: var(--app-pill-radius);
+  border-radius: var(--r-pill);
   font-size: 0.9em;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
-  letter-spacing: 0.01em;
-  /* minimal transition - color only, GPU-friendly */
-  transition: color var(--app-motion-quick), border-color var(--app-motion-quick);
+  /* color-only transition: GPU-free */
+  transition: color var(--t-fast);
 }
-
-.button-sub:hover,
-.button-sub.active { color: var(--app-theme-indigo); }
-
+.button-sub:active,
+.button-sub.active {
+  color: var(--c-teal);
+}
 .button-sub.active {
   background: rgba(248,255,253,1);
-  border: 1px solid #00CEB082;
+  border-color: #00CEB082;
 }
 
 /* ========== HI / HJ ========== */
 .hi { padding: 0 10px; }
-.hj {
-  border-radius: 40px;
-  background: #FFFFFF;
-  border: 0.5px solid rgba(0,0,0,0.1);
-}
+.hj { border-radius: 40px; background: #fff; border: 0.5px solid rgba(0,0,0,0.1); }
 
-/* ========== BUTTON CONTENT ========== */
+/* ========== CONTENT BUTTON ========== */
 :where(.button-content) {
   box-sizing: border-box;
   width: auto !important;
@@ -77,24 +59,22 @@ main {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 27px;
+  border-radius: var(--r-btn);
   font-size: 21px;
   line-height: 1;
-  background: var(--app-surface-primary);
-  color: var(--app-theme-indigo);
-  border: 1px solid var(--app-theme-indigo-border);
+  background: var(--c-surface);
+  color: var(--c-teal);
+  border: 1px solid var(--c-teal-border);
   cursor: pointer;
   text-align: center;
   -webkit-tap-highlight-color: transparent;
-  /* only border-color transition — transform causes layout thrashing on lists */
-  transition: border-color 0.15s;
-  /* contain each button — key for large lists */
+  /* border-color only — no transform, no box-shadow change */
+  transition: border-color 0.12s;
+  /* Each button is isolated — prevents list-level reflow */
   contain: layout style;
 }
-
-:where(.button-content:hover) { border-color: var(--app-theme-indigo-border-strong); }
-:where(.button-content:active) { opacity: 0.85; }
-:where(.button-content > *) { position: relative; z-index: 1; }
+:where(.button-content:hover)  { border-color: var(--c-teal-strong); }
+:where(.button-content:active) { opacity: 0.82; }
 
 /* ========== CARD ========== */
 :where(.card) {
@@ -104,55 +84,30 @@ main {
   width: 160px;
   max-height: 222px;
   max-width: 400px;
-  padding: 0;
-  border-radius: 30px;
+  border-radius: var(--r-card);
   overflow: hidden;
-  background: #FFFFFF;
-  border: 1px solid var(--app-theme-indigo-border);
-  transition: border-color var(--app-motion-natural);
-  /* contain card layout — prevents parent reflow */
+  background: #fff;
+  border: 1px solid var(--c-teal-border);
+  transition: border-color 0.12s;
+  /* contain: paint is the key — each card has its own paint layer */
   contain: layout style paint;
-  /* tell browser height upfront to reduce CLS */
+  /* Reserve size upfront → browser skips layout for off-screen cards */
   content-visibility: auto;
   contain-intrinsic-size: 160px 222px;
 }
+:where(.card:hover)  { border-color: var(--c-teal-strong); }
+:where(.card:active) { opacity: 0.85; }
 
-:where(.card > *) { position: relative; z-index: 1; }
-/* removed expensive ::before pseudo with gradient */
-:where(.card:hover) { border-color: var(--app-theme-indigo-border-strong); }
-:where(.card:active) { opacity: 0.88; }
-
-/* CARD INNER */
 .card-image {
   width: 100%;
   height: auto;
   object-fit: cover;
-  border-radius: 0;
-  box-shadow: none;
+  /* async decode — never blocks main thread */
+  image-rendering: auto;
 }
-
-.card-content {
-  margin-top: 5px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-}
-
-.card-title {
-  font-size: 13px;
-  font-weight: bold;
-  color: var(--app-text-heading);
-  margin-bottom: 4px;
-  line-height: 1.5;
-}
-
-.card-description {
-  font-size: 11.3px;
-  color: var(--app-text-body);
-  line-height: 1.6;
-  letter-spacing: 0.01em;
-}
+.card-content { padding: 12px; display: flex; flex-direction: column; }
+.card-title { font-size: 13px; font-weight: 700; color: var(--c-heading); margin-bottom: 4px; line-height: 1.5; }
+.card-description { font-size: 11.3px; color: var(--c-body); line-height: 1.6; }
 
 /* ========== CONTAINERS ========== */
 #main-buttons-container,
@@ -165,17 +120,17 @@ main {
   overscroll-behavior-x: contain;
   -webkit-overflow-scrolling: touch;
 }
-
 #main-buttons-container { gap: 8px; padding: 4px; }
-#sub-buttons-container { gap: 0px; padding: 6px; border-radius: 25px; }
-
+#sub-buttons-container  { gap: 0;   padding: 6px; border-radius: 25px; }
 #main-buttons-container::-webkit-scrollbar,
 #sub-buttons-container::-webkit-scrollbar { display: none; }
 
+/* ========== GROUP HEADER ========== */
 .group-header { padding: 10px; width: 100%; }
 .group-header-text { font-size: 1.2rem; font-weight: 600; color: #464646; }
-.group-header-description { margin: 0.5rem 0 0; font-size: 1rem; color: var(--app-text-heading); }
+.group-header-description { margin: 0.5rem 0 0; font-size: 1rem; color: var(--c-heading); }
 
+/* ========== SECTION CONTAINERS ========== */
 .card-content-container,
 .button-content-container {
   display: flex !important;
@@ -186,70 +141,48 @@ main {
   justify-content: center !important;
   align-items: center !important;
   border-radius: 25px;
-  /* contain each section */
   contain: layout style;
 }
-
 .button-content-container { gap: 5px !important; }
-.card-content-container { gap: 6px !important; }
+.card-content-container   { gap: 6px !important; }
 
-/* ========== FADE EFFECT — lightweight version ========== */
-/* Use opacity only — NO transform, avoids compositing cost on low-end */
-.fade-in {
-  animation: _fadeIn 0.18s ease-out forwards;
+/* ========== FADE-IN (scoped class, opacity-only) ========== */
+/*
+  Scoped to .hdr-fade — does NOT use wildcard or touch external elements.
+  CSS-only opacity: no JS RAF chain needed.
+*/
+.hdr-fade {
+  animation: _hdr_fadeIn 0.15s ease-out both;
 }
-
-@keyframes _fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-/* fade-out unused — remove animation entirely for speed */
-.fade-out { opacity: 0; }
+@keyframes _hdr_fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
 /* ========== RESPONSIVE ========== */
-@media screen and (max-width: 600px) {
-  .card-content-container { justify-content: center; gap: 12px; }
+@media (max-width: 600px) {
+  .card-content-container { gap: 12px; }
   .card { margin: 8px 4px; }
-  .card-content { padding-left: 10px; padding-top: 4px; }
+  .card-content { padding-left: 10px; }
 }
-
 @media (max-width: 450px) {
-  .container {
-    padding-left: 0.7rem;
-    padding-right: 0.7rem;
-    border-radius: 25px;
-  }
-}
-
-/* ========== REDUCED MOTION ========== */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-/* LOW-END DEVICE: disable all animation */
-@media (update: slow), (hover: none) and (pointer: coarse) and (max-width: 480px) {
-  .fade-in { animation: none !important; opacity: 1 !important; }
-  :where(.button-content) { transition: none !important; }
-  :where(.card) { transition: none !important; }
-  .button-sub { transition: none !important; }
-  :where(.card:active) { opacity: 0.8; }
+  .container { padding-left: 0.7rem; padding-right: 0.7rem; border-radius: 25px; }
 }
 
 /* ========== SCROLLBAR ========== */
-::-webkit-scrollbar { height: 7px; width: 7px; background: #f6f7fb; border-radius: 6px; }
+::-webkit-scrollbar       { height: 7px; width: 7px; background: #f6f7fb; border-radius: 6px; }
 ::-webkit-scrollbar-thumb { background: #e0e7f2; border-radius: 6px; }
 ::-webkit-scrollbar-thumb:hover { background: #c8d0e7; }
 
 /* ========== IMAGE WRAPPER ========== */
-.img-d1 { padding: 0 30px; z-index: -2; }
-.img-d1 img {
-  width: 100%;
-  border-radius: 25px;
-  /* GPU hint only for actual images, not every element */
+.img-d1 { padding: 0 30px; }
+.img-d1 img { width: 100%; border-radius: 25px; }
+
+/*
+  ✅ No global * { transition: none } or animation overrides.
+  ✅ prefers-reduced-motion handled only for OUR scoped classes below.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .hdr-fade { animation: none; }
+  :where(.button-content) { transition: none; }
+  :where(.card) { transition: none; }
+  .button-sub   { transition: none; }
+  #content-loading-overlay { transition: none; }
 }
