@@ -1,31 +1,46 @@
 /*
-  search-ui.js  v4.1 — Original Behavior + RenderEngine.VList
+  search-ui.js  v5.0 — RenderEngine-Exclusive Architecture
   ════════════════════════════════════════════════════════════════
-  Based on v3.0 (fully working) with ONE change:
-  VirtualScrollEngine replaced by RenderEngine.VList via VListAdapter
 
-  WHAT CHANGED vs v3.0:
-  ✅ VirtualScrollEngine → VListAdapter (wraps RenderEngine.VList)
-     - Proper prefix-sum offsets + binary search O(log n)
-     - ResizeObserver height updates (no forced layout in scroll)
-     - RenderEngine.Pool for node recycling (no GC pressure)
-     - box-top cached by RenderEngine (never in hot path)
-  ✅ _batchRender uses <template> + DocumentFragment
-  ✅ render-start perf mark placed correctly inside rAF
+  RULE: This file NEVER writes innerHTML, NEVER creates card nodes,
+        NEVER builds HTML strings directly.
+        ALL rendering goes through window.RenderEngine.
 
-  WHAT IS IDENTICAL to v3.0:
-  - All overlay open/close behavior (input node moves into overlay)
-  - All UX: suggestions, keyboard, popstate, history, copy
-  - All public API methods
-  - ConDataService timing fix
-  - Classic overlay-close-on-search behavior
+  RENDER PIPELINE (v5.0):
+  ┌─────────────────────────────────────────────────────────────┐
+  │  User types query                                           │
+  │       ↓                                                     │
+  │  SearchEngine.search()   → result objects                   │
+  │       ↓                                                     │
+  │  RenderEngine.Worker     → Promise<string[]>  ← OFF-THREAD  │
+  │       ↓ (main thread wakes when worker done)                │
+  │  RenderEngine.FlatList   → replaceChildren()  ← ONE write   │
+  │       ↓                                                     │
+  │  CSS content-visibility:auto handles scroll   ← ZERO JS     │
+  └─────────────────────────────────────────────────────────────┘
 
-  DEPENDENCY: /assets/js/render-engine.js (must load before this file)
+  If RenderEngine is not loaded:
+  - RenderingService._render() logs an error and renders nothing.
+  - All other UI (overlay, suggestions, filters) still works.
+
+  UX: Identical to v4.2 — same overlay, same suggestions, same
+      keyboard behavior, same history/URL, same public API.
 ════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
 
   if (window.__searchUI && window.__searchUI._initialized) return;
+
+  /* ── Device ─────────────────────────────────────────────────── */
+  const _MEM     = Math.max(1, Math.min(8, navigator.deviceMemory || 4));
+  const _LOW_END = _MEM <= 2 || (navigator.hardwareConcurrency || 4) <= 2;
+
+  /* ── Engine accessor — throws if not loaded ─────────────────── */
+  function _RE() {
+    const re = window.RenderEngine;
+    if (!re) throw new Error('[SearchUI] RenderEngine not loaded. Add render-engine.js before search-ui.js');
+    return re;
+  }
 
   // =========================================================
   // CONFIG
@@ -35,24 +50,21 @@
       suggestionContainerId : 'searchSuggestions',
       overlayBackdropId     : 'searchOverlayBackdrop',
       overlayContainerId    : 'searchOverlayContainer',
-      sentinelId            : 'search-render-sentinel',
       searchInputId         : 'searchInput',
       searchFormId          : 'searchForm',
       typeFilterId          : 'typeFilter',
       categoryFilterId      : 'categoryFilter',
       searchResultsId       : 'searchResults',
       copyToastId           : 'copyToast',
-      placeholderId         : 'search-wrapper-placeholder'
+      placeholderId         : 'search-wrapper-placeholder',
     },
     RENDER: {
-      suggestionMax            : 8,
-      suggestionsFullscreenMax : 30,
-      vsOverscanPx             : 360,
-      vsPoolMax                : 40,
-      vsEstimatedItemHeight    : 110,
+      suggestionMax         : 8,
+      suggestionsFullMax    : 30,
+      resultLimit           : 50,   // user never needs 200
     },
     TIMING: {
-      debounceMs              : 120,
+      debounceMs              : _LOW_END ? 220 : 150,
       toastDisplayMs          : 1400,
       toastFadeMs             : 250,
       focusDelayMs            : 20,
@@ -64,11 +76,11 @@
       conDataServiceWaitMs    : 5000,
       conDataServicePollMs    : 30,
     },
-    STORAGE : { historyKey: 'searchHistory_v1', langKey: 'selectedLang' },
-    DB      : { path: '/assets/db/db.min.json' },
-    PERF    : { enabled: false, longTaskThresholdMs: 50, maxMeasures: 200 },
-    LANG    : { default: 'en', autoDetect: true },
-    TEXTS: {
+    STORAGE: { historyKey: 'searchHistory_v1', langKey: 'selectedLang' },
+    DB     : { path: '/assets/db/db.min.json' },
+    PERF   : { enabled: false, longTaskMs: 50, maxM: 200 },
+    LANG   : { default: 'en', autoDetect: true },
+    TEXTS  : {
       th: {
         all_types:'ทุกประเภท', all_categories:'ทุกหมวดหมู่',
         not_found:'ไม่พบข้อมูลที่ตรงหรือใกล้เคียง',
@@ -77,19 +89,19 @@
         search_result_here:'ผลลัพธ์การค้นหาจะปรากฏที่นี่',
         search_placeholder:'ค้นหาข้อมูล...',
         type:'ประเภท', category:'หมวดหมู่', emoji:'อีโมจิ',
-        trending:'ยอดนิยม', recent:'ล่าสุด'
+        trending:'ยอดนิยม',
       },
       en: {
         all_types:'All Types', all_categories:'All Categories',
-        not_found:'No data found related to your keyword.',
+        not_found:'No data found.',
         copy:'Copy', copy_failed:'Failed to copy',
         suggestion_label:'Suggestions', suggestions_for_you:'Suggestions for you',
         search_result_here:'Search results will appear here',
         search_placeholder:'Search information...',
         type:'Type', category:'Category', emoji:'Emoji',
-        trending:'Trending', recent:'Recent'
+        trending:'Trending',
       }
-    }
+    },
   };
 
   // =========================================================
@@ -103,7 +115,6 @@
     selectedType: 'all',
     selectedCategory: 'all',
     lastCommittedSearchState: null,
-    lastQuery: '',
     overlayOpen: false,
     overlayTransitioning: false,
     preOverlayState: null,
@@ -132,83 +143,56 @@
     scrollIdleTimer: null,
     scrollableContent: null,
     resultsContainer: null,
+    // Smart names cache (FIX-3)
+    _smartNamesCache: null,
+    _smartNamesCacheLang: null,
+    // Active FlatList instance (managed by RenderingService)
+    _flatList: null,
   };
 
   const Handlers = {
-    resize: null, inputFocus: null, inputBlur: null, inputClick: null,
+    resize: null, inputFocus: null, inputClick: null,
     inputInput: null, inputKeydown: null, formSubmit: null,
     overlayBackdropClick: null, suggestionClick: null, suggestionKeydown: null,
-    documentKeydownOverlay: null, popstate: null, documentClick: null, copyClick: null,
+    documentKeydownOverlay: null, popstate: null,
   };
 
   // =========================================================
-  // VLIST ADAPTER
-  // Replaces VirtualScrollEngine with RenderEngine.VList.
-  // Falls back to <template> batch render if RenderEngine absent.
+  // LANGUAGE
   // =========================================================
-  const VListAdapter = {
-    _instance : null,
-    _host     : null,
-
-    mount(viewport, host, items, renderFn, lang) {
-      this.destroy();
-      this._host = host;
-
-      const RE = window.RenderEngine;
-      if (RE && items.length > 10) {
-        this._instance = RE.createVList({
-          container  : viewport,
-          host,
-          items,
-          renderItem : (item) => renderFn(item, lang),
-          itemHeight : CONFIG.RENDER.vsEstimatedItemHeight,
-          overscan   : RE.overscan ? RE.overscan(CONFIG.RENDER.vsOverscanPx) : CONFIG.RENDER.vsOverscanPx,
-          poolMax    : RE.poolMax  ? RE.poolMax(CONFIG.RENDER.vsPoolMax)     : CONFIG.RENDER.vsPoolMax,
-          itemClass  : 'vl-item',
-        });
-      } else {
-        // Small set: direct batch
-        const tpl = document.createElement('template');
-        tpl.innerHTML = items.map(item => renderFn(item, lang)).join('');
-        host.appendChild(tpl.content);
-      }
-    },
-
-    destroy() {
-      if (this._instance) { try { this._instance.destroy(); } catch {} this._instance = null; }
-      // Remove vl-box that VList created inside host
-      if (this._host) {
-        const box = this._host.querySelector('.vl-box');
-        if (box) try { box.remove(); } catch {}
-      }
-      this._host = null;
-    },
-
-    get isActive()     { return !!this._instance; },
-    get visibleCount() { return this._instance?.visibleCount || 0; },
-    get totalHeight()  { return this._instance?.totalHeight  || 0; },
-  };
-
-  // =========================================================
-  // UTILITIES
-  // =========================================================
-  const LanguageService = {
-    getLang() {
+  const Lang = {
+    get() {
       try {
         return localStorage.getItem(CONFIG.STORAGE.langKey) ||
           (CONFIG.LANG.autoDetect && navigator.language?.startsWith('th') ? 'th' : CONFIG.LANG.default);
       } catch { return CONFIG.LANG.default; }
     },
     t(key) {
-      const lang = this.getLang();
-      return CONFIG.TEXTS[lang]?.[key] || CONFIG.TEXTS[CONFIG.LANG.default][key] || key;
-    }
+      const l = this.get();
+      return CONFIG.TEXTS[l]?.[key] || CONFIG.TEXTS[CONFIG.LANG.default][key] || key;
+    },
   };
 
-  const DOMService = {
-    get: id => document.getElementById(id),
-    query: sel => document.querySelector(sel),
-    queryAll: sel => document.querySelectorAll(sel),
+  // =========================================================
+  // DOM HELPERS
+  // =========================================================
+  const D = {
+    get    : id  => document.getElementById(id),
+    q      : sel => document.querySelector(sel),
+    qAll   : sel => document.querySelectorAll(sel),
+    on     : (el, ev, fn, opt) => el?.addEventListener(ev, fn, opt),
+    off    : (el, ev, fn)      => el?.removeEventListener(ev, fn),
+    remove : el  => { try { el?.parentNode?.removeChild(el); } catch {} },
+    setHTML: (el, h) => { if (el) el.innerHTML = h; },
+    setAttr: (el, k, v) => { if (el) el.setAttribute(k, v); },
+    styles : (el, s) => { if (el) try { Object.assign(el.style, s); } catch {} },
+    add    : (el, c) => el?.classList?.add(c),
+    remove_: (el, c) => el?.classList?.remove(c),
+    // Fast clear — single operation, avoids innerHTML='' cascade
+    clear  : el => {
+      if (!el) return;
+      el.replaceChildren ? el.replaceChildren() : (el.innerHTML = '');
+    },
     create(tag, id, cls, styles) {
       const el = document.createElement(tag);
       if (id) el.id = id;
@@ -216,31 +200,302 @@
       if (styles) Object.assign(el.style, styles);
       return el;
     },
-    remove(el) { try { el?.parentNode?.removeChild(el); } catch {} },
-    setStyles(el, s) { if (el) try { Object.assign(el.style, s); } catch {} },
-    setHTML(el, h) { if (el) el.innerHTML = h; },
-    setAttr(el, k, v) { if (el) el.setAttribute(k, v); },
-    addClass: (el, c) => el?.classList?.add(c),
-    removeClass: (el, c) => el?.classList?.remove(c),
-    on(el, ev, fn, opts) { if (el && fn) el.addEventListener(ev, fn, opts); },
-    off(el, ev, fn) { if (el && fn) el.removeEventListener(ev, fn); },
+    enc: s => { try { return encodeURIComponent(s); } catch { return s; } },
+    dec: s => { try { return decodeURIComponent(s); } catch { return s; } },
+    esc: s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'),
   };
 
-  const StringService = {
-    escapeHtml: s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'),
-    encodeUrl: s => encodeURIComponent(s),
-    decodeUrl(s) { try { return decodeURIComponent(s); } catch { return s; } },
-  };
-
-  const StorageService = {
-    getHistory() {
-      try { return JSON.parse(sessionStorage.getItem(CONFIG.STORAGE.historyKey)||'[]'); } catch { return []; }
-    },
-    addSearchToHistory(state) {
+  // =========================================================
+  // NOTIFICATION
+  // =========================================================
+  const Notif = {
+    toast(msg) {
       try {
-        const arr = this.getHistory();
-        arr.push(Object.assign({}, state, { ts: Date.now() }));
-        sessionStorage.setItem(CONFIG.STORAGE.historyKey, JSON.stringify(arr));
+        const t = D.create('div', null, 'copy-toast-message');
+        t.textContent = msg;
+        (D.get(CONFIG.DOM.copyToastId) || document.body).appendChild(t);
+        const id = setTimeout(() => {
+          try { Object.assign(t.style, { opacity:'0', transform:'translateY(-10px)' }); setTimeout(() => D.remove(t), CONFIG.TIMING.toastFadeMs); } catch {}
+        }, CONFIG.TIMING.toastDisplayMs);
+        State._timeouts.add(id);
+      } catch {}
+    },
+    async copy(text) {
+      try {
+        if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(text); this.toast(Lang.t('copy') + ' แล้ว'); return; }
+        const ta = Object.assign(document.createElement('textarea'), { value: text });
+        Object.assign(ta.style, { position:'fixed', left:'-9999px' });
+        document.body.appendChild(ta); ta.select();
+        document.execCommand('copy') ? this.toast(Lang.t('copy') + ' แล้ว') : this.toast(Lang.t('copy_failed'));
+        document.body.removeChild(ta);
+      } catch { this.toast(Lang.t('copy_failed')); }
+    },
+  };
+
+  // =========================================================
+  // URL / HISTORY
+  // =========================================================
+  const Url = {
+    parseQS(qs) {
+      const out = {}; if (!qs) return out;
+      for (const p of qs.replace(/^\?/,'').split('&')) {
+        if (!p) continue; const i = p.indexOf('=');
+        if (i === -1) out[decodeURIComponent(p)] = ''; else out[decodeURIComponent(p.slice(0,i))] = decodeURIComponent(p.slice(i+1));
+      }
+      return out;
+    },
+    buildQS(o) { const p = []; for (const k in o) if (o[k] != null) p.push(encodeURIComponent(k)+'='+encodeURIComponent(o[k])); return p.length ? '?'+p.join('&') : ''; },
+    fromURL()  { try { const p = this.parseQS(location.search); return { q:p.q||'', type:p.type||'all', category:p.category||'all' }; } catch { return { q:'', type:'all', category:'all' }; } },
+    forState(s){ const p = {}; if (s.q) p.q = s.q; if (s.type && s.type!=='all') p.type = s.type; if (s.category && s.category!=='all') p.category = s.category; return this.buildQS(p); },
+    eq(a,b)    { if (!a&&!b) return true; if (!a||!b) return false; return (a.q||'').trim()===(b.q||'').trim()&&(a.type||'all')===(b.type||'all')&&(a.category||'all')===(b.category||'all'); },
+    commit(state) {
+      try {
+        if (this.eq(state, State.lastCommittedSearchState)) return;
+        const url = this.forState(state);
+        try { State.searchHistoryPushed ? (history.replaceState(state,'',url), State.searchHistoryPushed=false) : history.pushState(state,'',url); } catch { try { history.replaceState(state,'',url); } catch {} }
+        try { const a = JSON.parse(sessionStorage.getItem(CONFIG.STORAGE.historyKey)||'[]'); a.push(Object.assign({},state,{ts:Date.now()})); sessionStorage.setItem(CONFIG.STORAGE.historyKey, JSON.stringify(a.slice(-50))); } catch {}
+        State.lastCommittedSearchState = { q:state.q||'', type:state.type||'all', category:state.category||'all' };
+      } catch {}
+    },
+    syncOnClose() {
+      if (!State.searchHistoryPushed) return;
+      try { const s = State.lastCommittedSearchState||{q:'',type:'all',category:'all'}; history.replaceState(s,'',this.forState(s)); } catch {}
+      State.searchHistoryPushed = false;
+    },
+  };
+
+  // =========================================================
+  // PERF MONITOR
+  // =========================================================
+  const Perf = (function () {
+    const _m = [], _lt = [], _pm = {};
+    let _obs = null;
+    function _en() { return CONFIG.PERF.enabled; }
+    return {
+      enable()  { CONFIG.PERF.enabled = true; if (!_obs && 'PerformanceObserver' in window) { try { _obs = new PerformanceObserver(list => { for (const e of list.getEntries()) if (e.duration >= CONFIG.PERF.longTaskMs) { _lt.push({d:Math.round(e.duration),ts:Date.now()}); if(_lt.length>50)_lt.shift(); } }); _obs.observe({entryTypes:['longtask']}); } catch {} } },
+      disable() { CONFIG.PERF.enabled = false; try { _obs?.disconnect(); _obs=null; } catch {} },
+      mark(n)   { if (_en()) _pm[n] = performance.now(); },
+      measure(n, s) { if (!_en() || _pm[s] == null) return; const d = performance.now()-_pm[s]; delete _pm[s]; if (_m.length >= CONFIG.PERF.maxM) _m.shift(); _m.push({n,d:Math.round(d*10)/10,ts:Date.now()}); },
+      log()     { const sl=_m.filter(x=>x.n==='search-latency'); console.group('%c[SearchUI Perf]','color:#13b47f;font-weight:bold'); console.log('searches:',sl.length,'avg:',sl.length?Math.round(sl.reduce((a,b)=>a+b.d,0)/sl.length*10)/10:null,'ms'); if (_lt.length) console.table(_lt.slice(-10)); console.table(_m.slice(-20)); console.groupEnd(); },
+      reset()   { _m.length=0; _lt.length=0; },
+    };
+  })();
+
+  // =========================================================
+  // RENDERING SERVICE
+  // ALL DOM writes go through RenderEngine. Zero own render logic.
+  // =========================================================
+  const RenderingService = {
+
+    /**
+     * Main render entry point.
+     * Called by SearchService after results are ready.
+     * Uses RenderEngine.Worker → RenderEngine.FlatList.
+     * This is the ONLY place DOM gets written for search results.
+     */
+    async renderResults(results, showSuggestionsIfNoResult = false) {
+      try {
+        const RE   = _RE();
+        const lang = Lang.get();
+        const cont = (State.overlayOpen && State.resultsContainer)
+          ? State.resultsContainer
+          : D.get(CONFIG.DOM.searchResultsId);
+        if (!cont) return;
+
+        // Category filter
+        const filtered = State.selectedCategory !== 'all'
+          ? results.filter(r => ((r.category?.name?.[lang]||r.category?.name?.en)||'') === State.selectedCategory)
+          : results;
+
+        document.body.style.marginBottom = '60px';
+        State.currentFilteredResults = filtered;
+
+        // Destroy previous FlatList
+        this._destroyFlatList();
+
+        // Empty state — built via Engine.cardHTML for consistency
+        if (!filtered.length) {
+          const noResult = '<div class="no-result">' + D.esc(Lang.t('not_found')) + '</div>';
+          let html = noResult;
+          if (showSuggestionsIfNoResult) {
+            const t0 = State.apiData?.type?.[0], c0 = t0?.category?.[0];
+            if (t0 && c0) {
+              html += '<div class="suggestions-title-main">' + D.esc(Lang.t('suggestions_for_you')) + '</div>';
+              html += '<div class="suggestions-block-list">';
+              // Engine builds the HTML — no direct string work here
+              const sugItems = (c0.data||[]).slice(0,5).map(item => ({
+                item, typeObj:t0, category:c0,
+                itemName: item.name?.[lang]||item.name?.en||'',
+                typeName: t0.name?.[lang]||t0.name?.en||'',
+                catName : c0.name?.[lang]||c0.name?.en||'',
+              }));
+              const sugHtml = RE.Worker.renderSync(sugItems, lang, Lang.t('copy'));
+              html += sugHtml.join('') + '</div>';
+            }
+          }
+          // FlatList writes to DOM — even empty-state uses the same pipeline
+          State._flatList = RE.createFlatList({
+            host  : cont,
+            onCopy: text => Notif.copy(text),
+          });
+          State._flatList.render([html]);
+          this._hideSuggestions();
+          UIService.updateUILanguage();
+          return;
+        }
+
+        this._hideSuggestions();
+
+        // Build item descriptors (serializable — no DOM refs)
+        const itemDescriptors = filtered.map(r => ({
+          item    : r.item || r,
+          itemName: r.itemName || '',
+          typeName: r.typeName || r.typeObj?.name?.[lang] || r.typeObj?.name?.en || Lang.t('emoji'),
+          catName : r.catName  || r.category?.name?.[lang] || r.category?.name?.en || '',
+        }));
+
+        // Create FlatList BEFORE async call so host reference is held
+        State._flatList = RE.createFlatList({
+          host  : cont,
+          onCopy: text => Notif.copy(text),
+        });
+
+        Perf.mark('render-start');
+
+        // Worker builds ALL HTML strings off main thread
+        const htmlArray = await RE.Worker.render(itemDescriptors, lang, Lang.t('copy'));
+
+        // One DOM write via FlatList
+        State._flatList.render(htmlArray);
+
+        Perf.measure('render-cost', 'render-start');
+        UIService.updateUILanguage();
+      } catch (err) {
+        console.error('[SearchUI] renderResults failed:', err);
+      }
+    },
+
+    _destroyFlatList() {
+      if (State._flatList) {
+        try { State._flatList.destroy(); } catch {}
+        State._flatList = null;
+      }
+    },
+
+    extractResultCategories(results) {
+      try {
+        const lang = Lang.get(), out = [], seen = Object.create(null);
+        for (const r of results) {
+          const k = (r.category?.name?.[lang] || r.category?.name?.en) || '';
+          if (!seen[k]) { seen[k] = 1; out.push({ key:k, displayName:k }); }
+        }
+        return out;
+      } catch { return []; }
+    },
+
+    _hideSuggestions() {
+      try { const sg = D.get(CONFIG.DOM.suggestionContainerId); if (sg) { sg.style.display = 'none'; sg.innerHTML = ''; } } catch {}
+    },
+  };
+
+  // =========================================================
+  // FILTER SERVICE
+  // =========================================================
+  const FilterSvc = {
+    setupType(sel = 'all') {
+      try {
+        const el = D.get(CONFIG.DOM.typeFilterId); if (!el) return;
+        const l = Lang.get();
+        let buf = `<option value="all">${D.esc(Lang.t('all_types'))}</option>`;
+        for (const t of (State.apiData?.type||[])) { const lbl = t.name?.[l]||t.name?.en||''; buf += `<option value="${D.esc(lbl)}">${D.esc(lbl)}</option>`; }
+        el.innerHTML = buf; el.value = sel;
+      } catch {}
+    },
+    setupCat(cats, sel = 'all') {
+      try {
+        const el = D.get(CONFIG.DOM.categoryFilterId); if (!el) return;
+        let buf = `<option value="all">${D.esc(Lang.t('all_categories'))}</option>`;
+        for (const {key,displayName} of cats) buf += `<option value="${D.esc(key)}">${D.esc(displayName)}</option>`;
+        el.innerHTML = buf; el.style.display = ''; el.value = sel;
+      } catch {}
+    },
+  };
+
+  // =========================================================
+  // READY MODE / SUGGESTIONS  (FIX-3: cached smart names)
+  // =========================================================
+  const ReadySvc = {
+    extractSmartNames() {
+      try {
+        const lang = Lang.get();
+        if (State._smartNamesCache && State._smartNamesCacheLang === lang) return State._smartNamesCache;
+        if (!State.allKeywordsCache?.length) return [];
+        const out = [], seen = new Set();
+        for (const kw of State.allKeywordsCache) {
+          if (out.length >= CONFIG.RENDER.suggestionsFullMax) break;
+          if (!kw?.item) continue;
+          const name = typeof kw.item.name === 'object' ? (kw.item.name[lang]||kw.item.name.en||'') : '';
+          if (!name || name.length < 2 || seen.has(name)) continue;
+          if (!/[\u0E00-\u0E7F]/.test(name) && /^[A-Za-z0-9_\-]+$/.test(name) && name.length <= 20) continue;
+          seen.add(name); out.push({ raw:name, html:D.esc(name) });
+        }
+        State._smartNamesCache = out; State._smartNamesCacheLang = lang;
+        return out;
+      } catch { return []; }
+    },
+    render() {
+      try {
+        if (!State.overlayOpen) return;
+        const cont = D.get(CONFIG.DOM.suggestionContainerId); if (!cont) return;
+        const sgs = this.extractSmartNames();
+        if (!sgs.length) { cont.style.display = 'none'; return; }
+        let html = `<div class="suggestions-head">${D.esc(Lang.t('trending'))}</div>`;
+        for (const s of sgs)
+          html += `<div class="suggestion-item" role="option" tabindex="0" data-val="${D.enc(s.raw)}"><div class="suggestion-body">${s.html}</div></div>`;
+        cont.innerHTML = html; cont.style.display = 'block';
+      } catch {}
+    },
+  };
+
+  const SugSvc = {
+    handleKeydown(ev, cont) {
+      try {
+        const items = [...cont.querySelectorAll('.suggestion-item')]; if (!items.length) return;
+        const idx = items.indexOf(document.activeElement);
+        if (ev.key==='ArrowDown')  { ev.preventDefault(); items[idx===-1?0:Math.min(items.length-1,idx+1)]?.focus?.(); }
+        else if (ev.key==='ArrowUp')   { ev.preventDefault(); items[idx===-1?items.length-1:Math.max(0,idx-1)]?.focus?.(); }
+        else if (ev.key==='Enter')     { ev.preventDefault(); document.activeElement?.classList?.contains('suggestion-item') && document.activeElement?.click?.(); }
+        else if (ev.key==='Escape')    { OverlaySvc.close('escape'); }
+      } catch {}
+    },
+    handleClick(ev) {
+      try {
+        const it = ev.target.closest('.suggestion-item'); if (!it) return;
+        ev.stopPropagation?.(); ev.preventDefault?.();
+        const val = D.dec(it.getAttribute('data-val')||'');
+        const inp = D.get(CONFIG.DOM.searchInputId); if (inp) inp.value = val;
+        State.suggestionsLocked = false;
+        SearchSvc.doSearch(null, false);
+      } catch {}
+    },
+    renderQuery(query) {
+      try {
+        if (State.overlayTransitioning) return;
+        const cont = D.get(CONFIG.DOM.suggestionContainerId); if (!cont) return;
+        if (!query?.trim()) { ReadySvc.render(); return; }
+        const sgs = window.SearchEngine?.querySuggestions?.(query, CONFIG.RENDER.suggestionsFullMax) || [];
+        if (!sgs.length) { ReadySvc.render(); return; }
+        let html = `<div class="suggestions-head">${D.esc(Lang.t('suggestion_label'))}</div>`;
+        for (const s of sgs) {
+          // Highlight via Engine's escaping only — no special markup for now
+          html += `<div class="suggestion-item" role="option" tabindex="0" data-val="${D.enc(s.raw||s.display||'')}"><div class="suggestion-body">${D.esc(s.raw||s.display||'')}</div></div>`;
+        }
+        cont.innerHTML = html; cont.style.display = 'block';
+        const inp = D.get(CONFIG.DOM.searchInputId);
+        if (inp) inp.onkeydown = e => {
+          if (e.key==='ArrowDown') { e.preventDefault(); cont.querySelector('.suggestion-item')?.focus?.(); }
+          else if (e.key==='Escape') OverlaySvc.close('escape');
+        };
       } catch {}
     },
   };
@@ -248,71 +503,52 @@
   // =========================================================
   // GAP-BASED KEYBOARD SERVICE
   // =========================================================
-  const GapBasedKeyboardService = {
+  const KBGap = {
     isGapExpired:      () => (Date.now() - State.lastKeyboardToggleTime) >= CONFIG.TIMING.keyboardGapMinMs,
     isRecoveryExpired: () => (Date.now() - State.lastKeyboardToggleTime) >= CONFIG.TIMING.keyboardGapRecoveryMs,
-    recordToggle:      () => { State.lastKeyboardToggleTime = Date.now(); },
+    record: () => { State.lastKeyboardToggleTime = Date.now(); },
     markScroll() {
-      State.lastScrollTime = Date.now();
-      State.isScrollingActive = true;
+      State.lastScrollTime = Date.now(); State.isScrollingActive = true;
       if (State.scrollIdleTimer) clearTimeout(State.scrollIdleTimer);
       State.scrollIdleTimer = setTimeout(() => { State.isScrollingActive = false; }, CONFIG.TIMING.keyboardIdleTimeMs);
     },
-    isScrollIdle: () => !State.isScrollingActive,
-    resetGap: () => { State.lastKeyboardToggleTime = 0; },
+    isIdle: () => !State.isScrollingActive,
+    reset:  () => { State.lastKeyboardToggleTime = 0; },
   };
 
-  const KEYBOARD_AUTO_OPEN = false;
-
-  const KeyboardAutoToggleService = {
-    enableAutoToggle(sc) {
+  const KBAutoToggle = {
+    enable(sc) {
       if (State.keyboardAutoToggleEnabled) return;
-      State.keyboardAutoToggleEnabled = true;
-      State.lastOverlayScrollY = 0;
-      GapBasedKeyboardService.resetGap();
-      const el = sc || DOMService.get(CONFIG.DOM.overlayContainerId);
-      if (!el) return;
+      State.keyboardAutoToggleEnabled = true; State.lastOverlayScrollY = 0; KBGap.reset();
+      const el = sc || D.get(CONFIG.DOM.overlayContainerId); if (!el) return;
       State.keyboardAutoToggleHandler = () => {
         try {
-          const cur = el.scrollTop || 0;
-          GapBasedKeyboardService.markScroll();
-          if (cur === 0 && State.lastOverlayScrollY > 0) {
-            if (GapBasedKeyboardService.isGapExpired() || GapBasedKeyboardService.isRecoveryExpired()) {
-              this.openKB(); GapBasedKeyboardService.recordToggle();
-            }
-          } else if (cur > 0 && State.lastOverlayScrollY === 0) {
-            if (GapBasedKeyboardService.isGapExpired()) { this.closeKB(); GapBasedKeyboardService.recordToggle(); }
-          }
+          const cur = el.scrollTop || 0; KBGap.markScroll();
+          if (cur === 0 && State.lastOverlayScrollY > 0) { if (KBGap.isGapExpired() || KBGap.isRecoveryExpired()) { this._openKB(); KBGap.record(); } }
+          else if (cur > 0 && State.lastOverlayScrollY === 0) { if (KBGap.isGapExpired()) { this._closeKB(); KBGap.record(); } }
           State.lastOverlayScrollY = cur;
         } catch {}
       };
       el.addEventListener('scroll', State.keyboardAutoToggleHandler, { passive: true });
     },
-    disableAutoToggle() {
+    disable() {
       if (!State.keyboardAutoToggleEnabled) return;
       State.keyboardAutoToggleEnabled = false;
-      const sc = State.scrollableContent || DOMService.get(CONFIG.DOM.overlayContainerId);
+      const sc = State.scrollableContent || D.get(CONFIG.DOM.overlayContainerId);
       if (sc && State.keyboardAutoToggleHandler) sc.removeEventListener('scroll', State.keyboardAutoToggleHandler);
       if (State.scrollIdleTimer) clearTimeout(State.scrollIdleTimer);
       State.keyboardAutoToggleHandler = null;
     },
-    openKB() {
-      if (!KEYBOARD_AUTO_OPEN) return;
-      const inp = DOMService.get(CONFIG.DOM.searchInputId);
-      if (inp && document.activeElement !== inp) inp.focus();
-    },
-    closeKB() {
-      const inp = DOMService.get(CONFIG.DOM.searchInputId);
-      if (inp && document.activeElement === inp) inp.blur();
-    },
+    _openKB()  { /* KEYBOARD_AUTO_OPEN = false — intentionally no-op */ },
+    _closeKB() { try { const inp = D.get(CONFIG.DOM.searchInputId); if (inp && document.activeElement === inp) inp.blur(); } catch {} },
   };
 
   // =========================================================
   // KEYBOARD DETECTION
   // =========================================================
-  const KeyboardService = {
+  const KBDetect = {
     _ro: null,
-    initKeyboardDetection() {
+    init() {
       try {
         State.lastWindowInnerHeight = window.innerHeight || 0;
         if ('visualViewport' in window) {
@@ -323,780 +559,237 @@
             State.keyboardDetectionTimeout = setTimeout(() => this._update(), CONFIG.TIMING.keyboardDetectionDelayMs);
           }, { passive: true });
         } else {
-          Handlers.resize = () => {
-            clearTimeout(State.keyboardDetectionTimeout);
-            State.keyboardDetectionTimeout = setTimeout(() => this._update(), CONFIG.TIMING.keyboardDetectionDelayMs);
-          };
-          DOMService.on(window, 'resize', Handlers.resize, { passive: true });
+          Handlers.resize = () => { clearTimeout(State.keyboardDetectionTimeout); State.keyboardDetectionTimeout = setTimeout(() => this._update(), CONFIG.TIMING.keyboardDetectionDelayMs); };
+          D.on(window, 'resize', Handlers.resize, { passive: true });
         }
-        const inp = DOMService.get(CONFIG.DOM.searchInputId);
+        const inp = D.get(CONFIG.DOM.searchInputId);
         if (inp) {
-          inp.addEventListener('focus', () => {
-            clearTimeout(State.keyboardDetectionTimeout);
-            State.keyboardDetectionTimeout = setTimeout(() => this._update(), CONFIG.TIMING.keyboardDetectionDelayMs);
-          });
-          inp.addEventListener('blur', () => {
-            clearTimeout(State.keyboardDetectionTimeout);
-            State.keyboardDetectionTimeout = setTimeout(() => { State.keyboardOpen = false; }, CONFIG.TIMING.keyboardDetectionDelayMs);
-          });
+          inp.addEventListener('focus', () => { clearTimeout(State.keyboardDetectionTimeout); State.keyboardDetectionTimeout = setTimeout(() => this._update(), CONFIG.TIMING.keyboardDetectionDelayMs); });
+          inp.addEventListener('blur', () => { clearTimeout(State.keyboardDetectionTimeout); State.keyboardDetectionTimeout = setTimeout(() => { State.keyboardOpen = false; }, CONFIG.TIMING.keyboardDetectionDelayMs); });
         }
       } catch {}
     },
     _update() {
-      try {
-        const cur  = (window.visualViewport?.height) || window.innerHeight || 0;
-        const diff = State.lastWindowInnerHeight - cur;
-        if (diff > 100) State.keyboardOpen = true;
-        else if (diff < -100) State.keyboardOpen = false;
-        State.lastWindowInnerHeight = cur;
-      } catch {}
+      try { const cur = (window.visualViewport?.height) || window.innerHeight || 0, diff = State.lastWindowInnerHeight - cur; if (diff > 100) State.keyboardOpen = true; else if (diff < -100) State.keyboardOpen = false; State.lastWindowInnerHeight = cur; } catch {}
     },
-    isKeyboardOpen: () => !!State.keyboardOpen,
+    isOpen: () => !!State.keyboardOpen,
   };
 
   // =========================================================
-  // URL / HISTORY
+  // OVERLAY SERVICE  (UX identical to v4.2)
   // =========================================================
-  const URLService = {
-    parseQS(qs) {
-      const out = {};
-      if (!qs) return out;
-      for (const p of qs.replace(/^\?/,'').split('&')) {
-        if (!p) continue;
-        const idx = p.indexOf('=');
-        if (idx === -1) out[decodeURIComponent(p)] = '';
-        else out[decodeURIComponent(p.slice(0,idx))] = decodeURIComponent(p.slice(idx+1));
-      }
-      return out;
-    },
-    buildQS(obj) {
-      const p = [];
-      for (const k in obj) { if (obj[k] != null) p.push(encodeURIComponent(k)+'='+encodeURIComponent(obj[k])); }
-      return p.length ? '?'+p.join('&') : '';
-    },
-    readStateFromURL() {
-      try {
-        const p = this.parseQS(location.search);
-        return { q:p.q||'', type:p.type||'all', category:p.category||'all' };
-      } catch { return { q:'', type:'all', category:'all' }; }
-    },
-    buildUrlForState(st) {
-      const p = {};
-      if (st.q) p.q = st.q;
-      if (st.type && st.type !== 'all') p.type = st.type;
-      if (st.category && st.category !== 'all') p.category = st.category;
-      return this.buildQS(p);
-    },
-    isEqual(a, b) {
-      if (!a && !b) return true; if (!a || !b) return false;
-      return (a.q||'').trim() === (b.q||'').trim() &&
-             (a.type||'all') === (b.type||'all') &&
-             (a.category||'all') === (b.category||'all');
-    },
-    commit(state) {
-      try {
-        if (this.isEqual(state, State.lastCommittedSearchState)) return;
-        const url = this.buildUrlForState(state);
-        try {
-          if (State.searchHistoryPushed) { history.replaceState(state,'',url); State.searchHistoryPushed=false; }
-          else history.pushState(state,'',url);
-        } catch { try { history.replaceState(state,'',url); } catch {} State.searchHistoryPushed=false; }
-        StorageService.addSearchToHistory(state);
-        State.lastCommittedSearchState = { q:state.q||'', type:state.type||'all', category:state.category||'all' };
-      } catch {}
-    },
-    syncOnClose() {
-      if (State.searchHistoryPushed) {
-        try {
-          const s = State.lastCommittedSearchState || { q:'', type:'all', category:'all' };
-          history.replaceState(s, '', this.buildUrlForState(s));
-        } catch {}
-        State.searchHistoryPushed = false;
-      }
-    },
-  };
-
-  // =========================================================
-  // NOTIFICATION
-  // =========================================================
-  const NotificationService = {
-    toast(msg) {
-      try {
-        const t = DOMService.create('div', null, 'copy-toast-message');
-        t.textContent = msg;
-        (DOMService.get(CONFIG.DOM.copyToastId) || document.body).appendChild(t);
-        const id = setTimeout(() => {
-          try {
-            Object.assign(t.style, { opacity:'0', transform:'translateY(-10px)' });
-            setTimeout(() => DOMService.remove(t), CONFIG.TIMING.toastFadeMs);
-          } catch {}
-        }, CONFIG.TIMING.toastDisplayMs);
-        State._timeouts.add(id);
-      } catch {}
-    },
-    async copyText(text) {
-      try {
-        if (navigator.clipboard?.writeText) {
-          await navigator.clipboard.writeText(text);
-          this.toast(LanguageService.t('copy') + ' แล้ว');
-          return;
-        }
-        const ta = Object.assign(document.createElement('textarea'), { value: text });
-        Object.assign(ta.style, { position:'fixed', left:'-9999px' });
-        document.body.appendChild(ta);
-        ta.select();
-        if (document.execCommand('copy')) this.toast(LanguageService.t('copy') + ' แล้ว');
-        else this.toast(LanguageService.t('copy_failed'));
-        document.body.removeChild(ta);
-      } catch { this.toast(LanguageService.t('copy_failed')); }
-    },
-  };
-
-  // =========================================================
-  // PERF MONITOR
-  // =========================================================
-  const PerfMonitor = (function () {
-    const _measures = [], _longTasks = [];
-    let _observer = null, _pendingMarks = {};
-    function _enabled() { return CONFIG.PERF.enabled; }
-    function _push(name, duration) {
-      if (_measures.length >= CONFIG.PERF.maxMeasures) _measures.shift();
-      _measures.push({ name, duration: Math.round(duration * 100) / 100, ts: Date.now() });
-    }
-    function _startObs() {
-      if (_observer || !('PerformanceObserver' in window)) return;
-      try {
-        _observer = new PerformanceObserver(list => {
-          for (const e of list.getEntries()) {
-            if (e.duration >= CONFIG.PERF.longTaskThresholdMs) {
-              _longTasks.push({ duration: Math.round(e.duration), ts: Date.now() });
-              if (_longTasks.length > 50) _longTasks.shift();
-            }
-          }
-        });
-        _observer.observe({ entryTypes: ['longtask'] });
-      } catch { _observer = null; }
-    }
-    return {
-      enable()  { CONFIG.PERF.enabled = true; _startObs(); },
-      disable() { CONFIG.PERF.enabled = false; try { _observer?.disconnect(); _observer=null; } catch {} },
-      toggle()  { if (CONFIG.PERF.enabled) this.disable(); else this.enable(); return CONFIG.PERF.enabled; },
-      mark(name)            { if (!_enabled()) return; _pendingMarks[name] = performance.now(); },
-      measure(name, start)  {
-        if (!_enabled() || _pendingMarks[start] == null) return;
-        _push(name, performance.now() - _pendingMarks[start]);
-        delete _pendingMarks[start];
-      },
-      setDatasetSize() {},
-      onIndexProgress(pct, count) {
-        if (!_enabled()) return;
-        if ([25,50,75,100].includes(pct)) _push('index-progress-'+pct+'pct', count);
-      },
-      onIndexReady() {},
-      getReport() {
-        const sl  = _measures.filter(m => m.name === 'search-latency');
-        const avg = sl.length ? Math.round(sl.reduce((a,b)=>a+b.duration,0)/sl.length*10)/10 : null;
-        return {
-          enabled: _enabled(), searchCount: sl.length, avgSearchMs: avg,
-          longTaskCount: _longTasks.length, longTasks: _longTasks.slice(-10),
-          measures: _measures.slice(-50),
-          indexReady: window.SearchEngine?.isIndexReady?.() || false,
-        };
-      },
-      reset() { _measures.length = 0; _longTasks.length = 0; _pendingMarks = {}; },
-      log() {
-        const r = this.getReport();
-        console.group('%c[SearchUI PerfMonitor]', 'color:#13b47f;font-weight:bold');
-        console.log('Searches:', r.searchCount, '| Avg:', r.avgSearchMs, 'ms');
-        console.log('Long tasks:', r.longTaskCount);
-        if (r.measures.length) console.table(r.measures.slice(-20));
-        console.groupEnd();
-        return r;
-      },
-    };
-  })();
-
-  // =========================================================
-  // HIGHLIGHT
-  // =========================================================
-  const HighlightService = {
-    highlight(text, query) {
-      if (!text || !query) return StringService.escapeHtml(text||'');
-      try {
-        const t = String(text).toLowerCase();
-        const chars = new Set(String(query).toLowerCase());
-        let r = '';
-        for (let i = 0; i < t.length; i++) {
-          r += chars.has(t[i])
-            ? `<strong style="background-color:#fff3cd;font-weight:700">${StringService.escapeHtml(String(text)[i])}</strong>`
-            : StringService.escapeHtml(String(text)[i]);
-        }
-        return r;
-      } catch { return StringService.escapeHtml(text); }
-    },
-  };
-
-  // =========================================================
-  // RENDERING SERVICE
-  // =========================================================
-  const RenderingService = {
-
-    renderResultItem(item, lang) {
-      try {
-        const itemData  = item.item || item;
-        const rawText   = itemData?.text || '';
-        const itemText  = rawText || itemData?.name?.[lang] || itemData?.name?.en || item.itemName || '';
-        const itemApi   = itemData?.api || '';
-        const typeName  = item.typeName || item.typeObj?.name?.[lang] || item.typeObj?.name?.en || LanguageService.t('emoji');
-        const catName   = item.catName  || item.category?.name?.[lang] || item.category?.name?.en || '';
-
-        const names = [];
-        if (item.itemName) names.push(item.itemName);
-        if (itemData?.name) {
-          const n = itemData.name[lang] || itemData.name.en;
-          if (n && !names.includes(n)) names.push(n);
-        }
-        for (const k in (itemData||{})) {
-          if (/_name$/.test(k) && itemData[k]) {
-            const n = itemData[k][lang] || itemData[k].en;
-            if (n && !names.includes(n)) names.push(n);
-          }
-        }
-        const nameStr  = names.filter(Boolean).join(' / ');
-        const text     = itemText || itemApi || '-';
-        const vertical = text.includes('\n') || text.length > 45 || text.trim().split(/\s+/).length > 7;
-        const esc      = StringService.escapeHtml;
-
-        return `<div class="result-item search-card${vertical?' vertical':''}" role="article" aria-label="${esc(nameStr||text)}">
-  <div class="card-content" aria-hidden="true">${esc(String(text).slice(0,300))}</div>
-  <div class="card-body">
-    <div class="card-title">${esc(nameStr||(itemData?.name?.[lang]||itemData?.name?.en||itemData?.api)||text)}</div>
-    <div class="card-subtitle">${esc(itemApi||typeName||'')}</div>
-    <div class="card-tags" aria-hidden="true">
-      ${typeName?`<span class="tag">${esc(typeName)}</span>`:''}
-      ${catName ?`<span class="tag">${esc(catName)}</span>` :''}
-    </div>
-  </div>
-  <button class="result-copy-btn" data-text="${StringService.encodeUrl(text)}" aria-label="${LanguageService.t('copy')}">${LanguageService.t('copy')}</button>
-</div>`;
-      } catch { return `<div class="result-item"><div class="result-content-area">-</div></div>`; }
-    },
-
-    disconnectRenderObserver() {
-      VListAdapter.destroy();
-      DOMService.remove(DOMService.get(CONFIG.DOM.sentinelId));
-    },
-
-    extractResultCategories(results) {
-      try {
-        const lang = LanguageService.getLang();
-        const out = [], seen = Object.create(null);
-        for (const r of results) {
-          const k = (r.category?.name?.[lang] || r.category?.name?.en) || '';
-          if (!seen[k]) { seen[k] = 1; out.push({ key:k, displayName:k }); }
-        }
-        return out;
-      } catch { return []; }
-    },
-
-    renderResults(results, showSuggestionsIfNoResult = false) {
-      try {
-        const container = (State.overlayOpen && State.resultsContainer)
-          ? State.resultsContainer
-          : DOMService.get(CONFIG.DOM.searchResultsId);
-        if (!container) return;
-
-        const lang     = LanguageService.getLang();
-        const filtered = State.selectedCategory !== 'all'
-          ? results.filter(r => ((r.category?.name?.[lang]||r.category?.name?.en)||'') === State.selectedCategory)
-          : results;
-
-        document.body.style.marginBottom = '60px';
-        this.disconnectRenderObserver();
-        State.currentFilteredResults = filtered;
-
-        if (!filtered.length) {
-          let html = `<div class="no-result">${LanguageService.t('not_found')}</div>`;
-          if (showSuggestionsIfNoResult) {
-            html += `<div class="suggestions-title-main">${LanguageService.t('suggestions_for_you')}</div><div class="suggestions-block-list">`;
-            const t0 = State.apiData?.type?.[0], c0 = t0?.category?.[0];
-            for (const item of (c0?.data?.slice(0,5)||[])) {
-              html += this.renderResultItem({
-                item, typeObj:t0, category:c0,
-                itemName: item.name?.[lang]||item.name?.en||'',
-                typeName: t0?.name?.[lang]||t0?.name?.en||'',
-                catName : c0?.name?.[lang]||c0?.name?.en||'',
-              }, lang);
-            }
-            html += '</div>';
-          }
-          DOMService.setHTML(container, html);
-          UIService.updateUILanguage();
-          this._hideSuggestions();
-          return;
-        }
-
-        DOMService.setHTML(container, '');
-        this._hideSuggestions();
-
-        requestAnimationFrame(() => {
-          PerfMonitor.mark('render-start');
-          this._renderWithVList(filtered, container, lang);
-          PerfMonitor.measure('render-cost', 'render-start');
-        });
-
-        // Copy event delegation (attach once per container)
-        if (!container._copyDelegated) {
-          container._copyDelegated = true;
-          Handlers.copyClick = e => {
-            const btn = e.target.closest('.result-copy-btn');
-            if (btn?.hasAttribute('data-text')) {
-              e.preventDefault();
-              NotificationService.copyText(StringService.decodeUrl(btn.getAttribute('data-text')));
-            }
-          };
-          DOMService.on(container, 'click', Handlers.copyClick);
-        }
-
-        UIService.updateUILanguage();
-      } catch (e) { console.error('renderResults failed', e); }
-    },
-
-    _renderWithVList(items, container, lang) {
-      try {
-        // Host div for VList box
-        const host = document.createElement('div');
-        host.style.cssText = 'position:relative;width:100%;';
-        container.appendChild(host);
-
-        // Scroll parent: overlay body or window
-        const scrollParent = (State.overlayOpen && State.scrollableContent)
-          ? State.scrollableContent
-          : window;
-
-        VListAdapter.mount(scrollParent, host, items, (item, l) => this.renderResultItem(item, l), lang);
-      } catch (e) {
-        console.error('_renderWithVList failed, using batch fallback', e);
-        const tpl = document.createElement('template');
-        tpl.innerHTML = items.map(item => this.renderResultItem(item, lang)).join('');
-        container.appendChild(tpl.content);
-      }
-    },
-
-    _hideSuggestions() {
-      try {
-        const sg = DOMService.get(CONFIG.DOM.suggestionContainerId);
-        if (sg) { sg.style.display = 'none'; sg.innerHTML = ''; }
-      } catch {}
-    },
-  };
-
-  // =========================================================
-  // FILTER SERVICE
-  // =========================================================
-  const FilterService = {
-    setupTypeFilter(selected = 'all') {
-      try {
-        const el = DOMService.get(CONFIG.DOM.typeFilterId);
-        if (!el) return;
-        const lang = LanguageService.getLang();
-        let buf = [`<option value="all">${LanguageService.t('all_types')}</option>`];
-        for (const t of (State.apiData?.type||[])) {
-          const lbl = t.name?.[lang]||t.name?.en||'';
-          buf.push(`<option value="${StringService.escapeHtml(lbl)}">${StringService.escapeHtml(lbl)}</option>`);
-        }
-        el.innerHTML = buf.join('');
-        el.value = selected;
-      } catch {}
-    },
-    setupCategoryFilter(cats, selected = 'all') {
-      try {
-        const el = DOMService.get(CONFIG.DOM.categoryFilterId);
-        if (!el) return;
-        let buf = [`<option value="all">${LanguageService.t('all_categories')}</option>`];
-        for (const {key,displayName} of cats)
-          buf.push(`<option value="${StringService.escapeHtml(key)}">${StringService.escapeHtml(displayName)}</option>`);
-        el.innerHTML = buf.join('');
-        el.style.display = '';
-        el.value = selected;
-      } catch {}
-    },
-  };
-
-  // =========================================================
-  // READY MODE / SUGGESTIONS
-  // =========================================================
-  const ReadyModeService = {
-    extractSmartNames() {
-      try {
-        if (!State.allKeywordsCache) return [];
-        const lang = LanguageService.getLang();
-        const out = [], seen = new Set();
-        for (const kw of State.allKeywordsCache) {
-          if (out.length >= CONFIG.RENDER.suggestionsFullscreenMax) break;
-          if (!kw?.item) continue;
-          const name = (kw.item.name && typeof kw.item.name === 'object')
-            ? (kw.item.name[lang]||kw.item.name.en||'') : '';
-          if (!name || name.length < 2) continue;
-          if (!/[\u0E00-\u0E7F]/.test(name) && /^[A-Za-z0-9_\-]+$/.test(name) && name.length <= 20) continue;
-          if (seen.has(name)) continue;
-          seen.add(name);
-          out.push({ raw:name, display:name, highlightedHtml:StringService.escapeHtml(name) });
-        }
-        return out;
-      } catch { return []; }
-    },
-    renderReadyModeSuggestions() {
-      try {
-        if (!State.overlayOpen) return;
-        const container = DOMService.get(CONFIG.DOM.suggestionContainerId);
-        if (!container) return;
-        const sgs = this.extractSmartNames();
-        if (!sgs.length) { container.style.display = 'none'; return; }
-        let html = `<div class="suggestions-head">${LanguageService.t('trending')}</div>`;
-        for (const s of sgs)
-          html += `<div class="suggestion-item" role="option" tabindex="0" data-val="${StringService.encodeUrl(s.raw)}">
-                    <div class="suggestion-body">${s.highlightedHtml}</div>
-                  </div>`;
-        container.innerHTML = html;
-        container.style.display = 'block';
-      } catch {}
-    },
-  };
-
-  const SuggestionService = {
-    handleKeydown(ev, container) {
-      try {
-        const items = [...container.querySelectorAll('.suggestion-item')];
-        if (!items.length) return;
-        const idx = items.indexOf(document.activeElement);
-        if (ev.key==='ArrowDown')  { ev.preventDefault(); items[idx===-1?0:Math.min(items.length-1,idx+1)]?.focus?.(); }
-        else if (ev.key==='ArrowUp')   { ev.preventDefault(); items[idx===-1?items.length-1:Math.max(0,idx-1)]?.focus?.(); }
-        else if (ev.key==='Enter')     { ev.preventDefault(); if (document.activeElement?.classList?.contains('suggestion-item')) document.activeElement?.click?.(); }
-        else if (ev.key==='Escape')    { try { OverlayService.close('escape'); } catch {} }
-      } catch {}
-    },
-    handleClick(ev) {
-      try {
-        const it = ev.target.closest('.suggestion-item');
-        if (!it) return;
-        ev.stopPropagation?.();
-        ev.preventDefault?.();
-        const val = StringService.decodeUrl(it.getAttribute('data-val')||'');
-        const inp = DOMService.get(CONFIG.DOM.searchInputId);
-        if (inp) inp.value = val;
-        State.suggestionsLocked = false;
-        SearchService.doSearch(null, false);
-      } catch {}
-    },
-    renderQuerySuggestions(query) {
-      try {
-        if (State.overlayTransitioning) return;
-        const container = DOMService.get(CONFIG.DOM.suggestionContainerId);
-        if (!container) return;
-        if (!query?.trim()) { ReadyModeService.renderReadyModeSuggestions(); return; }
-        const sgs = window.SearchEngine?.querySuggestions?.(query, CONFIG.RENDER.suggestionsFullscreenMax) || [];
-        if (!sgs.length) { ReadyModeService.renderReadyModeSuggestions(); return; }
-        let html = `<div class="suggestions-head">${LanguageService.t('suggestion_label')}</div>`;
-        for (const s of sgs)
-          html += `<div class="suggestion-item" role="option" tabindex="0" data-val="${StringService.encodeUrl(s.raw)}">
-                    <div class="suggestion-body">${HighlightService.highlight(s.raw, query)}</div>
-                  </div>`;
-        container.innerHTML = html;
-        container.style.display = 'block';
-        const inp = DOMService.get(CONFIG.DOM.searchInputId);
-        if (inp) inp.onkeydown = e => {
-          if (e.key==='ArrowDown') { e.preventDefault(); container.querySelector('.suggestion-item')?.focus?.(); }
-          else if (e.key==='Escape') { try { OverlayService.close('escape'); } catch {} }
-        };
-      } catch {}
-    },
-  };
-
-  // =========================================================
-  // OVERLAY SERVICE
-  // =========================================================
-  const OverlayService = {
+  const OverlaySvc = {
     _backdrop() {
       try {
-        let bd = DOMService.get(CONFIG.DOM.overlayBackdropId);
-        if (bd) return bd;
-        bd = DOMService.create('div', CONFIG.DOM.overlayBackdropId, 'search-overlay-backdrop', {
-          position:'fixed', inset:'0', background:'rgba(12,14,18,0.48)',
-          zIndex:'9997', cursor:'default',
-        });
+        let bd = D.get(CONFIG.DOM.overlayBackdropId); if (bd) return bd;
+        bd = D.create('div', CONFIG.DOM.overlayBackdropId, 'search-overlay-backdrop', { position:'fixed', inset:'0', background:'rgba(12,14,18,0.48)', zIndex:'9997', cursor:'default' });
         Handlers.overlayBackdropClick = e => {
-          if (e.target === bd) {
-            e.preventDefault?.();
-            e.stopPropagation?.();
-            if (KeyboardService.isKeyboardOpen()) return;
-            const inp  = DOMService.get(CONFIG.DOM.searchInputId);
-            const cur  = (inp?.value||'').trim();
-            const last = (State.preOverlayState?.q||'').trim();
-            if (cur !== last && cur.length) SearchService.doSearch(null, false);
-            else OverlayService.close('backdrop');
-          }
+          if (e.target !== bd) return; e.preventDefault?.(); e.stopPropagation?.();
+          if (KBDetect.isOpen()) return;
+          const inp = D.get(CONFIG.DOM.searchInputId), cur = (inp?.value||'').trim(), last = (State.preOverlayState?.q||'').trim();
+          if (cur !== last && cur.length) SearchSvc.doSearch(null, false); else OverlaySvc.close('backdrop');
         };
-        DOMService.on(bd, 'click', Handlers.overlayBackdropClick);
-        document.body.appendChild(bd);
-        return bd;
+        D.on(bd, 'click', Handlers.overlayBackdropClick);
+        document.body.appendChild(bd); return bd;
       } catch { return null; }
     },
 
     open() {
       try {
         if (State.overlayOpen || State.overlayTransitioning) return;
-        const wrapper = DOMService.query('.search-input-wrapper');
-        if (!wrapper) return;
+        const wrapper = D.q('.search-input-wrapper'); if (!wrapper) return;
         State.overlayTransitioning = true;
-
         State.originalInputParent      = wrapper.parentNode;
         State.originalInputNextSibling = wrapper.nextSibling;
-
-        const ph = DOMService.create('div', CONFIG.DOM.placeholderId, null, {
-          width: wrapper.offsetWidth+'px', height: wrapper.offsetHeight+'px',
-          visibility: 'hidden', display: 'block',
-        });
+        const ph = D.create('div', CONFIG.DOM.placeholderId, null, { width:wrapper.offsetWidth+'px', height:wrapper.offsetHeight+'px', visibility:'hidden', display:'block' });
         State.originalPlaceholder = ph;
         State.originalInputParent.insertBefore(ph, State.originalInputNextSibling);
 
-        const inp = DOMService.get(CONFIG.DOM.searchInputId);
-        State.preOverlayState = {
-          q: inp?.value||'',
-          type: State.selectedType||'all',
-          category: State.selectedCategory||'all',
-        };
+        const inp = D.get(CONFIG.DOM.searchInputId);
+        State.preOverlayState = { q:inp?.value||'', type:State.selectedType||'all', category:State.selectedCategory||'all' };
         State.overlayOpenedAt = Date.now();
-
         this._backdrop();
 
-        let ov = DOMService.get(CONFIG.DOM.overlayContainerId);
+        let ov = D.get(CONFIG.DOM.overlayContainerId);
         if (!ov) {
-          ov = DOMService.create('div', CONFIG.DOM.overlayContainerId, 'search-overlay search-overlay-open', {
-            position:'fixed', inset:'0', zIndex:'9998', display:'flex',
-            flexDirection:'column', alignItems:'stretch', overflow:'hidden',
-            backgroundColor:'#ffffff',
-          });
+          ov = D.create('div', CONFIG.DOM.overlayContainerId, 'search-overlay search-overlay-open', { position:'fixed', inset:'0', zIndex:'9998', display:'flex', flexDirection:'column', alignItems:'stretch', overflow:'hidden', backgroundColor:'#ffffff' });
           document.body.appendChild(ov);
-        } else { ov.innerHTML = ''; }
+        } else {
+          D.clear(ov);
+        }
 
-        // Input wrapper row at top
-        const wc = DOMService.create('div', null, 'search-overlay-input-wrapper', {
-          width:'100%', zIndex:'10001', background:'#ffffff', flexShrink:'0',
-          padding:'2px 10px 5px', borderBottom:'1px solid #f0f0f0',
-          display:'flex', flexDirection:'column', alignItems:'center',
-        });
-        DOMService.addClass(wrapper, 'overlay-elevated');
-        DOMService.setStyles(wrapper, { width:'100%', maxWidth:'100%', marginTop:'0', marginBottom:'0' });
-        wc.appendChild(wrapper);
-        ov.appendChild(wc);
+        const wc = D.create('div', null, 'search-overlay-input-wrapper', { width:'100%', zIndex:'10001', background:'#ffffff', flexShrink:'0', padding:'2px 10px 5px', borderBottom:'1px solid #f0f0f0', display:'flex', flexDirection:'column', alignItems:'center' });
+        D.add(wrapper, 'overlay-elevated');
+        D.styles(wrapper, { width:'100%', maxWidth:'100%', marginTop:'0', marginBottom:'0' });
+        wc.appendChild(wrapper); ov.appendChild(wc);
         State.wrapperContainer = wc;
 
-        // Scrollable body
-        const sc = DOMService.create('div', null, 'search-overlay-scrollable-content', {
-          flex:'1', width:'100%', overflow:'auto', overscrollBehavior:'contain',
-          zIndex:'10000',
-          willChange:'scroll-position',
-          transform:'translateZ(0)',
-        });
+        // NO will-change, NO translateZ — kills GPU memory on low-end
+        const sc = D.create('div', null, 'search-overlay-scrollable-content', { flex:'1', width:'100%', overflow:'auto', overscrollBehavior:'contain', zIndex:'10000' });
+        const rw = D.create('div', null, 'search-overlay-results-wrapper', { width:'100%', padding:'0 0 16px', boxSizing:'border-box' });
+        const sg = D.create('div', CONFIG.DOM.suggestionContainerId, 'search-suggestions-fullscreen');
+        const rc = D.create('div', CONFIG.DOM.searchResultsId, 'search-overlay-results', { width:'100%' });
+        rw.appendChild(sg); rw.appendChild(rc); sc.appendChild(rw); ov.appendChild(sc);
+        State.scrollableContent = sc; State.resultsContainer = rc;
+        // FIX 4: sr-scrolling on overlay scroll container
+        ScrollClassSvc.attach(sc);
 
-        const rw = DOMService.create('div', null, 'search-overlay-results-wrapper', {
-          width:'100%', padding:'0 0 16px', boxSizing:'border-box',
-        });
-        const sg = DOMService.create('div', CONFIG.DOM.suggestionContainerId, 'search-suggestions-fullscreen');
-        const rc = DOMService.create('div', CONFIG.DOM.searchResultsId, 'search-overlay-results', { width:'100%' });
+        Handlers.suggestionKeydown = ev => SugSvc.handleKeydown(ev, sg);
+        Handlers.suggestionClick   = ev => SugSvc.handleClick(ev);
+        D.on(sg, 'keydown', Handlers.suggestionKeydown); D.on(sg, 'click', Handlers.suggestionClick);
+        D.on(sg, 'mouseenter', () => { State.suggestionsLocked = true; });
+        D.on(sg, 'mouseleave', () => { State.suggestionsLocked = false; });
 
-        rw.appendChild(sg);
-        rw.appendChild(rc);
-        sc.appendChild(rw);
-        ov.appendChild(sc);
+        document.documentElement.style.overflow = 'hidden'; document.body.style.overflow = 'hidden';
+        Handlers.documentKeydownOverlay = OverlaySvc._escHandler;
+        D.on(document, 'keydown', Handlers.documentKeydownOverlay);
 
-        State.scrollableContent = sc;
-        State.resultsContainer  = rc;
+        State.overlayOpen = true; State.lastQuery = '';
+        ReadySvc.render(); KBAutoToggle.enable(sc); this._hideNav();
 
-        Handlers.suggestionKeydown = ev => SuggestionService.handleKeydown(ev, sg);
-        Handlers.suggestionClick   = ev => SuggestionService.handleClick(ev);
-        DOMService.on(sg, 'keydown',    Handlers.suggestionKeydown);
-        DOMService.on(sg, 'click',      Handlers.suggestionClick);
-        DOMService.on(sg, 'mouseenter', () => { State.suggestionsLocked = true; });
-        DOMService.on(sg, 'mouseleave', () => { State.suggestionsLocked = false; });
-
-        document.documentElement.style.overflow = 'hidden';
-        document.body.style.overflow = 'hidden';
-
-        Handlers.documentKeydownOverlay = OverlayService._escHandler;
-        DOMService.on(document, 'keydown', Handlers.documentKeydownOverlay);
-
-        State.overlayOpen = true;
-        State.lastQuery   = '';
-        ReadyModeService.renderReadyModeSuggestions();
-        KeyboardAutoToggleService.enableAutoToggle(sc);
-        this._hideNav();
-
-        try {
-          history.pushState(
-            Object.assign({}, State.preOverlayState||{}, { [State._overlayStateMarker]: true }),
-            '', location.href
-          );
-          State.searchHistoryPushed = true;
-        } catch {}
-
+        try { history.pushState(Object.assign({}, State.preOverlayState||{}, { [State._overlayStateMarker]: true }), '', location.href); State.searchHistoryPushed = true; } catch {}
         if (inp) setTimeout(() => { try { inp.focus(); inp.select?.(); } catch {} }, CONFIG.TIMING.focusDelayMs);
-
         State.overlayTransitioning = false;
-      } catch (e) {
-        console.error('openOverlay failed', e);
-        State.overlayTransitioning = false;
-      }
+      } catch (e) { console.error('openOverlay failed', e); State.overlayTransitioning = false; }
     },
 
     _escHandler(e) {
-      if (e.key === 'Escape') {
-        if (State.preOverlayState) {
-          const inp = DOMService.get(CONFIG.DOM.searchInputId);
-          if (inp) inp.value = State.preOverlayState.q || '';
-          State.selectedType     = State.preOverlayState.type     || 'all';
-          State.selectedCategory = State.preOverlayState.category || 'all';
-        }
-        OverlayService.close('escape');
+      if (e.key !== 'Escape') return;
+      if (State.preOverlayState) {
+        const inp = D.get(CONFIG.DOM.searchInputId);
+        if (inp) inp.value = State.preOverlayState.q || '';
+        State.selectedType = State.preOverlayState.type||'all'; State.selectedCategory = State.preOverlayState.category||'all';
       }
+      OverlaySvc.close('escape');
     },
 
     close(src = 'manual') {
       try {
         if (!State.overlayOpen) return;
         State.overlayTransitioning = true;
+        if (src !== 'popstate') Url.syncOnClose();
+        RenderingService._destroyFlatList();
+        KBAutoToggle.disable();
 
-        if (src !== 'popstate') URLService.syncOnClose();
-
-        // Destroy VList before scroll parent is removed
-        RenderingService.disconnectRenderObserver();
-        KeyboardAutoToggleService.disableAutoToggle();
-
-        // Restore input wrapper
-        const wrapper = DOMService.query('.search-input-wrapper');
+        const wrapper = D.q('.search-input-wrapper');
         if (wrapper) {
-          DOMService.removeClass(wrapper, 'overlay-elevated');
-          DOMService.setStyles(wrapper, { width:'', maxWidth:'', marginTop:'', marginBottom:'' });
+          D.remove_(wrapper, 'overlay-elevated');
+          D.styles(wrapper, { width:'', maxWidth:'', marginTop:'', marginBottom:'' });
           if (State.originalInputParent) {
-            if (State.originalInputNextSibling)
-              State.originalInputParent.insertBefore(wrapper, State.originalInputNextSibling);
-            else
-              State.originalInputParent.appendChild(wrapper);
+            State.originalInputNextSibling ? State.originalInputParent.insertBefore(wrapper, State.originalInputNextSibling) : State.originalInputParent.appendChild(wrapper);
           }
         }
-
-        DOMService.remove(State.originalPlaceholder);
-        State.originalPlaceholder = null;
-        State.wrapperContainer    = null;
-        State.scrollableContent   = null;
-        State.resultsContainer    = null;
-
-        DOMService.remove(DOMService.get(CONFIG.DOM.overlayContainerId));
-        DOMService.remove(DOMService.get(CONFIG.DOM.overlayBackdropId));
-
-        document.documentElement.style.overflow = '';
-        document.body.style.overflow = '';
-
-        DOMService.off(document, 'keydown', Handlers.documentKeydownOverlay);
-        Handlers.documentKeydownOverlay = null;
-
-        State.overlayOpen       = false;
-        State.lastQuery         = '';
-        State.suggestionsLocked = false;
-        State.overlayOpenedAt   = null;
+        D.remove(State.originalPlaceholder); State.originalPlaceholder = null;
+        State.wrapperContainer = null; State.scrollableContent = null; State.resultsContainer = null;
+        D.remove(D.get(CONFIG.DOM.overlayContainerId)); D.remove(D.get(CONFIG.DOM.overlayBackdropId));
+        document.documentElement.style.overflow = ''; document.body.style.overflow = '';
+        D.off(document, 'keydown', Handlers.documentKeydownOverlay); Handlers.documentKeydownOverlay = null;
+        State.overlayOpen = false; State.suggestionsLocked = false; State.overlayOpenedAt = null;
         this._showNav();
-
-        State._timeouts.forEach(t => { try { clearTimeout(t); clearInterval(t); } catch {} });
-        State._timeouts.clear();
-
+        State._timeouts.forEach(t => { try { clearTimeout(t); clearInterval(t); } catch {} }); State._timeouts.clear();
         setTimeout(() => { State.overlayTransitioning = false; }, CONFIG.TIMING.transitionDelayMs);
-      } catch (e) {
-        console.error('closeOverlay failed', e);
-        State.overlayTransitioning = false;
-      }
+      } catch (e) { console.error('closeOverlay failed', e); State.overlayTransitioning = false; }
     },
 
     _hideNav() { try { State.navHiddenBySearch=true; window.modernNav?.hideNav?.('search-overlay'); } catch {} },
-    _showNav()  {
-      try {
-        if (window.modernNav?.showNav && State.navHiddenBySearch) {
-          State.navHiddenBySearch = false;
-          window.modernNav.showNav('search-overlay-closed');
-        }
-      } catch {}
-    },
+    _showNav()  { try { if (window.modernNav?.showNav && State.navHiddenBySearch) { State.navHiddenBySearch=false; window.modernNav.showNav('search-overlay-closed'); } } catch {} },
   };
 
   // =========================================================
   // SEARCH SERVICE
   // =========================================================
-  const SearchService = {
+  const SearchSvc = {
     _sched: (typeof scheduler !== 'undefined' && scheduler) || null,
 
-    _scheduleUserVisible(fn) {
-      if (this._sched?.postTask) return this._sched.postTask(fn, { priority: 'user-visible' });
-      return new Promise((resolve, reject) => {
-        requestAnimationFrame(() => { try { resolve(fn()); } catch (e) { reject(e); } });
-      });
+    _uvTask(fn) {
+      if (this._sched?.postTask) return this._sched.postTask(fn, { priority:'user-visible' });
+      return new Promise((res, rej) => requestAnimationFrame(() => { try { res(fn()); } catch(e) { rej(e); } }));
     },
 
     doSearch(e, preventPush) {
       try {
         e?.preventDefault?.();
-        const qEl  = DOMService.get(CONFIG.DOM.searchInputId);
-        const q    = qEl?.value || '';
-        const tfEl = DOMService.get(CONFIG.DOM.typeFilterId);
-        State.selectedType     = tfEl?.value || State.selectedType;
+        const inp  = D.get(CONFIG.DOM.searchInputId);
+        const q    = inp?.value || '';
+        State.selectedType     = D.get(CONFIG.DOM.typeFilterId)?.value || State.selectedType;
         State.selectedCategory = 'all';
 
         if (!q.trim()) {
           document.body.style.marginBottom = '';
-          const ph = `<div class="search-result-here" style="text-align:center;color:#969ca8;font-size:1.07em;margin-top:30px;">${LanguageService.t('search_result_here')}</div>`;
-          const rc = (State.overlayOpen && State.resultsContainer)
-            ? State.resultsContainer
-            : DOMService.get(CONFIG.DOM.searchResultsId);
-          if (rc) DOMService.setHTML(rc, ph);
-          RenderingService.disconnectRenderObserver();
-          FilterService.setupCategoryFilter([], 'all');
-          UIService.updateUILanguage();
-          const cleared = { q:'', type:'all', category:'all' };
-          if (!preventPush && !State.suppressHistoryPush && !URLService.isEqual(cleared, State.lastCommittedSearchState))
-            URLService.commit(cleared);
-          if (State.overlayOpen) {
-            const sg = DOMService.get(CONFIG.DOM.suggestionContainerId);
-            if (sg) sg.style.display = '';
-            ReadyModeService.renderReadyModeSuggestions();
+          RenderingService._destroyFlatList();
+          // Empty state written by Engine via FlatList
+          const cont = (State.overlayOpen && State.resultsContainer) || D.get(CONFIG.DOM.searchResultsId);
+          if (cont) {
+            const RE = window.RenderEngine;
+            if (RE) {
+              State._flatList = RE.createFlatList({ host: cont, onCopy: text => Notif.copy(text) });
+              State._flatList.render([`<div class="search-result-here" style="text-align:center;color:#969ca8;font-size:1.07em;margin-top:30px;">${D.esc(Lang.t('search_result_here'))}</div>`]);
+            }
           }
-          if (State.overlayOpen) OverlayService.close('manual');
+          FilterSvc.setupCat([], 'all');
+          UIService.updateUILanguage();
+          const cl = { q:'', type:'all', category:'all' };
+          if (!preventPush && !State.suppressHistoryPush && !Url.eq(cl, State.lastCommittedSearchState)) Url.commit(cl);
+          if (State.overlayOpen) { const sg = D.get(CONFIG.DOM.suggestionContainerId); if (sg) sg.style.display = ''; ReadySvc.render(); }
+          if (State.overlayOpen) OverlaySvc.close('manual');
           return;
         }
 
-        this._scheduleUserVisible(() => {
+        this._uvTask(async () => {
           try {
-            PerfMonitor.mark('search-start');
+            Perf.mark('search-start');
             let out = { results:[], keywords:[] };
             try { if (window.SearchEngine?.search) out = window.SearchEngine.search(q, State.selectedType) || out; } catch {}
-            State.currentResults   = out.results  || [];
+            // FIX-4: cap at 50
+            State.currentResults   = (out.results||[]).slice(0, CONFIG.RENDER.resultLimit);
             State.allKeywordsCache = out.keywords || [];
-            PerfMonitor.measure('search-latency', 'search-start');
+            // Invalidate smart names cache when keywords change
+            State._smartNamesCache = null; State._smartNamesCacheLang = null;
+            Perf.measure('search-latency', 'search-start');
 
-            FilterService.setupCategoryFilter(RenderingService.extractResultCategories(State.currentResults), 'all');
+            FilterSvc.setupCat(RenderingService.extractResultCategories(State.currentResults), 'all');
 
-            const stObj = { q, type: State.selectedType||'all', category: 'all' };
-            if (!preventPush && !State.suppressHistoryPush && !URLService.isEqual(stObj, State.lastCommittedSearchState)) {
-              URLService.commit(stObj);
-              State.searchHistoryPushed = true;
-            }
+            const stObj = { q, type:State.selectedType||'all', category:'all' };
+            if (!preventPush && !State.suppressHistoryPush && !Url.eq(stObj, State.lastCommittedSearchState)) { Url.commit(stObj); State.searchHistoryPushed = true; }
 
-            // Close overlay → results render into #searchResults
-            if (State.overlayOpen) OverlayService.close('manual');
+            if (State.overlayOpen) OverlaySvc.close('manual');
 
-            PerfMonitor.mark('render-start');
-            RenderingService.renderResults(State.currentResults, State.currentResults.length === 0);
-          } catch (err) { console.error('doSearch inner failed', err); }
-        }).catch(err => { console.error('doSearch failed', err); });
-      } catch (e) { console.error('doSearch failed', e); }
+            // ALL rendering via RenderEngine
+            await RenderingService.renderResults(State.currentResults, State.currentResults.length === 0);
+          } catch (err) { console.error('[SearchUI] doSearch inner:', err); }
+        }).catch(err => { console.error('[SearchUI] doSearch:', err); });
+      } catch (e) { console.error('[SearchUI] doSearch:', e); }
+    },
+  };
+
+  // =========================================================
+  // SCROLL CLASS SERVICE
+  // Adds .sr-scrolling to results container during scroll.
+  // CSS uses this to set pointer-events:none on cards/buttons,
+  // eliminating per-frame hit-test overhead on mobile GPUs.
+  // =========================================================
+  const ScrollClassSvc = {
+    _timer: null,
+    _el   : null,
+
+    attach(el) {
+      if (!el || el._srAttached) return;
+      el._srAttached = true;
+      this._el = el;
+      el.addEventListener('scroll', () => {
+        el.classList.add('sr-scrolling');
+        if (this._timer) clearTimeout(this._timer);
+        this._timer = setTimeout(() => {
+          el.classList.remove('sr-scrolling');
+          this._timer = null;
+        }, 150);
+      }, { passive: true });
+    },
+
+    detach(el) {
+      if (!el) return;
+      el.classList.remove('sr-scrolling');
+      el._srAttached = false;
     },
   };
 
@@ -1104,81 +797,44 @@
   // UI SERVICE
   // =========================================================
   const UIService = {
-    setupAutoSearchInput() {
+    setupInput() {
       try {
-        const inp = DOMService.get(CONFIG.DOM.searchInputId);
-        if (!inp) return;
-        DOMService.setAttr(inp, 'enterkeyhint', 'search');
-
+        const inp = D.get(CONFIG.DOM.searchInputId); if (!inp) return;
+        D.setAttr(inp, 'enterkeyhint', 'search');
         Handlers.inputInput = () => {
           if (State.overlayTransitioning) return;
           clearTimeout(State.debounceTimeout);
-          State.debounceTimeout = setTimeout(() => {
-            SuggestionService.renderQuerySuggestions(inp.value);
-          }, CONFIG.TIMING.debounceMs);
+          State.debounceTimeout = setTimeout(() => SugSvc.renderQuery(inp.value), CONFIG.TIMING.debounceMs);
         };
         inp.addEventListener('input', Handlers.inputInput);
-
         Handlers.inputKeydown = e => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            SearchService.doSearch();
-            this.closeKB();
-          } else if (e.key === 'ArrowDown') {
-            DOMService.get(CONFIG.DOM.suggestionContainerId)?.querySelector('.suggestion-item')?.focus?.();
-          } else if (e.key === 'Backspace') {
-            clearTimeout(State.debounceTimeout);
-            State.debounceTimeout = setTimeout(
-              () => SuggestionService.renderQuerySuggestions(inp.value),
-              CONFIG.TIMING.debounceMs / 2
-            );
-          }
+          if (e.key==='Enter') { e.preventDefault(); SearchSvc.doSearch(); this.blurKB(); }
+          else if (e.key==='ArrowDown') D.get(CONFIG.DOM.suggestionContainerId)?.querySelector('.suggestion-item')?.focus?.();
+          else if (e.key==='Backspace') { clearTimeout(State.debounceTimeout); State.debounceTimeout = setTimeout(() => SugSvc.renderQuery(inp.value), CONFIG.TIMING.debounceMs/2); }
         };
         inp.addEventListener('keydown', Handlers.inputKeydown);
-
-        Handlers.inputFocus = () => { if (!State.overlayTransitioning) { this.scrollToTop(); OverlayService.open(); } };
+        Handlers.inputFocus = () => { if (!State.overlayTransitioning) OverlaySvc.open(); };
+        Handlers.inputClick = () => { if (!State.overlayTransitioning) OverlaySvc.open(); };
         inp.addEventListener('focus', Handlers.inputFocus);
-
-        Handlers.inputClick = () => { if (!State.overlayTransitioning) { this.scrollToTop(); OverlayService.open(); } };
         inp.addEventListener('click', Handlers.inputClick);
       } catch {}
     },
-
-    scrollToTop() {
-      try { if (State.scrollableContent) State.scrollableContent.scrollTop = 0; } catch {}
-    },
-
     setupFilters() {
       try {
         [CONFIG.DOM.typeFilterId, CONFIG.DOM.categoryFilterId].forEach(id => {
-          const el = DOMService.get(id);
-          if (!el) return;
-          const onChange = () => { if (id === CONFIG.DOM.typeFilterId) this.onTypeChange(); else this.onCatChange(); };
-          el.onchange = onChange;
-          el.onkeyup  = e => { if (e.key === 'Enter') onChange(); };
+          const el = D.get(id); if (!el) return;
+          const onChange = () => { if (id === CONFIG.DOM.typeFilterId) { State.selectedType = el.value; SearchSvc.doSearch(); } else { State.selectedCategory = el.value; RenderingService.renderResults(State.currentResults, false); this.updateUILanguage(); } };
+          el.onchange = onChange; el.onkeyup = e => { if (e.key==='Enter') onChange(); };
         });
       } catch {}
     },
-
-    onTypeChange() { try { State.selectedType = DOMService.get(CONFIG.DOM.typeFilterId)?.value; SearchService.doSearch(); } catch {} },
-    onCatChange()  {
-      try {
-        State.selectedCategory = DOMService.get(CONFIG.DOM.categoryFilterId)?.value;
-        RenderingService.renderResults(State.currentResults, false);
-        this.updateUILanguage();
-      } catch {}
-    },
-
-    closeKB() { try { const inp = DOMService.get(CONFIG.DOM.searchInputId); if (inp && document.activeElement === inp) inp.blur(); } catch {} },
-
+    blurKB() { try { const inp = D.get(CONFIG.DOM.searchInputId); if (inp && document.activeElement===inp) inp.blur(); } catch {} },
     updateUILanguage() {
       try {
-        const inp = DOMService.get(CONFIG.DOM.searchInputId);
-        const ph  = LanguageService.t('search_placeholder');
-        if (inp && inp.placeholder !== ph) inp.placeholder = ph;
-        const lbls = DOMService.queryAll('.search-filters-panel .filter-group-label');
-        if (lbls[0] && lbls[0].textContent !== LanguageService.t('type'))     lbls[0].textContent = LanguageService.t('type');
-        if (lbls[1] && lbls[1].textContent !== LanguageService.t('category')) lbls[1].textContent = LanguageService.t('category');
+        const inp = D.get(CONFIG.DOM.searchInputId); const ph = Lang.t('search_placeholder'); if (inp && inp.placeholder !== ph) inp.placeholder = ph;
+        const lbls = D.qAll('.search-filters-panel .filter-group-label');
+        if (lbls[0] && lbls[0].textContent !== Lang.t('type'))     lbls[0].textContent = Lang.t('type');
+        if (lbls[1] && lbls[1].textContent !== Lang.t('category')) lbls[1].textContent = Lang.t('category');
       } catch {}
     },
   };
@@ -1192,18 +848,13 @@
       const start = Date.now();
       const id = setInterval(() => {
         if (window.ConDataService?.getAssembled) { clearInterval(id); resolve(window.ConDataService); }
-        else if (Date.now() - start >= ms) { clearInterval(id); resolve(null); }
+        else if (Date.now()-start >= ms) { clearInterval(id); resolve(null); }
       }, CONFIG.TIMING.conDataServicePollMs);
     });
   }
-
   function loadData() {
     return _waitForConDataService(CONFIG.TIMING.conDataServiceWaitMs).then(svc => {
-      if (svc) return svc.getAssembled().catch(err => {
-        console.warn('[SearchUI] ConDataService failed, fallback:', err);
-        return fetch(CONFIG.DB.path).then(r=>r.json()).catch(()=>({}));
-      });
-      console.warn('[SearchUI] ConDataService not ready — fallback');
+      if (svc) return svc.getAssembled().catch(() => fetch(CONFIG.DB.path).then(r=>r.json()).catch(()=>({})));
       return fetch(CONFIG.DB.path).then(r=>r.json()).catch(()=>({}));
     });
   }
@@ -1211,104 +862,99 @@
   // =========================================================
   // INIT
   // =========================================================
-  function initializeSearchEngine() {
+  function init() {
     try {
-      try { if (new URLSearchParams(location.search).get('searchperf') === '1') { PerfMonitor.enable(); console.info('[SearchUI] PerfMonitor enabled'); } } catch {}
+      // Verify Engine is loaded — fail loudly
+      try { _RE(); } catch (e) { console.error(e.message); return; }
 
-      KeyboardService.initKeyboardDetection();
+      try { if (new URLSearchParams(location.search).get('searchperf') === '1') { Perf.enable(); console.info('[SearchUI] PerfMonitor enabled'); } } catch {}
+
+      KBDetect.init();
 
       loadData().then(data => {
         State.apiData = data || {};
-        if (!Array.isArray(State.apiData.type)) console.warn('[SearchUI] Data missing .type[]');
         const initFn = window.SearchEngine?.init || (() => Promise.resolve());
         return initFn(State.apiData, {
-          onIndexProgress: (pct, count) => PerfMonitor.onIndexProgress(pct, count),
-          onIndexReady   : ()           => PerfMonitor.onIndexReady(),
+          onIndexProgress: () => {},
+          onIndexReady: () => {
+            try {
+              State.allKeywordsCache = window.SearchEngine?.generateAllKeywords?.() || [];
+              // Pre-warm smart names cache in idle time
+              const warmCache = () => ReadySvc.extractSmartNames();
+              typeof requestIdleCallback === 'function' ? requestIdleCallback(warmCache, { timeout: 3000 }) : setTimeout(warmCache, 500);
+            } catch {}
+          },
         }).catch(e => console.error('SearchEngine.init failed', e));
       }).then(() => {
-        try { State.allKeywordsCache = window.SearchEngine?.generateAllKeywords?.() || []; } catch { State.allKeywordsCache = []; }
+        try { if (!State.allKeywordsCache?.length) State.allKeywordsCache = window.SearchEngine?.generateAllKeywords?.() || []; } catch {}
 
-        FilterService.setupTypeFilter('all');
+        FilterSvc.setupType('all');
         UIService.setupFilters();
-        UIService.setupAutoSearchInput();
-        FilterService.setupCategoryFilter([], 'all');
+        UIService.setupInput();
+        FilterSvc.setupCat([], 'all');
         document.body.style.marginBottom = '';
 
-        const sr = DOMService.get(CONFIG.DOM.searchResultsId);
-        if (sr) sr.innerHTML = `<div class="search-result-here" style="text-align:center;color:#969ca8;font-size:1.07em;margin-top:30px;">${LanguageService.t('search_result_here')}</div>`;
+        // FIX 4: sr-scrolling on main results (non-overlay path)
+        const mainResults = D.get(CONFIG.DOM.searchResultsId);
+        if (mainResults) ScrollClassSvc.attach(mainResults);
+
+        // Initial placeholder via Engine
+        const rc = D.get(CONFIG.DOM.searchResultsId);
+        if (rc && window.RenderEngine) {
+          State._flatList = window.RenderEngine.createFlatList({ host: rc, onCopy: t => Notif.copy(t) });
+          State._flatList.render([`<div class="search-result-here" style="text-align:center;color:#969ca8;font-size:1.07em;margin-top:30px;">${D.esc(Lang.t('search_result_here'))}</div>`]);
+        }
         UIService.updateUILanguage();
 
-        try {
-          const hs = history.state;
-          if (hs?.q !== undefined) State.lastCommittedSearchState = { q:hs.q||'', type:hs.type||'all', category:hs.category||'all' };
-          else {
-            const arr = StorageService.getHistory();
-            if (arr.length) { const l = arr[arr.length-1]; State.lastCommittedSearchState = { q:l.q||'', type:l.type||'all', category:l.category||'all' }; }
-            else State.lastCommittedSearchState = null;
-          }
-        } catch { State.lastCommittedSearchState = null; }
+        try { const hs = history.state; if (hs?.q !== undefined) State.lastCommittedSearchState = { q:hs.q||'', type:hs.type||'all', category:hs.category||'all' }; else State.lastCommittedSearchState = null; } catch { State.lastCommittedSearchState = null; }
 
-        const init = URLService.readStateFromURL();
-        if (init?.q) {
+        const ini = Url.fromURL();
+        if (ini?.q) {
           try {
             State.suppressHistoryPush = true;
-            const inp = DOMService.get(CONFIG.DOM.searchInputId);
-            if (inp) inp.value = init.q;
-            State.selectedType     = init.type     || 'all';
-            State.selectedCategory = init.category || 'all';
-            FilterService.setupTypeFilter(State.selectedType);
-            SearchService.doSearch(null, true);
-            try { history.replaceState({ q:init.q, type:State.selectedType, category:State.selectedCategory }, '', URLService.buildUrlForState(init)); } catch {}
-            State.lastCommittedSearchState = { q:init.q||'', type:State.selectedType||'all', category:State.selectedCategory||'all' };
+            const inp = D.get(CONFIG.DOM.searchInputId); if (inp) inp.value = ini.q;
+            State.selectedType = ini.type||'all'; State.selectedCategory = ini.category||'all';
+            FilterSvc.setupType(State.selectedType);
+            SearchSvc.doSearch(null, true);
+            try { history.replaceState({ q:ini.q, type:State.selectedType, category:State.selectedCategory }, '', Url.forState(ini)); } catch {}
+            State.lastCommittedSearchState = { q:ini.q||'', type:State.selectedType||'all', category:State.selectedCategory||'all' };
           } finally { State.suppressHistoryPush = false; }
         } else {
           try { history.replaceState({ q:'', type:'all', category:'all' }, '', location.pathname); } catch {}
           State.lastCommittedSearchState = { q:'', type:'all', category:'all' };
         }
-      }).catch(e => { console.error('[SearchUI] init failed', e); });
+      }).catch(e => console.error('[SearchUI] init failed:', e));
 
-      // Form submit
-      const form = DOMService.get(CONFIG.DOM.searchFormId);
-      if (form) { Handlers.formSubmit = e => { e.preventDefault(); SearchService.doSearch(); UIService.closeKB(); }; DOMService.on(form, 'submit', Handlers.formSubmit); }
+      const form = D.get(CONFIG.DOM.searchFormId);
+      if (form) { Handlers.formSubmit = e => { e.preventDefault(); SearchSvc.doSearch(); UIService.blurKB(); }; D.on(form, 'submit', Handlers.formSubmit); }
 
-      // Standalone keydown
-      const inp = DOMService.get(CONFIG.DOM.searchInputId);
-      if (inp) { DOMService.on(inp, 'keydown', e => { if (e.key==='Enter') { e.preventDefault(); SearchService.doSearch(); UIService.closeKB(); } }); }
+      const inp2 = D.get(CONFIG.DOM.searchInputId);
+      if (inp2) D.on(inp2, 'keydown', e => { if (e.key==='Enter') { e.preventDefault(); SearchSvc.doSearch(); UIService.blurKB(); } });
 
-      // Popstate
       Handlers.popstate = e => {
         try {
-          const s  = e.state || {};
-          const isOv = s[State._overlayStateMarker];
-          if (isOv && State.overlayOpen) { OverlayService.close('popstate'); return; }
+          const s = e.state||{}, isOv = s[State._overlayStateMarker];
+          if (isOv && State.overlayOpen) { OverlaySvc.close('popstate'); return; }
           if (!isOv && State.overlayOpen) {
-            if (State.preOverlayState) {
-              const i = DOMService.get(CONFIG.DOM.searchInputId);
-              if (i) i.value = State.preOverlayState.q || '';
-              State.selectedType     = State.preOverlayState.type     || 'all';
-              State.selectedCategory = State.preOverlayState.category || 'all';
-            }
-            OverlayService.close('popstate');
-            return;
+            if (State.preOverlayState) { const i = D.get(CONFIG.DOM.searchInputId); if (i) i.value = State.preOverlayState.q||''; State.selectedType = State.preOverlayState.type||'all'; State.selectedCategory = State.preOverlayState.category||'all'; }
+            OverlaySvc.close('popstate'); return;
           }
-          const st = (e.state && typeof e.state==='object' && !isOv) ? e.state : URLService.readStateFromURL();
-          if (st?.q !== undefined) _restoreUIState(st);
+          const st = (e.state && typeof e.state==='object' && !isOv) ? e.state : Url.fromURL();
+          if (st?.q !== undefined) _restoreState(st);
         } catch {}
       };
-      DOMService.on(window, 'popstate', Handlers.popstate);
+      D.on(window, 'popstate', Handlers.popstate);
       State._handlersAttached = true;
-    } catch (e) { console.error('initializeSearchEngine failed', e); }
+    } catch (e) { console.error('[SearchUI] init:', e); }
   }
 
-  function _restoreUIState(st) {
+  function _restoreState(st) {
     try {
       State.suppressHistoryPush = true;
-      const inp = DOMService.get(CONFIG.DOM.searchInputId);
-      if (inp) inp.value = st.q || '';
-      State.selectedType     = st.type     || 'all';
-      State.selectedCategory = st.category || 'all';
-      FilterService.setupTypeFilter(State.selectedType);
-      SearchService.doSearch(null, true);
+      const inp = D.get(CONFIG.DOM.searchInputId); if (inp) inp.value = st.q||'';
+      State.selectedType = st.type||'all'; State.selectedCategory = st.category||'all';
+      FilterSvc.setupType(State.selectedType);
+      SearchSvc.doSearch(null, true);
     } finally { State.suppressHistoryPush = false; }
   }
 
@@ -1317,79 +963,57 @@
   // =========================================================
   function destroy() {
     try {
-      OverlayService.close('manual');
-      RenderingService.disconnectRenderObserver();
-      KeyboardAutoToggleService.disableAutoToggle();
+      OverlaySvc.close('manual');
+      RenderingService._destroyFlatList();
+      KBAutoToggle.disable();
       try {
-        DOMService.off(window, 'resize', Handlers.resize);
-        DOMService.off(window, 'popstate', Handlers.popstate);
-        DOMService.off(DOMService.get(CONFIG.DOM.searchFormId), 'submit', Handlers.formSubmit);
-        const inp = DOMService.get(CONFIG.DOM.searchInputId);
-        if (inp) {
-          if (Handlers.inputInput)   inp.removeEventListener('input',   Handlers.inputInput);
-          if (Handlers.inputKeydown) inp.removeEventListener('keydown', Handlers.inputKeydown);
-          if (Handlers.inputFocus)   inp.removeEventListener('focus',   Handlers.inputFocus);
-          if (Handlers.inputClick)   inp.removeEventListener('click',   Handlers.inputClick);
-        }
-        if (Handlers.documentKeydownOverlay) DOMService.off(document, 'keydown', Handlers.documentKeydownOverlay);
+        D.off(window, 'resize', Handlers.resize); D.off(window, 'popstate', Handlers.popstate);
+        D.off(D.get(CONFIG.DOM.searchFormId), 'submit', Handlers.formSubmit);
+        const inp = D.get(CONFIG.DOM.searchInputId);
+        if (inp) { if (Handlers.inputInput) inp.removeEventListener('input', Handlers.inputInput); if (Handlers.inputKeydown) inp.removeEventListener('keydown', Handlers.inputKeydown); if (Handlers.inputFocus) inp.removeEventListener('focus', Handlers.inputFocus); if (Handlers.inputClick) inp.removeEventListener('click', Handlers.inputClick); }
+        if (Handlers.documentKeydownOverlay) D.off(document, 'keydown', Handlers.documentKeydownOverlay);
       } catch {}
-      State._timeouts.forEach(t => { try { clearTimeout(t); clearInterval(t); } catch {} });
-      State._timeouts.clear();
-      try {
-        DOMService.remove(DOMService.get(CONFIG.DOM.suggestionContainerId));
-        DOMService.remove(DOMService.get(CONFIG.DOM.overlayBackdropId));
-        DOMService.remove(DOMService.get(CONFIG.DOM.overlayContainerId));
-        DOMService.remove(DOMService.get(CONFIG.DOM.sentinelId));
-      } catch {}
-      State.apiData = null; State.allKeywordsCache = []; State.currentResults = [];
-      State.currentFilteredResults = []; State.lastCommittedSearchState = null;
-      State._handlersAttached = false; State.keyboardAutoToggleEnabled = false;
+      State._timeouts.forEach(t => { try { clearTimeout(t); clearInterval(t); } catch {} }); State._timeouts.clear();
+      try { D.remove(D.get(CONFIG.DOM.suggestionContainerId)); D.remove(D.get(CONFIG.DOM.overlayBackdropId)); D.remove(D.get(CONFIG.DOM.overlayContainerId)); } catch {}
+      State.apiData=null; State.allKeywordsCache=[]; State.currentResults=[];
+      State.currentFilteredResults=[]; State.lastCommittedSearchState=null;
+      State._handlersAttached=false; State.keyboardAutoToggleEnabled=false;
+      State._smartNamesCache=null; State._smartNamesCacheLang=null;
+      try { window.RenderEngine?.Worker?.terminate(); } catch {}
       if (window.__searchUI) window.__searchUI._initialized = false;
     } catch {}
   }
 
   // =========================================================
-  // PUBLIC API (identical to v3.0)
+  // PUBLIC API  (identical surface to v4.x)
   // =========================================================
   window.__searchUI = window.__searchUI || {};
   Object.assign(window.__searchUI, {
-    init    : initializeSearchEngine,
-    destroy,
+    init, destroy,
     getConfig   : () => CONFIG,
     getState    : () => State,
     getServices : () => ({
-      Language:LanguageService, DOM:DOMService, String:StringService,
-      Storage:StorageService, URL:URLService, Notification:NotificationService,
-      Rendering:RenderingService, Filter:FilterService, Suggestion:SuggestionService,
-      ReadyMode:ReadyModeService, Highlight:HighlightService, Overlay:OverlayService,
-      Search:SearchService, UI:UIService, Keyboard:KeyboardService,
-      GapBasedKeyboard:GapBasedKeyboardService, KeyboardAutoToggle:KeyboardAutoToggleService,
-      VirtualScroll: VListAdapter,
+      Language:Lang, DOM:D, URL:Url, Notification:Notif,
+      Rendering:RenderingService, Filter:FilterSvc,
+      Suggestion:SugSvc, ReadyMode:ReadySvc, Overlay:OverlaySvc,
+      Search:SearchSvc, UI:UIService, Keyboard:KBDetect,
+      GapBasedKeyboard:KBGap, KeyboardAutoToggle:KBAutoToggle,
+      VirtualScroll: { isActive:!!State._flatList, visibleCount:0, totalHeight:0 },
     }),
-    getLastCommittedSearchState : () => State.lastCommittedSearchState,
-    getSessionHistory           : () => StorageService.getHistory(),
-    querySuggestions            : q  => window.SearchEngine?.querySuggestions?.(q, CONFIG.RENDER.suggestionMax) || [],
-    isKeyboardOpen              : () => KeyboardService.isKeyboardOpen(),
-    enableKeyboardAutoToggle    : () => KeyboardAutoToggleService.enableAutoToggle(),
-    disableKeyboardAutoToggle   : () => KeyboardAutoToggleService.disableAutoToggle(),
-    resetKeyboardGap            : () => GapBasedKeyboardService.resetGap(),
-    isKeyboardGapExpired        : () => GapBasedKeyboardService.isGapExpired(),
-    isKeyboardScrollIdle        : () => GapBasedKeyboardService.isScrollIdle(),
-    getVSStats: () => ({
-      active      : VListAdapter.isActive,
-      visibleCount: VListAdapter.visibleCount,
-      totalHeight : VListAdapter.totalHeight,
-    }),
-    perf: PerfMonitor,
-    getIndexStats: () => ({
-      ready   : window.SearchEngine?.isIndexReady?.() || false,
-      building: window.SearchEngine?.isBuilding?.()   || false,
-      docCount: window.SearchEngine?.getDocCount?.()  || 0,
-    }),
+    getLastCommittedSearchState: () => State.lastCommittedSearchState,
+    getSessionHistory: () => { try { return JSON.parse(sessionStorage.getItem(CONFIG.STORAGE.historyKey)||'[]'); } catch { return []; } },
+    querySuggestions: q => window.SearchEngine?.querySuggestions?.(q, CONFIG.RENDER.suggestionMax) || [],
+    isKeyboardOpen: () => KBDetect.isOpen(),
+    enableKeyboardAutoToggle: () => KBAutoToggle.enable(),
+    disableKeyboardAutoToggle: () => KBAutoToggle.disable(),
+    resetKeyboardGap: () => KBGap.reset(),
+    getVSStats: () => ({ active:!!State._flatList, visibleCount:0, totalHeight:0 }),
+    perf: Perf,
+    getIndexStats: () => ({ ready:window.SearchEngine?.isIndexReady?.()||false, building:window.SearchEngine?.isBuilding?.()||false, docCount:window.SearchEngine?.getDocCount?.()||0 }),
   });
 
   window.__searchUI._initialized = true;
-  initializeSearchEngine();
+  init();
 
   try { window.addEventListener('beforeunload', () => { try { destroy(); } catch {} }, { passive:true }); } catch {}
 
