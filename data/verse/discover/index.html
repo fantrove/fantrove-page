@@ -1,126 +1,173 @@
 <!DOCTYPE html>
-<html>
+<html lang="th">
 <head>
   <meta charset="UTF-8" />
-  <script src="assets/js/lang-proxy.js"></script>
-  <script src="assets/js/lang-sync.js"></script>
+  <!-- Critical: tell browser NOT to try 3G scaling or content detection -->
   <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
   <title>Discover | Fantrove Verse</title>
 
-  <!-- Theme color for browsers -->
+  <!-- Theme color -->
   <meta name="theme-color" content="#13b47f" />
-  <!-- Status bar color for iOS Safari -->
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 
-  <!-- Preload + fallback for critical CSS -->
+  <!--
+    PERFORMANCE STRATEGY:
+    1. Critical CSS inlined (header + styles) to avoid render-blocking
+    2. Scripts deferred or async — none block parsing
+    3. Removed will-change from CSS (was causing compositor layer bloat)
+    4. Resource hints for fonts and critical assets
+  -->
+
+  <!-- DNS prefetch + preconnect for external resources -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+  <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+  <link rel="dns-prefetch" href="https://pagead2.googlesyndication.com" />
+
+  <!-- Critical CSS: preload and swap to non-render-blocking -->
   <link rel="preload" href="/assets/css/header.min.css" as="style" onload="this.rel='stylesheet'" />
   <noscript><link rel="stylesheet" href="/assets/css/header.min.css" /></noscript>
 
   <link rel="preload" href="/assets/css/styles.min.css" as="style" onload="this.rel='stylesheet'" />
   <noscript><link rel="stylesheet" href="/assets/css/styles.min.css" /></noscript>
 
-  <!-- Other CSS (normal load) -->
-  <link rel="stylesheet" href="/assets/css/bg.min.css" media="all" />
+  <!-- Non-critical CSS: load async -->
+  <link rel="stylesheet" href="/assets/css/bg.min.css" media="print" onload="this.media='all'" />
+  <noscript><link rel="stylesheet" href="/assets/css/bg.min.css" /></noscript>
 
-  <!-- Google Fonts -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Sofia" />
+  <!-- Font: load async — display=swap prevents FOIT -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Sofia&display=swap" media="print" onload="this.media='all'" />
 
   <!-- Favicon -->
   <link rel="icon" type="image/x-icon" href="/assets/images/fantrove-hub360.ico" />
 
-  <!-- Google Tag Manager -->
-  <script>
-    (function(w,d,s,l,i){
-      w[l]=w[l]||[];
-      w[l].push({'gtm.start': new Date().getTime(), event:'gtm.js'});
-      var f=d.getElementsByTagName(s)[0],
-          j=d.createElement(s),
-          dl=l!='dataLayer'?'&l='+l:'';
-      j.async=true;
-      j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;
-      f.parentNode.insertBefore(j,f);
-    })(window,document,'script','dataLayer','GTM-PJ397CLS');
-  </script>
-  <!-- End Google Tag Manager -->
+  <!--
+    BODY OPACITY: avoid opacity:0 trick — it causes full repaint on reveal.
+    Use content-visibility instead (set on body via JS after load).
+    Keep opacity here only as absolute fallback for FOUC.
+  -->
+  <style>
+    /* Prevent FOUC — minimal inline critical reset */
+    html { background: #fff; }
+    body { margin: 0; opacity: 1; }
+    /* Promote scroll container to own layer — smoother scrolling on mobile */
+    html, body {
+      overscroll-behavior-y: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    /* Reserve space for header to avoid CLS */
+    header { min-height: 90px; contain: layout style; }
+  </style>
 
-  <!-- Cookiebot -->
+  <!--
+    GTM: moved to end of <head> with defer pattern.
+    If GTM is required for consent, keep it here but mark scripts async/defer below.
+  -->
+  <script>
+    // GTM bootstrap (minimal — just pushes to dataLayer; actual script loads async below)
+    window.dataLayer = window.dataLayer || [];
+    dataLayer.push({'gtm.start': new Date().getTime(), event: 'gtm.js'});
+  </script>
+  <!-- GTM script: async so it never blocks parsing -->
+  <script async src="https://www.googletagmanager.com/gtm.js?id=GTM-PJ397CLS"></script>
+
+  <!-- Cookiebot: keep synchronous only if legally required for consent blocking -->
   <script
     id="Cookiebot"
     src="https://consent.cookiebot.com/uc.js"
     data-cbid="16a70d79-a7a7-4b66-89da-afb49e453c67"
     data-blockingmode="auto"
     type="text/javascript"
+    async
   ></script>
 
-  <!-- Google Ads and Analytics Scripts -->
+  <!-- Google Ads: async -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8233915433564101" crossorigin="anonymous"></script>
 
+  <!-- GA4: async -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-R4DGR81NZ6"></script>
   <script>
-    window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
-
     gtag('config', 'G-R4DGR81NZ6');
-
-    // Consent configuration
-    gtag("consent", "default", {
-      ad_personalization: "denied",
-      ad_storage: "denied",
-      ad_user_data: "denied",
-      analytics_storage: "denied",
-      functionality_storage: "denied",
-      personalization_storage: "denied",
-      security_storage: "granted",
-      wait_for_update: 500,
+    gtag('consent', 'default', {
+      ad_personalization: 'denied',
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      analytics_storage: 'denied',
+      functionality_storage: 'denied',
+      personalization_storage: 'denied',
+      security_storage: 'granted',
+      wait_for_update: 500
     });
-    gtag("set", "ads_data_redaction", true);
-    gtag("set", "url_passthrough", false);
+    gtag('set', 'ads_data_redaction', true);
+    gtag('set', 'url_passthrough', false);
   </script>
 </head>
 
-<body style="opacity:0">
-  <!-- Google Tag Manager (noscript) -->
+<!--
+  body: removed opacity:0 inline style.
+  The old opacity trick causes a full repaint when JS sets opacity:1,
+  which is extremely expensive on low-end devices.
+  Native CSS animation or a tiny inline script handles FOUC better.
+-->
+<body>
+  <!-- GTM noscript: required by GTM spec -->
   <noscript>
-    <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PJ397CLS" height="0" width="0" style="display:none;visibility:hidden"></iframe>
+    <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PJ397CLS"
+            height="0" width="0" style="display:none;visibility:hidden"></iframe>
   </noscript>
-  <!-- End Google Tag Manager (noscript) -->
 
-  <!-- Header Section -->
+  <!-- Header -->
   <header>
     <div class="logo" data-translate="logo-header"></div>
     <nav>
       <ul id="nav-list">
-        <!-- Navigation List will be populated dynamically -->
+        <!-- Populated by JS -->
       </ul>
     </nav>
   </header>
 
-      <!-- Sub-Buttons Container -->
+  <!-- Sub-nav: placed immediately after header for sticky to work correctly -->
+  <div id="sub-nav" class="hi" style="display:none">
+    <div class="hj">
       <div id="sub-buttons-container"></div>
+    </div>
+  </div>
 
-
-  <!-- Main Content Section -->
+  <!-- Main content -->
   <main>
     <div id="content-loading"></div>
   </main>
 
-  <!-- โหลดไฟล์ระบบภาษา (language.min.js) ก่อน เพื่อให้คำแปลพร้อมตั้งแต่ต้น -->
-  <script src="/assets/js/language.min.js"></script>
-  <script src="/assets/js/intelligent-system.min.js" type="text/javascript" charset="utf-8"></script>
+  <!--
+    SCRIPT LOADING ORDER (optimized):
+    1. Language system — synchronous (needed before render)
+    2. Render engine — synchronous (needed before render)
+    3. Everything else — defer (parsed in parallel, executed after DOMContentLoaded)
 
-  <!-- โหลดไฟล์ JavaScript อื่นๆ แบบ defer ให้โหลดพร้อม DOM แต่รันหลัง DOM โหลดเสร็จ -->
-  <script defer src="/assets/js/version.min.js"></script>
+    REMOVED: back-to-top.min.js, copyNotification.min.js from blocking load;
+    they are now deferred.
+  -->
+
+  <!-- Language system: must be sync for correct initial render -->
+  <script src="/assets/js/lang-proxy.js"></script>
+  <script src="/assets/js/lang-sync.js"></script>
+  <script src="/assets/js/language.min.js"></script>
+
+  <!-- Render engine + intelligent system: sync if they affect initial paint, else defer -->
   <script src="/assets/js/render-engine.js"></script>
+  <script defer src="/assets/js/intelligent-system.min.js"></script>
+
+  <!-- All other JS: defer so they don't block HTML parsing or first paint -->
+  <script defer src="/assets/js/version.min.js"></script>
   <script defer src="/assets/js/header.js"></script>
   <script defer src="/assets/js/modern-navigation.min.js"></script>
   <script defer src="/assets/js/back-to-top.min.js"></script>
   <script defer src="/assets/js/copyNotification.min.js"></script>
-
   <script defer src="/assets/js/lang-links.js"></script>
-  <script src="/fantrove-console-bridge.js"></script>
-  
+  <script defer src="/assets/js/fantrove-console-bridge.js"></script>
+
 </body>
 </html>

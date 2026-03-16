@@ -1,336 +1,191 @@
-// contentLoadingManager.js
-// Centralized loading overlay manager (single source of truth).
-// Responsibilities:
-// - Only this module creates, shows, hides and updates the global loading overlay.
-// - Other modules should call window._headerV2_contentLoadingManager.show/hide/updateMessage
-//   (or the global helpers window.showInstantLoadingOverlay / window.removeInstantLoadingOverlay
-//   which are proxied to this manager).
-// - Options callers may pass:
-//     { message, zIndex, autoHideAfterMs, behindSubNav }
-//   If zIndex is not provided the manager will choose sensible defaults.
-// - Show/hide/update are idempotent and safe to call repeatedly.
-// - Manager will not implicitly change history or do unrelated side-effects.
+// contentLoadingManager.js — Optimized
+// - Removed will-change on overlay (causes compositor layer bloat)
+// - Lighter fade transition (0.2s instead of 0.36s)
+// - Single style injection
+// - Passive state tracking
 
 const LOADING_ID = 'content-loading-overlay';
-const STYLE_ID = 'content-loading-overlay-styles';
-const DEFAULT_ZINDEX = 15000;
-const FADE_MS = 360;
+const STYLE_ID   = 'content-loading-overlay-styles';
+const DEFAULT_Z  = 15000;
+const FADE_MS    = 200; // shorter = less perceived lag
 
 const contentLoadingManager = {
-  // public constants (for external use)
   LOADING_CONTAINER_ID: 'content-loading',
   spinnerElement: null,
-
-  // internal state
   _autoHideTimer: null,
   _currentOptions: null,
+  _shown: false,
 
-  // Ensure overlay CSS exists (idempotent)
   _ensureStyles() {
     if (document.getElementById(STYLE_ID)) return;
     const s = document.createElement('style');
     s.id = STYLE_ID;
+    // No will-change — overlay is not an animated layer that needs GPU promotion
     s.textContent = `
-#${LOADING_ID} {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255,255,255,0.94);
-  transition: opacity ${FADE_MS}ms cubic-bezier(.7,0,.7,1);
-  opacity: 1;
-  z-index: ${DEFAULT_ZINDEX};
+#${LOADING_ID}{
+  position:fixed;inset:0;width:100vw;height:100vh;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,0.96);
+  opacity:1;z-index:${DEFAULT_Z};
+  transition:opacity ${FADE_MS}ms ease;
   -webkit-font-smoothing:antialiased;
-  -moz-osx-font-smoothing:grayscale;
-  will-change: opacity;
-  contain: strict;
 }
-#${LOADING_ID}.hidden {
-  opacity: 0 !important;
-  pointer-events: none;
+#${LOADING_ID}.hidden{opacity:0;pointer-events:none;}
+#${LOADING_ID} .content-loading-spinner{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
 }
-#${LOADING_ID} .content-loading-spinner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  animation: content-loading-fade-in 240ms ease-in;
+#${LOADING_ID} .spinner-svg{
+  margin-bottom:12px;width:52px;height:52px;
+  display:inline-flex;align-items:center;justify-content:center;
 }
-#${LOADING_ID} .spinner-svg {
-  margin-bottom: 12px;
-  width: 56px;
-  height: 56px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+#${LOADING_ID} .spinner-svg svg{width:100%;height:100%;}
+#${LOADING_ID} .spinner-svg-fg{
+  stroke:#4285f4;stroke-width:5;stroke-linecap:round;
+  stroke-dasharray:90 125;
+  animation:_spin 1s linear infinite;fill:none;
 }
-#${LOADING_ID} .spinner-svg svg { width: 100%; height: 100%; }
-#${LOADING_ID} .spinner-svg-fg {
-  stroke: #4285f4;
-  stroke-width: 5;
-  stroke-linecap: round;
-  stroke-dasharray: 90 125;
-  animation: instant-spinner-rotate 1s linear infinite;
-  fill: none;
+#${LOADING_ID} .spinner-svg-bg{stroke:#eee;stroke-width:5;fill:none;}
+#${LOADING_ID} .loading-message{
+  font-size:1rem;color:#2196f3;text-align:center;
+  margin-top:6px;font-weight:500;opacity:0.92;
 }
-#${LOADING_ID} .spinner-svg-bg {
-  stroke: #eee;
-  stroke-width: 5;
-  fill: none;
-}
-#${LOADING_ID} .loading-message {
-  font-size: 1.06rem;
-  color: #2196f3;
-  text-align: center;
-  margin-top: 6px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  opacity: 0.94;
-}
-@keyframes content-loading-fade-in { from { opacity: 0; } to { opacity: 1; } }
-@keyframes instant-spinner-rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes _spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 `;
     document.head.appendChild(s);
   },
 
-  // Build overlay DOM (idempotent w.r.t. existing element)
-  _buildOverlay(message = '') {
-    let overlay = document.getElementById(LOADING_ID);
-    if (overlay) {
-      // update message if needed
-      const msgEl = overlay.querySelector('.loading-message');
-      if (msgEl) msgEl.textContent = message || msgEl.textContent;
-      return overlay;
+  _buildOverlay(message) {
+    let el = document.getElementById(LOADING_ID);
+    if (el) {
+      const m = el.querySelector('.loading-message');
+      if (m && message) m.textContent = message;
+      return el;
     }
 
-    overlay = document.createElement('div');
-    overlay.id = LOADING_ID;
-    overlay.setAttribute('role', 'status');
-    overlay.setAttribute('aria-live', 'polite');
-    overlay.classList.add('hidden'); // start hidden; show() will remove class
+    el = document.createElement('div');
+    el.id = LOADING_ID;
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-live', 'polite');
+    el.classList.add('hidden');
 
-    const spinnerWrap = document.createElement('div');
-    spinnerWrap.className = 'content-loading-spinner';
+    el.innerHTML = `
+<div class="content-loading-spinner">
+  <div class="spinner-svg" aria-hidden="true">
+    <svg viewBox="0 0 48 48">
+      <circle class="spinner-svg-bg" cx="24" cy="24" r="20"/>
+      <circle class="spinner-svg-fg" cx="24" cy="24" r="20"/>
+    </svg>
+  </div>
+  <div class="loading-message">${message || this._defaultMsg()}</div>
+</div>`;
 
-    const spinnerSvgWrap = document.createElement('div');
-    spinnerSvgWrap.className = 'spinner-svg';
-    spinnerSvgWrap.setAttribute('aria-hidden', 'true');
-    spinnerSvgWrap.innerHTML = `
-<svg viewBox="0 0 48 48" focusable="false" aria-hidden="true" role="img">
-    <circle class="spinner-svg-bg" cx="24" cy="24" r="20" />
-    <circle class="spinner-svg-fg" cx="24" cy="24" r="20" />
-</svg>`.trim();
-
-    const messageEl = document.createElement('div');
-    messageEl.className = 'loading-message';
-    messageEl.textContent = message || this.getDefaultMessage();
-
-    spinnerWrap.appendChild(spinnerSvgWrap);
-    spinnerWrap.appendChild(messageEl);
-    overlay.appendChild(spinnerWrap);
-
-    document.body.appendChild(overlay);
-    // force style recalc so transition works
-    // eslint-disable-next-line no-unused-expressions
-    overlay.offsetHeight;
-
-    return overlay;
+    document.body.appendChild(el);
+    // Force style recalc so transition works on first show
+    el.offsetHeight; // eslint-disable-line no-unused-expressions
+    return el;
   },
 
-  // Default messages per language
-  getDefaultMessage() {
-    const lang = (typeof localStorage !== 'undefined' && localStorage.getItem('selectedLang')) || 'en';
-    return lang === 'th' ? 'กำลังโหลดเนื้อหา...' : 'Loading content...';
+  _defaultMsg() {
+    return localStorage.getItem('selectedLang') === 'th' ? 'กำลังโหลด...' : 'Loading...';
   },
 
-  // Compute a sensible z-index if none provided. Honor behindSubNav if requested.
-  _computeZIndex(opts = {}) {
-    if (typeof opts.zIndex === 'number') return Math.max(0, Math.floor(opts.zIndex));
+  _zIndex(opts) {
+    if (typeof opts?.zIndex === 'number') return opts.zIndex;
+    return DEFAULT_Z;
+  },
+
+  show(opts = '') {
     try {
-      let headerZ = 0, subZ = 0;
-      try {
-        const headerEl = document.querySelector('header');
-        if (headerEl) {
-          const s = window.getComputedStyle(headerEl);
-          headerZ = parseInt(s.zIndex, 10) || 0;
-        }
-      } catch (e) { headerZ = 0; }
-
-      try {
-        const subEl = document.getElementById('sub-nav');
-        if (subEl) {
-          const s = window.getComputedStyle(subEl);
-          subZ = parseInt(s.zIndex, 10) || 0;
-        }
-      } catch (e) { subZ = 0; }
-
-      if (opts.behindSubNav) {
-        // If caller requested behindSubNav, attempt to sit just below subNav/header if possible.
-        const target = subZ || headerZ || DEFAULT_ZINDEX;
-        return Math.max(0, target - 1);
-      }
-
-      // default: place overlay above everything (use DEFAULT_ZINDEX)
-      return DEFAULT_ZINDEX;
-    } catch (e) {
-      return DEFAULT_ZINDEX;
-    }
-  },
-
-  // Show overlay. Accepts string or options object.
-  // options: { message, zIndex, autoHideAfterMs, behindSubNav }
-  show(messageOrOptions = '') {
-    try {
-      let message = '';
-      let opts = {};
-      if (typeof messageOrOptions === 'string') {
-        message = messageOrOptions;
-      } else if (typeof messageOrOptions === 'object' && messageOrOptions !== null) {
-        message = messageOrOptions.message || '';
-        opts = { ...messageOrOptions };
-      }
+      let msg = '', options = {};
+      if (typeof opts === 'string') { msg = opts; }
+      else if (opts && typeof opts === 'object') { msg = opts.message || ''; options = opts; }
 
       this._ensureStyles();
+      const z = this._zIndex(options);
+      const el = this._buildOverlay(msg);
+      el.style.zIndex = String(z);
 
-      const z = this._computeZIndex(opts);
-      const overlay = this._buildOverlay(message);
+      const m = el.querySelector('.loading-message');
+      if (m) m.textContent = msg || this._defaultMsg();
 
-      // set z-index and message
-      overlay.style.zIndex = String(z);
-      const msgEl = overlay.querySelector('.loading-message');
-      if (msgEl) msgEl.textContent = message || this.getDefaultMessage();
+      el.classList.remove('hidden');
+      this.spinnerElement = el;
+      this._shown = true;
+      this._currentOptions = { ...options, zIndex: z };
 
-      // ensure visible
-      overlay.classList.remove('hidden');
-
-      // store state
-      this.spinnerElement = overlay;
-      this._currentOptions = { ...opts, zIndex: z, message: msgEl ? msgEl.textContent : '' };
-
-      // auto-hide handling
-      if (this._autoHideTimer) {
-        clearTimeout(this._autoHideTimer);
-        this._autoHideTimer = null;
-      }
-      if (opts.autoHideAfterMs && Number(opts.autoHideAfterMs) > 0) {
-        this._autoHideTimer = setTimeout(() => {
-          try { this.hide(); } catch (e) {}
-        }, Number(opts.autoHideAfterMs));
+      this._clearAutoHide();
+      if (options.autoHideAfterMs > 0) {
+        this._autoHideTimer = setTimeout(() => { try { this.hide(); } catch (_) {} }, options.autoHideAfterMs);
       }
 
-      // Expose convenience globals (proxied to manager) so legacy code calling
-      // window.showInstantLoadingOverlay/removeInstantLoadingOverlay works but still
-      // routs through this manager (single source of truth).
+      // Proxy globals
       try {
-        window.__removeInstantLoadingOverlay = () => this.hide();
-        window.__instantLoadingOverlayShown = true;
-        // Also add short global helpers (non-destructive)
         window.showInstantLoadingOverlay = (o) => this.show(o);
         window.removeInstantLoadingOverlay = () => this.hide();
-      } catch (e) {}
+        window.__instantLoadingOverlayShown = true;
+        window.__removeInstantLoadingOverlay = () => this.hide();
+      } catch (_) {}
 
-      return overlay;
+      return el;
     } catch (err) {
-      console.error('contentLoadingManager.show error', err);
+      console.error('contentLoadingManager.show', err);
       return null;
     }
   },
 
-  // Hide overlay (idempotent)
   hide() {
     try {
-      if (!this.spinnerElement) {
-        // try to find element in DOM (in case created elsewhere)
-        const existing = document.getElementById(LOADING_ID);
-        if (!existing) {
-          this._clearAutoHide();
-          this._currentOptions = null;
-          try { window.__instantLoadingOverlayShown = false; } catch (e) {}
-          return;
-        }
-        this.spinnerElement = existing;
-      }
-      const overlay = this.spinnerElement;
-      overlay.classList.add('hidden');
+      if (!this._shown && !document.getElementById(LOADING_ID)) return;
+      const el = this.spinnerElement || document.getElementById(LOADING_ID);
+      if (!el) { this._shown = false; return; }
 
-      // remove after transition
+      el.classList.add('hidden');
+
       setTimeout(() => {
-        try {
-          const el = document.getElementById(LOADING_ID);
-          if (el && el.parentNode) el.parentNode.removeChild(el);
-        } catch (e) {}
-      }, FADE_MS + 40);
+        try { const e = document.getElementById(LOADING_ID); if (e?.parentNode) e.parentNode.removeChild(e); } catch (_) {}
+      }, FADE_MS + 20);
 
       this._clearAutoHide();
-      this._currentOptions = null;
+      this._shown = false;
       this.spinnerElement = null;
-      try { window.__instantLoadingOverlayShown = false; } catch (e) {}
+      this._currentOptions = null;
+      try { window.__instantLoadingOverlayShown = false; } catch (_) {}
     } catch (err) {
-      console.error('contentLoadingManager.hide error', err);
-      this._clearAutoHide();
-      this._currentOptions = null;
+      console.error('contentLoadingManager.hide', err);
+      this._shown = false;
       this.spinnerElement = null;
-      try { window.__instantLoadingOverlayShown = false; } catch (e) {}
     }
   },
 
-  // Update message of existing overlay without touching z-index or timers
-  updateMessage(message = '') {
+  updateMessage(msg) {
     try {
-      const overlay = this.spinnerElement || document.getElementById(LOADING_ID);
-      if (!overlay) return;
-      const msgEl = overlay.querySelector('.loading-message');
-      if (msgEl) msgEl.textContent = message || this.getDefaultMessage();
-      if (!this._currentOptions) this._currentOptions = {};
-      this._currentOptions.message = msgEl ? msgEl.textContent : '';
-    } catch (e) {
-      console.error('contentLoadingManager.updateMessage error', e);
-    }
+      const el = this.spinnerElement || document.getElementById(LOADING_ID);
+      if (!el) return;
+      const m = el.querySelector('.loading-message');
+      if (m) m.textContent = msg || this._defaultMsg();
+    } catch (_) {}
   },
 
-  // Return true if overlay exists & visible
   isShown() {
     try {
-      const overlay = document.getElementById(LOADING_ID);
-      return !!overlay && !overlay.classList.contains('hidden');
-    } catch (e) {
-      return false;
-    }
+      const el = document.getElementById(LOADING_ID);
+      return !!el && !el.classList.contains('hidden');
+    } catch (_) { return false; }
   },
 
-  // Set default z-index for future overlays (not retroactive)
-  setDefaultZIndex(n) {
-    if (typeof n === 'number' && !Number.isNaN(n)) {
-      try {
-        // mutate constant by storing override on object
-        this._defaultZIndexOverride = Math.max(0, Math.floor(n));
-      } catch (e) {}
-    }
-  },
-
-  // Internal: clear any auto-hide timer
   _clearAutoHide() {
-    if (this._autoHideTimer) {
-      try { clearTimeout(this._autoHideTimer); } catch (e) {}
-      this._autoHideTimer = null;
-    }
+    if (this._autoHideTimer) { clearTimeout(this._autoHideTimer); this._autoHideTimer = null; }
   }
 };
 
-// Expose manager globally as canonical controller
+// Expose globally
 try {
-  if (!window) {
-    // noop in SSR
-  } else {
+  if (typeof window !== 'undefined') {
     if (!window._headerV2_contentLoadingManager) window._headerV2_contentLoadingManager = contentLoadingManager;
-    // Proxy legacy global functions to the manager to enforce single source
-    window.showInstantLoadingOverlay = (opts) => window._headerV2_contentLoadingManager.show(opts);
-    window.removeInstantLoadingOverlay = () => window._headerV2_contentLoadingManager.hide();
+    window.showInstantLoadingOverlay  = (o) => contentLoadingManager.show(o);
+    window.removeInstantLoadingOverlay = () => contentLoadingManager.hide();
   }
-} catch (e) { /* ignore in restricted env */ }
+} catch (_) {}
 
-export { contentLoadingManager as contentLoadingManager };
+export { contentLoadingManager };
 export default contentLoadingManager;
