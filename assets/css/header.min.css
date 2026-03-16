@@ -1,317 +1,408 @@
-/* ---------- header.min.css v2.0 — Zero-Jank Nav
-   ─────────────────────────────────────────────────────
-   KEY CHANGES:
-   • Nav buttons: transition color only (no background-color anim)
-   • Active button ::after underline uses transform:scaleX instead
-     of width animation → compositor thread only
-   • Spinner uses transform:rotate → compositor
-   • No expensive properties in scroll path
-   ─────────────────────────────────────────────────────
-*/
-
-/* ---------- FONT ------------------------------------------ */
+/* ---------- FONT ---------- */
 @font-face {
   font-family: 'FoglihtenNo07calt';
   src: url('/assets/fonts/FoglihtenNo07calt.ttf') format('truetype');
   font-display: swap;
 }
 
-/* ---------- ROOT VARIABLES -------------------------------- */
+/* ---------- ROOT VARIABLES ---------- */
 :root {
-  --primary-color       : #FFFFFF;
-  --background-color    : #FFFFFF;
-  --text-color          : #52638a;
-  --text-primary        : #00CEB0;
-  --text-secondary      : #52638a;
+  /* Colors */
+  --primary-color: #FFFFFF;
+  --background-color: #FFFFFF;
+  --text-color: #52638a;
+  --text-primary: #00CEB0;
+  --text-secondary: #52638a;
 
-  --hover-color         : rgba(19, 180, 127, 0.08);
-  --nav-bg-color        : var(--background-color);
-  --nav-active-bg       : #FFFFFF;
-  --nav-button-radius   : 25px;
+  /* Nav */
+  --hover-color: rgba(19, 180, 127, 0.08);
+  --nav-bg-color: var(--background-color);
+  --nav-hover-bg: rgba(255, 255, 255, 0.12);
+  --nav-active-bg: #FFFFFF;
+  --nav-active-glow:
+    0 0 5px rgba(19, 180, 127, 0.18),
+    0 0 2px rgba(19, 180, 127, 0.1);
+  --nav-text-default: #FFFFFF;
+  --nav-text-hover: #FFFFFF;
+  --nav-text-active: #ffffff;
+  --nav-underline-color: #ffffff;
+  --nav-button-radius: 25px;
 
-  --transition-fast     : 0.18s ease;
-  --shadow-color        : rgba(0, 0, 0, 0.04);
-  --loading-bg          : #fff;
-  --spinner-primary     : #4285f4;
-  --spinner-secondary   : #eee;
+  /* Transition */
+  --transition-fast: 0.2s ease;
+
+  /* Shadow */
+  --shadow-color: rgba(0, 0, 0, 0.05);
+
+  /* Loading */
+  --loading-bg: #fff;
+  --spinner-primary: #4285f4;
+  --spinner-secondary: #eee;
 }
 
-/* ---------- GLOBAL --------------------------------------- */
+/* ---------- GLOBAL ---------- */
 body {
-  margin : 0;
+  margin: 0;
   padding: 0;
 }
 
-/* ---------- HEADER --------------------------------------- */
+/* ---------- HEADER ---------- */
 header {
-  position        : relative;
-  display         : flex;
-  flex-direction  : column;
-  align-items     : flex-start;
-  width           : 100%;
-  background      : var(--background-color);
-  margin-bottom   : 30px;
-  /* CSS containment — header cannot affect outer layout/paint */
-  contain         : layout style paint;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  background: var(--background-color);
+  margin-bottom: 30px;
 }
 
-/* ---------- LOGO ----------------------------------------- */
 .logo {
-  font-family   : 'FoglihtenNo07calt', monospace;
-  font-size     : 26px;
-  padding       : 20px 0 0;
-  color         : var(--text-primary);
-  text-shadow: 0 0 3px rgba(0, 255, 171, 0.4);
-  white-space   : nowrap;
-  display       : flex;
-  align-items   : center;
-  margin-left   : 10px;
+  font-family: 'FoglihtenNo07calt', monospace;
+  font-size: 26px;
+  padding: 20px 0 0;
+  color: var(--text-primary);
+  text-shadow: 0 0 3px rgba(0, 255, 171, 0.5);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  margin-left: 10px;
   pointer-events: none;
 }
 
-
-
 .logo span {
   pointer-events: auto;
-  user-select   : text;
+  user-select: text;
 }
 
 .logo img {
-  height     : var(--height);
+  height: var(--height);
   margin-left: 5px;
 }
 
-/* ---------- NAV ------------------------------------------ */
+/* ---------- NAV ---------- */
 nav {
-  width      : 100%;
-  background : none;
-  margin-top : 7px;
-  overflow-x : hidden;
+  width: 100%;
+  background: none;
+  margin-top: 7px;
+  overflow-x: hidden;
 }
 
 nav ul {
-  display    : flex;
-  list-style : none;
-  margin     : 0;
-  padding    : 7px 7px 0;
-  justify-content        : flex-start;
-  overflow-x             : auto;
-  white-space            : nowrap;
-  scrollbar-width        : none;
-  border-bottom          : 0.8px solid rgba(19, 180, 127, 0.3);
-
-  /* GPU-composited scroll — promotes to own compositor layer */
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior        : contain;
-  will-change                : scroll-position;
-  transform                  : translateZ(0);
+  display: flex;
+  list-style-type: none;
+  margin: 0;
+  padding: 7px 7px 0;
+  justify-content: flex-start;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+  border-bottom: 0.8px solid rgba(19, 180, 127, 0.3);
 }
 
-nav ul::-webkit-scrollbar { display: none; }
+nav ul::-webkit-scrollbar {
+  display: none;
+}
 
-nav ul li { flex: none; }
+nav ul li {
+  flex: none;
+}
 
 nav ul li button {
-  display        : flex;
-  align-items    : center;
+  display: flex;
+  align-items: center;
   justify-content: center;
-  padding        : 11px 13px;
-  border-radius  : var(--nav-button-radius);
-  font-size      : 0.9em;
-  background     : transparent;
-  border         : 1px solid transparent;
-  color          : var(--text-secondary);
-  cursor         : pointer;
-  position       : relative;
-  overflow       : hidden;
-  white-space    : nowrap;
-  user-select    : none;
+  padding: 11px 13px;
+  border-radius: var(--nav-button-radius);
+  font-size: 0.9em;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+  user-select: none;
   -webkit-tap-highlight-color: transparent;
-
-  /* Transition color only — compositor-safe */
-  transition     : color var(--transition-fast);
-
-  /* Per-button paint isolation */
-  contain        : layout style paint;
 }
 
 nav ul li button:hover {
-  background: rgba(0, 0, 0, 0.04);
+  background: rgba(0, 0, 0, 0.05);
 }
 
 nav ul li button.active {
-  color      : var(--text-primary);
-  background : rgba(248, 255, 253, 1);
-  border     : 1px solid #00CEB082;
+  color: var(--text-primary);
+  background: rgba(248, 255, 253, 1);
+  border: 1px solid #00CEB082;
 }
 
-/* Active underline: use transform:scaleX instead of width animation
-   → compositor thread, no layout, no paint */
 nav ul li button.active::after {
-  content       : '';
-  position      : absolute;
-  left          : 50%;
-  bottom        : 0;
-  width         : 40%;
-  height        : 3px;
-  background    : currentColor;
-  border-radius : 10px 10px 0 0;
-  transform     : translateX(-50%) scaleX(1);
-  transform-origin: center bottom;
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 40%;
+  height: 3px;
+  background: currentColor;
+  border-radius: 10px 10px 0 0;
+  transform: translateX(-50%);
 }
 
-/* ---------- NAVBAR TOGGLE -------------------------------- */
+/* ---------- NAVBAR TOGGLE ---------- */
 .navbar-toggle {
-  display            : flex;
-  flex-direction     : column;
-  gap                : 4px;
-  cursor             : pointer;
-  outline            : none;
-  box-shadow         : none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+  outline: none;
+  box-shadow: none;
   -webkit-tap-highlight-color: transparent;
-  position           : fixed;
-  left               : 16px;
-  top                : 25.3px;
-  padding            : 5px;
-  z-index            : 10008;
-  /* Isolate toggle from page */
-  contain            : layout style paint;
+  position: fixed;
+  left: 16px;
+  top: 25.3px;
+  padding: 5px;
+  z-index: 10008;
 }
 
-/* ---------- ERROR MESSAGE -------------------------------- */
+/* ---------- ERROR MESSAGE ---------- */
 .error-message {
-  position    : fixed;
-  top         : 50%;
-  right       : 20px;
-  background  : #ff4444;
-  color       : white;
-  padding     : 15px 20px;
+  position: fixed;
+  top: 50%;
+  right: 20px;
+  background-color: #ff4444;
+  color: white;
+  padding: 15px 20px;
   border-radius: 5px;
-  z-index     : 1000;
-  box-shadow  : 0 2px 4px rgba(0,0,0,.15);
-  animation   : _errFadeIn 0.3s ease-in-out;
+  z-index: 1000;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  animation: fadeIn 0.3s ease-in-out;
 }
 
-@keyframes _errFadeIn {
-  from { opacity: 0; transform: translateY(-20px); }
-  to   { opacity: 1; transform: translateY(0); }
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-/* ---------- LOADING SPINNER ------------------------------ */
+/* ---------- LOADING SPINNER ---------- */
 .content-loading-spinner {
-  position       : fixed;
-  inset          : 0;
-  display        : flex;
-  flex-direction : column;
-  align-items    : center;
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
-  background     : var(--loading-bg);
-  z-index        : 1000;
-  width          : 100%;
-  height         : 100%;
-  opacity        : 1;
-  visibility     : visible;
-  /* Strict containment OK here — fixed + known size */
-  contain        : strict;
+  background: var(--loading-bg);
+  z-index: 1000;
+  width: 100%;
+  height: 100%;
+  opacity: 1;
+  visibility: visible;
 }
 
-.content-loading-fade-in  { opacity: 1; visibility: visible;  pointer-events: auto; }
-.content-loading-fade-out { opacity: 0; visibility: hidden;   pointer-events: none; }
+.content-loading-fade-in {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.content-loading-fade-out {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
 
 .spinner-svg {
-  display        : flex;
-  align-items    : center;
+  display: flex;
+  align-items: center;
   justify-content: center;
-  margin-bottom  : 14px;
+  margin-bottom: 14px;
 }
 
-.spinner-svg svg    { width: 48px; height: 48px; }
-.spinner-svg-bg     { stroke: var(--spinner-secondary); stroke-width: 6; }
-.spinner-svg-fg     {
-  stroke           : var(--spinner-primary);
-  stroke-width     : 6;
-  stroke-linecap   : round;
-  transform-origin : 50% 50%;
-  /* transform:rotate is compositor — zero paint cost */
-  animation        : _spinnerRotate 0.9s linear infinite;
+.spinner-svg svg {
+  width: 48px;
+  height: 48px;
 }
 
-@keyframes _spinnerRotate {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
+.spinner-svg-bg {
+  stroke: var(--spinner-secondary);
+  stroke-width: 6;
+}
+
+.spinner-svg-fg {
+  stroke: var(--spinner-primary);
+  stroke-width: 6;
+  stroke-linecap: round;
+  transform-origin: 50% 50%;
 }
 
 .loading-message {
-  font-size  : 0.82rem;
-  color      : #444;
+  font-size: 0.82rem;
+  color: #444;
   font-weight: 500;
-  text-align : center;
-  margin-top : 0;
+  text-align: center;
+  margin-top: 0;
 }
 
-/* ---------- RESPONSIVE ----------------------------------- */
-@media (min-width: 600px)  { body { font-size: 16px; } nav { margin-top: 5px; } }
-@media (min-width: 768px)  { body { font-size: 16px; } }
-@media (min-width: 1024px) { body { font-size: 16px; } nav { margin-top: 5px; } }
+/* ---------- RESPONSIVE FONT SIZES ---------- */
+@media (min-width: 600px) {
+  body {
+    font-size: 16px;
+  }
+  nav {
+    margin-top: 5px;
+  }
+}
 
-/* ---------- REDUCED MOTION ------------------------------- */
+@media (min-width: 768px) {
+  body {
+    font-size: 16px;
+  }
+}
+
+@media (min-width: 1024px) {
+  body {
+    font-size: 16px;
+  }
+  nav {
+    margin-top: 5px;
+  }
+}
+
+@media (min-width: 1280px) {
+  body {
+    font-size: 16px;
+  }
+}
+
+@media (min-width: 1440px) {
+  body {
+    font-size: 16px;
+  }
+}
+
+@media (min-width: 1920px) {
+  body {
+    font-size: 16px;
+  }
+}
+
+/* ---------- ULTRA LOW-END OPTIMIZATIONS ---------- */
+
+/* ปิดทุก transition บนอุปกรณ์ที่ตั้งค่าไม่เอา animation */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration       : 0.01ms !important;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration      : 0.01ms !important;
-    scroll-behavior          : auto !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
-  .error-message { animation: none !important; opacity: 1; }
-  .logo { text-shadow: none; }
-  nav ul { will-change: auto; transform: none; }
-  .spinner-svg-fg { animation: none !important; }
-}
-
-/* ---------- SLOW REFRESH / LOW-END ----------------------- */
-@media (update: slow), (max-device-pixel-ratio: 1.5) {
-  .logo { text-shadow: none !important; }
-  nav ul li button { transition: none !important; }
-  .error-message { animation: none !important; opacity: 1; }
-  .content-loading-spinner { transition: none !important; }
-}
-
-/* ---------- SMALL SCREENS -------------------------------- */
-@media (max-width: 320px), (max-height: 480px) {
-  .logo { font-size: 20px; padding: 15px 0 0; }
-  nav ul li button { padding: 8px 10px; font-size: 0.85em; }
-  .navbar-toggle { left: 12px; top: 20px; }
-  .error-message { right: 10px; padding: 10px 15px; font-size: 0.9em; }
-}
-
-/* ---------- TOUCH ---------------------------------------- */
-@media (hover: none) and (pointer: coarse) {
-  nav ul li button { transition: none !important; }
-  nav ul li button:active { opacity: 0.8; }
-  .navbar-toggle:active { opacity: 0.7; }
-}
-
-/* ---------- HIGH CONTRAST -------------------------------- */
-@media (monochrome: 1), (prefers-contrast: high) {
-  .logo { text-shadow: none; color: #000; }
-  nav ul li button.active { border-width: 2px; border-color: #000; }
-}
-
-/* ---------- PRINT ---------------------------------------- */
-@media print {
-  header, nav, .navbar-toggle,
-  .content-loading-spinner { display: none !important; }
+  
   .error-message {
-    position: static; box-shadow: none;
-    border: 1px solid #000; animation: none !important;
+    animation: none !important;
+    opacity: 1;
   }
 }
 
-/* ---------- FEATURE FALLBACKS ---------------------------- */
-@supports not (will-change: scroll-position) {
-  nav ul { will-change: auto; }
+/* ปิดทุก effect บนอุปกรณ์สเปคต่ำ */
+@media (update: slow), (max-device-pixel-ratio: 1.5) {
+  .logo {
+    text-shadow: none !important;
+  }
+  
+  nav ul li button {
+    transition: none !important;
+  }
+  
+  .error-message {
+    animation: none !important;
+    opacity: 1;
+  }
+  
+  .content-loading-spinner {
+    transition: none !important;
+  }
 }
 
+/* ปรับสำหรับหน้าจอเล็กสุด */
+@media (max-width: 320px), (max-height: 480px) {
+  .logo {
+    font-size: 20px;
+    padding: 15px 0 0;
+  }
+  
+  nav ul li button {
+    padding: 8px 10px;
+    font-size: 0.85em;
+  }
+  
+  .navbar-toggle {
+    left: 12px;
+    top: 20px;
+  }
+  
+  .error-message {
+    right: 10px;
+    padding: 10px 15px;
+    font-size: 0.9em;
+  }
+}
+
+/* ปรับสำหรับ Android รุ่นเก่าและ RAM น้อย */
+@media (hover: none) and (pointer: coarse) {
+  nav ul li button {
+    transition: none !important;
+  }
+  
+  nav ul li button:active {
+    opacity: 0.8;
+  }
+  
+  .navbar-toggle:active {
+    opacity: 0.7;
+  }
+}
+
+/* ปิด text-shadow บนอุปกรณ์ที่มีปัญหา rendering */
 @supports not (text-shadow: 0 0 3px rgba(0, 255, 171, 0.5)) {
-  .logo { text-shadow: none; }
+  .logo {
+    text-shadow: none;
+  }
+}
+
+/* ปรับสำหรับ e-ink devices และ monochrome */
+@media (monochrome: 1), (prefers-contrast: high) {
+  .logo {
+    text-shadow: none;
+    color: #000;
+  }
+  
+  nav ul li button.active {
+    border-width: 2px;
+    border-color: #000;
+  }
+}
+
+/* ปรับสำหรับ print mode */
+@media print {
+  header,
+  nav,
+  .navbar-toggle,
+  .content-loading-spinner {
+    display: none !important;
+  }
+  
+  .error-message {
+    position: static;
+    box-shadow: none;
+    border: 1px solid #000;
+    animation: none !important;
+  }
 }

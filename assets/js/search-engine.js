@@ -1,479 +1,395 @@
 /*
-  search-engine.js  v4.0 — Platform-Level Scheduling
-  ──────────────────────────────────────────────────────────────────────
-  NEW in v4.0
-  ✅ scheduler.postTask()     priority-aware scheduling (Chrome 94+, with fallback)
-  ✅ scheduler.yield()        mid-task cooperative yield (Chrome 115+, with fallback)
-  ✅ isInputPending()         yield mid-chunk on user interaction (Chrome 87+)
-  ✅ Deadline-aware loop      process items while rIC budget remains (< 1 ms waste)
-  ✅ Tab-visibility guard     suspend index build when tab hidden; resume on show
-  ✅ WeakRef for Fuse docs    GC can reclaim index under memory pressure
-  ✅ FinalizationRegistry     auto-cleanup dead WeakRef entries
-  ✅ Memory-aware chunk size  scale with navigator.deviceMemory
-  ✅ AbortController          cancel in-flight builds on re-init
-
-  PRESERVED from v3.2
-  ✅ Immediate substring search  results before Fuse ready
-  ✅ All public APIs             init / search / querySuggestions / generateAllKeywords
-  ✅ Graceful Fuse failure       stays on immediate search
-  ✅ PerfMonitor integration     performance.mark / measure
+  search-engine.fuse.js (optimized for immediate display & low resource use)
+  - Shows results immediately using a lightweight substring search (no Fuse required)
+  - Builds Fuse index asynchronously during idle time to avoid blocking UI
+  - Does NOT use any caching (no localStorage/sessionStorage)
+  - API preserved: init(data, options), generateAllKeywords(), querySuggestions(q,maxCount), search(q,typeFilter)
 */
 (function (global) {
   'use strict';
 
-  // ── Device capability ─────────────────────────────────────────
-  const _MEM   = Math.max(1, Math.min(8, (navigator.deviceMemory || 4)));
-  const _FUSE_CDN = 'https://unpkg.com/fuse.js@6.6.2/dist/fuse.min.js';
+  // ---------- Utilities ----------
+  function isEmpty(v) { return v === null || v === undefined || v === ''; }
 
-  // ── Scheduler API with full fallback chain ────────────────────
-  const _sched = (typeof scheduler !== 'undefined' && scheduler) || null;
-
-  function _scheduleTask(fn, priority, signal) {
-    if (_sched?.postTask) {
-      const opts = { priority: priority || 'background' };
-      if (signal) opts.signal = signal;
-      return _sched.postTask(fn, opts);
-    }
-    return new Promise((resolve, reject) => {
-      const run = () => { try { resolve(fn()); } catch (e) { reject(e); } };
-      if (!priority || priority === 'background') {
-        if (typeof requestIdleCallback === 'function') requestIdleCallback(run, { timeout: 3000 });
-        else setTimeout(run, 0);
-      } else {
-        requestAnimationFrame(run);
-      }
-    });
-  }
-
-  function _yieldNow() {
-    if (_sched?.yield) return _sched.yield();
-    return new Promise(resolve => {
-      if (typeof requestIdleCallback === 'function') requestIdleCallback(resolve, { timeout: 500 });
-      else setTimeout(resolve, 0);
-    });
-  }
-
-  function _isInputPending() {
-    try { return !!navigator.scheduling?.isInputPending?.(); } catch { return false; }
-  }
-
-  // ── Tab visibility ────────────────────────────────────────────
-  let _tabHidden = document.hidden;
-  document.addEventListener('visibilitychange', () => { _tabHidden = document.hidden; }, { passive: true });
-
-  function _waitUntilVisible() {
-    if (!_tabHidden) return Promise.resolve();
-    return new Promise(resolve => {
-      const h = () => { if (!document.hidden) { document.removeEventListener('visibilitychange', h); resolve(); } };
-      document.addEventListener('visibilitychange', h, { passive: true });
-    });
-  }
-
-  // ── WeakRef cache + FinalizationRegistry ─────────────────────
-  const _wCache = new Map();
-  const _wReg   = (typeof FinalizationRegistry !== 'undefined')
-    ? new FinalizationRegistry(k => _wCache.delete(k)) : null;
-
-  function _wSet(key, val) {
-    try {
-      const ref = new WeakRef(val);
-      _wCache.set(key, ref);
-      _wReg?.register(val, key);
-    } catch { _wCache.set(key, { deref: () => val }); }
-  }
-
-  function _wGet(key) { return _wCache.get(key)?.deref?.() ?? null; }
-
-  // ── Perf helpers ──────────────────────────────────────────────
-  const Perf = {
-    mark   (n)    { try { performance.mark('se:' + n); } catch {} },
-    measure(n,a,b){ try { performance.measure('se:' + n, 'se:' + a, 'se:' + b); } catch {} },
-    all    ()     {
-      try { return performance.getEntriesByType('measure').filter(e => e.name.startsWith('se:')); }
-      catch { return []; }
-    },
-  };
-
-  // ── Text normalization ────────────────────────────────────────
   function defaultNormalizeText(s) {
     if (!s && s !== 0) return '';
     s = String(s).toLowerCase().trim();
-    try { s = s.normalize('NFKD').replace(/[\u0300-\u036f]/g, ''); } catch {}
-    s = s.replace(/[\u200B-\u200D\uFEFF]/g, '')
-         .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'")
-         .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"')
-         .replace(/[\uFF01-\uFF5E]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0))
-         .replace(/[^\p{L}\p{N}\s]+/gu, ' ')
-         .replace(/\s+/g, ' ').trim();
+    try { s = s.normalize('NFKD').replace(/[\u0300-\u036f]/g, ''); } catch (e) {}
+    s = s.replace(/[\u200B-\u200D\uFEFF]/g, '');
+    s = s.replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'").replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"');
+    s = s.replace(/[\uFF01-\uFF5E]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0));
+    s = s.replace(/[^\p{L}\p{N}\s]+/gu, ' ');
+    s = s.replace(/\s+/g, ' ').trim();
     return s;
   }
 
-  function pickLang(obj, langs) {
+  function pickLang(obj, langs){
     if (!obj || typeof obj !== 'object') return obj || '';
-    for (const l of langs) if (obj[l]) return obj[l];
+    for (let i=0;i<langs.length;i++) if (obj[langs[i]]) return obj[langs[i]];
     for (const k in obj) return obj[k];
     return '';
   }
 
-  function escHtml(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
-
-  // ── Fuse loader ───────────────────────────────────────────────
+  // ---------- Loader for Fuse.js (CDN) ----------
   function ensureFuseLoaded() {
     return new Promise((resolve, reject) => {
       if (global.Fuse) return resolve(global.Fuse);
-      const s   = document.createElement('script');
-      s.src     = _FUSE_CDN; s.async = true;
-      s.onload  = () => global.Fuse ? resolve(global.Fuse) : reject(new Error('Fuse not on global'));
-      s.onerror = () => reject(new Error('Fuse CDN load failed'));
+      const src = 'https://unpkg.com/fuse.js@6.6.2/dist/fuse.min.js';
+      const s = document.createElement('script');
+      s.src = src;
+      s.async = true;
+      s.onload = () => {
+        if (global.Fuse) resolve(global.Fuse);
+        else reject(new Error('Fuse loaded but global.Fuse not available'));
+      };
+      s.onerror = () => reject(new Error('Failed to load Fuse.js'));
       document.head.appendChild(s);
     });
   }
 
-  // ── Data flattening ───────────────────────────────────────────
-  function detectLangs(data) {
-    const set = Object.create(null);
-    for (const t of (data.type || [])) {
-      if (typeof t.name === 'object') for (const k in t.name) set[k] = 1;
-      for (const c of (t.category || [])) {
-        if (typeof c.name === 'object') for (const k in c.name) set[k] = 1;
-        for (const it of (c.data || []))
-          if (typeof it.name === 'object') for (const k in it.name) set[k] = 1;
-      }
-    }
-    const langs = Object.keys(set);
-    return langs.length ? langs : ['en'];
-  }
-
-  function collectRawItems(data) {
-    const raw = [];
-    for (const typeObj of (data.type || [])) {
-      const typeNames = typeof typeObj.name === 'object' ? typeObj.name : { en: String(typeObj.name || '') };
-      for (const cat of (typeObj.category || [])) {
-        const catNames = typeof cat.name === 'object' ? cat.name : { en: String(cat.name || '') };
-        for (const item of (cat.data || []))
-          raw.push({ typeObj, typeNames, cat, catNames, item });
-      }
-    }
-    return raw;
-  }
-
-  function buildDoc(raw, langs, normFn, id) {
-    const { typeObj, typeNames, cat, catNames, item } = raw;
-    const parts = [];
-    if (item.name && typeof item.name === 'object') {
-      for (const lg of langs) if (item.name[lg]) parts.push(String(item.name[lg]));
-    } else if (item.name) parts.push(String(item.name));
-    for (const k in item)
-      if (/_name$/.test(k) && item[k] && typeof item[k] === 'object')
-        for (const lg of langs) if (item[k][lg]) parts.push(String(item[k][lg]));
-    if (item.api)  parts.push(String(item.api));
-    if (item.text) parts.push(String(item.text));
-    for (const lg of langs) {
-      if (typeNames[lg]) parts.push(String(typeNames[lg]));
-      if (catNames[lg])  parts.push(String(catNames[lg]));
-    }
-    const combined = parts.filter(Boolean).join(' • ');
-    return {
-      id: String(id),
-      typeKey    : pickLang(typeObj.name, langs) || '',
-      categoryKey: pickLang(cat.name, langs)     || '',
-      name       : pickLang(item.name || {}, langs) || (item.api || ''),
-      api        : item.api  || '',
-      text       : item.text || '',
-      combined   : normFn ? normFn(combined) : combined,
-      rawItem    : item, typeObj, category: cat,
-    };
-  }
-
+  // ---------- Lightweight immediate doc builder ----------
+  // Build minimal docs for instant substring-based search (cheap, no normalization by default)
   function buildImmediateDocs(data) {
-    const langs    = detectLangs(data);
-    const rawItems = collectRawItems(data);
-    const docs     = [];
+    const docs = [];
     const keywords = [];
-    rawItems.forEach((raw, i) => {
-      const { typeObj, typeNames, cat, catNames, item } = raw;
-      const parts = [];
-      if (item.name && typeof item.name === 'object') {
-        for (const lg of langs) if (item.name[lg]) parts.push(String(item.name[lg]));
-      } else if (item.name) parts.push(String(item.name));
-      if (item.api)  parts.push(String(item.api));
-      if (item.text) parts.push(String(item.text));
-      for (const lg of langs) {
-        if (typeNames[lg]) parts.push(String(typeNames[lg]));
-        if (catNames[lg])  parts.push(String(catNames[lg]));
+    if (!data || !Array.isArray(data.type)) return { docs, keywords };
+
+    // detect langs minimally
+    const langsSet = Object.create(null);
+    for (let i=0;i<data.type.length;i++){
+      const t = data.type[i];
+      if (typeof t.name === 'object') for (const k in t.name) langsSet[k]=1;
+      const cats = t.category || [];
+      for (let j=0;j<cats.length;j++){
+        const c = cats[j];
+        if (typeof c.name === 'object') for (const k in c.name) langsSet[k]=1;
+        const items = c.data || [];
+        for (let x=0;x<items.length;x++){
+          const it = items[x];
+          if (typeof it.name === 'object') for (const k in it.name) langsSet[k]=1;
+        }
       }
-      const combined   = parts.filter(Boolean).join(' • ');
-      const typeKey    = pickLang(typeObj.name, langs) || '';
-      const catKey     = pickLang(cat.name, langs)     || '';
-      const nameStr    = pickLang(item.name || {}, langs) || (item.api || '');
-      docs.push({
-        id: String(i + 1), typeKey, categoryKey: catKey,
-        name: nameStr, api: item.api || '', text: item.text || '',
-        combined, rawItem: item, typeObj, category: cat,
-      });
-      if (nameStr) keywords.push({
-        raw: nameStr, normalized: String(nameStr).toLowerCase(),
-        docId: String(i + 1), item, itemName: nameStr,
-        typeObj, typeName: typeKey, catName: catKey,
-      });
-    });
+    }
+    const langs = Object.keys(langsSet).length ? Object.keys(langsSet) : ['en'];
+
+    let idCounter = 1;
+    for (let i=0;i<data.type.length;i++){
+      const typeObj = data.type[i];
+      const typeNames = typeof typeObj.name === 'object' ? typeObj.name : { en: String(typeObj.name || '') };
+      const cats = typeObj.category || [];
+      for (let j=0;j<cats.length;j++){
+        const cat = cats[j];
+        const catNames = typeof cat.name === 'object' ? cat.name : { en: String(cat.name || '') };
+        const items = cat.data || [];
+        for (let x=0;x<items.length;x++){
+          const item = items[x];
+          // Build combined text cheaply (no heavy normalization)
+          const parts = [];
+          if (item.name && typeof item.name === 'object') {
+            for (const lg of langs) if (item.name[lg]) parts.push(String(item.name[lg]));
+          } else if (item.name) parts.push(String(item.name));
+          if (item.api) parts.push(String(item.api));
+          if (item.text) parts.push(String(item.text));
+          for (const lg of langs) {
+            if (typeNames[lg]) parts.push(String(typeNames[lg]));
+            if (catNames[lg]) parts.push(String(catNames[lg]));
+          }
+          const combined = parts.filter(Boolean).join(' • ');
+
+          const doc = {
+            id: String(idCounter++),
+            typeKey: pickLang(typeObj.name, langs) || '',
+            categoryKey: pickLang(cat.name, langs) || '',
+            name: pickLang(item.name || {}, langs) || (item.api || ''),
+            api: item.api || '',
+            text: item.text || '',
+            combined: combined,
+            rawItem: item,
+            typeObj,
+            category: cat
+          };
+          docs.push(doc);
+
+          const kw = (doc.name || '') || (doc.api || '');
+          if (kw) keywords.push({
+            raw: kw,
+            normalized: String(kw).toLowerCase(),
+            docId: doc.id,
+            item: item,
+            itemName: doc.name,
+            typeObj: typeObj,
+            typeName: doc.typeKey,
+            catName: doc.categoryKey
+          });
+        }
+      }
+    }
     return { docs, keywords };
   }
 
-  // ── Deadline + isInputPending aware chunked build ─────────────
-  //
-  //  Process items inside a single rIC deadline window.
-  //  Check isInputPending() every item — yield immediately on user input.
-  //  Tab hidden → suspend completely → resume when visible.
-  //  Result: main thread is NEVER blocked during user interaction.
-  //
-  async function flattenDataToDocsChunked(data, normFn, onProgress) {
-    Perf.mark('idx-start');
-    const langs    = detectLangs(data);
-    const rawItems = collectRawItems(data);
-    const total    = rawItems.length;
-    const docs     = [];
+  // ---------- Full flatten to docs (keeps original behavior, optionally used when building Fuse) ----------
+  function flattenDataToDocs(data, normalizeFn) {
+    const docs = [];
     const keywords = [];
-    let i = 0;
+    if (!data || !Array.isArray(data.type)) return { docs, keywords };
 
-    while (i < total) {
-      if (_tabHidden) await _waitUntilVisible();
-
-      // Obtain an rIC deadline (or synthetic 14ms budget on browsers without rIC)
-      const deadline = await new Promise(resolve => {
-        if (typeof requestIdleCallback === 'function') {
-          requestIdleCallback(dl => resolve(dl), { timeout: 2000 });
-        } else {
-          const t0 = performance.now();
-          resolve({ timeRemaining: () => Math.max(0, 14 - (performance.now() - t0)) });
+    const langs = (function () {
+      const set = Object.create(null);
+      for (let i=0;i<data.type.length;i++){
+        const t = data.type[i];
+        if (typeof t.name === 'object') for (const k in t.name) set[k]=1;
+        const cats = t.category || [];
+        for (let j=0;j<cats.length;j++){
+          const c = cats[j];
+          if (typeof c.name === 'object') for (const k in c.name) set[k]=1;
+          const items = c.data || [];
+          for (let x=0;x<items.length;x++){
+            const it = items[x];
+            if (typeof it.name === 'object') for (const k in it.name) set[k]=1;
+            for (const k in it) if (/_name$/.test(k) && typeof it[k] === 'object') for (const l in it[k]) set[l]=1;
+          }
         }
-      });
-
-      // Inner loop: consume budget items per item
-      while (i < total) {
-        if (_isInputPending())            break;   // user typing/tapping → yield NOW
-        if (deadline.timeRemaining() < 1) break;   // rIC budget < 1ms → stop
-
-        const doc = buildDoc(rawItems[i], langs, normFn, i + 1);
-        docs.push(doc);
-        const kwStr = doc.name || doc.api;
-        if (kwStr) keywords.push({
-          raw: kwStr,
-          normalized: normFn ? normFn(kwStr) : String(kwStr).toLowerCase(),
-          docId: doc.id, item: doc.rawItem, itemName: doc.name,
-          typeObj: doc.typeObj, typeName: doc.typeKey, catName: doc.categoryKey,
-        });
-        i++;
       }
+      return Object.keys(set).length ? Object.keys(set) : ['en'];
+    })();
 
-      // Milestone progress callbacks
-      const pct = i >= total ? 100 : Math.round((i / total) * 100);
-      if (pct === 25 || pct === 50 || pct === 75 || pct === 100) {
-        try { if (typeof onProgress === 'function') onProgress(pct, i); } catch {}
+    let idCounter = 1;
+    for (let i=0;i<data.type.length;i++){
+      const typeObj = data.type[i];
+      const typeNames = typeof typeObj.name === 'object' ? typeObj.name : { en: String(typeObj.name || '') };
+      const cats = typeObj.category || [];
+      for (let j=0;j<cats.length;j++){
+        const cat = cats[j];
+        const catNames = typeof cat.name === 'object' ? cat.name : { en: String(cat.name || '') };
+        const items = cat.data || [];
+        for (let x=0;x<items.length;x++){
+          const item = items[x];
+          let combinedParts = [];
+          if (item.name && typeof item.name === 'object') {
+            for (const lg of langs) {
+              if (item.name[lg]) combinedParts.push(String(item.name[lg]));
+            }
+          } else if (item.name) combinedParts.push(String(item.name));
+          for (const k in item) {
+            if (/_name$/.test(k) && typeof item[k] === 'object') {
+              for (const lg of langs) if (item[k][lg]) combinedParts.push(String(item[k][lg]));
+            }
+          }
+          if (item.api) combinedParts.push(String(item.api));
+          if (item.text) combinedParts.push(String(item.text));
+          for (const lg of langs) {
+            if (typeNames[lg]) combinedParts.push(String(typeNames[lg]));
+            if (catNames[lg]) combinedParts.push(String(catNames[lg]));
+          }
+          const combined = combinedParts.filter(Boolean).join(' • ');
+          const doc = {
+            id: String(idCounter++),
+            typeKey: pickLang(typeObj.name, langs) || '',
+            categoryKey: pickLang(cat.name, langs) || '',
+            name: pickLang(item.name || {}, langs) || (item.api || ''),
+            api: item.api || '',
+            text: item.text || '',
+            combined: normalizeFn ? normalizeFn(combined) : combined,
+            rawItem: item,
+            typeObj,
+            category: cat
+          };
+          docs.push(doc);
+
+          const kw = (doc.name || '') || (doc.api || '');
+          if (kw) keywords.push({ raw: kw, normalized: normalizeFn ? normalizeFn(kw) : String(kw).toLowerCase(), docId: doc.id, item: item, itemName: doc.name, typeObj: typeObj, typeName: doc.typeKey, catName: doc.categoryKey });
+        }
       }
-
-      // Yield between outer iterations — let scheduler decide next tick
-      if (i < total) await _yieldNow();
     }
-
-    Perf.mark('idx-done');
-    Perf.measure('idx-total', 'idx-start', 'idx-done');
-    return { docs, keywords, langs };
+    return { docs, keywords };
   }
 
-  // ── Search Engine ─────────────────────────────────────────────
-  const SearchEngine = (function () {
-    let _data      = null;
-    let _docs      = [];
-    let _keywords  = [];
-    let _fuse      = null;
-    let _normFn    = defaultNormalizeText;
-    let _building  = false;
-    let _ready     = false;
-    let _abortCtrl = null;
-    let _opts      = {
-      fuseOptions     : {},
-      idleTimeout     : 4000,
-      onIndexProgress : null,
-      onIndexReady    : null,
-    };
+  // ---------- Search Engine with immediate fallback & async Fuse building ----------
+  const SearchEngine = (function(){
+    let _data = null;
+    let _docs = [];            // immediate docs (un-normalized combined strings)
+    let _keywords = [];        // immediate keywords (normalized via toLowerCase for prefix match)
+    let _fuse = null;         // Fuse instance (built async)
+    let _normalize = defaultNormalizeText;
+    let _options = { useWorker: false, fuseOptions: {}, fastImmediateLimit: 200, idleTimeout: 4000 };
 
-    function _mkKeywords(raw) {
-      return raw.map(k => ({
-        key: k.normalized || String(k.raw || '').toLowerCase(),
-        raw: k.raw || '', item: k.item || null, itemName: k.itemName || '',
-        typeObj: k.typeObj || null, typeName: k.typeName || '', catName: k.catName || '',
-      }));
-    }
+    let _fuseBuilding = false;
 
     async function init(data, options) {
       options = options || {};
-      _opts   = Object.assign({}, _opts, options);
-      _data   = data || null;
-      _normFn = options.normalizeFn || defaultNormalizeText;
-      _ready  = false;
+      _options = Object.assign({}, _options, options);
+      _data = data || null;
+      _normalize = options.normalizeFn || defaultNormalizeText;
 
-      if (_abortCtrl) { try { _abortCtrl.abort(); } catch {} }
-      _abortCtrl = (typeof AbortController !== 'undefined') ? new AbortController() : { signal: {}, abort: () => {} };
+      // 1) Build immediate lightweight docs so we can show results right away (cheap)
+      const immediate = buildImmediateDocs(_data || {});
+      _docs = immediate.docs;
+      _keywords = immediate.keywords.map(k => ({
+        item: k.item || null,
+        itemName: k.itemName || (k.item && k.item.name ? (typeof k.item.name === 'string' ? k.item.name : JSON.stringify(k.item.name)) : ''),
+        typeObj: k.typeObj || null,
+        typeName: k.typeName || '',
+        catName: k.catName || '',
+        key: k.normalized || (k.raw || '').toLowerCase(),
+        raw: k.raw || ''
+      }));
 
-      Perf.mark('imm-start');
-      const imm = buildImmediateDocs(_data || {});
-      _docs     = imm.docs;
-      _keywords = _mkKeywords(imm.keywords);
-      Perf.mark('imm-done');
-      Perf.measure('imm-build', 'imm-start', 'imm-done');
+      // 2) Schedule Fuse index build in idle time (do NOT block UI)
+      scheduleBuildFuse();
 
-      // Background Fuse build — low priority, won't compete with user interaction
-      _scheduleFuseBuild(_abortCtrl.signal);
       return true;
     }
 
-    function _scheduleFuseBuild(signal) {
-      if (_building || !_data) return;
-      _building = true;
+    function scheduleBuildFuse() {
+      if (_fuseBuilding || !_data) return;
+      _fuseBuilding = true;
 
-      const run = async () => {
-        if (signal.aborted) { _building = false; return; }
+      const build = async () => {
         try {
-          const Fuse    = await ensureFuseLoaded();
-          if (signal.aborted) { _building = false; return; }
-
-          const fuseOpts = Object.assign({
-            includeScore: true, threshold: 0.38, ignoreLocation: true,
-            minMatchCharLength: 2, useExtendedSearch: false,
+          const Fuse = await ensureFuseLoaded();
+          // Flatten fully (with normalization) for better Fuse results
+          const { docs, keywords } = flattenDataToDocs(_data || {}, _normalize);
+          // reduce memory pressure: reuse doc objects if possible, but assign to _docsForFuse
+          let fuseDocs = docs;
+          const defaultFuseOpts = {
+            includeScore: true,
+            threshold: 0.38,
+            ignoreLocation: true,
+            minMatchCharLength: 2,
+            useExtendedSearch: false,
             keys: [
-              { name: 'name',     weight: 0.6 },
-              { name: 'api',      weight: 0.9 },
+              { name: 'name', weight: 0.6 },
+              { name: 'api', weight: 0.9 },
               { name: 'combined', weight: 0.5 },
-              { name: 'text',     weight: 0.2 },
-            ],
-          }, _opts.fuseOptions || {});
-
-          const { docs, keywords } = await flattenDataToDocsChunked(
-            _data, _normFn,
-            (pct, count) => {
-              try { if (typeof _opts.onIndexProgress === 'function') _opts.onIndexProgress(pct, count); } catch {}
-            }
-          );
-
-          if (signal.aborted) { _building = false; return; }
-
-          Perf.mark('fuse-create');
-          _fuse = new Fuse(docs, fuseOpts);
-          Perf.mark('fuse-done');
-          Perf.measure('fuse-create', 'fuse-create', 'fuse-done');
-
-          // Store under WeakRef so GC can reclaim docs array under memory pressure
-          _wSet('fuse-docs', docs);
-
-          _keywords = _mkKeywords(keywords);
-          _ready    = true;
-          try { if (typeof _opts.onIndexReady === 'function') _opts.onIndexReady(); } catch {}
-        } catch (err) {
-          if (!signal.aborted)
-            console.warn('[SearchEngine] Fuse build failed, using immediate search:', err?.message || err);
+              { name: 'text', weight: 0.2 }
+            ]
+          };
+          const fuseOpts = Object.assign({}, defaultFuseOpts, _options.fuseOptions || {});
+          try {
+            _fuse = new Fuse(fuseDocs, fuseOpts);
+            // overwrite keyword list with normalized, rich entries once Fuse-ready
+            _keywords = keywords.map(k => {
+              return {
+                item: k.item || null,
+                itemName: k.itemName || (k.item && k.item.name ? (typeof k.item.name === 'string' ? k.item.name : JSON.stringify(k.item.name)) : ''),
+                typeObj: k.typeObj || null,
+                typeName: k.typeName || '',
+                catName: k.catName || '',
+                key: k.normalized || (k.raw || '').toLowerCase(),
+                raw: k.raw || ''
+              };
+            });
+          } catch (e) {
+            console.error('Failed to create Fuse index', e);
+            _fuse = null;
+          }
+        } catch (e) {
+          // If Fuse fails to load or build, we keep using immediate search — graceful degradation
+          console.warn('Fuse not available for indexing (will use immediate search):', e && e.message ? e.message : e);
           _fuse = null;
         } finally {
-          _building = false;
+          _fuseBuilding = false;
         }
       };
 
-      // Schedule as background — won't compete with user-visible or user-blocking tasks
-      _scheduleTask(run, 'background', signal).catch(() => { _building = false; });
+      // If requestIdleCallback available, use it for low-priority background work
+      if (typeof requestIdleCallback === 'function') {
+        try {
+          requestIdleCallback(build, { timeout: _options.idleTimeout });
+        } catch (e) {
+          setTimeout(build, 100);
+        }
+      } else {
+        // If device has very low concurrency, delay longer to reduce contention
+        const cores = (navigator && navigator.hardwareConcurrency) ? navigator.hardwareConcurrency : 4;
+        const delay = cores <= 2 ? Math.max(1000, _options.idleTimeout) : 100;
+        setTimeout(build, delay);
+      }
     }
 
-    function _immediateSearch(qRaw, typeFilter) {
-      const q  = String(qRaw || '').trim();
-      if (!q) return { results: [], keywords: _allKW() };
-      Perf.mark('imm-srch');
+    // Immediate cheap substring search (case-insensitive) for instant UI feedback
+    function immediateSearch(qRaw, typeFilter, limit) {
+      const q = String(qRaw || '').trim();
+      if (!q) return { results: [], keywords: generateAllKeywords() };
       const nq = q.toLowerCase();
       const results = [];
-      for (let i = 0; i < _docs.length && results.length < 200; i++) {
+      limit = limit || _options.fastImmediateLimit || 200;
+      for (let i=0;i<_docs.length && results.length < limit;i++){
         const d = _docs[i];
-        if (typeFilter && typeFilter !== 'all' &&
-            (d.typeKey || '').toLowerCase() !== String(typeFilter).toLowerCase()) continue;
+        if (typeFilter && typeFilter !== 'all') {
+          if ((d.typeKey || '').toLowerCase() !== String(typeFilter || '').toLowerCase()) continue;
+        }
+        // check name, api, combined cheaply
         const hay = ((d.name || '') + ' ' + (d.api || '') + ' ' + (d.combined || '')).toLowerCase();
-        if (hay.indexOf(nq) >= 0)
+        if (hay.indexOf(nq) >= 0) {
           results.push({
-            typeObj: d.typeObj, category: d.category, item: d.rawItem,
-            typeName: d.typeKey, catName: d.categoryKey, itemName: d.name || '',
-            lang: 'auto', fuzzy: false, fuzzyScore: null, matchExact: hay === nq,
-          });
-      }
-      Perf.mark('imm-srch-done');
-      Perf.measure('imm-search', 'imm-srch', 'imm-srch-done');
-      return { results, keywords: _allKW() };
-    }
-
-    function search(qRaw, typeFilter) {
-      const q = String(qRaw || '').trim();
-      if (!q) return { results: [], keywords: _allKW() };
-      if (!_fuse) return _immediateSearch(qRaw, typeFilter);
-      Perf.mark('fuse-srch');
-      try {
-        const fuseResults = _fuse.search(q, { limit: 200 }) || [];
-        const results     = [];
-        for (const r of fuseResults) {
-          const doc = r.item || r;
-          if (typeFilter && typeFilter !== 'all' &&
-              (doc.typeKey || '').toLowerCase() !== String(typeFilter).toLowerCase()) continue;
-          results.push({
-            typeObj: doc.typeObj, category: doc.category, item: doc.rawItem,
-            typeName: doc.typeKey, catName: doc.categoryKey, itemName: doc.name || '',
-            lang: 'auto', fuzzy: r.score > 0, fuzzyScore: r.score ?? null, matchExact: r.score === 0,
+            typeObj: d.typeObj,
+            category: d.category,
+            item: d.rawItem,
+            typeName: d.typeKey,
+            catName: d.categoryKey,
+            itemName: d.name || '',
+            lang: 'auto',
+            fuzzy: false,
+            fuzzyScore: null,
+            matchExact: (hay === nq)
           });
         }
-        Perf.mark('fuse-srch-done');
-        Perf.measure('fuse-search', 'fuse-srch', 'fuse-srch-done');
-        return { results, keywords: _allKW() };
-      } catch (err) {
-        console.error('[SearchEngine] Fuse search error:', err);
-        return _immediateSearch(qRaw, typeFilter);
       }
+      return { results, keywords: generateAllKeywords() };
+    }
+
+    // generateAllKeywords now returns entries compatible with original UI's expectations
+    function generateAllKeywords() {
+      return _keywords.map(k => Object.assign({}, k));
     }
 
     function querySuggestions(rawQuery, maxCount) {
-      maxCount   = maxCount || 8;
-      const q    = String(rawQuery || '').trim();
+      maxCount = maxCount || 8;
+      const q = String(rawQuery || '').trim();
       if (!q) return [];
-      const nq  = _normFn ? _normFn(q) : q.toLowerCase();
+      const nq = _normalize ? _normalize(q) : q.toLowerCase();
       const out = [];
       const seen = new Set();
-
-      for (const k of _keywords) {
-        if (out.length >= maxCount) break;
-        if (!k?.key || String(k.key).indexOf(nq) !== 0) continue;
-        if (seen.has(k.key)) continue;
-        seen.add(k.key);
-        const display = k.raw || k.itemName || '';
-        out.push({ display, raw: display, highlightedHtml: display, source: 'keyword' });
+      // 1) keyword prefix matches from immediate keywords
+      for (let i=0;i<_keywords.length && out.length < maxCount;i++){
+        const k = _keywords[i];
+        if (!k || !k.key) continue;
+        if (String(k.key).indexOf(nq) === 0) {
+          const display = k.raw || k.itemName || '';
+          const norm = k.key;
+          if (seen.has(norm)) continue;
+          seen.add(norm);
+          out.push({ display, raw: display, highlightedHtml: display, source: 'keyword' });
+        }
       }
       if (out.length >= maxCount) return out.slice(0, maxCount);
 
+      // 2) If Fuse ready, use Fuse suggestions (more accurate)
       if (_fuse && q.length >= 1) {
         try {
-          const fr = _fuse.search(q, { limit: Math.max(12, maxCount) });
-          for (const r of fr) {
-            if (out.length >= maxCount) break;
-            const doc     = r.item || r;
-            const display = doc.name || doc.api || '';
-            if (!display) continue;
-            const norm = _normFn ? _normFn(display) : String(display).toLowerCase();
-            if (!norm || seen.has(norm)) continue;
+          const fuseRes = _fuse.search(q, { limit: Math.max(12, maxCount) });
+          for (let i=0;i<fuseRes.length && out.length < maxCount;i++){
+            const r = fuseRes[i];
+            const doc = r.item || r;
+            const display = doc.name || doc.api || (doc.rawItem && (doc.rawItem.name ? (typeof doc.rawItem.name === 'string' ? doc.rawItem.name : JSON.stringify(doc.rawItem.name)) : '')) || '';
+            const norm = _normalize ? _normalize(display) : (String(display || '').toLowerCase());
+            if (!norm) continue;
+            if (seen.has(norm)) continue;
             seen.add(norm);
-            out.push({ display, raw: display, highlightedHtml: escHtml(String(display)), source: 'fuse', score: r.score ?? null });
+            const highlightedHtml = (typeof display === 'string') ? escapeHtml(display) : escapeHtml(String(display));
+            out.push({ display, raw: display, highlightedHtml, source: 'fuse', score: (r.score !== undefined ? r.score : null) });
           }
-        } catch {}
+        } catch (e) { console.error('Fuse search for suggestions failed', e); }
       } else {
-        const nqS = String(q).toLowerCase();
-        for (const d of _docs) {
-          if (out.length >= maxCount) break;
+        // 3) Fallback: do immediate doc scans for suggestions (cheap)
+        const nqSimple = String(q).toLowerCase();
+        for (let i=0;i<_docs.length && out.length < maxCount;i++){
+          const d = _docs[i];
           const display = d.name || d.api || '';
           if (!display) continue;
           const norm = String(display).toLowerCase();
-          if (norm.indexOf(nqS) === 0 && !seen.has(norm)) {
+          if (norm.indexOf(nqSimple) === 0 && !seen.has(norm)) {
             seen.add(norm);
             out.push({ display, raw: display, highlightedHtml: display, source: 'immediate' });
           }
@@ -482,24 +398,59 @@
       return out;
     }
 
-    function _allKW() { return _keywords.map(k => Object.assign({}, k)); }
+    function search(qRaw, typeFilter) {
+      const q = String(qRaw || '').trim();
+      if (!q) return { results: [], keywords: generateAllKeywords() };
+      // If Fuse ready, use it (more thorough). Otherwise do immediate cheap search.
+      if (_fuse) {
+        try {
+          const fuseResults = _fuse.search(q, { limit: 200 }) || [];
+          const results = [];
+          for (let i=0;i<fuseResults.length;i++){
+            const r = fuseResults[i];
+            const doc = r.item || r;
+            if (typeFilter && typeFilter !== 'all') {
+              if ((doc.typeKey || '').toLowerCase() !== String(typeFilter || '').toLowerCase()) continue;
+            }
+            results.push({
+              typeObj: doc.typeObj,
+              category: doc.category,
+              item: doc.rawItem,
+              typeName: doc.typeKey,
+              catName: doc.categoryKey,
+              itemName: doc.name || '',
+              lang: 'auto',
+              fuzzy: (r.score !== undefined && r.score > 0),
+              fuzzyScore: (r.score !== undefined ? r.score : null),
+              matchExact: (r.score !== undefined ? (r.score === 0) : false)
+            });
+          }
+          return { results, keywords: generateAllKeywords() };
+        } catch (e) {
+          console.error('Fuse search failed, falling back to immediate search', e);
+          return immediateSearch(qRaw, typeFilter);
+        }
+      } else {
+        // immediate cheap substring search (fast, low resources)
+        return immediateSearch(qRaw, typeFilter);
+      }
+    }
+
+    function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
     return {
-      init               : (data, opts) => init(data, opts),
-      search             : (q, tf)      => search(q, tf),
-      querySuggestions   : (q, max)     => querySuggestions(q, max),
-      generateAllKeywords: ()           => _allKW(),
-      isIndexReady       : ()           => _ready,
-      isBuilding         : ()           => _building,
-      getDocCount        : ()           => _docs.length,
-      getPerfEntries     : ()           => Perf.all(),
+      init: function(data, options) { return init(data, options); },
+      generateAllKeywords: function() { return generateAllKeywords(); },
+      querySuggestions: function(q, maxCount) { return querySuggestions(q, maxCount); },
+      search: function(q, typeFilter) { return search(q, typeFilter); },
       _internals: {
-        normalizeText: _normFn,
-        getDocs      : () => _docs.slice(),
-        getKeywords  : () => _keywords.slice(),
-        getFuse      : () => _fuse,
-        flattenDataToDocsChunked, buildImmediateDocs,
-      },
+        normalizeText: _normalize,
+        flattenDataToDocs,
+        buildImmediateDocs,
+        getDocs: () => _docs.slice(),
+        getFuse: () => _fuse,
+        options: () => Object.assign({}, _options)
+      }
     };
   })();
 

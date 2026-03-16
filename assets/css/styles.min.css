@@ -1,571 +1,367 @@
-/*
-  styles.min.css  v4.0 — Zero-Jank Architecture
-  ──────────────────────────────────────────────────────────────────
-  CORE PRINCIPLES:
-  • @layer          — cascade isolation, no specificity wars
-  • @property       — typed custom props prevent implicit animation triggers
-  • contain:strict  — on scroll containers (known size + overflow:hidden)
-  • contain:layout style paint — per-component paint isolation
-  • transform:translate() only — compositor-thread scroll, zero layout
-  • No box-shadow/filter on scroll path items — these force layer creation
-  • will-change REMOVED from static elements — browser decides layers
-  • Hover effects use transform+opacity ONLY — no color/shadow change
-    that causes repaint on every frame
-  • content-visibility:auto + contain-intrinsic-size:auto N on cards
-    → browser skips off-screen cards natively even without JS VG
-
-  VirtualGrid (JS) handles cards with > 20 items.
-  CSS content-visibility handles remaining cases gracefully.
-*/
-
-/* ─── CSS @property: typed custom props ─────────────────────── */
-/* Typed props prevent the browser from animating them implicitly
-   and make cascade-inheritance explicit */
-@property --card-radius {
-  syntax: '<length>';
-  inherits: false;
-  initial-value: 15px;
-}
-@property --card-border-alpha {
-  syntax: '<number>';
-  inherits: false;
-  initial-value: 0.15;
+:root {
+  --app-theme-indigo: #00CEB0;
+  --app-theme-indigo-hover: #54CBAB;
+  --app-theme-indigo-light: #54CBAB;
+  --app-theme-indigo-lighter: rgba(96, 81, 255, 0.04);
+  --app-theme-indigo-border: rgba(0, 206, 176, 0.15);
+  --app-theme-indigo-border-strong: rgba(0, 206, 176, 0.8);
+  --app-theme-indigo-border2: rgba(0, 206, 176, 0.3);
+  --app-text-heading: #494E59;
+  --app-text-body: #52638A;
+  --app-text-light: #6F6F82;
+  --app-surface-primary: #FFFFFF;
+  --app-surface-secondary: #FAFBFF;
+  --app-border-subtle: #EAEAF1;
+  --app-border-hover: #DCDCE6;
+  --app-elevation-small: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --app-elevation-medium: 0 3px 6px rgba(0, 0, 0, 0.1);
+  --app-motion-quick: 0.12s ease-out;
+  --app-motion-natural: 0.18s ease-out;
+  --app-card-padding: 15px;
+  --app-card-radius: 15px;
+  --app-button-radius: 12px;
+  --app-pill-radius: 25px;
 }
 
-/* ─── Layer order ────────────────────────────────────────────── */
-@layer reset, tokens, layout, components, states, responsive, a11y;
+/* ========== BASE ========== */
 
-/* ================================================================
-   RESET
-   ================================================================ */
-@layer reset {
-  *, *::before, *::after { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; }
+main {
+  margin-top: 30px;
+  margin-bottom: 80px;
 }
 
-/* ================================================================
-   TOKENS
-   ================================================================ */
-@layer tokens {
-  :root {
-    --c-primary     : #00CEB0;
-    --c-primary-h   : #54CBAB;
-    --c-primary-l   : #54CBAB;
-    --c-primary-a12 : rgba(0, 206, 176, 0.12);
-    --c-primary-a15 : rgba(0, 206, 176, 0.15);
-    --c-primary-a30 : rgba(0, 206, 176, 0.30);
-    --c-primary-a80 : rgba(0, 206, 176, 0.80);
+/* ========== BUTTON SUB ========== */
 
-    --c-text-head : #494E59;
-    --c-text-body : #52638A;
-    --c-text-muted: #6F6F82;
-
-    --c-surface-1 : #FFFFFF;
-    --c-surface-2 : #FAFBFF;
-    --c-border-1  : #EAEAF1;
-    --c-border-2  : #DCDCE6;
-
-    /* Elevation — cheap 1-stop shadow (no multi-stop) */
-    --shadow-xs : 0 1px 2px rgba(0,0,0,.06);
-    --shadow-sm : 0 2px 4px rgba(0,0,0,.07);
-
-    /* Motion */
-    --dur-fast  : 0.12s;
-    --dur-base  : 0.18s;
-    --ease-out  : cubic-bezier(0.2, 0, 0, 1);
-
-    /* Layout */
-    --card-r    : 15px;   /* @property fallback */
-    --btn-r     : 12px;
-    --pill-r    : 25px;
-  }
+.button-sub {
+  margin: 0;
+  padding: 11px 13px;
+  background: var(--app-surface-primary);
+  color: var(--app-text-body);
+  border: 1px solid transparent;
+  border-radius: var(--app-pill-radius);
+  font-size: 0.9em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  letter-spacing: 0.01em;
+  transition:
+    background var(--app-motion-quick),
+    border-color var(--app-motion-quick),
+    color var(--app-motion-quick);
 }
 
-/* ================================================================
-   LAYOUT
-   ================================================================ */
-@layer layout {
-  main {
-    margin-top   : 30px;
-    margin-bottom: 80px;
-  }
+.button-sub:hover,
+.button-sub.active {
+  color: var(--app-theme-indigo);
 }
 
-/* ================================================================
-   COMPONENTS
-   ================================================================ */
-@layer components {
+.button-sub.active {
+  background: rgba(248, 255, 253, 1);
+  border: 1px solid #00CEB082;
+}
 
-  /* ── Button sub ───────────────────────────────────────────────── */
-  .button-sub {
-    margin      : 0;
-    padding     : 11px 13px;
-    background  : var(--c-surface-1);
-    color       : var(--c-text-body);
-    border      : 1px solid transparent;
-    border-radius: var(--pill-r);
-    font-size   : 0.9em;
-    cursor      : pointer;
-    -webkit-tap-highlight-color: transparent;
-    user-select : none;
-    letter-spacing: 0.01em;
-    /* Only transition colors — no layout props */
-    transition  : color var(--dur-fast) var(--ease-out),
-                  border-color var(--dur-fast) var(--ease-out);
-    /* Isolate repaint to this button */
-    contain     : layout style paint;
-  }
+/* ========== HI / HJ ========== */
 
-  .button-sub:hover,
-  .button-sub.active {
-    color: var(--c-primary);
-  }
+.hi {
+  padding: 0 10px;
+}
 
-  .button-sub.active {
-    background  : rgba(248,255,253,1);
-    border-color: rgba(0, 206, 176, 0.51);
-  }
+.hj {
+  border-radius: 40px;
+  background: #FFFFFF;
+  border: 0.5px solid rgba(0, 0, 0, 0.1);
+}
 
-  /* ── hi / hj ────────────────────────────────────────────────── */
-  .hi {
-    padding: 0 10px;
-  }
+/* ========== BUTTON CONTENT ========== */
 
-  .hj {
-    border-radius: 40px;
-    background   : #FFFFFF;
-    border       : 0.5px solid rgba(0,0,0,.08);
-    /* Contain sub-nav inner — children can't escape paint boundary */
-    contain      : layout style paint;
-  }
+:where(.button-content) {
+  box-sizing: border-box;
 
-  /* ── Button content (emoji/symbol buttons) ──────────────────── */
-  :where(.button-content) {
-    box-sizing : border-box;
-    width      : auto !important;
-    min-width  : 60px;
-    max-width  : 100%;
+  width: auto !important;
+  min-width: 60px;
+  max-width: 100%;
 
-    padding    : 13px 17px !important;
-    margin     : 8px 0;
+  padding: 13px 17px !important;
+  margin: 8px 0;
 
-    height     : 60px;
-    min-height : 60px;
+  height: 60px;
+  min-height: 60px;
 
-    display    : inline-flex;
-    align-items: center;
-    justify-content: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 
-    border-radius: 27px;
-    font-size  : 21px;
-    line-height: 1;
+  border-radius: 27px;
+  font-size: 21px;
+  line-height: 1;
 
-    background : var(--c-surface-1);
-    color      : var(--c-primary);
-    border     : 1px solid var(--c-primary-a15);
+  background: var(--app-surface-primary);
+  color: var(--app-theme-indigo);
+  border: 1px solid var(--app-theme-indigo-border);
 
-    cursor     : pointer;
-    text-align : center;
-    -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+  text-align: center;
+  -webkit-tap-highlight-color: transparent;
 
-    /* ONLY animate transform — compositor thread, zero reflow */
-    transition : transform var(--dur-fast) var(--ease-out),
-                 border-color var(--dur-base) var(--ease-out);
+  transition:
+    transform 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.18s,
+    color 0.18s;
+}
 
-    /* Isolate repaint per button */
-    contain    : layout style paint;
-  }
+:where(.button-content:hover) {
+  border-color: var(--app-theme-indigo-border-strong);
+}
 
-  :where(.button-content:hover) {
-    border-color: var(--c-primary-a80);
-  }
+:where(.button-content:active) {
+  transform: scale(0.96);
+}
 
-  :where(.button-content:active) {
-    transform: scale(0.96);
-  }
+:where(.button-content > *) {
+  position: relative;
+  z-index: 1;
+}
 
-  :where(.button-content > *) {
-    position : relative;
-    z-index  : 1;
-  }
+/* ========== CARD ========== */
 
-  /* ── Card ────────────────────────────────────────────────────── */
-  /*
-    NO box-shadow on .card — box-shadow changes on scroll path force
-    the browser to repaint the entire stacking context every frame.
-    Use border instead (border changes don't cause repaint in isolation).
+:where(.card) {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
 
-    content-visibility:auto — browser skips off-screen cards natively.
-    contain-intrinsic-size:auto 222px — "auto" caches actual height
-    after first render so scroll metrics stay accurate.
+  width: 160px;
+  max-height: 222px;
+  max-width: 400px;
 
-    VirtualGrid (JS) handles the real virtualization for large groups;
-    CSS CV:auto covers smaller groups and edge cases.
-  */
-  :where(.card) {
-    display       : flex;
-    flex-direction: column;
-    align-items   : stretch;
+  padding: 0;
+  border-radius: 30px;
+  overflow: hidden;
 
-    width     : 160px;
-    max-height: 222px;
-    max-width : 400px;
+  background: #FFFFFF;
+  border: 1px solid var(--app-theme-indigo-border);
 
-    padding      : 0;
-    border-radius: var(--card-r, 15px);
-    overflow     : hidden;
+  transition:
+    border-color var(--app-motion-natural),
+    box-shadow var(--app-motion-natural),
+    transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
 
-    background : #FFFFFF;
-    border     : 1px solid var(--c-primary-a15);
+:where(.card > *) {
+  position: relative;
+  z-index: 1;
+}
 
-    /* Compositor-safe transitions only */
-    transition : transform var(--dur-base) var(--ease-out),
-                 border-color var(--dur-base) var(--ease-out),
-                 opacity var(--dur-fast) var(--ease-out);
+:where(.card)::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(
+    120deg,
+    rgba(247, 248, 255, 0.13) 75%,
+    rgba(96, 81, 255, 0.10) 100%
+  );
+  border-radius: inherit;
+}
 
-    /* Per-card paint isolation */
-    contain              : layout style paint;
-    content-visibility   : auto;
-    contain-intrinsic-size: auto 222px;
+:where(.card:hover) {
+  border-color: var(--app-theme-indigo-border-strong);
+}
 
-    /* No will-change by default — let browser manage layers */
-  }
+:where(.card:active) {
+  transform: scale(0.97);
+}
 
-  /* Hover: transform only — no shadow, no color change on hot path */
-  :where(.card:hover) {
-    border-color: var(--c-primary-a80);
-    transform   : translateY(-2px);
-  }
+/* CARD INNER */
+.card-image {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  border-radius: 0;
+  box-shadow: none;
+  transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
 
-  :where(.card:active) {
-    transform: scale(0.97);
-  }
+.card-content {
+  margin-top: 5px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  transition: opacity 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
 
-  /* The ::before shimmer is removed from hot path — it caused
-     composited-layer creation on every card */
+.card-title {
+  font-size: 13px;
+  font-weight: bold;
+  color: var(--app-text-heading);
+  margin-bottom: 4px;
+  line-height: 1.5;
+}
 
-  :where(.card > *) {
-    position: relative;
-    z-index : 1;
-  }
+.card-description {
+  font-size: 11.3px;
+  color: var(--app-text-body);
+  line-height: 1.6;
+  letter-spacing: 0.01em;
+}
 
-  /* Card image */
-  .card-image {
-    width          : 100%;
-    height         : auto;
-    object-fit     : cover;
-    border-radius  : 0;
-    box-shadow     : none;
-    /* Use transform for zoom on hover — compositor-safe */
-    transition     : transform var(--dur-base) var(--ease-out);
-    image-rendering: -webkit-optimize-contrast;
-    /* Explicitly mark as block — prevents inline baseline gap */
-    display        : block;
-  }
+/* ========== BUTTON / CARD CONTAINERS ========== */
 
-  :where(.card:hover) .card-image {
-    transform: scale(1.02);
-  }
+#main-buttons-container,
+#sub-buttons-container {
+  display: flex;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
 
-  .card-content {
-    margin-top : 5px;
-    padding    : 12px;
-    display    : flex;
-    flex-direction: column;
-    justify-content: flex-start;
-  }
+#main-buttons-container {
+  gap: 8px;
+  padding: 4px;
+}
 
-  .card-title {
-    font-size  : 13px;
-    font-weight: bold;
-    color      : var(--c-text-head);
-    margin-bottom: 4px;
-    line-height: 1.5;
-  }
+#sub-buttons-container {
+  gap: 0px;
+  padding: 6px;
+  border-radius: 25px;
+}
 
-  .card-description {
-    font-size : 11.3px;
-    color     : var(--c-text-body);
-    line-height: 1.6;
-    letter-spacing: 0.01em;
-  }
+#main-buttons-container::-webkit-scrollbar,
+#sub-buttons-container::-webkit-scrollbar {
+  display: none;
+}
 
-  /* VirtualGrid container */
-  .vg-box {
-    /* Already set inline — just ensure contain doesn't conflict */
-    contain: layout style;
-  }
+.group-header {
+  padding: 10px;
+  width: 100%;
+}
 
-  .vg-item {
-    /* Position/size set inline by VG; contain set inline too */
-    /* Cards inside vg-item should NOT use content-visibility:auto
-       because VG already handles visibility explicitly */
-  }
+.group-header-text {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #464646;
+}
 
-  .vg-item :where(.card) {
-    content-visibility   : visible;
-    contain-intrinsic-size: none;
-    /* Remove transition on VG cards — they appear/disappear instantly */
-    transition           : border-color var(--dur-base) var(--ease-out),
-                           opacity var(--dur-fast) var(--ease-out);
-    /* width is explicit (160px) because VG container is exactly CARD_W */
-    width    : 100%;
-    max-width: none;
-  }
+.group-header-description {
+  margin: 0.5rem 0 0;
+  font-size: 1rem;
+  color: var(--app-text-heading);
+}
 
-  /* ── Containers ──────────────────────────────────────────────── */
-  /*
-    GPU-composited horizontal scroll — transform:translateZ(0) promotes
-    to own compositor layer; will-change:scroll-position tells browser
-    to prepare GPU layer early; overscroll-behavior:contain prevents
-    scroll chaining.
+.card-content-container,
+.button-content-container {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  margin: 0 0 40px 0 !important;
+  padding: 1rem 5px !important;
+  background: #fff;
+  justify-content: center !important;
+  align-items: center !important;
+  border-radius: 25px;
+}
 
-    contain:layout style on containers prevents inner children from
-    affecting outer page layout — critical for performance.
-  */
-  #main-buttons-container,
-  #sub-buttons-container {
-    display                : flex;
-    overflow-x             : auto;
-    white-space            : nowrap;
-    scrollbar-width        : none;
-    -ms-overflow-style     : none;
-    overscroll-behavior-x  : contain;
-    -webkit-overflow-scrolling: touch;
-    will-change            : scroll-position;
-    transform              : translateZ(0);
-    contain                : layout style;
-  }
+.button-content-container {
+  gap: 5px !important;
+}
 
-  #main-buttons-container {
-    gap    : 8px;
-    padding: 4px;
-  }
+.card-content-container {
+  gap: 6px !important;
+}
 
-  #sub-buttons-container {
-    gap          : 0px;
-    padding      : 6px;
+/* ========== FADE EFFECT ========== */
+
+.fade-in {
+  opacity: 0;
+  animation: fadeIn 0.25s ease-out forwards;
+}
+
+.fade-out {
+  opacity: 1;
+  animation: fadeOut 0.25s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* ========== RESPONSIVE ========== */
+
+@media screen and (max-width: 600px) {
+  .card-content-container { justify-content: center; gap: 12px; }
+  .card { margin: 8px 4px; }
+  .card-content { padding-left: 10px; padding-top: 4px; }
+}
+
+@media (max-width: 450px) {
+  .container {
+    padding-left: 0.7rem;
+    padding-right: 0.7rem;
     border-radius: 25px;
   }
-
-  #main-buttons-container::-webkit-scrollbar,
-  #sub-buttons-container::-webkit-scrollbar {
-    display: none;
-  }
-
-  .group-header {
-    padding: 10px;
-    width  : 100%;
-  }
-
-  .group-header-text {
-    font-size  : 1.2rem;
-    font-weight: 600;
-    color      : #464646;
-  }
-
-  .group-header-description {
-    margin   : 0.5rem 0 0;
-    font-size: 1rem;
-    color    : var(--c-text-head);
-  }
-
-  /*
-    Card/button content containers:
-    contain:layout style — group-level isolation (not paint, because
-    groups are opaque white blocks so paint boundary is already
-    at wrapper level).
-
-    NOTE: These are flex+wrap containers. DO NOT add contain:strict
-    because that would require a fixed size and break auto height.
-  */
-  .card-content-container,
-  .button-content-container {
-    display        : flex !important;
-    flex-wrap      : wrap !important;
-    margin         : 0 0 40px 0 !important;
-    padding        : 1rem 5px !important;
-    background     : #fff;
-    justify-content: center !important;
-    align-items    : center !important;
-    border-radius  : 25px;
-    contain        : layout style;
-    /* When VG is active, container becomes position:relative.
-       When flat, it's normal flex. Both work. */
-  }
-
-  /* When VirtualGrid is mounted, the container switches to overflow:hidden
-     + position:relative. The inner .vg-box provides the height. */
-  .card-content-container[style*="position:relative"],
-  .card-content-container[style*="position: relative"] {
-    /* Allow the vg-box height to define the scroll height */
-    padding : 0 !important;
-  }
-
-  .button-content-container {
-    gap: 5px !important;
-  }
-
-  .card-content-container {
-    gap: 6px !important;
-  }
-
-  /* ── Fade animations ─────────────────────────────────────────── */
-  .fade-in {
-    opacity  : 0;
-    animation: _fadeIn var(--dur-base) var(--ease-out) forwards;
-  }
-  .fade-out {
-    opacity  : 1;
-    animation: _fadeOut var(--dur-base) var(--ease-out) forwards;
-  }
-
-  @keyframes _fadeIn  { from { opacity: 0; } to { opacity: 1; } }
-  @keyframes _fadeOut { from { opacity: 1; } to { opacity: 0; } }
-
-  /* ── Image wrapper ──────────────────────────────────────────── */
-  .img-d1 { padding: 0 30px; z-index: -2; }
-  .img-d1 img {
-    width          : 100%;
-    border-radius  : 25px;
-    display        : block;
-    image-rendering: -webkit-optimize-contrast;
-  }
-
-  /* ── Scrollbar ───────────────────────────────────────────────── */
-  ::-webkit-scrollbar          { height: 7px; width: 7px; background: #f6f7fb; border-radius: 6px; }
-  ::-webkit-scrollbar-thumb    { background: #e0e7f2; border-radius: 6px; }
-  ::-webkit-scrollbar-thumb:hover { background: #c8d0e7; }
 }
 
-/* ================================================================
-   STATES  (interaction, dynamic classes)
-   ================================================================ */
-@layer states {
-  /* Added by JS right before a transform animation starts */
-  .is-animating {
-    will-change: transform;
-  }
-  /* Removed by JS after animation ends — prevents stale GPU layers */
-  .animation-done {
-    will-change: auto;
+/* ========== REDUCED MOTION ========== */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
-/* ================================================================
-   RESPONSIVE
-   ================================================================ */
-@layer responsive {
-  @media screen and (max-width: 600px) {
-    .card-content-container { justify-content: center; gap: 12px; }
-    .card { margin: 8px 4px; }
-    .card-content { padding-left: 10px; padding-top: 4px; }
-  }
+/* ========== SCROLLBAR ========== */
 
-  @media (max-width: 450px) {
-    .container {
-      padding-left : 0.7rem;
-      padding-right: 0.7rem;
-      border-radius: 25px;
-    }
-  }
-
-  /* Touch devices: disable hover effects entirely to avoid sticky hover */
-  @media (hover: none) and (pointer: coarse) {
-    :where(.card:hover) {
-      transform    : none;
-      border-color : var(--c-primary-a15);
-    }
-    :where(.card:active) {
-      transform: scale(0.97);
-    }
-    :where(.button-content:hover) {
-      border-color: var(--c-primary-a15);
-    }
-    .button-sub { transition: none; }
-  }
-
-  /* Slow-refresh / e-ink / low-end */
-  @media (update: slow), (max-device-pixel-ratio: 1.5) {
-    :where(.card) { transition: none !important; }
-    :where(.button-content) { transition: none !important; }
-    .button-sub { transition: none !important; }
-    .fade-in, .fade-out { animation: none !important; opacity: 1; }
-  }
+::-webkit-scrollbar {
+  height: 7px;
+  width: 7px;
+  background: #f6f7fb;
+  border-radius: 6px;
 }
 
-/* ================================================================
-   ACCESSIBILITY
-   ================================================================ */
-@layer a11y {
-  @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
-      animation-duration       : 0.001ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration      : 0.001ms !important;
-      scroll-behavior          : auto !important;
-    }
-
-    /* Disable GPU compositing hints on reduced-motion environments */
-    #main-buttons-container,
-    #sub-buttons-container {
-      will-change: auto;
-      transform  : none;
-    }
-
-    :where(.card) {
-      transition: none !important;
-      transform : none !important;
-    }
-  }
-
-  @media (monochrome: 1), (prefers-contrast: high) {
-    :where(.card) { border-width: 2px; border-color: #000; }
-    :where(.card:hover) { transform: none; }
-    .button-sub.active { border-width: 2px; border-color: #000; }
-  }
-
-  @media print {
-    #main-buttons-container,
-    #sub-buttons-container,
-    .button-content-container,
-    .vg-box,
-    .vg-item { display: none !important; }
-
-    .card-content-container { display: block !important; }
-    :where(.card) {
-      page-break-inside    : avoid;
-      contain              : none;
-      content-visibility   : visible;
-      transform            : none !important;
-    }
-  }
+::-webkit-scrollbar-thumb {
+  background: #e0e7f2;
+  border-radius: 6px;
+  transition: background 0.10s;
 }
 
-/* ─── Feature fallbacks ──────────────────────────────────────── */
+::-webkit-scrollbar-thumb:hover {
+  background: #c8d0e7;
+}
+
+/* ========== IMAGE WRAPPER ========== */
+
+.img-d1 {
+  padding: 0 30px;
+  z-index: -2;
+}
+
+.img-d1 img {
+  width: 100%;
+  border-radius: 25px;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+/* ========== FALLBACK FOR OLD BROWSERS ========== */
 @supports not (content-visibility: auto) {
-  :where(.card) {
-    content-visibility    : visible;
-    contain-intrinsic-size: none;
-  }
-}
-
-@supports not (contain: layout style) {
-  .card-content-container,
-  .button-content-container,
-  :where(.button-content),
-  :where(.card) { contain: none; }
-}
-
-@supports not (will-change: scroll-position) {
-  #main-buttons-container,
-  #sub-buttons-container { will-change: auto; }
-}
-
-/* @property fallback — if browser doesn't support @property,
-   variables still work as regular custom props */
-@supports not (syntax: '<length>') {
-  :root {
-    --card-r: 15px;
+  .button-content,
+  .card {
+    content-visibility: visible;
   }
 }
