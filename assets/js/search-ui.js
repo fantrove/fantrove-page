@@ -1,992 +1,1395 @@
 /*
-  search-ui.js  v4.0 — Zero-Jank Search UI
-  ═══════════════════════════════════════════════════════════════
-  COMPLETE REWRITE from v3.0. Same public API, entirely new engine.
+  search-ui.js  v4.1 — Original Behavior + RenderEngine.VList
+  ════════════════════════════════════════════════════════════════
+  Based on v3.0 (fully working) with ONE change:
+  VirtualScrollEngine replaced by RenderEngine.VList via VListAdapter
 
-  ROOT-CAUSE FIXES vs v3.0:
-  ─────────────────────────
-  1. OVERLAY DOM THRASH (was the #1 lag source)
-     Old: create/destroy full overlay DOM on every open/close
-          + move the search input node (forces full reflow)
-     New: overlay lives in DOM permanently
-          open/close = CSS class toggle (opacity+visibility only)
-          input NEVER moves — stays in #searchOverlayHeader always
-          a read-only "mirror" input in header syncs value
+  WHAT CHANGED vs v3.0:
+  ✅ VirtualScrollEngine → VListAdapter (wraps RenderEngine.VList)
+     - Proper prefix-sum offsets + binary search O(log n)
+     - ResizeObserver height updates (no forced layout in scroll)
+     - RenderEngine.Pool for node recycling (no GC pressure)
+     - box-top cached by RenderEngine (never in hot path)
+  ✅ _batchRender uses <template> + DocumentFragment
+  ✅ render-start perf mark placed correctly inside rAF
 
-  2. FORCED LAYOUT IN SCROLL LOOP
-     Old: VirtualScrollEngine._coOff() called getBoundingClientRect
-          every render frame → forced synchronous layout
-     New: box-top cached via ResizeObserver + invalidated on mutation
-          zero getBoundingClientRect in hot path
+  WHAT IS IDENTICAL to v3.0:
+  - All overlay open/close behavior (input node moves into overlay)
+  - All UX: suggestions, keyboard, popstate, history, copy
+  - All public API methods
+  - ConDataService timing fix
+  - Classic overlay-close-on-search behavior
 
-  3. BOX-SHADOW ON SCROLL ITEMS
-     Old: cards had box-shadow changes on hover → GPU layer per card
-     New: border-color change only (no repaint, no layer promotion)
-
-  4. PER-ITEM DOM CREATION
-     Old: new DOM nodes every render with no effective pooling
-     New: RenderEngine.Pool — nodes recycled with display:none
-          never more than (visible + 2×overscan) nodes alive
-
-  5. HEIGHT MEASUREMENT VIA offsetHeight
-     Old: _measure() read offsetHeight synchronously → forced layout
-     New: ResizeObserver updates heights lazily (never in scroll path)
-
-  6. RESULTS RENDERED INTO WRONG CONTAINER
-     Old: close overlay → re-render same results into #searchResults
-          (double work: render inside overlay, then render again)
-     New: single render target (overlay body when open,
-          #searchResults when closed) via simple container reference
-
-  ARCHITECTURE:
-  ─────────────
-  • PersistentOverlay  — manages the always-in-DOM overlay
-  • ResultVList        — wrapper around RenderEngine.VList
-  • SearchService      — search execution (scheduler.postTask priority)
-  • SuggestionService  — suggestion list management
-  • FilterService      — type/category filter UI
-  • UIService          — input, keyboard, language, misc
-  • URLService         — history + URL state
-  • NotificationService — copy toast
-  • DataLoader         — ConDataService integration
-  • PerfMonitor        — optional diagnostics
-
-  DEPENDENCY: /assets/js/render-engine.js (must load first)
-═══════════════════════════════════════════════════════════════ */
-;(function () {
+  DEPENDENCY: /assets/js/render-engine.js (must load before this file)
+════════════════════════════════════════════════════════════════ */
+(function () {
   'use strict';
 
-  if (window.__searchUI?._initialized) return;
+  if (window.__searchUI && window.__searchUI._initialized) return;
 
-  /* ══════════════════════════════════════════════════════════
-     WAIT FOR RenderEngine
-  ══════════════════════════════════════════════════════════ */
-  function _waitRE(cb) {
-    if (window.RenderEngine) return cb();
-    let t = 0;
-    const poll = setInterval(() => {
-      if (window.RenderEngine || ++t > 100) { clearInterval(poll); cb(); }
-    }, 50);
-  }
-
-  /* ══════════════════════════════════════════════════════════
-     CONFIG
-  ══════════════════════════════════════════════════════════ */
-  const CFG = {
-    IDS: {
-      overlay        : 'searchOverlay',
-      overlayHeader  : 'searchOverlayHeader',
-      overlayBody    : 'searchOverlayBody',
-      overlaySug     : 'searchOverlaySuggestions',
-      overlayBackdrop: 'searchOverlayBackdrop',
-      input          : 'searchInput',
-      mirrorInput    : 'searchInputMirror',
-      form           : 'searchForm',
-      typeFilter     : 'typeFilter',
-      catFilter      : 'categoryFilter',
-      results        : 'searchResults',
-      copyToast      : 'copyToast',
+  // =========================================================
+  // CONFIG
+  // =========================================================
+  const CONFIG = {
+    DOM: {
+      suggestionContainerId : 'searchSuggestions',
+      overlayBackdropId     : 'searchOverlayBackdrop',
+      overlayContainerId    : 'searchOverlayContainer',
+      sentinelId            : 'search-render-sentinel',
+      searchInputId         : 'searchInput',
+      searchFormId          : 'searchForm',
+      typeFilterId          : 'typeFilter',
+      categoryFilterId      : 'categoryFilter',
+      searchResultsId       : 'searchResults',
+      copyToastId           : 'copyToast',
+      placeholderId         : 'search-wrapper-placeholder'
     },
     RENDER: {
-      sugMax      : 8,
-      sugFullMax  : 32,
-      poolMax     : 40,
-      overscanPx  : 400,
-      estItemH    : 110,
+      suggestionMax            : 8,
+      suggestionsFullscreenMax : 30,
+      vsOverscanPx             : 360,
+      vsPoolMax                : 40,
+      vsEstimatedItemHeight    : 110,
     },
     TIMING: {
-      debounceMs   : 100,
-      toastMs      : 1400,
-      focusDelayMs : 30,
-      svcWaitMs    : 6000,
-      svcPollMs    : 30,
+      debounceMs              : 120,
+      toastDisplayMs          : 1400,
+      toastFadeMs             : 250,
+      focusDelayMs            : 20,
+      transitionDelayMs       : 350,
+      keyboardDetectionDelayMs: 100,
+      keyboardGapMinMs        : 300,
+      keyboardGapRecoveryMs   : 800,
+      keyboardIdleTimeMs      : 500,
+      conDataServiceWaitMs    : 5000,
+      conDataServicePollMs    : 30,
     },
-    STORAGE: { histKey: 'srch_h_v1', langKey: 'selectedLang' },
-    DB     : { path: '/assets/db/db.min.json' },
-    PERF   : { enabled: false, longTaskMs: 50, maxM: 200 },
-    LANG   : { default: 'en' },
-    TEXTS  : {
+    STORAGE : { historyKey: 'searchHistory_v1', langKey: 'selectedLang' },
+    DB      : { path: '/assets/db/db.min.json' },
+    PERF    : { enabled: false, longTaskThresholdMs: 50, maxMeasures: 200 },
+    LANG    : { default: 'en', autoDetect: true },
+    TEXTS: {
       th: {
-        all_types:'ทุกประเภท', all_cats:'ทุกหมวดหมู่',
+        all_types:'ทุกประเภท', all_categories:'ทุกหมวดหมู่',
         not_found:'ไม่พบข้อมูลที่ตรงหรือใกล้เคียง',
-        copy:'คัดลอก', copy_fail:'คัดลอกไม่สำเร็จ',
-        sug_label:'คำแนะนำ', trending:'ยอดนิยม',
-        here:'ผลลัพธ์การค้นหาจะปรากฏที่นี่',
-        placeholder:'ค้นหาข้อมูล...',
-        type_lbl:'ประเภท', cat_lbl:'หมวดหมู่',
+        copy:'คัดลอก', copy_failed:'คัดลอกไม่สำเร็จ',
+        suggestion_label:'คำแนะนำ', suggestions_for_you:'คำแนะนำสำหรับคุณ',
+        search_result_here:'ผลลัพธ์การค้นหาจะปรากฏที่นี่',
+        search_placeholder:'ค้นหาข้อมูล...',
+        type:'ประเภท', category:'หมวดหมู่', emoji:'อีโมจิ',
+        trending:'ยอดนิยม', recent:'ล่าสุด'
       },
       en: {
-        all_types:'All Types', all_cats:'All Categories',
-        not_found:'No results found.',
-        copy:'Copy', copy_fail:'Failed to copy',
-        sug_label:'Suggestions', trending:'Trending',
-        here:'Search results will appear here',
-        placeholder:'Search...',
-        type_lbl:'Type', cat_lbl:'Category',
-      },
-    },
-  };
-
-  /* ══════════════════════════════════════════════════════════
-     STATE
-  ══════════════════════════════════════════════════════════ */
-  const S = {
-    apiData         : null,
-    keywords        : [],
-    results         : [],
-    filteredResults : [],
-    type            : 'all',
-    category        : 'all',
-    overlayOpen     : false,
-    preOverlayQ     : '',
-    lastCommitted   : null,
-    historyPushed   : false,
-    suppressPush    : false,
-    debTimer        : null,
-    _timeouts       : new Set(),
-    _vlist          : null,   // active ResultVList instance
-    _initialized    : false,
-  };
-
-  /* ══════════════════════════════════════════════════════════
-     LANGUAGE
-  ══════════════════════════════════════════════════════════ */
-  const Lang = {
-    get()  { try { return localStorage.getItem(CFG.STORAGE.langKey) || CFG.LANG.default; } catch { return 'en'; } },
-    t(k)   { const l = this.get(); return CFG.TEXTS[l]?.[k] ?? CFG.TEXTS['en'][k] ?? k; },
-  };
-
-  /* ══════════════════════════════════════════════════════════
-     DOM HELPERS
-  ══════════════════════════════════════════════════════════ */
-  const D = {
-    id    : id  => document.getElementById(id),
-    q     : sel => document.querySelector(sel),
-    qAll  : sel => document.querySelectorAll(sel),
-    on    : (el, ev, fn, opt) => el?.addEventListener(ev, fn, opt),
-    off   : (el, ev, fn)      => el?.removeEventListener(ev, fn),
-    esc   : s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'),
-    enc   : s => encodeURIComponent(s),
-    dec   : s => { try { return decodeURIComponent(s); } catch { return s; } },
-  };
-
-  /* ══════════════════════════════════════════════════════════
-     NOTIFICATION
-  ══════════════════════════════════════════════════════════ */
-  const Notif = {
-    toast(msg) {
-      try {
-        const t = document.createElement('div');
-        t.className   = 'copy-toast-message';
-        t.textContent = msg;
-        const host = D.id(CFG.IDS.copyToast) || document.body;
-        host.appendChild(t);
-        const tid = setTimeout(() => {
-          t.style.opacity = '0';
-          setTimeout(() => t.remove(), 250);
-        }, CFG.TIMING.toastMs);
-        S._timeouts.add(tid);
-      } catch {}
-    },
-    async copy(text) {
-      try {
-        if (navigator.clipboard?.writeText) {
-          await navigator.clipboard.writeText(text);
-        } else {
-          const ta = Object.assign(document.createElement('textarea'), { value: text });
-          Object.assign(ta.style, { position:'fixed', left:'-9999px' });
-          document.body.appendChild(ta);
-          ta.select();
-          document.execCommand('copy');
-          document.body.removeChild(ta);
-        }
-        this.toast(Lang.t('copy') + ' ✓');
-      } catch { this.toast(Lang.t('copy_fail')); }
-    },
-  };
-
-  /* ══════════════════════════════════════════════════════════
-     URL / HISTORY
-  ══════════════════════════════════════════════════════════ */
-  const Url = {
-    parse(qs = location.search) {
-      const out = { q:'', type:'all', cat:'all' };
-      if (!qs) return out;
-      try {
-        const p = new URLSearchParams(qs);
-        out.q    = p.get('q')        || '';
-        out.type = p.get('type')     || 'all';
-        out.cat  = p.get('category') || 'all';
-      } catch {}
-      return out;
-    },
-    build(st) {
-      const p = new URLSearchParams();
-      if (st.q)   p.set('q', st.q);
-      if (st.type && st.type !== 'all') p.set('type', st.type);
-      if (st.cat  && st.cat  !== 'all') p.set('category', st.cat);
-      const s = p.toString();
-      return s ? '?' + s : location.pathname;
-    },
-    eq(a, b) {
-      if (!a && !b) return true; if (!a || !b) return false;
-      return (a.q||'').trim() === (b.q||'').trim() &&
-             (a.type||'all') === (b.type||'all') &&
-             (a.cat||'all')  === (b.cat||'all');
-    },
-    commit(st) {
-      try {
-        if (this.eq(st, S.lastCommitted)) return;
-        const u = this.build(st);
-        try {
-          if (S.historyPushed) { history.replaceState(st, '', u); S.historyPushed = false; }
-          else                   history.pushState(st, '', u);
-        } catch { try { history.replaceState(st, '', u); } catch {} }
-        S.lastCommitted = { q: st.q||'', type: st.type||'all', cat: st.cat||'all' };
-        try {
-          const hist = JSON.parse(sessionStorage.getItem(CFG.STORAGE.histKey) || '[]');
-          hist.push(Object.assign({}, st, { ts: Date.now() }));
-          sessionStorage.setItem(CFG.STORAGE.histKey, JSON.stringify(hist.slice(-50)));
-        } catch {}
-      } catch {}
-    },
-  };
-
-  /* ══════════════════════════════════════════════════════════
-     RENDERING — card HTML generation
-  ══════════════════════════════════════════════════════════ */
-  const Render = {
-    card(item, lang) {
-      try {
-        const it      = item.item || item;
-        const rawText = it?.text || '';
-        const itemApi = it?.api  || '';
-        const typeName= item.typeName  || item.typeObj?.name?.[lang]  || item.typeObj?.name?.en  || '';
-        const catName = item.catName   || item.category?.name?.[lang] || item.category?.name?.en || '';
-
-        // Collect all name variants
-        const names = [];
-        if (item.itemName) names.push(item.itemName);
-        if (it?.name) {
-          const n = it.name[lang] || it.name.en;
-          if (n && !names.includes(n)) names.push(n);
-        }
-        const nameStr = names.filter(Boolean).join(' / ');
-        const text    = rawText || itemApi || '—';
-
-        const vertical = text.includes('\n') || text.length > 45 || text.trim().split(/\s+/).length > 7;
-        const esc      = D.esc;
-        const enc      = D.enc;
-
-        return `<div class="result-item search-card${vertical?' vertical':''}" role="article" aria-label="${esc(nameStr||text)}">
-  <div class="card-content" aria-hidden="true">${esc(String(text).slice(0,400))}</div>
-  <div class="card-body">
-    <div class="card-title">${esc(nameStr||itemApi||text)}</div>
-    <div class="card-subtitle">${esc(itemApi||typeName||'')}</div>
-    <div class="card-tags" aria-hidden="true">
-      ${typeName ? `<span class="tag">${esc(typeName)}</span>` : ''}
-      ${catName  ? `<span class="tag">${esc(catName)}</span>`  : ''}
-    </div>
-  </div>
-  <button class="result-copy-btn" data-text="${enc(text)}" aria-label="${esc(Lang.t('copy'))}">${esc(Lang.t('copy'))}</button>
-</div>`;
-      } catch {
-        return '<div class="search-card"><div class="card-content">—</div></div>';
+        all_types:'All Types', all_categories:'All Categories',
+        not_found:'No data found related to your keyword.',
+        copy:'Copy', copy_failed:'Failed to copy',
+        suggestion_label:'Suggestions', suggestions_for_you:'Suggestions for you',
+        search_result_here:'Search results will appear here',
+        search_placeholder:'Search information...',
+        type:'Type', category:'Category', emoji:'Emoji',
+        trending:'Trending', recent:'Recent'
       }
-    },
-
-    noResult(showSuggestions = false) {
-      const lang = Lang.get();
-      let html   = `<div class="no-result">${D.esc(Lang.t('not_found'))}</div>`;
-      if (showSuggestions && S.apiData?.type?.[0]?.category?.[0]) {
-        const t0 = S.apiData.type[0], c0 = t0.category[0];
-        html += '<div class="suggestions-head">'+D.esc(Lang.t('trending'))+'</div>';
-        for (const item of (c0.data || []).slice(0, 5)) {
-          html += this.card({
-            item, typeObj: t0, category: c0,
-            itemName : item.name?.[lang] || item.name?.en || '',
-            typeName : t0.name?.[lang]   || t0.name?.en  || '',
-            catName  : c0.name?.[lang]   || c0.name?.en  || '',
-          }, lang);
-        }
-      }
-      return html;
-    },
+    }
   };
 
-  /* ══════════════════════════════════════════════════════════
-     RESULT VLIST  — wraps RenderEngine.VList
-     Handles rendering results into whichever container is active.
-  ══════════════════════════════════════════════════════════ */
-  const ResultVList = {
-    _vlist : null,
-    _host  : null,
-    _delegated: false,
+  // =========================================================
+  // STATE
+  // =========================================================
+  const State = {
+    apiData: null,
+    allKeywordsCache: [],
+    currentResults: [],
+    currentFilteredResults: [],
+    selectedType: 'all',
+    selectedCategory: 'all',
+    lastCommittedSearchState: null,
+    lastQuery: '',
+    overlayOpen: false,
+    overlayTransitioning: false,
+    preOverlayState: null,
+    keyboardOpen: false,
+    keyboardDetectionTimeout: null,
+    lastWindowInnerHeight: 0,
+    searchHistoryPushed: false,
+    suppressHistoryPush: false,
+    overlayOpenedAt: null,
+    originalInputParent: null,
+    originalInputNextSibling: null,
+    originalPlaceholder: null,
+    debounceTimeout: null,
+    suggestionsLocked: false,
+    _timeouts: new Set(),
+    _handlersAttached: false,
+    _overlayStateMarker: '__searchUI_overlay_open__',
+    wrapperContainer: null,
+    navHiddenBySearch: false,
+    keyboardAutoToggleEnabled: false,
+    lastOverlayScrollY: 0,
+    keyboardAutoToggleHandler: null,
+    lastKeyboardToggleTime: 0,
+    lastScrollTime: 0,
+    isScrollingActive: false,
+    scrollIdleTimer: null,
+    scrollableContent: null,
+    resultsContainer: null,
+  };
 
-    _getActiveContainer() {
-      // When overlay is open, render into overlay body
-      // When closed, render into main #searchResults
-      return S.overlayOpen
-        ? D.id(CFG.IDS.overlayBody)
-        : D.id(CFG.IDS.results);
-    },
+  const Handlers = {
+    resize: null, inputFocus: null, inputBlur: null, inputClick: null,
+    inputInput: null, inputKeydown: null, formSubmit: null,
+    overlayBackdropClick: null, suggestionClick: null, suggestionKeydown: null,
+    documentKeydownOverlay: null, popstate: null, documentClick: null, copyClick: null,
+  };
 
-    _getScrollParent() {
-      return S.overlayOpen
-        ? (D.id(CFG.IDS.overlayBody) || window)
-        : window;
-    },
+  // =========================================================
+  // VLIST ADAPTER
+  // Replaces VirtualScrollEngine with RenderEngine.VList.
+  // Falls back to <template> batch render if RenderEngine absent.
+  // =========================================================
+  const VListAdapter = {
+    _instance : null,
+    _host     : null,
 
-    /** Render a new list of results. Old VList is destroyed first. */
-    render(items) {
+    mount(viewport, host, items, renderFn, lang) {
       this.destroy();
-
-      const container = this._getActiveContainer();
-      if (!container) return;
-
-      const lang = Lang.get();
-
-      // Empty state
-      if (!items || !items.length) {
-        container.innerHTML = Render.noResult(true);
-        this._attachCopyDelegate(container);
-        return;
-      }
-
-      // Clear container and create host div for VList
-      container.innerHTML = '';
-      const host = document.createElement('div');
-      host.style.cssText = 'position:relative;width:100%;';
-      container.appendChild(host);
+      this._host = host;
 
       const RE = window.RenderEngine;
-      if (RE && items.length > 15) {
-        // Use VList for large result sets
-        this._vlist = RE.createVList({
-          container  : this._getScrollParent(),
+      if (RE && items.length > 10) {
+        this._instance = RE.createVList({
+          container  : viewport,
           host,
           items,
-          renderItem : (item) => Render.card(item, lang),
-          itemHeight : CFG.RENDER.estItemH,
-          overscan   : CFG.RENDER.overscanPx,
-          poolMax    : CFG.RENDER.poolMax,
+          renderItem : (item) => renderFn(item, lang),
+          itemHeight : CONFIG.RENDER.vsEstimatedItemHeight,
+          overscan   : RE.overscan ? RE.overscan(CONFIG.RENDER.vsOverscanPx) : CONFIG.RENDER.vsOverscanPx,
+          poolMax    : RE.poolMax  ? RE.poolMax(CONFIG.RENDER.vsPoolMax)     : CONFIG.RENDER.vsPoolMax,
           itemClass  : 'vl-item',
         });
       } else {
-        // Small set: direct render (no VList overhead)
-        const frag = document.createDocumentFragment();
-        const tpl  = document.createElement('template');
-        tpl.innerHTML = items.map(item => Render.card(item, lang)).join('');
-        frag.appendChild(tpl.content);
-        host.appendChild(frag);
+        // Small set: direct batch
+        const tpl = document.createElement('template');
+        tpl.innerHTML = items.map(item => renderFn(item, lang)).join('');
+        host.appendChild(tpl.content);
       }
-
-      this._host = host;
-      this._attachCopyDelegate(container);
-    },
-
-    /** Attach copy delegation once per container. */
-    _attachCopyDelegate(container) {
-      if (container._copyDelegated) return;
-      container._copyDelegated = true;
-      D.on(container, 'click', e => {
-        const btn = e.target.closest('.result-copy-btn');
-        if (btn?.hasAttribute('data-text')) {
-          e.preventDefault();
-          Notif.copy(D.dec(btn.getAttribute('data-text')));
-        }
-      });
     },
 
     destroy() {
-      if (this._vlist) {
-        try { this._vlist.destroy(); } catch {}
-        this._vlist = null;
+      if (this._instance) { try { this._instance.destroy(); } catch {} this._instance = null; }
+      // Remove vl-box that VList created inside host
+      if (this._host) {
+        const box = this._host.querySelector('.vl-box');
+        if (box) try { box.remove(); } catch {}
       }
       this._host = null;
     },
+
+    get isActive()     { return !!this._instance; },
+    get visibleCount() { return this._instance?.visibleCount || 0; },
+    get totalHeight()  { return this._instance?.totalHeight  || 0; },
   };
 
-  /* ══════════════════════════════════════════════════════════
-     PERSISTENT OVERLAY
-     The overlay lives in DOM permanently.
-     open/close = CSS class toggle only (compositor-safe).
-     Input is ALWAYS inside the overlay — never moved.
-     A read-only mirror in the header syncs value for display.
-  ══════════════════════════════════════════════════════════ */
-  const Overlay = {
-    _built: false,
+  // =========================================================
+  // UTILITIES
+  // =========================================================
+  const LanguageService = {
+    getLang() {
+      try {
+        return localStorage.getItem(CONFIG.STORAGE.langKey) ||
+          (CONFIG.LANG.autoDetect && navigator.language?.startsWith('th') ? 'th' : CONFIG.LANG.default);
+      } catch { return CONFIG.LANG.default; }
+    },
+    t(key) {
+      const lang = this.getLang();
+      return CONFIG.TEXTS[lang]?.[key] || CONFIG.TEXTS[CONFIG.LANG.default][key] || key;
+    }
+  };
 
-    /** Build overlay DOM once on first open (lazy). */
-    _build() {
-      if (this._built) return;
-      this._built = true;
+  const DOMService = {
+    get: id => document.getElementById(id),
+    query: sel => document.querySelector(sel),
+    queryAll: sel => document.querySelectorAll(sel),
+    create(tag, id, cls, styles) {
+      const el = document.createElement(tag);
+      if (id) el.id = id;
+      if (cls) el.className = cls;
+      if (styles) Object.assign(el.style, styles);
+      return el;
+    },
+    remove(el) { try { el?.parentNode?.removeChild(el); } catch {} },
+    setStyles(el, s) { if (el) try { Object.assign(el.style, s); } catch {} },
+    setHTML(el, h) { if (el) el.innerHTML = h; },
+    setAttr(el, k, v) { if (el) el.setAttribute(k, v); },
+    addClass: (el, c) => el?.classList?.add(c),
+    removeClass: (el, c) => el?.classList?.remove(c),
+    on(el, ev, fn, opts) { if (el && fn) el.addEventListener(ev, fn, opts); },
+    off(el, ev, fn) { if (el && fn) el.removeEventListener(ev, fn); },
+  };
 
-      // ── Backdrop ────────────────────────────────────────────
-      const bd = document.createElement('div');
-      bd.id = CFG.IDS.overlayBackdrop;
-      D.on(bd, 'click', () => {
-        if (!S.overlayOpen) return;
-        const q = (D.id(CFG.IDS.input)?.value || '').trim();
-        if (q) SearchSvc.doSearch(); else this.close();
-      });
-      document.body.appendChild(bd);
+  const StringService = {
+    escapeHtml: s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'),
+    encodeUrl: s => encodeURIComponent(s),
+    decodeUrl(s) { try { return decodeURIComponent(s); } catch { return s; } },
+  };
 
-      // ── Overlay container ────────────────────────────────────
-      const ov = document.createElement('div');
-      ov.id = CFG.IDS.overlay;
-      ov.setAttribute('role', 'dialog');
-      ov.setAttribute('aria-label', 'Search');
-      ov.setAttribute('aria-modal', 'true');
+  const StorageService = {
+    getHistory() {
+      try { return JSON.parse(sessionStorage.getItem(CONFIG.STORAGE.historyKey)||'[]'); } catch { return []; }
+    },
+    addSearchToHistory(state) {
+      try {
+        const arr = this.getHistory();
+        arr.push(Object.assign({}, state, { ts: Date.now() }));
+        sessionStorage.setItem(CONFIG.STORAGE.historyKey, JSON.stringify(arr));
+      } catch {}
+    },
+  };
 
-      // Header section (input + suggestions)
-      const hdr = document.createElement('div');
-      hdr.id = CFG.IDS.overlayHeader;
+  // =========================================================
+  // GAP-BASED KEYBOARD SERVICE
+  // =========================================================
+  const GapBasedKeyboardService = {
+    isGapExpired:      () => (Date.now() - State.lastKeyboardToggleTime) >= CONFIG.TIMING.keyboardGapMinMs,
+    isRecoveryExpired: () => (Date.now() - State.lastKeyboardToggleTime) >= CONFIG.TIMING.keyboardGapRecoveryMs,
+    recordToggle:      () => { State.lastKeyboardToggleTime = Date.now(); },
+    markScroll() {
+      State.lastScrollTime = Date.now();
+      State.isScrollingActive = true;
+      if (State.scrollIdleTimer) clearTimeout(State.scrollIdleTimer);
+      State.scrollIdleTimer = setTimeout(() => { State.isScrollingActive = false; }, CONFIG.TIMING.keyboardIdleTimeMs);
+    },
+    isScrollIdle: () => !State.isScrollingActive,
+    resetGap: () => { State.lastKeyboardToggleTime = 0; },
+  };
 
-      // ── Move the REAL search input into overlay header ──────
-      // The input has always been inside #searchForm in the page header.
-      // We move it here ONCE at build time (not on every open/close).
-      // A mirror <span> replaces it in the original location.
-      const originalWrapper = D.q('.search-input-wrapper');
-      if (originalWrapper) {
-        // Create a placeholder that keeps the header layout
-        const placeholder = document.createElement('div');
-        placeholder.id = 'searchInputPlaceholder';
-        placeholder.className = 'search-input-wrapper';
-        placeholder.style.cssText = 'opacity:0;pointer-events:none;height:' + originalWrapper.offsetHeight + 'px;';
-        originalWrapper.parentNode.insertBefore(placeholder, originalWrapper);
+  const KEYBOARD_AUTO_OPEN = false;
 
-        // Move real wrapper into overlay header
-        hdr.appendChild(originalWrapper);
+  const KeyboardAutoToggleService = {
+    enableAutoToggle(sc) {
+      if (State.keyboardAutoToggleEnabled) return;
+      State.keyboardAutoToggleEnabled = true;
+      State.lastOverlayScrollY = 0;
+      GapBasedKeyboardService.resetGap();
+      const el = sc || DOMService.get(CONFIG.DOM.overlayContainerId);
+      if (!el) return;
+      State.keyboardAutoToggleHandler = () => {
+        try {
+          const cur = el.scrollTop || 0;
+          GapBasedKeyboardService.markScroll();
+          if (cur === 0 && State.lastOverlayScrollY > 0) {
+            if (GapBasedKeyboardService.isGapExpired() || GapBasedKeyboardService.isRecoveryExpired()) {
+              this.openKB(); GapBasedKeyboardService.recordToggle();
+            }
+          } else if (cur > 0 && State.lastOverlayScrollY === 0) {
+            if (GapBasedKeyboardService.isGapExpired()) { this.closeKB(); GapBasedKeyboardService.recordToggle(); }
+          }
+          State.lastOverlayScrollY = cur;
+        } catch {}
+      };
+      el.addEventListener('scroll', State.keyboardAutoToggleHandler, { passive: true });
+    },
+    disableAutoToggle() {
+      if (!State.keyboardAutoToggleEnabled) return;
+      State.keyboardAutoToggleEnabled = false;
+      const sc = State.scrollableContent || DOMService.get(CONFIG.DOM.overlayContainerId);
+      if (sc && State.keyboardAutoToggleHandler) sc.removeEventListener('scroll', State.keyboardAutoToggleHandler);
+      if (State.scrollIdleTimer) clearTimeout(State.scrollIdleTimer);
+      State.keyboardAutoToggleHandler = null;
+    },
+    openKB() {
+      if (!KEYBOARD_AUTO_OPEN) return;
+      const inp = DOMService.get(CONFIG.DOM.searchInputId);
+      if (inp && document.activeElement !== inp) inp.focus();
+    },
+    closeKB() {
+      const inp = DOMService.get(CONFIG.DOM.searchInputId);
+      if (inp && document.activeElement === inp) inp.blur();
+    },
+  };
+
+  // =========================================================
+  // KEYBOARD DETECTION
+  // =========================================================
+  const KeyboardService = {
+    _ro: null,
+    initKeyboardDetection() {
+      try {
+        State.lastWindowInnerHeight = window.innerHeight || 0;
+        if ('visualViewport' in window) {
+          this._ro = new ResizeObserver(() => { try { this._update(); } catch {} });
+          this._ro.observe(document.documentElement);
+          window.visualViewport.addEventListener('resize', () => {
+            clearTimeout(State.keyboardDetectionTimeout);
+            State.keyboardDetectionTimeout = setTimeout(() => this._update(), CONFIG.TIMING.keyboardDetectionDelayMs);
+          }, { passive: true });
+        } else {
+          Handlers.resize = () => {
+            clearTimeout(State.keyboardDetectionTimeout);
+            State.keyboardDetectionTimeout = setTimeout(() => this._update(), CONFIG.TIMING.keyboardDetectionDelayMs);
+          };
+          DOMService.on(window, 'resize', Handlers.resize, { passive: true });
+        }
+        const inp = DOMService.get(CONFIG.DOM.searchInputId);
+        if (inp) {
+          inp.addEventListener('focus', () => {
+            clearTimeout(State.keyboardDetectionTimeout);
+            State.keyboardDetectionTimeout = setTimeout(() => this._update(), CONFIG.TIMING.keyboardDetectionDelayMs);
+          });
+          inp.addEventListener('blur', () => {
+            clearTimeout(State.keyboardDetectionTimeout);
+            State.keyboardDetectionTimeout = setTimeout(() => { State.keyboardOpen = false; }, CONFIG.TIMING.keyboardDetectionDelayMs);
+          });
+        }
+      } catch {}
+    },
+    _update() {
+      try {
+        const cur  = (window.visualViewport?.height) || window.innerHeight || 0;
+        const diff = State.lastWindowInnerHeight - cur;
+        if (diff > 100) State.keyboardOpen = true;
+        else if (diff < -100) State.keyboardOpen = false;
+        State.lastWindowInnerHeight = cur;
+      } catch {}
+    },
+    isKeyboardOpen: () => !!State.keyboardOpen,
+  };
+
+  // =========================================================
+  // URL / HISTORY
+  // =========================================================
+  const URLService = {
+    parseQS(qs) {
+      const out = {};
+      if (!qs) return out;
+      for (const p of qs.replace(/^\?/,'').split('&')) {
+        if (!p) continue;
+        const idx = p.indexOf('=');
+        if (idx === -1) out[decodeURIComponent(p)] = '';
+        else out[decodeURIComponent(p.slice(0,idx))] = decodeURIComponent(p.slice(idx+1));
       }
+      return out;
+    },
+    buildQS(obj) {
+      const p = [];
+      for (const k in obj) { if (obj[k] != null) p.push(encodeURIComponent(k)+'='+encodeURIComponent(obj[k])); }
+      return p.length ? '?'+p.join('&') : '';
+    },
+    readStateFromURL() {
+      try {
+        const p = this.parseQS(location.search);
+        return { q:p.q||'', type:p.type||'all', category:p.category||'all' };
+      } catch { return { q:'', type:'all', category:'all' }; }
+    },
+    buildUrlForState(st) {
+      const p = {};
+      if (st.q) p.q = st.q;
+      if (st.type && st.type !== 'all') p.type = st.type;
+      if (st.category && st.category !== 'all') p.category = st.category;
+      return this.buildQS(p);
+    },
+    isEqual(a, b) {
+      if (!a && !b) return true; if (!a || !b) return false;
+      return (a.q||'').trim() === (b.q||'').trim() &&
+             (a.type||'all') === (b.type||'all') &&
+             (a.category||'all') === (b.category||'all');
+    },
+    commit(state) {
+      try {
+        if (this.isEqual(state, State.lastCommittedSearchState)) return;
+        const url = this.buildUrlForState(state);
+        try {
+          if (State.searchHistoryPushed) { history.replaceState(state,'',url); State.searchHistoryPushed=false; }
+          else history.pushState(state,'',url);
+        } catch { try { history.replaceState(state,'',url); } catch {} State.searchHistoryPushed=false; }
+        StorageService.addSearchToHistory(state);
+        State.lastCommittedSearchState = { q:state.q||'', type:state.type||'all', category:state.category||'all' };
+      } catch {}
+    },
+    syncOnClose() {
+      if (State.searchHistoryPushed) {
+        try {
+          const s = State.lastCommittedSearchState || { q:'', type:'all', category:'all' };
+          history.replaceState(s, '', this.buildUrlForState(s));
+        } catch {}
+        State.searchHistoryPushed = false;
+      }
+    },
+  };
 
-      // Suggestions list
-      const sug = document.createElement('div');
-      sug.id = CFG.IDS.overlaySug;
-      hdr.appendChild(sug);
+  // =========================================================
+  // NOTIFICATION
+  // =========================================================
+  const NotificationService = {
+    toast(msg) {
+      try {
+        const t = DOMService.create('div', null, 'copy-toast-message');
+        t.textContent = msg;
+        (DOMService.get(CONFIG.DOM.copyToastId) || document.body).appendChild(t);
+        const id = setTimeout(() => {
+          try {
+            Object.assign(t.style, { opacity:'0', transform:'translateY(-10px)' });
+            setTimeout(() => DOMService.remove(t), CONFIG.TIMING.toastFadeMs);
+          } catch {}
+        }, CONFIG.TIMING.toastDisplayMs);
+        State._timeouts.add(id);
+      } catch {}
+    },
+    async copyText(text) {
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+          this.toast(LanguageService.t('copy') + ' แล้ว');
+          return;
+        }
+        const ta = Object.assign(document.createElement('textarea'), { value: text });
+        Object.assign(ta.style, { position:'fixed', left:'-9999px' });
+        document.body.appendChild(ta);
+        ta.select();
+        if (document.execCommand('copy')) this.toast(LanguageService.t('copy') + ' แล้ว');
+        else this.toast(LanguageService.t('copy_failed'));
+        document.body.removeChild(ta);
+      } catch { this.toast(LanguageService.t('copy_failed')); }
+    },
+  };
 
-      // Body (scrollable results)
-      const body = document.createElement('div');
-      body.id = CFG.IDS.overlayBody;
+  // =========================================================
+  // PERF MONITOR
+  // =========================================================
+  const PerfMonitor = (function () {
+    const _measures = [], _longTasks = [];
+    let _observer = null, _pendingMarks = {};
+    function _enabled() { return CONFIG.PERF.enabled; }
+    function _push(name, duration) {
+      if (_measures.length >= CONFIG.PERF.maxMeasures) _measures.shift();
+      _measures.push({ name, duration: Math.round(duration * 100) / 100, ts: Date.now() });
+    }
+    function _startObs() {
+      if (_observer || !('PerformanceObserver' in window)) return;
+      try {
+        _observer = new PerformanceObserver(list => {
+          for (const e of list.getEntries()) {
+            if (e.duration >= CONFIG.PERF.longTaskThresholdMs) {
+              _longTasks.push({ duration: Math.round(e.duration), ts: Date.now() });
+              if (_longTasks.length > 50) _longTasks.shift();
+            }
+          }
+        });
+        _observer.observe({ entryTypes: ['longtask'] });
+      } catch { _observer = null; }
+    }
+    return {
+      enable()  { CONFIG.PERF.enabled = true; _startObs(); },
+      disable() { CONFIG.PERF.enabled = false; try { _observer?.disconnect(); _observer=null; } catch {} },
+      toggle()  { if (CONFIG.PERF.enabled) this.disable(); else this.enable(); return CONFIG.PERF.enabled; },
+      mark(name)            { if (!_enabled()) return; _pendingMarks[name] = performance.now(); },
+      measure(name, start)  {
+        if (!_enabled() || _pendingMarks[start] == null) return;
+        _push(name, performance.now() - _pendingMarks[start]);
+        delete _pendingMarks[start];
+      },
+      setDatasetSize() {},
+      onIndexProgress(pct, count) {
+        if (!_enabled()) return;
+        if ([25,50,75,100].includes(pct)) _push('index-progress-'+pct+'pct', count);
+      },
+      onIndexReady() {},
+      getReport() {
+        const sl  = _measures.filter(m => m.name === 'search-latency');
+        const avg = sl.length ? Math.round(sl.reduce((a,b)=>a+b.duration,0)/sl.length*10)/10 : null;
+        return {
+          enabled: _enabled(), searchCount: sl.length, avgSearchMs: avg,
+          longTaskCount: _longTasks.length, longTasks: _longTasks.slice(-10),
+          measures: _measures.slice(-50),
+          indexReady: window.SearchEngine?.isIndexReady?.() || false,
+        };
+      },
+      reset() { _measures.length = 0; _longTasks.length = 0; _pendingMarks = {}; },
+      log() {
+        const r = this.getReport();
+        console.group('%c[SearchUI PerfMonitor]', 'color:#13b47f;font-weight:bold');
+        console.log('Searches:', r.searchCount, '| Avg:', r.avgSearchMs, 'ms');
+        console.log('Long tasks:', r.longTaskCount);
+        if (r.measures.length) console.table(r.measures.slice(-20));
+        console.groupEnd();
+        return r;
+      },
+    };
+  })();
 
-      ov.appendChild(hdr);
-      ov.appendChild(body);
-      document.body.appendChild(ov);
+  // =========================================================
+  // HIGHLIGHT
+  // =========================================================
+  const HighlightService = {
+    highlight(text, query) {
+      if (!text || !query) return StringService.escapeHtml(text||'');
+      try {
+        const t = String(text).toLowerCase();
+        const chars = new Set(String(query).toLowerCase());
+        let r = '';
+        for (let i = 0; i < t.length; i++) {
+          r += chars.has(t[i])
+            ? `<strong style="background-color:#fff3cd;font-weight:700">${StringService.escapeHtml(String(text)[i])}</strong>`
+            : StringService.escapeHtml(String(text)[i]);
+        }
+        return r;
+      } catch { return StringService.escapeHtml(text); }
+    },
+  };
 
-      // Keyboard: Escape closes overlay
-      D.on(document, 'keydown', e => {
-        if (e.key === 'Escape' && S.overlayOpen) this.close();
-      });
+  // =========================================================
+  // RENDERING SERVICE
+  // =========================================================
+  const RenderingService = {
 
-      // Suggestions interaction
-      D.on(sug, 'click', e => {
-        const it = e.target.closest('.suggestion-item');
+    renderResultItem(item, lang) {
+      try {
+        const itemData  = item.item || item;
+        const rawText   = itemData?.text || '';
+        const itemText  = rawText || itemData?.name?.[lang] || itemData?.name?.en || item.itemName || '';
+        const itemApi   = itemData?.api || '';
+        const typeName  = item.typeName || item.typeObj?.name?.[lang] || item.typeObj?.name?.en || LanguageService.t('emoji');
+        const catName   = item.catName  || item.category?.name?.[lang] || item.category?.name?.en || '';
+
+        const names = [];
+        if (item.itemName) names.push(item.itemName);
+        if (itemData?.name) {
+          const n = itemData.name[lang] || itemData.name.en;
+          if (n && !names.includes(n)) names.push(n);
+        }
+        for (const k in (itemData||{})) {
+          if (/_name$/.test(k) && itemData[k]) {
+            const n = itemData[k][lang] || itemData[k].en;
+            if (n && !names.includes(n)) names.push(n);
+          }
+        }
+        const nameStr  = names.filter(Boolean).join(' / ');
+        const text     = itemText || itemApi || '-';
+        const vertical = text.includes('\n') || text.length > 45 || text.trim().split(/\s+/).length > 7;
+        const esc      = StringService.escapeHtml;
+
+        return `<div class="result-item search-card${vertical?' vertical':''}" role="article" aria-label="${esc(nameStr||text)}">
+  <div class="card-content" aria-hidden="true">${esc(String(text).slice(0,300))}</div>
+  <div class="card-body">
+    <div class="card-title">${esc(nameStr||(itemData?.name?.[lang]||itemData?.name?.en||itemData?.api)||text)}</div>
+    <div class="card-subtitle">${esc(itemApi||typeName||'')}</div>
+    <div class="card-tags" aria-hidden="true">
+      ${typeName?`<span class="tag">${esc(typeName)}</span>`:''}
+      ${catName ?`<span class="tag">${esc(catName)}</span>` :''}
+    </div>
+  </div>
+  <button class="result-copy-btn" data-text="${StringService.encodeUrl(text)}" aria-label="${LanguageService.t('copy')}">${LanguageService.t('copy')}</button>
+</div>`;
+      } catch { return `<div class="result-item"><div class="result-content-area">-</div></div>`; }
+    },
+
+    disconnectRenderObserver() {
+      VListAdapter.destroy();
+      DOMService.remove(DOMService.get(CONFIG.DOM.sentinelId));
+    },
+
+    extractResultCategories(results) {
+      try {
+        const lang = LanguageService.getLang();
+        const out = [], seen = Object.create(null);
+        for (const r of results) {
+          const k = (r.category?.name?.[lang] || r.category?.name?.en) || '';
+          if (!seen[k]) { seen[k] = 1; out.push({ key:k, displayName:k }); }
+        }
+        return out;
+      } catch { return []; }
+    },
+
+    renderResults(results, showSuggestionsIfNoResult = false) {
+      try {
+        const container = (State.overlayOpen && State.resultsContainer)
+          ? State.resultsContainer
+          : DOMService.get(CONFIG.DOM.searchResultsId);
+        if (!container) return;
+
+        const lang     = LanguageService.getLang();
+        const filtered = State.selectedCategory !== 'all'
+          ? results.filter(r => ((r.category?.name?.[lang]||r.category?.name?.en)||'') === State.selectedCategory)
+          : results;
+
+        document.body.style.marginBottom = '60px';
+        this.disconnectRenderObserver();
+        State.currentFilteredResults = filtered;
+
+        if (!filtered.length) {
+          let html = `<div class="no-result">${LanguageService.t('not_found')}</div>`;
+          if (showSuggestionsIfNoResult) {
+            html += `<div class="suggestions-title-main">${LanguageService.t('suggestions_for_you')}</div><div class="suggestions-block-list">`;
+            const t0 = State.apiData?.type?.[0], c0 = t0?.category?.[0];
+            for (const item of (c0?.data?.slice(0,5)||[])) {
+              html += this.renderResultItem({
+                item, typeObj:t0, category:c0,
+                itemName: item.name?.[lang]||item.name?.en||'',
+                typeName: t0?.name?.[lang]||t0?.name?.en||'',
+                catName : c0?.name?.[lang]||c0?.name?.en||'',
+              }, lang);
+            }
+            html += '</div>';
+          }
+          DOMService.setHTML(container, html);
+          UIService.updateUILanguage();
+          this._hideSuggestions();
+          return;
+        }
+
+        DOMService.setHTML(container, '');
+        this._hideSuggestions();
+
+        requestAnimationFrame(() => {
+          PerfMonitor.mark('render-start');
+          this._renderWithVList(filtered, container, lang);
+          PerfMonitor.measure('render-cost', 'render-start');
+        });
+
+        // Copy event delegation (attach once per container)
+        if (!container._copyDelegated) {
+          container._copyDelegated = true;
+          Handlers.copyClick = e => {
+            const btn = e.target.closest('.result-copy-btn');
+            if (btn?.hasAttribute('data-text')) {
+              e.preventDefault();
+              NotificationService.copyText(StringService.decodeUrl(btn.getAttribute('data-text')));
+            }
+          };
+          DOMService.on(container, 'click', Handlers.copyClick);
+        }
+
+        UIService.updateUILanguage();
+      } catch (e) { console.error('renderResults failed', e); }
+    },
+
+    _renderWithVList(items, container, lang) {
+      try {
+        // Host div for VList box
+        const host = document.createElement('div');
+        host.style.cssText = 'position:relative;width:100%;';
+        container.appendChild(host);
+
+        // Scroll parent: overlay body or window
+        const scrollParent = (State.overlayOpen && State.scrollableContent)
+          ? State.scrollableContent
+          : window;
+
+        VListAdapter.mount(scrollParent, host, items, (item, l) => this.renderResultItem(item, l), lang);
+      } catch (e) {
+        console.error('_renderWithVList failed, using batch fallback', e);
+        const tpl = document.createElement('template');
+        tpl.innerHTML = items.map(item => this.renderResultItem(item, lang)).join('');
+        container.appendChild(tpl.content);
+      }
+    },
+
+    _hideSuggestions() {
+      try {
+        const sg = DOMService.get(CONFIG.DOM.suggestionContainerId);
+        if (sg) { sg.style.display = 'none'; sg.innerHTML = ''; }
+      } catch {}
+    },
+  };
+
+  // =========================================================
+  // FILTER SERVICE
+  // =========================================================
+  const FilterService = {
+    setupTypeFilter(selected = 'all') {
+      try {
+        const el = DOMService.get(CONFIG.DOM.typeFilterId);
+        if (!el) return;
+        const lang = LanguageService.getLang();
+        let buf = [`<option value="all">${LanguageService.t('all_types')}</option>`];
+        for (const t of (State.apiData?.type||[])) {
+          const lbl = t.name?.[lang]||t.name?.en||'';
+          buf.push(`<option value="${StringService.escapeHtml(lbl)}">${StringService.escapeHtml(lbl)}</option>`);
+        }
+        el.innerHTML = buf.join('');
+        el.value = selected;
+      } catch {}
+    },
+    setupCategoryFilter(cats, selected = 'all') {
+      try {
+        const el = DOMService.get(CONFIG.DOM.categoryFilterId);
+        if (!el) return;
+        let buf = [`<option value="all">${LanguageService.t('all_categories')}</option>`];
+        for (const {key,displayName} of cats)
+          buf.push(`<option value="${StringService.escapeHtml(key)}">${StringService.escapeHtml(displayName)}</option>`);
+        el.innerHTML = buf.join('');
+        el.style.display = '';
+        el.value = selected;
+      } catch {}
+    },
+  };
+
+  // =========================================================
+  // READY MODE / SUGGESTIONS
+  // =========================================================
+  const ReadyModeService = {
+    extractSmartNames() {
+      try {
+        if (!State.allKeywordsCache) return [];
+        const lang = LanguageService.getLang();
+        const out = [], seen = new Set();
+        for (const kw of State.allKeywordsCache) {
+          if (out.length >= CONFIG.RENDER.suggestionsFullscreenMax) break;
+          if (!kw?.item) continue;
+          const name = (kw.item.name && typeof kw.item.name === 'object')
+            ? (kw.item.name[lang]||kw.item.name.en||'') : '';
+          if (!name || name.length < 2) continue;
+          if (!/[\u0E00-\u0E7F]/.test(name) && /^[A-Za-z0-9_\-]+$/.test(name) && name.length <= 20) continue;
+          if (seen.has(name)) continue;
+          seen.add(name);
+          out.push({ raw:name, display:name, highlightedHtml:StringService.escapeHtml(name) });
+        }
+        return out;
+      } catch { return []; }
+    },
+    renderReadyModeSuggestions() {
+      try {
+        if (!State.overlayOpen) return;
+        const container = DOMService.get(CONFIG.DOM.suggestionContainerId);
+        if (!container) return;
+        const sgs = this.extractSmartNames();
+        if (!sgs.length) { container.style.display = 'none'; return; }
+        let html = `<div class="suggestions-head">${LanguageService.t('trending')}</div>`;
+        for (const s of sgs)
+          html += `<div class="suggestion-item" role="option" tabindex="0" data-val="${StringService.encodeUrl(s.raw)}">
+                    <div class="suggestion-body">${s.highlightedHtml}</div>
+                  </div>`;
+        container.innerHTML = html;
+        container.style.display = 'block';
+      } catch {}
+    },
+  };
+
+  const SuggestionService = {
+    handleKeydown(ev, container) {
+      try {
+        const items = [...container.querySelectorAll('.suggestion-item')];
+        if (!items.length) return;
+        const idx = items.indexOf(document.activeElement);
+        if (ev.key==='ArrowDown')  { ev.preventDefault(); items[idx===-1?0:Math.min(items.length-1,idx+1)]?.focus?.(); }
+        else if (ev.key==='ArrowUp')   { ev.preventDefault(); items[idx===-1?items.length-1:Math.max(0,idx-1)]?.focus?.(); }
+        else if (ev.key==='Enter')     { ev.preventDefault(); if (document.activeElement?.classList?.contains('suggestion-item')) document.activeElement?.click?.(); }
+        else if (ev.key==='Escape')    { try { OverlayService.close('escape'); } catch {} }
+      } catch {}
+    },
+    handleClick(ev) {
+      try {
+        const it = ev.target.closest('.suggestion-item');
         if (!it) return;
-        e.preventDefault();
-        const val = D.dec(it.getAttribute('data-val') || '');
-        const inp = D.id(CFG.IDS.input);
+        ev.stopPropagation?.();
+        ev.preventDefault?.();
+        const val = StringService.decodeUrl(it.getAttribute('data-val')||'');
+        const inp = DOMService.get(CONFIG.DOM.searchInputId);
         if (inp) inp.value = val;
-        SearchSvc.doSearch();
-      });
-      D.on(sug, 'keydown', e => SugSvc._handleKeydown(e, sug));
+        State.suggestionsLocked = false;
+        SearchService.doSearch(null, false);
+      } catch {}
+    },
+    renderQuerySuggestions(query) {
+      try {
+        if (State.overlayTransitioning) return;
+        const container = DOMService.get(CONFIG.DOM.suggestionContainerId);
+        if (!container) return;
+        if (!query?.trim()) { ReadyModeService.renderReadyModeSuggestions(); return; }
+        const sgs = window.SearchEngine?.querySuggestions?.(query, CONFIG.RENDER.suggestionsFullscreenMax) || [];
+        if (!sgs.length) { ReadyModeService.renderReadyModeSuggestions(); return; }
+        let html = `<div class="suggestions-head">${LanguageService.t('suggestion_label')}</div>`;
+        for (const s of sgs)
+          html += `<div class="suggestion-item" role="option" tabindex="0" data-val="${StringService.encodeUrl(s.raw)}">
+                    <div class="suggestion-body">${HighlightService.highlight(s.raw, query)}</div>
+                  </div>`;
+        container.innerHTML = html;
+        container.style.display = 'block';
+        const inp = DOMService.get(CONFIG.DOM.searchInputId);
+        if (inp) inp.onkeydown = e => {
+          if (e.key==='ArrowDown') { e.preventDefault(); container.querySelector('.suggestion-item')?.focus?.(); }
+          else if (e.key==='Escape') { try { OverlayService.close('escape'); } catch {} }
+        };
+      } catch {}
+    },
+  };
 
-      // Mirror click in placeholder opens overlay
-      const ph = D.id('searchInputPlaceholder');
-      if (ph) {
-        D.on(ph, 'click', () => this.open());
-        D.on(ph, 'focus', () => this.open());
-      }
+  // =========================================================
+  // OVERLAY SERVICE
+  // =========================================================
+  const OverlayService = {
+    _backdrop() {
+      try {
+        let bd = DOMService.get(CONFIG.DOM.overlayBackdropId);
+        if (bd) return bd;
+        bd = DOMService.create('div', CONFIG.DOM.overlayBackdropId, 'search-overlay-backdrop', {
+          position:'fixed', inset:'0', background:'rgba(12,14,18,0.48)',
+          zIndex:'9997', cursor:'default',
+        });
+        Handlers.overlayBackdropClick = e => {
+          if (e.target === bd) {
+            e.preventDefault?.();
+            e.stopPropagation?.();
+            if (KeyboardService.isKeyboardOpen()) return;
+            const inp  = DOMService.get(CONFIG.DOM.searchInputId);
+            const cur  = (inp?.value||'').trim();
+            const last = (State.preOverlayState?.q||'').trim();
+            if (cur !== last && cur.length) SearchService.doSearch(null, false);
+            else OverlayService.close('backdrop');
+          }
+        };
+        DOMService.on(bd, 'click', Handlers.overlayBackdropClick);
+        document.body.appendChild(bd);
+        return bd;
+      } catch { return null; }
     },
 
     open() {
-      if (S.overlayOpen) return;
-      this._build();
-      S.overlayOpen  = true;
-      S.preOverlayQ  = D.id(CFG.IDS.input)?.value || '';
-
-      const ov = D.id(CFG.IDS.overlay);
-      const bd = D.id(CFG.IDS.overlayBackdrop);
-      if (ov) ov.classList.add('open');
-      if (bd) bd.classList.add('open');
-
-      document.body.style.overflow = 'hidden';
-
-      // Push history state so back closes overlay
       try {
-        history.pushState({ __search_overlay__: true }, '', location.href);
-        S.historyPushed = true;
-      } catch {}
+        if (State.overlayOpen || State.overlayTransitioning) return;
+        const wrapper = DOMService.query('.search-input-wrapper');
+        if (!wrapper) return;
+        State.overlayTransitioning = true;
 
-      // Focus input
-      const inp = D.id(CFG.IDS.input);
-      if (inp) {
-        const tid = setTimeout(() => {
-          try { inp.focus(); inp.select?.(); } catch {}
-        }, CFG.TIMING.focusDelayMs);
-        S._timeouts.add(tid);
+        State.originalInputParent      = wrapper.parentNode;
+        State.originalInputNextSibling = wrapper.nextSibling;
+
+        const ph = DOMService.create('div', CONFIG.DOM.placeholderId, null, {
+          width: wrapper.offsetWidth+'px', height: wrapper.offsetHeight+'px',
+          visibility: 'hidden', display: 'block',
+        });
+        State.originalPlaceholder = ph;
+        State.originalInputParent.insertBefore(ph, State.originalInputNextSibling);
+
+        const inp = DOMService.get(CONFIG.DOM.searchInputId);
+        State.preOverlayState = {
+          q: inp?.value||'',
+          type: State.selectedType||'all',
+          category: State.selectedCategory||'all',
+        };
+        State.overlayOpenedAt = Date.now();
+
+        this._backdrop();
+
+        let ov = DOMService.get(CONFIG.DOM.overlayContainerId);
+        if (!ov) {
+          ov = DOMService.create('div', CONFIG.DOM.overlayContainerId, 'search-overlay search-overlay-open', {
+            position:'fixed', inset:'0', zIndex:'9998', display:'flex',
+            flexDirection:'column', alignItems:'stretch', overflow:'hidden',
+            backgroundColor:'#ffffff',
+          });
+          document.body.appendChild(ov);
+        } else { ov.innerHTML = ''; }
+
+        // Input wrapper row at top
+        const wc = DOMService.create('div', null, 'search-overlay-input-wrapper', {
+          width:'100%', zIndex:'10001', background:'#ffffff', flexShrink:'0',
+          padding:'2px 10px 5px', borderBottom:'1px solid #f0f0f0',
+          display:'flex', flexDirection:'column', alignItems:'center',
+        });
+        DOMService.addClass(wrapper, 'overlay-elevated');
+        DOMService.setStyles(wrapper, { width:'100%', maxWidth:'100%', marginTop:'0', marginBottom:'0' });
+        wc.appendChild(wrapper);
+        ov.appendChild(wc);
+        State.wrapperContainer = wc;
+
+        // Scrollable body
+        const sc = DOMService.create('div', null, 'search-overlay-scrollable-content', {
+          flex:'1', width:'100%', overflow:'auto', overscrollBehavior:'contain',
+          zIndex:'10000',
+          willChange:'scroll-position',
+          transform:'translateZ(0)',
+        });
+
+        const rw = DOMService.create('div', null, 'search-overlay-results-wrapper', {
+          width:'100%', padding:'0 0 16px', boxSizing:'border-box',
+        });
+        const sg = DOMService.create('div', CONFIG.DOM.suggestionContainerId, 'search-suggestions-fullscreen');
+        const rc = DOMService.create('div', CONFIG.DOM.searchResultsId, 'search-overlay-results', { width:'100%' });
+
+        rw.appendChild(sg);
+        rw.appendChild(rc);
+        sc.appendChild(rw);
+        ov.appendChild(sc);
+
+        State.scrollableContent = sc;
+        State.resultsContainer  = rc;
+
+        Handlers.suggestionKeydown = ev => SuggestionService.handleKeydown(ev, sg);
+        Handlers.suggestionClick   = ev => SuggestionService.handleClick(ev);
+        DOMService.on(sg, 'keydown',    Handlers.suggestionKeydown);
+        DOMService.on(sg, 'click',      Handlers.suggestionClick);
+        DOMService.on(sg, 'mouseenter', () => { State.suggestionsLocked = true; });
+        DOMService.on(sg, 'mouseleave', () => { State.suggestionsLocked = false; });
+
+        document.documentElement.style.overflow = 'hidden';
+        document.body.style.overflow = 'hidden';
+
+        Handlers.documentKeydownOverlay = OverlayService._escHandler;
+        DOMService.on(document, 'keydown', Handlers.documentKeydownOverlay);
+
+        State.overlayOpen = true;
+        State.lastQuery   = '';
+        ReadyModeService.renderReadyModeSuggestions();
+        KeyboardAutoToggleService.enableAutoToggle(sc);
+        this._hideNav();
+
+        try {
+          history.pushState(
+            Object.assign({}, State.preOverlayState||{}, { [State._overlayStateMarker]: true }),
+            '', location.href
+          );
+          State.searchHistoryPushed = true;
+        } catch {}
+
+        if (inp) setTimeout(() => { try { inp.focus(); inp.select?.(); } catch {} }, CONFIG.TIMING.focusDelayMs);
+
+        State.overlayTransitioning = false;
+      } catch (e) {
+        console.error('openOverlay failed', e);
+        State.overlayTransitioning = false;
       }
+    },
 
-      SugSvc.renderTrending();
+    _escHandler(e) {
+      if (e.key === 'Escape') {
+        if (State.preOverlayState) {
+          const inp = DOMService.get(CONFIG.DOM.searchInputId);
+          if (inp) inp.value = State.preOverlayState.q || '';
+          State.selectedType     = State.preOverlayState.type     || 'all';
+          State.selectedCategory = State.preOverlayState.category || 'all';
+        }
+        OverlayService.close('escape');
+      }
     },
 
     close(src = 'manual') {
-      if (!S.overlayOpen) return;
-      S.overlayOpen = false;
+      try {
+        if (!State.overlayOpen) return;
+        State.overlayTransitioning = true;
 
-      const ov = D.id(CFG.IDS.overlay);
-      const bd = D.id(CFG.IDS.overlayBackdrop);
-      if (ov) ov.classList.remove('open');
-      if (bd) bd.classList.remove('open');
+        if (src !== 'popstate') URLService.syncOnClose();
 
-      document.body.style.overflow = '';
+        // Destroy VList before scroll parent is removed
+        RenderingService.disconnectRenderObserver();
+        KeyboardAutoToggleService.disableAutoToggle();
 
-      // Destroy any VList in overlay body (will re-render in #searchResults)
-      ResultVList.destroy();
+        // Restore input wrapper
+        const wrapper = DOMService.query('.search-input-wrapper');
+        if (wrapper) {
+          DOMService.removeClass(wrapper, 'overlay-elevated');
+          DOMService.setStyles(wrapper, { width:'', maxWidth:'', marginTop:'', marginBottom:'' });
+          if (State.originalInputParent) {
+            if (State.originalInputNextSibling)
+              State.originalInputParent.insertBefore(wrapper, State.originalInputNextSibling);
+            else
+              State.originalInputParent.appendChild(wrapper);
+          }
+        }
 
-      // Clear suggestions
-      const sug = D.id(CFG.IDS.overlaySug);
-      if (sug) sug.innerHTML = '';
+        DOMService.remove(State.originalPlaceholder);
+        State.originalPlaceholder = null;
+        State.wrapperContainer    = null;
+        State.scrollableContent   = null;
+        State.resultsContainer    = null;
 
-      // History sync
-      if (src !== 'popstate') {
-        try {
-          const st = S.lastCommitted || { q:'', type:'all', cat:'all' };
-          history.replaceState(st, '', Url.build(st));
-          S.historyPushed = false;
-        } catch {}
+        DOMService.remove(DOMService.get(CONFIG.DOM.overlayContainerId));
+        DOMService.remove(DOMService.get(CONFIG.DOM.overlayBackdropId));
+
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
+
+        DOMService.off(document, 'keydown', Handlers.documentKeydownOverlay);
+        Handlers.documentKeydownOverlay = null;
+
+        State.overlayOpen       = false;
+        State.lastQuery         = '';
+        State.suggestionsLocked = false;
+        State.overlayOpenedAt   = null;
+        this._showNav();
+
+        State._timeouts.forEach(t => { try { clearTimeout(t); clearInterval(t); } catch {} });
+        State._timeouts.clear();
+
+        setTimeout(() => { State.overlayTransitioning = false; }, CONFIG.TIMING.transitionDelayMs);
+      } catch (e) {
+        console.error('closeOverlay failed', e);
+        State.overlayTransitioning = false;
       }
+    },
 
-      // Blur input so keyboard closes on mobile
-      try { D.id(CFG.IDS.input)?.blur(); } catch {}
+    _hideNav() { try { State.navHiddenBySearch=true; window.modernNav?.hideNav?.('search-overlay'); } catch {} },
+    _showNav()  {
+      try {
+        if (window.modernNav?.showNav && State.navHiddenBySearch) {
+          State.navHiddenBySearch = false;
+          window.modernNav.showNav('search-overlay-closed');
+        }
+      } catch {}
     },
   };
 
-  /* ══════════════════════════════════════════════════════════
-     SUGGESTION SERVICE
-  ══════════════════════════════════════════════════════════ */
-  const SugSvc = {
-    renderTrending() {
-      const sug = D.id(CFG.IDS.overlaySug);
-      if (!sug || !S.overlayOpen) return;
-      const lang = Lang.get();
-      const items = this._extractTrending(lang);
-      if (!items.length) { sug.innerHTML = ''; return; }
-      let html = `<div class="suggestions-head">${D.esc(Lang.t('trending'))}</div>`;
-      for (const it of items)
-        html += `<div class="suggestion-item" role="option" tabindex="0" data-val="${D.enc(it)}">
-                   <div class="suggestion-body">${D.esc(it)}</div>
-                 </div>`;
-      sug.innerHTML = html;
-    },
-
-    renderQuery(q) {
-      const sug = D.id(CFG.IDS.overlaySug);
-      if (!sug) return;
-      if (!q?.trim()) { this.renderTrending(); return; }
-      const items = window.SearchEngine?.querySuggestions?.(q, CFG.RENDER.sugFullMax) || [];
-      if (!items.length) { this.renderTrending(); return; }
-      let html = `<div class="suggestions-head">${D.esc(Lang.t('sug_label'))}</div>`;
-      for (const it of items) {
-        const display = D.esc(it.raw || it.display || '');
-        html += `<div class="suggestion-item" role="option" tabindex="0" data-val="${D.enc(it.raw||it.display||'')}">
-                   <div class="suggestion-body">${display}</div>
-                 </div>`;
-      }
-      sug.innerHTML = html;
-    },
-
-    _extractTrending(lang) {
-      const out = [], seen = new Set();
-      for (const kw of (S.keywords || [])) {
-        if (out.length >= CFG.RENDER.sugFullMax) break;
-        if (!kw?.item) continue;
-        const name = typeof kw.item.name === 'object'
-          ? (kw.item.name[lang] || kw.item.name.en || '')
-          : (kw.itemName || '');
-        if (!name || name.length < 2 || seen.has(name)) continue;
-        if (!/[\u0E00-\u0E7F]/.test(name) && /^[A-Za-z0-9_\-]+$/.test(name) && name.length <= 20) continue;
-        seen.add(name);
-        out.push(name);
-      }
-      return out;
-    },
-
-    _handleKeydown(e, container) {
-      const items = [...container.querySelectorAll('.suggestion-item')];
-      if (!items.length) return;
-      const idx = items.indexOf(document.activeElement);
-      if (e.key === 'ArrowDown') { e.preventDefault(); items[idx === -1 ? 0 : Math.min(items.length-1, idx+1)]?.focus(); }
-      else if (e.key === 'ArrowUp')  { e.preventDefault(); items[idx === -1 ? items.length-1 : Math.max(0, idx-1)]?.focus(); }
-      else if (e.key === 'Enter')    { e.preventDefault(); document.activeElement?.click?.(); }
-      else if (e.key === 'Escape')   { Overlay.close('escape'); }
-    },
-  };
-
-  /* ══════════════════════════════════════════════════════════
-     FILTER SERVICE
-  ══════════════════════════════════════════════════════════ */
-  const FilterSvc = {
-    setupType(selected = 'all') {
-      const el = D.id(CFG.IDS.typeFilter);
-      if (!el) return;
-      const lang = Lang.get();
-      let html   = `<option value="all">${D.esc(Lang.t('all_types'))}</option>`;
-      for (const t of (S.apiData?.type || [])) {
-        const lbl = t.name?.[lang] || t.name?.en || '';
-        html += `<option value="${D.esc(lbl)}">${D.esc(lbl)}</option>`;
-      }
-      el.innerHTML = html;
-      el.value     = selected;
-    },
-
-    setupCat(cats, selected = 'all') {
-      const el = D.id(CFG.IDS.catFilter);
-      if (!el) return;
-      let html = `<option value="all">${D.esc(Lang.t('all_cats'))}</option>`;
-      for (const { key, label } of cats)
-        html += `<option value="${D.esc(key)}">${D.esc(label)}</option>`;
-      el.innerHTML  = html;
-      el.style.display = cats.length ? '' : 'none';
-      el.value      = selected;
-    },
-
-    extractCats(results) {
-      const lang = Lang.get(), out = [], seen = new Set();
-      for (const r of results) {
-        const k = r.category?.name?.[lang] || r.category?.name?.en || '';
-        if (!seen.has(k)) { seen.add(k); out.push({ key: k, label: k }); }
-      }
-      return out;
-    },
-  };
-
-  /* ══════════════════════════════════════════════════════════
-     SEARCH SERVICE  — runs at user-visible priority
-  ══════════════════════════════════════════════════════════ */
-  const SearchSvc = {
+  // =========================================================
+  // SEARCH SERVICE
+  // =========================================================
+  const SearchService = {
     _sched: (typeof scheduler !== 'undefined' && scheduler) || null,
 
-    _visibleTask(fn) {
+    _scheduleUserVisible(fn) {
       if (this._sched?.postTask) return this._sched.postTask(fn, { priority: 'user-visible' });
-      return new Promise((res, rej) => requestAnimationFrame(() => { try { res(fn()); } catch(e) { rej(e); } }));
+      return new Promise((resolve, reject) => {
+        requestAnimationFrame(() => { try { resolve(fn()); } catch (e) { reject(e); } });
+      });
     },
 
     doSearch(e, preventPush) {
       try {
         e?.preventDefault?.();
-        const inp = D.id(CFG.IDS.input);
-        const q   = inp?.value || '';
-        S.type    = D.id(CFG.IDS.typeFilter)?.value || S.type;
-        S.category = 'all';
+        const qEl  = DOMService.get(CONFIG.DOM.searchInputId);
+        const q    = qEl?.value || '';
+        const tfEl = DOMService.get(CONFIG.DOM.typeFilterId);
+        State.selectedType     = tfEl?.value || State.selectedType;
+        State.selectedCategory = 'all';
 
         if (!q.trim()) {
-          // Empty search: clear results + close overlay
-          ResultVList.destroy();
-          const rc = D.id(CFG.IDS.results);
-          if (rc) rc.innerHTML = `<div class="search-result-here">${D.esc(Lang.t('here'))}</div>`;
-          FilterSvc.setupCat([], 'all');
-          if (S.overlayOpen) Overlay.close('manual');
-          if (!preventPush && !S.suppressPush) {
-            const st = { q:'', type:'all', cat:'all' };
-            if (!Url.eq(st, S.lastCommitted)) Url.commit(st);
+          document.body.style.marginBottom = '';
+          const ph = `<div class="search-result-here" style="text-align:center;color:#969ca8;font-size:1.07em;margin-top:30px;">${LanguageService.t('search_result_here')}</div>`;
+          const rc = (State.overlayOpen && State.resultsContainer)
+            ? State.resultsContainer
+            : DOMService.get(CONFIG.DOM.searchResultsId);
+          if (rc) DOMService.setHTML(rc, ph);
+          RenderingService.disconnectRenderObserver();
+          FilterService.setupCategoryFilter([], 'all');
+          UIService.updateUILanguage();
+          const cleared = { q:'', type:'all', category:'all' };
+          if (!preventPush && !State.suppressHistoryPush && !URLService.isEqual(cleared, State.lastCommittedSearchState))
+            URLService.commit(cleared);
+          if (State.overlayOpen) {
+            const sg = DOMService.get(CONFIG.DOM.suggestionContainerId);
+            if (sg) sg.style.display = '';
+            ReadyModeService.renderReadyModeSuggestions();
           }
+          if (State.overlayOpen) OverlayService.close('manual');
           return;
         }
 
-        this._visibleTask(() => {
+        this._scheduleUserVisible(() => {
           try {
-            PerfMon.mark('search-start');
-            let out = { results: [], keywords: [] };
-            try { if (window.SearchEngine?.search) out = window.SearchEngine.search(q, S.type) || out; } catch {}
-            S.results  = out.results  || [];
-            S.keywords = out.keywords || [];
-            PerfMon.measure('search-latency', 'search-start');
+            PerfMonitor.mark('search-start');
+            let out = { results:[], keywords:[] };
+            try { if (window.SearchEngine?.search) out = window.SearchEngine.search(q, State.selectedType) || out; } catch {}
+            State.currentResults   = out.results  || [];
+            State.allKeywordsCache = out.keywords || [];
+            PerfMonitor.measure('search-latency', 'search-start');
 
-            // Close overlay BEFORE rendering (so results land in #searchResults)
-            if (S.overlayOpen) Overlay.close('manual');
+            FilterService.setupCategoryFilter(RenderingService.extractResultCategories(State.currentResults), 'all');
 
-            FilterSvc.setupCat(FilterSvc.extractCats(S.results), 'all');
-
-            // URL commit
-            if (!preventPush && !S.suppressPush) {
-              const st = { q, type: S.type || 'all', cat: 'all' };
-              if (!Url.eq(st, S.lastCommitted)) { Url.commit(st); S.historyPushed = true; }
+            const stObj = { q, type: State.selectedType||'all', category: 'all' };
+            if (!preventPush && !State.suppressHistoryPush && !URLService.isEqual(stObj, State.lastCommittedSearchState)) {
+              URLService.commit(stObj);
+              State.searchHistoryPushed = true;
             }
 
-            // Render results (into #searchResults since overlay is now closed)
-            PerfMon.mark('render-start');
-            S.filteredResults = S.category !== 'all'
-              ? S.results.filter(r => (r.category?.name?.[Lang.get()] || r.category?.name?.en || '') === S.category)
-              : S.results;
-            ResultVList.render(S.filteredResults.length ? S.filteredResults : S.results);
-            PerfMon.measure('render-cost', 'render-start');
-          } catch (err) { console.error('[SearchUI] doSearch inner:', err); }
-        }).catch(err => console.error('[SearchUI] doSearch:', err));
+            // Close overlay → results render into #searchResults
+            if (State.overlayOpen) OverlayService.close('manual');
 
-      } catch (e) { console.error('[SearchUI] doSearch:', e); }
+            PerfMonitor.mark('render-start');
+            RenderingService.renderResults(State.currentResults, State.currentResults.length === 0);
+          } catch (err) { console.error('doSearch inner failed', err); }
+        }).catch(err => { console.error('doSearch failed', err); });
+      } catch (e) { console.error('doSearch failed', e); }
     },
   };
 
-  /* ══════════════════════════════════════════════════════════
-     UI SERVICE
-  ══════════════════════════════════════════════════════════ */
-  const UISvc = {
-    setupInput() {
-      const inp = D.id(CFG.IDS.input);
-      if (!inp) return;
-
-      inp.setAttribute('enterkeyhint', 'search');
-      inp.setAttribute('autocomplete', 'off');
-
-      D.on(inp, 'focus', () => { if (!S.overlayOpen) Overlay.open(); });
-      D.on(inp, 'click', () => { if (!S.overlayOpen) Overlay.open(); });
-
-      D.on(inp, 'input', () => {
-        clearTimeout(S.debTimer);
-        S.debTimer = setTimeout(() => {
-          SugSvc.renderQuery(inp.value);
-        }, CFG.TIMING.debounceMs);
-      });
-
-      D.on(inp, 'keydown', e => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          SearchSvc.doSearch();
-          try { inp.blur(); } catch {}
-        } else if (e.key === 'Escape') {
-          Overlay.close('escape');
-        } else if (e.key === 'ArrowDown') {
-          const sug = D.id(CFG.IDS.overlaySug);
-          sug?.querySelector('.suggestion-item')?.focus?.();
-        }
-      });
-
-      // Form submit
-      const form = D.id(CFG.IDS.form);
-      if (form) D.on(form, 'submit', e => { e.preventDefault(); SearchSvc.doSearch(); });
-    },
-
-    setupFilters() {
-      const tf = D.id(CFG.IDS.typeFilter);
-      const cf = D.id(CFG.IDS.catFilter);
-      if (tf) tf.onchange = () => { S.type = tf.value; SearchSvc.doSearch(); };
-      if (cf) cf.onchange = () => {
-        S.category = cf.value;
-        S.filteredResults = S.category !== 'all'
-          ? S.results.filter(r => (r.category?.name?.[Lang.get()] || r.category?.name?.en || '') === S.category)
-          : S.results;
-        ResultVList.render(S.filteredResults);
-      };
-    },
-
-    updateLang() {
+  // =========================================================
+  // UI SERVICE
+  // =========================================================
+  const UIService = {
+    setupAutoSearchInput() {
       try {
-        const inp = D.id(CFG.IDS.input);
-        if (inp) {
-          const ph = Lang.t('placeholder');
-          if (inp.placeholder !== ph) inp.placeholder = ph;
-        }
-        const lbls = D.qAll('.filter-group-label');
-        if (lbls[0]) lbls[0].textContent = Lang.t('type_lbl');
-        if (lbls[1]) lbls[1].textContent = Lang.t('cat_lbl');
+        const inp = DOMService.get(CONFIG.DOM.searchInputId);
+        if (!inp) return;
+        DOMService.setAttr(inp, 'enterkeyhint', 'search');
+
+        Handlers.inputInput = () => {
+          if (State.overlayTransitioning) return;
+          clearTimeout(State.debounceTimeout);
+          State.debounceTimeout = setTimeout(() => {
+            SuggestionService.renderQuerySuggestions(inp.value);
+          }, CONFIG.TIMING.debounceMs);
+        };
+        inp.addEventListener('input', Handlers.inputInput);
+
+        Handlers.inputKeydown = e => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            SearchService.doSearch();
+            this.closeKB();
+          } else if (e.key === 'ArrowDown') {
+            DOMService.get(CONFIG.DOM.suggestionContainerId)?.querySelector('.suggestion-item')?.focus?.();
+          } else if (e.key === 'Backspace') {
+            clearTimeout(State.debounceTimeout);
+            State.debounceTimeout = setTimeout(
+              () => SuggestionService.renderQuerySuggestions(inp.value),
+              CONFIG.TIMING.debounceMs / 2
+            );
+          }
+        };
+        inp.addEventListener('keydown', Handlers.inputKeydown);
+
+        Handlers.inputFocus = () => { if (!State.overlayTransitioning) { this.scrollToTop(); OverlayService.open(); } };
+        inp.addEventListener('focus', Handlers.inputFocus);
+
+        Handlers.inputClick = () => { if (!State.overlayTransitioning) { this.scrollToTop(); OverlayService.open(); } };
+        inp.addEventListener('click', Handlers.inputClick);
       } catch {}
     },
 
-    setupPopstate() {
-      D.on(window, 'popstate', e => {
-        try {
-          const s = e.state || {};
-          if (s.__search_overlay__ && S.overlayOpen) { Overlay.close('popstate'); return; }
-          if (!s.__search_overlay__ && S.overlayOpen) { Overlay.close('popstate'); }
-          if (s.q !== undefined) this._restoreState(s);
-        } catch {}
-      });
+    scrollToTop() {
+      try { if (State.scrollableContent) State.scrollableContent.scrollTop = 0; } catch {}
     },
 
-    _restoreState(st) {
+    setupFilters() {
       try {
-        S.suppressPush = true;
-        const inp = D.id(CFG.IDS.input);
-        if (inp) inp.value = st.q || '';
-        S.type     = st.type || 'all';
-        S.category = st.cat  || 'all';
-        FilterSvc.setupType(S.type);
-        SearchSvc.doSearch(null, true);
-      } finally { S.suppressPush = false; }
+        [CONFIG.DOM.typeFilterId, CONFIG.DOM.categoryFilterId].forEach(id => {
+          const el = DOMService.get(id);
+          if (!el) return;
+          const onChange = () => { if (id === CONFIG.DOM.typeFilterId) this.onTypeChange(); else this.onCatChange(); };
+          el.onchange = onChange;
+          el.onkeyup  = e => { if (e.key === 'Enter') onChange(); };
+        });
+      } catch {}
+    },
+
+    onTypeChange() { try { State.selectedType = DOMService.get(CONFIG.DOM.typeFilterId)?.value; SearchService.doSearch(); } catch {} },
+    onCatChange()  {
+      try {
+        State.selectedCategory = DOMService.get(CONFIG.DOM.categoryFilterId)?.value;
+        RenderingService.renderResults(State.currentResults, false);
+        this.updateUILanguage();
+      } catch {}
+    },
+
+    closeKB() { try { const inp = DOMService.get(CONFIG.DOM.searchInputId); if (inp && document.activeElement === inp) inp.blur(); } catch {} },
+
+    updateUILanguage() {
+      try {
+        const inp = DOMService.get(CONFIG.DOM.searchInputId);
+        const ph  = LanguageService.t('search_placeholder');
+        if (inp && inp.placeholder !== ph) inp.placeholder = ph;
+        const lbls = DOMService.queryAll('.search-filters-panel .filter-group-label');
+        if (lbls[0] && lbls[0].textContent !== LanguageService.t('type'))     lbls[0].textContent = LanguageService.t('type');
+        if (lbls[1] && lbls[1].textContent !== LanguageService.t('category')) lbls[1].textContent = LanguageService.t('category');
+      } catch {}
     },
   };
 
-  /* ══════════════════════════════════════════════════════════
-     PERF MONITOR (lightweight, opt-in)
-  ══════════════════════════════════════════════════════════ */
-  const PerfMon = (() => {
-    const _m = [], _pending = {}, _lt = [];
-    let _obs = null;
-
-    function _en() { return CFG.PERF.enabled; }
-
-    return {
-      enable() {
-        CFG.PERF.enabled = true;
-        if (!_obs && 'PerformanceObserver' in window) {
-          try {
-            _obs = new PerformanceObserver(list => {
-              for (const e of list.getEntries()) {
-                if (e.duration >= CFG.PERF.longTaskMs) _lt.push({ d: Math.round(e.duration), ts: Date.now() });
-                if (_lt.length > 50) _lt.shift();
-              }
-            });
-            _obs.observe({ entryTypes: ['longtask'] });
-          } catch {}
-        }
-      },
-      disable() { CFG.PERF.enabled = false; try { _obs?.disconnect(); _obs = null; } catch {} },
-      mark(n)    { if (!_en()) return; _pending[n] = performance.now(); },
-      measure(n, s) {
-        if (!_en() || _pending[s] == null) return;
-        const d = performance.now() - _pending[s];
-        delete _pending[s];
-        if (_m.length >= CFG.PERF.maxM) _m.shift();
-        _m.push({ n, d: Math.round(d * 10) / 10, ts: Date.now() });
-      },
-      log() {
-        const sl = _m.filter(x => x.n === 'search-latency');
-        const avg = sl.length ? Math.round(sl.reduce((a,b) => a+b.d, 0) / sl.length * 10) / 10 : null;
-        console.group('%c[SearchUI PerfMon]', 'color:#13b47f;font-weight:bold');
-        console.log('searches:', sl.length, '| avg ms:', avg);
-        console.log('long tasks:', _lt.length);
-        if (_lt.length) console.table(_lt.slice(-10));
-        console.table(_m.slice(-20));
-        console.groupEnd();
-      },
-      reset() { _m.length = 0; _lt.length = 0; },
-    };
-  })();
-
-  /* ══════════════════════════════════════════════════════════
-     DATA LOADER
-  ══════════════════════════════════════════════════════════ */
-  function _waitForService(ms) {
-    return new Promise(res => {
-      if (window.ConDataService?.getAssembled) return res(window.ConDataService);
+  // =========================================================
+  // DATA LOADER
+  // =========================================================
+  function _waitForConDataService(ms) {
+    return new Promise(resolve => {
+      if (window.ConDataService?.getAssembled) return resolve(window.ConDataService);
       const start = Date.now();
       const id = setInterval(() => {
-        if (window.ConDataService?.getAssembled) { clearInterval(id); res(window.ConDataService); }
-        else if (Date.now() - start >= ms) { clearInterval(id); res(null); }
-      }, CFG.TIMING.svcPollMs);
+        if (window.ConDataService?.getAssembled) { clearInterval(id); resolve(window.ConDataService); }
+        else if (Date.now() - start >= ms) { clearInterval(id); resolve(null); }
+      }, CONFIG.TIMING.conDataServicePollMs);
     });
   }
 
   function loadData() {
-    return _waitForService(CFG.TIMING.svcWaitMs).then(svc => {
-      if (svc) return svc.getAssembled().catch(() => fetch(CFG.DB.path).then(r=>r.json()).catch(()=>({})));
-      return fetch(CFG.DB.path).then(r=>r.json()).catch(()=>({}));
+    return _waitForConDataService(CONFIG.TIMING.conDataServiceWaitMs).then(svc => {
+      if (svc) return svc.getAssembled().catch(err => {
+        console.warn('[SearchUI] ConDataService failed, fallback:', err);
+        return fetch(CONFIG.DB.path).then(r=>r.json()).catch(()=>({}));
+      });
+      console.warn('[SearchUI] ConDataService not ready — fallback');
+      return fetch(CONFIG.DB.path).then(r=>r.json()).catch(()=>({}));
     });
   }
 
-  /* ══════════════════════════════════════════════════════════
-     INIT
-  ══════════════════════════════════════════════════════════ */
-  function init() {
-    _waitRE(() => {
-      try {
-        // Auto-enable PerfMon via ?searchperf=1
-        try { if (new URLSearchParams(location.search).get('searchperf') === '1') PerfMon.enable(); } catch {}
+  // =========================================================
+  // INIT
+  // =========================================================
+  function initializeSearchEngine() {
+    try {
+      try { if (new URLSearchParams(location.search).get('searchperf') === '1') { PerfMonitor.enable(); console.info('[SearchUI] PerfMonitor enabled'); } } catch {}
 
-        loadData().then(data => {
-          S.apiData = data || {};
-          const initFn = window.SearchEngine?.init || (() => Promise.resolve());
-          return initFn(S.apiData, {
-            onIndexProgress: () => {},
-            onIndexReady   : () => { try { S.keywords = window.SearchEngine.generateAllKeywords?.() || []; } catch {} },
-          }).catch(e => console.error('[SearchUI] SearchEngine.init:', e));
-        }).then(() => {
-          try { S.keywords = window.SearchEngine?.generateAllKeywords?.() || []; } catch {}
+      KeyboardService.initKeyboardDetection();
 
-          FilterSvc.setupType('all');
-          FilterSvc.setupCat([], 'all');
-          UISvc.setupInput();
-          UISvc.setupFilters();
-          UISvc.updateLang();
-          UISvc.setupPopstate();
+      loadData().then(data => {
+        State.apiData = data || {};
+        if (!Array.isArray(State.apiData.type)) console.warn('[SearchUI] Data missing .type[]');
+        const initFn = window.SearchEngine?.init || (() => Promise.resolve());
+        return initFn(State.apiData, {
+          onIndexProgress: (pct, count) => PerfMonitor.onIndexProgress(pct, count),
+          onIndexReady   : ()           => PerfMonitor.onIndexReady(),
+        }).catch(e => console.error('SearchEngine.init failed', e));
+      }).then(() => {
+        try { State.allKeywordsCache = window.SearchEngine?.generateAllKeywords?.() || []; } catch { State.allKeywordsCache = []; }
 
-          // Show placeholder
-          const rc = D.id(CFG.IDS.results);
-          if (rc) rc.innerHTML = `<div class="search-result-here">${D.esc(Lang.t('here'))}</div>`;
+        FilterService.setupTypeFilter('all');
+        UIService.setupFilters();
+        UIService.setupAutoSearchInput();
+        FilterService.setupCategoryFilter([], 'all');
+        document.body.style.marginBottom = '';
 
-          // Restore from URL
-          const init = Url.parse();
-          if (init.q) {
-            try {
-              S.suppressPush = true;
-              const inp = D.id(CFG.IDS.input);
-              if (inp) inp.value = init.q;
-              S.type     = init.type;
-              S.category = init.cat;
-              FilterSvc.setupType(init.type);
-              SearchSvc.doSearch(null, true);
-              try { history.replaceState(init, '', Url.build(init)); } catch {}
-              S.lastCommitted = { q: init.q||'', type: init.type||'all', cat: init.cat||'all' };
-            } finally { S.suppressPush = false; }
-          } else {
-            try { history.replaceState({ q:'', type:'all', cat:'all' }, '', location.pathname); } catch {}
-            S.lastCommitted = { q:'', type:'all', cat:'all' };
+        const sr = DOMService.get(CONFIG.DOM.searchResultsId);
+        if (sr) sr.innerHTML = `<div class="search-result-here" style="text-align:center;color:#969ca8;font-size:1.07em;margin-top:30px;">${LanguageService.t('search_result_here')}</div>`;
+        UIService.updateUILanguage();
+
+        try {
+          const hs = history.state;
+          if (hs?.q !== undefined) State.lastCommittedSearchState = { q:hs.q||'', type:hs.type||'all', category:hs.category||'all' };
+          else {
+            const arr = StorageService.getHistory();
+            if (arr.length) { const l = arr[arr.length-1]; State.lastCommittedSearchState = { q:l.q||'', type:l.type||'all', category:l.category||'all' }; }
+            else State.lastCommittedSearchState = null;
           }
+        } catch { State.lastCommittedSearchState = null; }
 
-          S._initialized = true;
-        }).catch(e => console.error('[SearchUI] init failed:', e));
+        const init = URLService.readStateFromURL();
+        if (init?.q) {
+          try {
+            State.suppressHistoryPush = true;
+            const inp = DOMService.get(CONFIG.DOM.searchInputId);
+            if (inp) inp.value = init.q;
+            State.selectedType     = init.type     || 'all';
+            State.selectedCategory = init.category || 'all';
+            FilterService.setupTypeFilter(State.selectedType);
+            SearchService.doSearch(null, true);
+            try { history.replaceState({ q:init.q, type:State.selectedType, category:State.selectedCategory }, '', URLService.buildUrlForState(init)); } catch {}
+            State.lastCommittedSearchState = { q:init.q||'', type:State.selectedType||'all', category:State.selectedCategory||'all' };
+          } finally { State.suppressHistoryPush = false; }
+        } else {
+          try { history.replaceState({ q:'', type:'all', category:'all' }, '', location.pathname); } catch {}
+          State.lastCommittedSearchState = { q:'', type:'all', category:'all' };
+        }
+      }).catch(e => { console.error('[SearchUI] init failed', e); });
 
-      } catch (e) { console.error('[SearchUI] init:', e); }
-    });
+      // Form submit
+      const form = DOMService.get(CONFIG.DOM.searchFormId);
+      if (form) { Handlers.formSubmit = e => { e.preventDefault(); SearchService.doSearch(); UIService.closeKB(); }; DOMService.on(form, 'submit', Handlers.formSubmit); }
+
+      // Standalone keydown
+      const inp = DOMService.get(CONFIG.DOM.searchInputId);
+      if (inp) { DOMService.on(inp, 'keydown', e => { if (e.key==='Enter') { e.preventDefault(); SearchService.doSearch(); UIService.closeKB(); } }); }
+
+      // Popstate
+      Handlers.popstate = e => {
+        try {
+          const s  = e.state || {};
+          const isOv = s[State._overlayStateMarker];
+          if (isOv && State.overlayOpen) { OverlayService.close('popstate'); return; }
+          if (!isOv && State.overlayOpen) {
+            if (State.preOverlayState) {
+              const i = DOMService.get(CONFIG.DOM.searchInputId);
+              if (i) i.value = State.preOverlayState.q || '';
+              State.selectedType     = State.preOverlayState.type     || 'all';
+              State.selectedCategory = State.preOverlayState.category || 'all';
+            }
+            OverlayService.close('popstate');
+            return;
+          }
+          const st = (e.state && typeof e.state==='object' && !isOv) ? e.state : URLService.readStateFromURL();
+          if (st?.q !== undefined) _restoreUIState(st);
+        } catch {}
+      };
+      DOMService.on(window, 'popstate', Handlers.popstate);
+      State._handlersAttached = true;
+    } catch (e) { console.error('initializeSearchEngine failed', e); }
   }
 
-  /* ══════════════════════════════════════════════════════════
-     DESTROY
-  ══════════════════════════════════════════════════════════ */
+  function _restoreUIState(st) {
+    try {
+      State.suppressHistoryPush = true;
+      const inp = DOMService.get(CONFIG.DOM.searchInputId);
+      if (inp) inp.value = st.q || '';
+      State.selectedType     = st.type     || 'all';
+      State.selectedCategory = st.category || 'all';
+      FilterService.setupTypeFilter(State.selectedType);
+      SearchService.doSearch(null, true);
+    } finally { State.suppressHistoryPush = false; }
+  }
+
+  // =========================================================
+  // DESTROY
+  // =========================================================
   function destroy() {
     try {
-      ResultVList.destroy();
-      Overlay.close('manual');
-      S._timeouts.forEach(t => { try { clearTimeout(t); } catch {} });
-      S._timeouts.clear();
-      S.apiData = null; S.keywords = []; S.results = [];
-      S._initialized = false;
+      OverlayService.close('manual');
+      RenderingService.disconnectRenderObserver();
+      KeyboardAutoToggleService.disableAutoToggle();
+      try {
+        DOMService.off(window, 'resize', Handlers.resize);
+        DOMService.off(window, 'popstate', Handlers.popstate);
+        DOMService.off(DOMService.get(CONFIG.DOM.searchFormId), 'submit', Handlers.formSubmit);
+        const inp = DOMService.get(CONFIG.DOM.searchInputId);
+        if (inp) {
+          if (Handlers.inputInput)   inp.removeEventListener('input',   Handlers.inputInput);
+          if (Handlers.inputKeydown) inp.removeEventListener('keydown', Handlers.inputKeydown);
+          if (Handlers.inputFocus)   inp.removeEventListener('focus',   Handlers.inputFocus);
+          if (Handlers.inputClick)   inp.removeEventListener('click',   Handlers.inputClick);
+        }
+        if (Handlers.documentKeydownOverlay) DOMService.off(document, 'keydown', Handlers.documentKeydownOverlay);
+      } catch {}
+      State._timeouts.forEach(t => { try { clearTimeout(t); clearInterval(t); } catch {} });
+      State._timeouts.clear();
+      try {
+        DOMService.remove(DOMService.get(CONFIG.DOM.suggestionContainerId));
+        DOMService.remove(DOMService.get(CONFIG.DOM.overlayBackdropId));
+        DOMService.remove(DOMService.get(CONFIG.DOM.overlayContainerId));
+        DOMService.remove(DOMService.get(CONFIG.DOM.sentinelId));
+      } catch {}
+      State.apiData = null; State.allKeywordsCache = []; State.currentResults = [];
+      State.currentFilteredResults = []; State.lastCommittedSearchState = null;
+      State._handlersAttached = false; State.keyboardAutoToggleEnabled = false;
       if (window.__searchUI) window.__searchUI._initialized = false;
     } catch {}
   }
 
-  /* ══════════════════════════════════════════════════════════
-     PUBLIC API
-  ══════════════════════════════════════════════════════════ */
+  // =========================================================
+  // PUBLIC API (identical to v3.0)
+  // =========================================================
   window.__searchUI = window.__searchUI || {};
   Object.assign(window.__searchUI, {
-    init, destroy,
-    perf       : PerfMon,
-    getState   : () => S,
-    getConfig  : () => CFG,
-    getServices: () => ({ Overlay, SugSvc, FilterSvc, SearchSvc, UISvc, ResultVList, Url, Notif, Lang }),
-    querySuggestions: q => window.SearchEngine?.querySuggestions?.(q, CFG.RENDER.sugMax) || [],
-    getIndexStats: () => ({
-      ready    : window.SearchEngine?.isIndexReady?.() || false,
-      building : window.SearchEngine?.isBuilding?.()   || false,
-      docCount : window.SearchEngine?.getDocCount?.()  || 0,
+    init    : initializeSearchEngine,
+    destroy,
+    getConfig   : () => CONFIG,
+    getState    : () => State,
+    getServices : () => ({
+      Language:LanguageService, DOM:DOMService, String:StringService,
+      Storage:StorageService, URL:URLService, Notification:NotificationService,
+      Rendering:RenderingService, Filter:FilterService, Suggestion:SuggestionService,
+      ReadyMode:ReadyModeService, Highlight:HighlightService, Overlay:OverlayService,
+      Search:SearchService, UI:UIService, Keyboard:KeyboardService,
+      GapBasedKeyboard:GapBasedKeyboardService, KeyboardAutoToggle:KeyboardAutoToggleService,
+      VirtualScroll: VListAdapter,
     }),
+    getLastCommittedSearchState : () => State.lastCommittedSearchState,
+    getSessionHistory           : () => StorageService.getHistory(),
+    querySuggestions            : q  => window.SearchEngine?.querySuggestions?.(q, CONFIG.RENDER.suggestionMax) || [],
+    isKeyboardOpen              : () => KeyboardService.isKeyboardOpen(),
+    enableKeyboardAutoToggle    : () => KeyboardAutoToggleService.enableAutoToggle(),
+    disableKeyboardAutoToggle   : () => KeyboardAutoToggleService.disableAutoToggle(),
+    resetKeyboardGap            : () => GapBasedKeyboardService.resetGap(),
+    isKeyboardGapExpired        : () => GapBasedKeyboardService.isGapExpired(),
+    isKeyboardScrollIdle        : () => GapBasedKeyboardService.isScrollIdle(),
     getVSStats: () => ({
-      active     : !!ResultVList._vlist,
-      visibleCount: ResultVList._vlist?.visibleCount || 0,
-      totalHeight : ResultVList._vlist?.totalHeight  || 0,
+      active      : VListAdapter.isActive,
+      visibleCount: VListAdapter.visibleCount,
+      totalHeight : VListAdapter.totalHeight,
     }),
-    _initialized: false,
+    perf: PerfMonitor,
+    getIndexStats: () => ({
+      ready   : window.SearchEngine?.isIndexReady?.() || false,
+      building: window.SearchEngine?.isBuilding?.()   || false,
+      docCount: window.SearchEngine?.getDocCount?.()  || 0,
+    }),
   });
 
-  window.__searchUI._initialized = false;
-
-  // Auto-init
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init, { once: true });
-  } else {
-    init();
-  }
+  window.__searchUI._initialized = true;
+  initializeSearchEngine();
 
   try { window.addEventListener('beforeunload', () => { try { destroy(); } catch {} }, { passive:true }); } catch {}
 
