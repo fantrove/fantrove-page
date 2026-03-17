@@ -1,0 +1,296 @@
+/* loading.css — v6
+ * ─────────────────────────────────────────────────────────
+ * v6 changes:
+ *  ① Spinner 68px (was 52px), font 16px/600 primary
+ *  ② .clp-spinner: will-change:transform ALWAYS
+ *     → permanent GPU compositor layer สำหรับ spinner
+ *     → หมุนต่อเนื่องแม้ main thread กำลัง render เยอะๆ
+ *  ③ .clp-spinner: isolation:isolate
+ *     → stacking context แยก ไม่ repaint พร้อม parent
+ *  ④ contain:strict บน overlay + contain:size style บน spinner
+ *     → browser skip layout recalc ของ siblings เมื่อ spinner animate
+ * ─────────────────────────────────────────────────────────
+ */
+
+@layer loading {
+
+/* ── Keyframes ─────────────────────────────────────────── */
+@keyframes _ld_spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes _ld_in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes _ld_out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+@keyframes _ld_notif_in {
+  from { opacity: 0; transform: translateY(-14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes _ld_notif_out {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-14px); }
+}
+
+/* ── CSS variable: nav offset ──────────────────────────── */
+:root {
+  --clp-top: 0px;
+}
+
+/* ════════════════════════════════════════════════════════
+   MAIN LOADING OVERLAY  #clp-overlay
+   ════════════════════════════════════════════════════════ */
+#clp-overlay {
+  position: fixed;
+  top: var(--clp-top);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  background: #ffffff;
+  z-index: 200;
+  /* contain:strict = own stacking context, no layout bleed */
+  contain: strict;
+}
+
+#clp-overlay[hidden] {
+  display: none !important;
+}
+
+#clp-overlay.entering {
+  will-change: opacity;
+  animation: _ld_in 0.14s ease-out forwards;
+}
+#clp-overlay.leaving {
+  will-change: opacity;
+  animation: _ld_out 0.18s ease-in forwards;
+  pointer-events: none;
+}
+
+/* ── Spinner ─────────────────────────────────────────────
+ *
+ * ② will-change:transform ALWAYS on spinner
+ *    → permanent GPU compositor layer
+ *    → arc animation ไม่ขึ้นกับ main thread เลย
+ *    justified: spinner แสดงตลอดเวลาที่ overlay visible
+ *    GPU layer cost = worthwhile เพราะ guarantee smooth spin
+ *
+ * ③ isolation:isolate → stacking context แยก
+ *    → repaint ของ overlay background ไม่ลาม spinner
+ *
+ * ④ contain:size style → browser ไม่ต้อง recalc layout
+ *    ของ spinner เมื่อ children (SVG circle) animate
+ * ─────────────────────────────────────────────────────── */
+#clp-overlay .clp-spinner {
+  width: 68px;
+  height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  /* ② GPU layer ถาวรสำหรับ spinner */
+  will-change: transform;
+  /* ③ stacking context แยก */
+  isolation: isolate;
+  /* ④ ไม่ recalc layout จาก content */
+  contain: size style;
+}
+
+#clp-overlay .clp-spinner svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  display: block;
+}
+
+/* Track: brand tint */
+#clp-overlay .clp-track {
+  stroke: #e8f5ef;
+  stroke-width: 3.5;
+  fill: none;
+}
+
+/* Arc: brand color
+ * transform-box:fill-box → หมุนรอบ cx,cy จริง
+ * will-change:transform บน circle → compositor arc เอง
+ * (parent spinner มี GPU layer แล้ว แต่ circle ก็ควรมีด้วย
+ *  เพื่อ guarantee animation ไม่ถูก block) */
+#clp-overlay .clp-arc {
+  stroke: #00CEB0;
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-dasharray: 88 132;
+  fill: none;
+  transform-box: fill-box;
+  transform-origin: center;
+  will-change: transform;
+  animation: _ld_spin 0.8s linear infinite;
+}
+
+/* ── Text block ────────────────────────────────────────── */
+#clp-overlay .clp-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  /* contain ป้องกัน text reflow กระทบ spinner */
+  contain: layout style;
+}
+
+/* Primary: ภาษา active — ใหญ่ขึ้น อ่านง่ายขึ้น */
+#clp-overlay .clp-msg {
+  font-size: 16px;
+  font-weight: 600;
+  color: #3c4043;
+  text-align: center;
+  line-height: 1.4;
+  min-width: 100px;
+  /* ป้องกัน layout shift จากภาษาที่ความยาวต่างกัน */
+  min-height: 1.4em;
+}
+
+/* Secondary: ภาษาสำรอง (en) */
+#clp-overlay .clp-sub {
+  font-size: 13px;
+  font-weight: 400;
+  color: #9aa0a6;
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* ซ่อนเมื่อว่าง */
+#clp-overlay .clp-sub:empty {
+  display: none;
+}
+
+/* ════════════════════════════════════════════════════════
+   LEGACY OVERLAYS — backward compat
+   ════════════════════════════════════════════════════════ */
+#content-loading-overlay,
+#instant-loading-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.96);
+  z-index: 15000;
+  opacity: 1;
+  transition: opacity 0.18s ease;
+  contain: strict;
+}
+
+#content-loading-overlay[hidden],
+#instant-loading-overlay[hidden],
+#content-loading-overlay.hidden,
+#instant-loading-overlay.hidden {
+  display: none !important;
+  opacity: 0;
+  pointer-events: none;
+}
+
+#content-loading-overlay .fg,
+#content-loading-overlay .svg-fg,
+#instant-loading-overlay .spinner-svg-fg {
+  transform-box: fill-box;
+  transform-origin: center;
+  will-change: transform;
+  animation: _ld_spin 0.9s linear infinite;
+}
+
+/* ════════════════════════════════════════════════════════
+   NOTIFICATION SYSTEM
+   ════════════════════════════════════════════════════════ */
+.notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  z-index: 10000;
+  opacity: 0;
+  animation: _ld_notif_in 0.22s ease-out forwards;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  max-width: 320px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.notification-success { background: #1e8e3e; color: #fff; }
+.notification-error   { background: #d93025; color: #fff; }
+.notification-warning { background: #f29900; color: #fff; }
+.notification-info    { background: #1a73e8; color: #fff; }
+.notification-loading { background: #5f6368; color: #fff; }
+
+.notification-icon {
+  font-size: 15px;
+  flex-shrink: 0;
+  line-height: 1.3;
+}
+
+.notification-message-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.notification-title   { font-size: 13px; font-weight: 600; line-height: 1.3; }
+.notification-content { font-size: 13px; opacity: 0.9; word-break: break-word; line-height: 1.4; }
+
+.notification-close {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 17px;
+  cursor: pointer;
+  padding: 0;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0.6;
+  margin-top: 1px;
+}
+.notification-close:hover { opacity: 1; }
+
+.notification-loading .notification-icon {
+  display: inline-block;
+  animation: _ld_spin 1s linear infinite;
+}
+
+.notification-slideout {
+  animation: _ld_notif_out 0.22s ease-in forwards;
+}
+
+/* ════════════════════════════════════════════════════════
+   REDUCED MOTION
+   ════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  #clp-overlay.entering,
+  #clp-overlay.leaving  { animation: none; will-change: auto; }
+  /* spinner: ลบ animation แต่คง will-change ไว้
+     เพราะ element ยังแสดงอยู่ แค่ไม่ animate */
+  #clp-overlay .clp-arc { animation: none; }
+
+  #content-loading-overlay .fg,
+  #content-loading-overlay .svg-fg,
+  #instant-loading-overlay .spinner-svg-fg { animation: none; }
+
+  .notification          { animation: none; opacity: 1; }
+  .notification-slideout { animation: none; opacity: 0; }
+  .notification-loading .notification-icon { animation: none; }
+}
+
+} /* end @layer loading */

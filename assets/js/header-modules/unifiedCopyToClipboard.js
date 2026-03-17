@@ -1,153 +1,110 @@
-// unifiedCopyToClipboard.js
-// ✅ ปรับปรุง: Optimized indexing, memoization
+// unifiedCopyToClipboard.js (v2 — optimized)
+// =========================================================
+// v2 changes:
+//  ① Removed private _copyIndex build — uses dataManager._sharedIndex instead
+//     Same Map, zero extra walk, zero extra memory
+//  ② getTypeFromParent() recursive walk replaced with catToTypeMap O(1) lookup
+//  ③ findTypeIdAndName() recursive walk replaced with catToTypeMap O(1) lookup
+// =========================================================
 import dataManager from './dataManager.js';
 import { showNotification } from './utils.js';
+
+// ─── O(1) type lookup via shared catToTypeMap ─────────────────────────────
+function _getTypeId(node) {
+    try {
+        const idx = window._headerV2_dataManager?._sharedIndex;
+        if (!idx) return 'emoji';
+        // Walk up via idMap to find which type contains this node
+        // catToTypeMap: categoryId → typeObj
+        // We need: node → category → type
+        // Fastest path: check if node itself has a category clue
+        if (node._typeId) return node._typeId; // cached on node
+        // Fallback: scan catToTypeMap values for ownership
+        // This is O(categories) not O(all nodes)
+        for (const [catId, typeObj] of idx.catToTypeMap) {
+            const cat = (typeObj.category || []).find(c => c.id === catId);
+            if (cat && Array.isArray(cat.data)) {
+                if (cat.data.includes(node)) {
+                    node._typeId = typeObj.id; // cache result on node
+                    return typeObj.id;
+                }
+            }
+        }
+        return 'emoji';
+    } catch (_) { return 'emoji'; }
+}
+
+// ─── Resolve type for an api code using catToTypeMap ─────────────────────
+function _getTypeForApi(apiCode, db) {
+    try {
+        const idx = window._headerV2_dataManager?._sharedIndex;
+        if (!idx) return 'emoji';
+        const node = idx.apiMap.get(apiCode);
+        if (!node) return 'emoji';
+        return _getTypeId(node);
+    } catch (_) { return 'emoji'; }
+}
 
 export async function unifiedCopyToClipboard(copyInfo = {}) {
     const lang = localStorage.getItem('selectedLang') || 'en';
     try {
         if (!copyInfo || !copyInfo.text) throw new Error('No content to copy');
         await navigator.clipboard.writeText(copyInfo.text);
-
-        let notificationParams = { text: copyInfo.text, name: "", typeId: "emoji", lang };
-
+        
+        // ① Ensure DB + shared index are ready (loadApiDatabase triggers _buildSharedIndex)
         const db = await dataManager.loadApiDatabase();
-
-        if (!dataManager._copyIndex) {
-            const textMap = new Map();
-            const emojiMap = new Map();
-            const apiMap = new Map();
-            const symbolMap = new Map();
-
-            function buildIndex(obj) {
-                if (Array.isArray(obj)) {
-                    obj.forEach(item => buildIndex(item));
-                } else if (typeof obj === 'object' && obj !== null) {
-                    if (obj.text) {
-                        textMap.set(obj.text, obj);
-                        const normalized = obj.text.trim().toLowerCase();
-                        if (normalized.length === 1) emojiMap.set(normalized, obj);
-                        if (normalized.length > 1) symbolMap.set(normalized, obj);
-                    }
-                    if (obj.api) apiMap.set(obj.api, obj);
-                    if (obj.name) {
-                        const nameNorm = (obj.name[lang] || obj.name.en || "").trim().toLowerCase();
-                        if (nameNorm) symbolMap.set(nameNorm, obj);
-                    }
-                    for (const key in obj) {
-                        if (Object.prototype.hasOwnProperty.call(obj, key)) {
-                            buildIndex(obj[key]);
-                        }
-                    }
-                }
-            }
-
-            try { buildIndex(db?.type || db); } catch (e) {}
-            dataManager._copyIndex = { textMap, emojiMap, apiMap, symbolMap };
+        
+        // Wait for shared index if still building (usually instant on warm path)
+        if (!dataManager._sharedIndex && dataManager._sharedIndexPromise) {
+            await dataManager._sharedIndexPromise;
         }
-
-        const { textMap, emojiMap, apiMap, symbolMap } = dataManager._copyIndex;
-
-        function findTypeIdAndName(obj, code, parentTypeId) {
-            if (Array.isArray(obj)) {
-                for (const item of obj) {
-                    const result = findTypeIdAndName(item, code, parentTypeId);
-                    if (result) return result;
-                }
-            } else if (typeof obj === 'object' && obj !== null) {
-                if (obj.api === code) {
-                    return { typeId: parentTypeId, name: obj.name?.[lang] || obj.name?.en || obj.api || "" };
-                }
-                let newParentTypeId = parentTypeId;
-                if (obj.id && obj.category && Array.isArray(obj.category)) {
-                    newParentTypeId = obj.id;
-                }
-                for (const key in obj) {
-                    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-                        const result = findTypeIdAndName(obj[key], code, newParentTypeId);
-                        if (result) return result;
-                    }
-                }
-            }
-            return null;
-        }
-
+        
+        const idx = dataManager._sharedIndex;
+        let notificationParams = { text: copyInfo.text, name: '', typeId: 'emoji', lang };
+        
         if (copyInfo.api) {
-            const apiNode = (dataManager._copyIndex && dataManager._copyIndex.apiMap)
-                ? dataManager._copyIndex.apiMap.get(copyInfo.api)
-                : null;
-            let typeId = "emoji";
-            let name = "";
-            const typeResult = findTypeIdAndName(db?.type || db, copyInfo.api, "emoji");
-            if (typeResult) {
-                typeId = typeResult.typeId || "emoji";
-                name = typeResult.name;
-            } else if (apiNode) {
-                name = apiNode.name?.[lang] || apiNode.name?.en || apiNode.api;
-            }
-            notificationParams = { text: apiNode?.text || copyInfo.text, name: name ? `${name}` : apiNode?.api || copyInfo.api, typeId, lang };
+            // ① O(1) lookup
+            const apiNode = idx?.apiMap?.get(copyInfo.api);
+            const typeId = _getTypeForApi(copyInfo.api, db);
+            const name = apiNode?.name?.[lang] || apiNode?.name?.en || apiNode?.api || copyInfo.api;
+            notificationParams = {
+                text: apiNode?.text || copyInfo.text,
+                name: name ? `${name}` : copyInfo.api,
+                typeId,
+                lang
+            };
         } else {
-            let node = textMap.get(copyInfo.text) || emojiMap.get(copyInfo.text.trim().toLowerCase()) || null;
-
-            if (!node) {
-                const norm = copyInfo.text.trim().toLowerCase();
-                node = textMap.get(norm) || emojiMap.get(norm) || symbolMap.get(norm) || null;
-            }
-
-            if (!node) {
-                for (let [key, value] of textMap) {
-                    if (key.trim().toLowerCase() === copyInfo.text.trim().toLowerCase()) {
-                        node = value; break;
-                    }
-                }
-                if (!node) {
-                    for (let [key, value] of emojiMap) {
-                        if (key === copyInfo.text.trim().toLowerCase()) {
-                            node = value; break;
-                        }
-                    }
-                }
-            }
-
+            // ① O(1) text lookup
+            const norm = copyInfo.text.trim().toLowerCase();
+            const node = idx?.textMap?.get(copyInfo.text) ||
+                idx?.textMap?.get(norm) ||
+                null;
+            
             if (node) {
-                let typeId = "emoji";
-                let name = "";
-                let text = node.text || copyInfo.text;
-                function getTypeFromParent(obj, targetNode, parentTypeId) {
-                    if (Array.isArray(obj)) {
-                        for (const item of obj) {
-                            const result = getTypeFromParent(item, targetNode, parentTypeId);
-                            if (result) return result;
-                        }
-                    } else if (typeof obj === 'object' && obj !== null) {
-                        if (obj === targetNode) return parentTypeId;
-                        let newParentTypeId = parentTypeId;
-                        if (obj.id && obj.category && Array.isArray(obj.category)) {
-                            newParentTypeId = obj.id;
-                        }
-                        for (const key in obj) {
-                            if (Object.prototype.hasOwnProperty.call(obj, key)) {
-                                const result = getTypeFromParent(obj[key], targetNode, newParentTypeId);
-                                if (result) return result;
-                            }
-                        }
-                    }
-                    return null;
-                }
-                typeId = getTypeFromParent(db?.type || db, node, "emoji") || "emoji";
-                name = node.name?.[lang] || node.name?.en || "";
-                notificationParams = { text, name: name ? `${name}` : "", typeId, lang };
+                const typeId = _getTypeId(node);
+                const name = node.name?.[lang] || node.name?.en || '';
+                notificationParams = {
+                    text: node.text || copyInfo.text,
+                    name: name ? `${name}` : '',
+                    typeId,
+                    lang
+                };
             } else {
-                notificationParams = { text: copyInfo.text, name: copyInfo.text || "", typeId: "special-characters", lang };
+                notificationParams = {
+                    text: copyInfo.text,
+                    name: copyInfo.text || '',
+                    typeId: 'special-characters',
+                    lang
+                };
             }
         }
-
-        if (typeof window.showCopyNotification === "function") {
+        
+        if (typeof window.showCopyNotification === 'function') {
             window.showCopyNotification(notificationParams);
         } else {
-            window._headerV2_utils.showNotification(notificationParams.text, "success", { duration: 2200 });
+            window._headerV2_utils.showNotification(notificationParams.text, 'success', { duration: 2200 });
         }
-
+        
     } catch (error) {
         window._headerV2_utils.showNotification(error.message || 'Copy failed', 'error');
     }

@@ -1,12 +1,15 @@
-// dataManager.js (อัพเดท)
+// dataManager.js (v2.1 — fixed)
 // =========================================================
-// ปรับให้ใช้ ConDataService สำหรับ con-data database
-// ยังคงทำงานกับ buttons.min.json เหมือนเดิม (backward compatible 100%)
+// v2.1 fix:
+//  loadApiDatabase() ตอนนี้ await _buildSharedIndex() ให้เสร็จก่อน return
+//  แทนที่จะ fire-and-forget (.catch(()=>{}))
+//  ทำให้ทุก caller ที่ await loadApiDatabase() ได้รับ _sharedIndex พร้อมใช้เสมอ
 //
-// การเปลี่ยนแปลง:
-//  - con-data requests  → ผ่าน ConDataService
-//  - buttons.min.json   → ยังคงอ่านเองเหมือนเดิม
-//  - Public API         → ไม่เปลี่ยนแปลงเลย (backward compatible)
+// v2 changes (ยังคงอยู่):
+//  ① Single shared index (_sharedIndex) — DB walked once
+//  ② _buildSharedIndex yields every 500 items (scheduler.yield)
+//  ③ _performFetch cache key = url only
+//  ④ _fetchQueue lazy sort
 // =========================================================
 import { _headerV2_utils } from './utils.js';
 import ConDataService from '../con-data-service/con-data-service.js';
@@ -17,20 +20,14 @@ const dataManager = {
         RETRY_DELAY: 300,
         MAX_RETRIES: 1,
         CACHE_DURATION: 2 * 60 * 60 * 1000,
-        // Buttons config ยังคงอยู่ที่นี่ (dataManager ยังรับผิดชอบอยู่)
         BUTTONS_CONFIG_PATH: '/assets/json/buttons.min.json',
-        // con-data paths (คงไว้เพื่อ backward compat แต่ไม่ได้ใช้โดยตรงแล้ว)
         API_DATABASE_PATH: '/assets/db/con-data/',
         TOP_INDEX_FILE: 'index.json',
         KNOWN_TOP_CATEGORIES: ['emoji', 'symbol', 'unicode']
     },
 
-    // =========================================================
-    // CACHE (สำหรับ buttons + misc)
-    // con-data cache ถูกจัดการโดย ConDataService แทนแล้ว
-    // =========================================================
     cache: new Map(),
-    apiCache: null,            // backward compat — จะชี้ไปที่ assembled db
+    apiCache: null,
     apiCacheTimestamp: 0,
     _categoryIndexes: new Map(),
     _subcategoryCache: new Map(),
@@ -41,18 +38,23 @@ const dataManager = {
     _topLevelIndex: null,
     _topLevelIndexPromise: null,
 
+    // Shared index — single source of truth for all consumers
+    _sharedIndex: null,
+    _sharedIndexPromise: null,
+
     _fetchQueue: [],
     _fetchInProgress: new Map(),
     _queueProcessing: false,
+    _queueDirty: false,
 
     // =========================================================
-    // FETCH QUEUE (ยังคงไว้สำหรับ buttons.min.json และไฟล์อื่นๆ)
+    // FETCH QUEUE
     // =========================================================
     async _enqueueFetch(url, options = {}, priority = 5) {
         return new Promise((resolve, reject) => {
             const task = { url, options, priority: typeof priority === 'number' ? priority : 5, resolve, reject, timestamp: Date.now() };
             this._fetchQueue.push(task);
-            this._fetchQueue.sort((a, b) => a.priority - b.priority || a.timestamp - b.timestamp);
+            this._queueDirty = true;
             this._processFetchQueue();
         });
     },
@@ -65,6 +67,10 @@ const dataManager = {
                 await new Promise(r => setTimeout(r, 50));
                 continue;
             }
+            if (this._queueDirty) {
+                this._fetchQueue.sort((a, b) => a.priority - b.priority || a.timestamp - b.timestamp);
+                this._queueDirty = false;
+            }
             const task = this._fetchQueue.shift();
             const taskId = `${task.url}-${task.priority}`;
             this._fetchInProgress.set(taskId, true);
@@ -76,7 +82,7 @@ const dataManager = {
     },
 
     // =========================================================
-    // CACHE HELPERS (ยังคงไว้สำหรับ buttons + misc)
+    // CACHE HELPERS
     // =========================================================
     getCached(key) {
         const cached = this.cache.get(key);
@@ -100,15 +106,16 @@ const dataManager = {
         this._subcategoryCache.clear();
         this._topLevelIndex = null;
         this._topLevelIndexPromise = null;
-        // invalidate con-data service cache ด้วย
+        this._sharedIndex = null;
+        this._sharedIndexPromise = null;
         try { ConDataService.invalidateCache(); } catch (e) {}
     },
 
     // =========================================================
-    // FETCH (ใช้สำหรับ buttons.min.json และไฟล์ที่ไม่ใช่ con-data)
+    // FETCH
     // =========================================================
     async _performFetch(url, options = {}) {
-        const key = `${url}-${JSON.stringify(options)}`;
+        const key = url;
         const cached = this.getCached(key);
         if (cached) return cached;
         try {
@@ -138,8 +145,6 @@ const dataManager = {
     },
 
     async fetchWithRetry(url, options = {}, priority = 5) {
-        // ถ้า URL อยู่ใน con-data path → ให้ ConDataService จัดการ
-        // (ใช้สำหรับ jsonFile references ที่มาจาก buttons config)
         if (url && url.includes('/con-data/')) {
             return this._fetchViaService(url, options);
         }
@@ -148,19 +153,15 @@ const dataManager = {
 
     // =========================================================
     // CON-DATA VIA SERVICE
-    // แทนที่ของเดิมที่ fetch ตรงๆ
     // =========================================================
     async _fetchViaService(url, options = {}) {
-        // ดึง assembled db จาก service และ filter ตาม URL
         const assembled = await ConDataService.getAssembled();
-        // พยายาม parse url เพื่อหา typeId/categoryId
         const match = url.match(/\/con-data\/([^/]+)\/([^/]+)\.min\.json/);
         if (match) {
             const [, typeId, catId] = match;
             const items = await ConDataService.getItems(typeId, catId).catch(() => null);
             if (items) return items;
         }
-        // fallback: ดึงทั้งหมด
         return assembled;
     },
 
@@ -174,9 +175,7 @@ const dataManager = {
             const doWarmup = async () => {
                 try {
                     if (!window._headerV2_utils.isOnline()) return resolve();
-                    // warmup buttons config
                     await this._enqueueFetch(this.constants.BUTTONS_CONFIG_PATH, { cache: 'force-cache' }, 9).catch(() => {});
-                    // warmup con-data service ด้วย (โหลด assembled db)
                     ConDataService.getAssembled().catch(() => {});
                 } finally {
                     resolve();
@@ -190,25 +189,29 @@ const dataManager = {
 
     // =========================================================
     // loadApiDatabase()
-    // PUBLIC — backward compatible
-    // คืนค่า assembled db ในรูปแบบเดิม { type: [...] }
+    // FIX v2.1: await _buildSharedIndex() ก่อน return เสมอ
     // =========================================================
     async loadApiDatabase() {
         this._warmup();
-        // ถ้า cache ยังใช้ได้
+
         if (this.apiCache && Date.now() - this.apiCacheTimestamp < this.constants.CACHE_DURATION) {
-            if (!this._jsonDbIndexReady) {
-                ConDataService.getAssembled().then(db => this._buildJsonDbIndex(db)).catch(() => {});
+            // Cache hit — ถ้า index ยังไม่พร้อม await ให้เสร็จก่อน
+            if (!this._sharedIndex) {
+                if (this._sharedIndexPromise) {
+                    await this._sharedIndexPromise;
+                } else {
+                    await this._buildSharedIndex(this.apiCache);
+                }
             }
             return this.apiCache;
         }
+
         try {
-            // ใช้ ConDataService แทน _assembleFullDatabase เดิม
             const db = await ConDataService.getAssembled();
             this.apiCache = db;
             this.apiCacheTimestamp = Date.now();
-            // สร้าง index สำหรับ backward compat (fetchApiContent, fetchCategoryGroup)
-            this._buildJsonDbIndex(db).catch(() => {});
+            // FIX: await ให้ index build เสร็จก่อน return
+            await this._buildSharedIndex(db);
             return db;
         } catch (e) {
             if (this.apiCache) return this.apiCache;
@@ -217,11 +220,84 @@ const dataManager = {
     },
 
     // =========================================================
+    // _buildSharedIndex — single walk, yields every 500 items
+    // =========================================================
+    async _buildSharedIndex(db) {
+        if (this._sharedIndex) return this._sharedIndex;
+        if (this._sharedIndexPromise) return this._sharedIndexPromise;
+
+        this._sharedIndexPromise = (async () => {
+            const apiMap       = new Map();
+            const idMap        = new Map();
+            const textMap      = new Map();
+            const catToTypeMap = new Map();
+
+            const stack = [{ obj: db?.type || db, typeId: null }];
+            let count = 0;
+
+            while (stack.length) {
+                const { obj, typeId } = stack.pop();
+                if (!obj || typeof obj !== 'object') continue;
+
+                if (Array.isArray(obj)) {
+                    for (let i = obj.length - 1; i >= 0; i--)
+                        stack.push({ obj: obj[i], typeId });
+                    continue;
+                }
+
+                if (obj.api)  apiMap.set(obj.api, obj);
+                if (obj.id)   idMap.set(obj.id, obj);
+                if (obj.text) textMap.set(obj.text, obj);
+
+                const currentTypeId = (obj.id && obj.category) ? obj.id : typeId;
+
+                if (obj.category && Array.isArray(obj.category) && obj.id) {
+                    for (const cat of obj.category) catToTypeMap.set(cat.id, obj);
+                }
+
+                for (const k in obj) {
+                    if (Object.prototype.hasOwnProperty.call(obj, k)) {
+                        const v = obj[k];
+                        if (v && typeof v === 'object')
+                            stack.push({ obj: v, typeId: currentTypeId });
+                    }
+                }
+
+                if (++count % 500 === 0) {
+                    await new Promise(r => {
+                        if (typeof scheduler !== 'undefined' && scheduler.yield)
+                            scheduler.yield().then(r);
+                        else
+                            setTimeout(r, 0);
+                    });
+                }
+            }
+
+            const idx = { apiMap, idMap, textMap, catToTypeMap };
+            this._sharedIndex = idx;
+
+            if (window._headerV2_dataManager)
+                window._headerV2_dataManager._sharedIndex = idx;
+
+            // Backward compat
+            this._jsonDbIndex = { apiMap, idMap, textMap, catToTypeMap };
+            this._jsonDbIndexReady = true;
+            this._jsonDbIndexPromise = null;
+
+            return idx;
+        })();
+
+        return this._sharedIndexPromise;
+    },
+
+    // =========================================================
     // fetchApiContent()
-    // PUBLIC — backward compatible
     // =========================================================
     async fetchApiContent(apiCode) {
-        // ใช้ ConDataService โดยตรง
+        if (this._sharedIndex?.apiMap) {
+            const item = this._sharedIndex.apiMap.get(apiCode);
+            if (item) return item.text || item;
+        }
         const item = await ConDataService.findByApi(apiCode);
         if (item) return item.text || item;
         throw new Error(`API code not found: ${apiCode}`);
@@ -229,14 +305,12 @@ const dataManager = {
 
     // =========================================================
     // fetchCategoryGroup()
-    // PUBLIC — backward compatible
     // =========================================================
     async fetchCategoryGroup(categoryId) {
         const idRaw = categoryId.replace(/_category$/, '');
         const db = await ConDataService.getAssembled();
         const currentLang = localStorage.getItem('selectedLang') || 'en';
 
-        // ค้นหา category ในทุก type
         let foundCat = null, typeObj = null;
         for (const t of (db.type || [])) {
             const cat = (t.category || []).find(c => c.id === idRaw);
@@ -256,71 +330,20 @@ const dataManager = {
         return { id: foundCat.id, name: foundCat.name, data: foundCat.data || [], header };
     },
 
-    // =========================================================
-    // _buildJsonDbIndex()
-    // สร้าง index สำหรับ backward compat
-    // (contentManager และ unifiedCopyToClipboard ยังใช้อยู่)
-    // =========================================================
     async _buildJsonDbIndex(db) {
-        if (this._jsonDbIndexReady && this._jsonDbIndex) return this._jsonDbIndex;
-        if (this._jsonDbIndexPromise) return this._jsonDbIndexPromise;
-
-        this._jsonDbIndexPromise = new Promise((resolve) => {
-            const apiMap     = new Map();
-            const idMap      = new Map();
-            const textMap    = new Map();
-            const catToTypeMap = new Map();
-
-            function walk(obj) {
-                if (Array.isArray(obj)) { obj.forEach(item => walk(item)); return; }
-                if (typeof obj !== 'object' || !obj) return;
-                if (obj.api)  apiMap.set(obj.api, obj);
-                if (obj.id)   idMap.set(obj.id, obj);
-                if (obj.text) textMap.set(obj.text, obj);
-                if (obj.category && Array.isArray(obj.category) && obj.id) {
-                    for (const cat of obj.category) catToTypeMap.set(cat.id, obj);
-                }
-                for (const key in obj) {
-                    if (Object.prototype.hasOwnProperty.call(obj, key)) walk(obj[key]);
-                }
-            }
-            try { walk(db?.type || db); } catch {}
-            this._jsonDbIndex = { apiMap, idMap, textMap, catToTypeMap };
-            this._jsonDbIndexReady = true;
-            resolve(this._jsonDbIndex);
-        });
-
-        await this._jsonDbIndexPromise;
-        this._jsonDbIndexPromise = null;
-        return this._jsonDbIndex;
+        return this._buildSharedIndex(db);
     },
 
-    // =========================================================
-    // prefetchTopCategories()
-    // PUBLIC — backward compatible
-    // =========================================================
     async prefetchTopCategories(priority = 8) {
-        // delegate ไปยัง service (warmup ทำให้แล้ว)
         ConDataService.getAssembled().catch(() => {});
     },
 
-    // =========================================================
-    // _loadTopLevelIndex / _loadCategoryIndex / _loadSubcategoryFile
-    // backward compat stubs — ยังคงมีฟังก์ชันให้เรียกได้
-    // แต่ delegate ไปที่ service แทน
-    // =========================================================
     async _loadTopLevelIndex() {
         if (this._topLevelIndex) return this._topLevelIndex;
         if (this._topLevelIndexPromise) return this._topLevelIndexPromise;
         this._topLevelIndexPromise = ConDataService.getAssembled()
             .then(db => {
-                const idx = {
-                    categories: (db.type || []).map(t => ({
-                        id: t.id,
-                        name: t.name,
-                        file: `${t.id}.min.json`
-                    }))
-                };
+                const idx = { categories: (db.type || []).map(t => ({ id: t.id, name: t.name, file: `${t.id}.min.json` })) };
                 this._topLevelIndex = idx;
                 return idx;
             })
@@ -334,11 +357,7 @@ const dataManager = {
         if (!db) { this._categoryIndexes.set(category, null); return null; }
         const typeObj = (db.type || []).find(t => t.id === category);
         if (!typeObj) { this._categoryIndexes.set(category, null); return null; }
-        const idx = {
-            id: typeObj.id,
-            name: typeObj.name,
-            categories: (typeObj.category || []).map(c => ({ id: c.id, name: c.name }))
-        };
+        const idx = { id: typeObj.id, name: typeObj.name, categories: (typeObj.category || []).map(c => ({ id: c.id, name: c.name })) };
         this._categoryIndexes.set(category, idx);
         return idx;
     },

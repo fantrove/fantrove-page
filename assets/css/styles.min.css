@@ -1,22 +1,13 @@
-/* styles.min.css — Research-backed CSS optimization
+/* styles.min.css — v2 optimized
  *
- * Key decisions:
- *  • content-visibility is at .cm-group level (JS-injected wrapper)
- *    NOT on .card / .button-content directly.
- *    Reason: nesting content-visibility creates stacking issues.
- *    The wrapper handles "skip rendering"; inner elements handle paint isolation.
- *
- *  • contain:layout style paint on .card → each card is a paint island
- *    Hover/active on one card never repaints siblings.
- *
- *  • contain:layout style on .button-content → layout isolated
- *    Adding/removing buttons doesn't reflow sibling buttons.
- *
- *  • No global will-change → managed per-element only during animation
- *    (contentManager removes it via animationend)
- *
- *  • No * { transition:none } or * { animation:none } overrides
- *    Only our scoped classes in prefers-reduced-motion block
+ * v2 changes vs v1:
+ *  • touch-action: pan-x on horizontal scroll containers
+ *    → browser skips hit-test and handles scroll natively (no JS touch handler cost)
+ *  • contain: layout style on #sub-nav
+ *    → sticky subnav repaints never cascade to main content
+ *  • will-change removed everywhere except .navbar-toggle (fixed, compositor layer justified)
+ *  • overscroll-behavior-x already on nav containers — verified kept
+ *  • @layer base/components pattern avoided (compat) — kept flat specificity
  */
 
 :root {
@@ -52,6 +43,8 @@ main {
   -webkit-tap-highlight-color: transparent;
   user-select: none;
   transition: color var(--t-fast);
+  /* touch-action: manipulation removes 300ms tap delay on mobile */
+  touch-action: manipulation;
 }
 .button-sub:active,
 .button-sub.active { color: var(--c-teal); }
@@ -68,8 +61,13 @@ main {
   border: 0.5px solid rgba(0,0,0,0.1);
 }
 
+/* ========== SUB-NAV ========== */
+/* Contain repaints to subnav — sticky scroll never triggers main content repaint */
+#sub-nav {
+  contain: layout style;
+}
+
 /* ========== CONTENT BUTTON ========== */
-/* :where() = specificity 0 → easy external override without !important */
 :where(.button-content) {
   box-sizing: border-box;
   width: auto !important;
@@ -91,10 +89,8 @@ main {
   cursor: pointer;
   text-align: center;
   -webkit-tap-highlight-color: transparent;
-  /* border-color only: no transform, no opacity, no box-shadow
-     → change triggers compositor-only operation, zero layout cost */
+  touch-action: manipulation;
   transition: border-color 0.12s;
-  /* Layout isolation: adding/removing one button doesn't reflow others */
   contain: layout style;
 }
 :where(.button-content:hover)  { border-color: var(--c-teal-strong); }
@@ -113,13 +109,8 @@ main {
   background: #fff;
   border: 1px solid var(--c-teal-border);
   transition: border-color 0.12s;
-  /* contain:paint → each card is its own paint layer.
-     Hover on card A will NOT repaint card B, C, D...
-     This is the CSS equivalent of iOS layer isolation. */
   contain: layout style paint;
-  /* NOTE: content-visibility is NOT set here.
-     It lives on the parent .cm-group wrapper (injected by contentManager).
-     Nesting content-visibility causes rendering order bugs in Chromium. */
+  touch-action: manipulation;
 }
 :where(.card:hover)  { border-color: var(--c-teal-strong); }
 :where(.card:active) { opacity: 0.85; }
@@ -129,7 +120,6 @@ main {
   height: auto;
   object-fit: cover;
   image-rendering: auto;
-  /* Prevent image from blocking card's contain:paint boundary */
   display: block;
 }
 
@@ -137,7 +127,6 @@ main {
   padding: 12px;
   display: flex;
   flex-direction: column;
-  /* Clamp to prevent overflow breaking contain:paint boundary */
   overflow: hidden;
 }
 
@@ -147,7 +136,6 @@ main {
   color: var(--c-heading);
   margin-bottom: 4px;
   line-height: 1.5;
-  /* line-clamp: prevents tall titles from expanding card beyond intrinsic estimate */
   overflow: hidden;
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -173,6 +161,8 @@ main {
   scrollbar-width: none;
   -ms-overflow-style: none;
   overscroll-behavior-x: contain;
+  /* pan-x: browser owns horizontal scroll natively — no JS touch cost */
+  touch-action: pan-x;
   -webkit-overflow-scrolling: touch;
 }
 #main-buttons-container { gap: 8px; padding: 4px; }
@@ -204,13 +194,12 @@ main {
   justify-content: center !important;
   align-items: center !important;
   border-radius: 25px;
-  /* Layout isolation for the whole section */
   contain: layout style;
 }
 .button-content-container { gap: 5px !important; }
 .card-content-container   { gap: 6px !important; }
 
-/* ========== FADE-IN (backward compat for other modules) ========== */
+/* ========== FADE-IN ========== */
 .hdr-fade {
   animation: _hdr_fadeIn 0.15s ease-out both;
 }
@@ -240,7 +229,6 @@ main {
 .img-d1 img { width: 100%; border-radius: 25px; }
 
 /* ========== REDUCED MOTION ========== */
-/* Scoped only to our classes — never touches external animations */
 @media (prefers-reduced-motion: reduce) {
   .hdr-fade                   { animation: none; }
   .cm-in, .cm-in.cm-done      { animation: none; will-change: auto; }

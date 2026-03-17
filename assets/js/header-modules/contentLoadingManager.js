@@ -1,131 +1,251 @@
-// contentLoadingManager.js — featherweight
-//
-// Changes vs previous:
-//  - Styles are scoped to #content-loading-overlay only
-//  - No will-change injection
-//  - No global animation rule injection
-//  - Faster fade (0.15s)
-//  - Spinner uses prefixed @keyframes _hdr_spin (no collision)
+// contentLoadingManager.js — v5
+// ─────────────────────────────────────────────────────────
+// v5 changes:
+//  ① i18n system: CLP_MESSAGES map แยกออกมาชัดเจน
+//     เพิ่มภาษาใหม่ = เพิ่ม key เดียว ไม่ต้องแก้ logic
+//  ② dual-language display:
+//     .clp-msg  = ภาษา active (primary, เข้ม)
+//     .clp-sub  = ภาษา en เป็น subtitle (จาง) ถ้าไม่ใช่ en
+//     → ผู้ใช้เห็นทั้ง native + English เสมอ
+//  ③ DOM structure ใหม่: .clp-text wrapper
+//  ④ platform optimizations จาก v4 ยังคงอยู่ครบ
+// ─────────────────────────────────────────────────────────
 
-const ID      = 'content-loading-overlay';
-const FADE_MS = 150;
-const Z       = 15000;
+// ════════════════════════════════════════════════════════
+// I18N — เพิ่มภาษาใหม่ที่นี่เพียงที่เดียว
+// ─────────────────────────────────────────────────────────
+// Key    = BCP 47 language tag (ตรงกับ localStorage 'selectedLang')
+// loading = ข้อความหลักขณะโหลด
+// ════════════════════════════════════════════════════════
+const CLP_MESSAGES = {
+  en: {
+    loading: 'Loading...',
+  },
+  th: {
+    loading: 'กำลังโหลด...',
+  },
+  // เพิ่มภาษาใหม่ได้ที่นี่ เช่น:
+  // ja: { loading: '読み込み中...' },
+  // zh: { loading: '加载中...' },
+  // ko: { loading: '로딩 중...' },
+  // id: { loading: 'Memuat...' },
+  // ms: { loading: 'Memuatkan...' },
+  // vi: { loading: 'Đang tải...' },
+};
+
+// Fallback chain: lang → 'en' → first key in map
+function _getMsg(lang, key = 'loading') {
+  return (
+    CLP_MESSAGES[lang]?.[key] ||
+    CLP_MESSAGES['en']?.[key] ||
+    CLP_MESSAGES[Object.keys(CLP_MESSAGES)[0]]?.[key] ||
+    'Loading...'
+  );
+}
+
+// ════════════════════════════════════════════════════════
+const OVERLAY_ID  = 'clp-overlay';
+const FADE_OUT_MS = 200;
+const LANG_KEY    = 'selectedLang';
 
 const contentLoadingManager = {
   LOADING_CONTAINER_ID: 'content-loading',
+
   _el: null,
   _shown: false,
-  _timer: null,
+  _rafId: null,
+  _leaveTimer: null,
+  _ro: null,
 
-  _injectStyles() {
-    if (document.getElementById('_hdr_ov_css')) return;
-    const s = document.createElement('style');
-    s.id = '_hdr_ov_css';
-    // All rules prefixed with #content-loading-overlay — zero global bleed
-    s.textContent = `
-#${ID}{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
-background:rgba(255,255,255,.96);z-index:${Z};opacity:1;transition:opacity ${FADE_MS}ms ease;
-contain:strict;}
-#${ID}.h{opacity:0;pointer-events:none;}
-#${ID} .w{display:flex;flex-direction:column;align-items:center;}
-#${ID} .s{width:48px;height:48px;margin-bottom:10px;}
-#${ID} .s svg{width:100%;height:100%;}
-#${ID} .bg{stroke:#eee;stroke-width:5;fill:none;}
-#${ID} .fg{stroke:#4285f4;stroke-width:5;stroke-linecap:round;stroke-dasharray:90 125;fill:none;
-animation:_hdr_spin .9s linear infinite;}
-@keyframes _hdr_spin{to{transform:rotate(360deg)}}
-#${ID} .m{font-size:.88rem;color:#2196f3;font-weight:500;}`;
-    document.head.appendChild(s);
-  },
-
-  _build(msg) {
-    let el = document.getElementById(ID);
-    if (el) { this._setMsg(el, msg); return el; }
-
-    el = document.createElement('div');
-    el.id = ID;
-    el.setAttribute('role', 'status');
-    el.setAttribute('aria-live', 'polite');
-    el.classList.add('h'); // start hidden
-    el.innerHTML =
-      `<div class="w"><div class="s" aria-hidden="true"><svg viewBox="0 0 48 48">` +
-      `<circle class="bg" cx="24" cy="24" r="20"/><circle class="fg" cx="24" cy="24" r="20"/>` +
-      `</svg></div><div class="m">${msg || this._msg()}</div></div>`;
-    document.body.appendChild(el);
-    el.offsetHeight; // force style recalc before removing 'h'
-    return el;
-  },
-
-  _setMsg(el, msg) {
-    const m = el.querySelector('.m');
-    if (m) m.textContent = msg || this._msg();
-  },
-
-  _msg() {
-    return localStorage.getItem('selectedLang') === 'th' ? 'กำลังโหลด...' : 'Loading...';
-  },
-
-  show(opts = '') {
-    try {
-      const msg = typeof opts === 'string' ? opts : (opts?.message || '');
-      const z   = typeof opts?.zIndex === 'number' ? opts.zIndex : Z;
-      this._injectStyles();
-      const el = this._build(msg);
-      el.style.zIndex = String(z);
-      this._setMsg(el, msg);
-      el.classList.remove('h');
+  // ── Init ──────────────────────────────────────────────
+  init() {
+    if (!document.getElementById(OVERLAY_ID)) {
+      const el = document.createElement('div');
+      el.id = OVERLAY_ID;
+      el.setAttribute('role', 'status');
+      el.setAttribute('aria-live', 'polite');
+      el.setAttribute('aria-atomic', 'true');
+      el.hidden = true;
+      el.innerHTML = this._html();
+      document.body.appendChild(el);
       this._el = el;
-      this._shown = true;
-      this._clearTimer();
-      if (opts?.autoHideAfterMs > 0)
-        this._timer = setTimeout(() => { try { this.hide(); } catch(_){} }, opts.autoHideAfterMs);
-      // Proxy globals
-      try {
-        window.__instantLoadingOverlayShown  = true;
-        window.__removeInstantLoadingOverlay = () => this.hide();
-        window.showInstantLoadingOverlay     = (o) => this.show(o);
-        window.removeInstantLoadingOverlay   = () => this.hide();
-      } catch(_) {}
-      return el;
-    } catch(e) { console.error('clm.show', e); return null; }
-  },
+    } else {
+      this._el = document.getElementById(OVERLAY_ID);
+    }
 
-  hide() {
+    this._updateTopVar();
+
+    // ResizeObserver: อัพเดท --clp-top เมื่อ nav เปลี่ยนขนาด
+    if (typeof ResizeObserver !== 'undefined' && !this._ro) {
+      this._ro = new ResizeObserver(() => this._updateTopVar());
+      const header = document.querySelector('header');
+      const subnav = document.getElementById('sub-nav');
+      if (header) this._ro.observe(header);
+      if (subnav) this._ro.observe(subnav);
+    }
+
     try {
-      const el = this._el || document.getElementById(ID);
-      this._clearTimer();
-      this._shown = false;
-      this._el = null;
-      try { window.__instantLoadingOverlayShown = false; } catch(_) {}
-      if (!el) return;
-      el.classList.add('h');
-      setTimeout(() => {
-        try { const e=document.getElementById(ID); if(e?.parentNode) e.parentNode.removeChild(e); }
-        catch(_) {}
-      }, FADE_MS + 20);
-    } catch(e) { console.error('clm.hide', e); this._shown = false; this._el = null; }
+      window.showInstantLoadingOverlay   = (o) => this.show(o);
+      window.removeInstantLoadingOverlay = ()  => this.hide();
+    } catch(_) {}
   },
 
-  updateMessage(msg) {
-    const el = this._el || document.getElementById(ID);
-    if (el) this._setMsg(el, msg);
+  _html() {
+    return (
+      `<div class="clp-spinner" aria-hidden="true">` +
+        `<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">` +
+          `<circle class="clp-track" cx="26" cy="26" r="22"/>` +
+          `<circle class="clp-arc"   cx="26" cy="26" r="22"/>` +
+        `</svg>` +
+      `</div>` +
+      `<div class="clp-text">` +
+        `<div class="clp-msg"></div>` +
+        `<div class="clp-sub"></div>` +
+      `</div>`
+    );
   },
 
-  isShown() {
-    try { const e=document.getElementById(ID); return !!e && !e.classList.contains('h'); }
-    catch(_) { return false; }
+  // ── CSS var ───────────────────────────────────────────
+  _updateTopVar() {
+    try {
+      const header = document.querySelector('header');
+      const subnav = document.getElementById('sub-nav');
+      let top = 0;
+      if (header) top += header.offsetHeight;
+      if (subnav && subnav.style.display !== 'none' && subnav.offsetHeight > 0)
+        top += subnav.offsetHeight;
+      document.documentElement.style.setProperty('--clp-top', `${top}px`);
+    } catch(_) {}
   },
 
-  _clearTimer() {
-    if (this._timer) { clearTimeout(this._timer); this._timer = null; }
-  }
+  _getEl() {
+    if (this._el) return this._el;
+    this.init();
+    return this._el;
+  },
+
+  // ── i18n text update ──────────────────────────────────
+  // primary  = ภาษา active
+  // subtitle = ภาษา en (แสดงเมื่อ active ไม่ใช่ en)
+  _setTexts(customMsg) {
+    const el = this._getEl();
+    if (!el) return;
+
+    const msgEl = el.querySelector('.clp-msg');
+    const subEl = el.querySelector('.clp-sub');
+    if (!msgEl) return;
+
+    if (customMsg) {
+      // ถ้ามี custom message ใช้เลย ไม่ต้อง i18n
+      msgEl.textContent = customMsg;
+      if (subEl) subEl.textContent = '';
+      return;
+    }
+
+    const lang = localStorage.getItem(LANG_KEY) || 'en';
+    const primary = _getMsg(lang, 'loading');
+    msgEl.textContent = primary;
+
+    // subtitle: แสดง en ถ้าภาษา active ไม่ใช่ en
+    if (subEl) {
+      subEl.textContent = (lang !== 'en') ? _getMsg('en', 'loading') : '';
+    }
+
+    // aria-label อ่านทั้งคู่สำหรับ screen reader
+    const ariaText = (lang !== 'en')
+      ? `${primary} / ${_getMsg('en', 'loading')}`
+      : primary;
+    el.setAttribute('aria-label', ariaText);
+  },
+
+  // ── Show ──────────────────────────────────────────────
+  show(opts = '') {
+    const msg = typeof opts === 'string' ? opts : (opts?.message || '');
+    const el  = this._getEl();
+    if (!el) return;
+
+    // ยกเลิก leaving
+    if (this._leaveTimer) { clearTimeout(this._leaveTimer); this._leaveTimer = null; }
+    if (this._rafId) { cancelAnimationFrame(this._rafId); this._rafId = null; }
+
+    this._updateTopVar();
+    this._setTexts(msg || null);
+
+    el.classList.remove('leaving');
+    el.style.willChange = '';
+    el.hidden = false;
+
+    this._rafId = requestAnimationFrame(() => {
+      this._rafId = null;
+      el.classList.add('entering');
+      const onEnd = () => {
+        el.classList.remove('entering');
+        el.style.willChange = '';
+        el.removeEventListener('animationend', onEnd);
+      };
+      el.addEventListener('animationend', onEnd, { once: true, passive: true });
+    });
+
+    this._shown = true;
+    try {
+      window.__instantLoadingOverlayShown  = true;
+      window.__removeInstantLoadingOverlay = () => this.hide();
+    } catch(_) {}
+
+    if (opts?.autoHideAfterMs > 0)
+      setTimeout(() => this.hide(), opts.autoHideAfterMs);
+  },
+
+  // Aliases
+  showInContent(opts) { return this.show(opts); },
+
+  // ── Hide ──────────────────────────────────────────────
+  hide() {
+    const el = this._getEl();
+    if (!el || !this._shown) return;
+
+    this._shown = false;
+    try { window.__instantLoadingOverlayShown = false; } catch(_) {}
+
+    if (this._rafId) { cancelAnimationFrame(this._rafId); this._rafId = null; }
+
+    el.classList.remove('entering');
+    el.style.willChange = 'opacity';
+    el.classList.add('leaving');
+
+    this._leaveTimer = setTimeout(() => {
+      this._leaveTimer = null;
+      el.classList.remove('leaving');
+      el.style.willChange = '';
+      el.hidden = true;
+    }, FADE_OUT_MS + 10);
+  },
+
+  hideFromContent() { return this.hide(); },
+
+  // ── Utilities ─────────────────────────────────────────
+  updateMessage(msg) { this._setTexts(msg || null); },
+  isShown() { return this._shown; },
+
+  // อ่าน i18n map สาธารณะ (สำหรับ module อื่นที่ต้องการ)
+  getMessages() { return CLP_MESSAGES; },
 };
 
+// Auto-init
+function _autoInit() { contentLoadingManager.init(); }
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _autoInit, { once: true });
+} else {
+  _autoInit();
+}
+
+// Expose
 try {
   if (typeof window !== 'undefined') {
-    if (!window._headerV2_contentLoadingManager) window._headerV2_contentLoadingManager = contentLoadingManager;
-    window.showInstantLoadingOverlay  = (o) => contentLoadingManager.show(o);
-    window.removeInstantLoadingOverlay = () => contentLoadingManager.hide();
+    if (!window._headerV2_contentLoadingManager)
+      window._headerV2_contentLoadingManager = contentLoadingManager;
+    window.showInstantLoadingOverlay   = (o) => contentLoadingManager.show(o);
+    window.removeInstantLoadingOverlay = ()  => contentLoadingManager.hide();
   }
 } catch(_) {}
 

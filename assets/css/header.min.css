@@ -1,3 +1,12 @@
+/* header.min.css — v3
+ *
+ * v3 changes:
+ *  - ลบ #content-loading-overlay block ออกทั้งหมด
+ *    → ย้ายไปอยู่ใน /assets/css/loading.css แล้ว
+ *  - ไฟล์นี้มีแค่ header + nav + logo + navbar-toggle
+ *  - touch-action, contain จาก v2 ยังคงอยู่
+ */
+
 /* ---------- FONT ---------- */
 @font-face {
   font-family: 'FoglihtenNo07calt';
@@ -5,13 +14,11 @@
   font-display: swap;
 }
 
-/* ---------- VARIABLES (header-scoped) ---------- */
+/* ---------- VARIABLES ---------- */
 :root {
   --text-primary:     #00CEB0;
   --text-secondary:   #52638a;
   --nav-btn-radius:   25px;
-  --spinner-primary:  #4285f4;
-  --spinner-secondary:#eee;
 }
 
 /* ---------- GLOBAL RESET (minimal) ---------- */
@@ -26,7 +33,7 @@ header {
   width: 100%;
   background: #fff;
   margin-bottom: 30px;
-  contain: layout style;   /* isolate: no layout bleed to rest of page */
+  contain: layout style;
 }
 
 .logo {
@@ -34,7 +41,6 @@ header {
   font-size: 26px;
   padding: 20px 0 0;
   color: var(--text-primary);
-  /* no text-shadow — GPU expensive on low-end */
   white-space: nowrap;
   display: flex;
   align-items: center;
@@ -61,12 +67,13 @@ nav ul {
   scrollbar-width: none;
   border-bottom: 0.8px solid rgba(19,180,127,0.3);
   overscroll-behavior-x: contain;
+  touch-action: pan-x;
   -webkit-overflow-scrolling: touch;
+  contain: layout style;
 }
 nav ul::-webkit-scrollbar { display: none; }
 nav ul li { flex: none; }
 
-/* Buttons: zero transition cost */
 nav ul li button {
   position: relative;
   display: flex;
@@ -82,7 +89,7 @@ nav ul li button {
   white-space: nowrap;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-  /* intentionally NO transition — instant = no jank */
+  touch-action: manipulation;
 }
 
 nav ul li button:active { background: rgba(0,0,0,0.04); }
@@ -112,11 +119,13 @@ nav ul li button.active::after {
   gap: 4px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
   position: fixed;
   left: 16px;
   top: 25.3px;
   padding: 5px;
   z-index: 10008;
+  will-change: transform;
 }
 
 /* ---------- ERROR ---------- */
@@ -131,46 +140,6 @@ nav ul li button.active::after {
   z-index: 1000;
 }
 
-/* ---------- LOADING OVERLAY (fully scoped to #content-loading-overlay) ---------- */
-#content-loading-overlay {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255,255,255,0.96);
-  z-index: 15000;
-  transition: opacity 0.18s ease;
-  /* contain=strict keeps overlay in its own stacking layer cheaply */
-  contain: strict;
-}
-#content-loading-overlay.hidden { opacity: 0; pointer-events: none; }
-
-#content-loading-overlay .cls {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-#content-loading-overlay .svg-wrap { width: 48px; height: 48px; margin-bottom: 10px; }
-#content-loading-overlay .svg-wrap svg { width: 100%; height: 100%; }
-#content-loading-overlay .svg-bg { stroke: var(--spinner-secondary); stroke-width: 5; fill: none; }
-#content-loading-overlay .svg-fg {
-  stroke: var(--spinner-primary);
-  stroke-width: 5;
-  stroke-linecap: round;
-  stroke-dasharray: 90 125;
-  fill: none;
-  animation: _hdr_spin 0.9s linear infinite;
-}
-/* Prefixed keyframe — never collides with external keyframes */
-@keyframes _hdr_spin { to { transform: rotate(360deg); } }
-
-#content-loading-overlay .msg {
-  font-size: 0.88rem;
-  color: #2196f3;
-  font-weight: 500;
-}
-
 /* ---------- RESPONSIVE ---------- */
 @media (min-width: 600px)  { nav { margin-top: 5px; } }
 @media (min-width: 1024px) { nav { margin-top: 5px; } }
@@ -180,11 +149,5 @@ nav ul li button.active::after {
   .navbar-toggle { left: 12px; top: 20px; }
 }
 @media print {
-  header, nav, .navbar-toggle, #content-loading-overlay { display: none !important; }
+  header, nav, .navbar-toggle { display: none !important; }
 }
-
-/*
-  ✅ NO global * { animation: ... } or * { transition: none } rules here.
-  ✅ All rules are scoped to header, nav, .logo, #content-loading-overlay.
-  ✅ External systems (bottom nav, modals, third-party widgets) are unaffected.
-*/
