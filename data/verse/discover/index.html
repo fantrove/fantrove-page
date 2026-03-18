@@ -18,8 +18,8 @@
   <!--
     CSS LOADING ORDER (3 ไฟล์แยกชัดเจน):
     1. loading.css   — overlay + notification (preload: ต้องพร้อมก่อน JS แสดง overlay)
-    2. header.min.css — header + nav เท่านั้น
-    3. styles.min.css — main content styles
+    2. header.css — header + nav เท่านั้น
+    3. styles.css — main content styles
 
     loading.css ใช้ preload + onload pattern เหมือนกัน
     แต่ priority สูงกว่าเพราะ overlay แสดงทันทีที่ JS โหลด
@@ -29,17 +29,17 @@
   <link rel="preload" href="/assets/css/loading.css" as="style" onload="this.rel='stylesheet'" />
   <noscript><link rel="stylesheet" href="/assets/css/loading.css" /></noscript>
 
-  <!-- header.min.css -->
-  <link rel="preload" href="/assets/css/header.min.css" as="style" onload="this.rel='stylesheet'" />
-  <noscript><link rel="stylesheet" href="/assets/css/header.min.css" /></noscript>
+  <!-- header.css -->
+  <link rel="preload" href="/assets/css/header.css" as="style" onload="this.rel='stylesheet'" />
+  <noscript><link rel="stylesheet" href="/assets/css/header.css" /></noscript>
 
-  <!-- styles.min.css -->
-  <link rel="preload" href="/assets/css/styles.min.css" as="style" onload="this.rel='stylesheet'" />
-  <noscript><link rel="stylesheet" href="/assets/css/styles.min.css" /></noscript>
+  <!-- styles.css -->
+  <link rel="preload" href="/assets/css/styles.css" as="style" onload="this.rel='stylesheet'" />
+  <noscript><link rel="stylesheet" href="/assets/css/styles.css" /></noscript>
 
   <!-- Non-critical CSS -->
-  <link rel="stylesheet" href="/assets/css/bg.min.css" media="print" onload="this.media='all'" />
-  <noscript><link rel="stylesheet" href="/assets/css/bg.min.css" /></noscript>
+  <link rel="stylesheet" href="/assets/css/bg.css" media="print" onload="this.media='all'" />
+  <noscript><link rel="stylesheet" href="/assets/css/bg.css" /></noscript>
 
   <!-- Font -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Sofia&display=swap" media="print" onload="this.media='all'" />
@@ -128,18 +128,18 @@
   <!-- Language system: sync -->
   <script src="/assets/js/lang-proxy.js"></script>
   <script src="/assets/js/lang-sync.js"></script>
-  <script src="/assets/js/language.min.js"></script>
+  <script src="/assets/js/language.js"></script>
 
   <!-- Render engine -->
   <script src="/assets/js/render-engine.js"></script>
-  <script defer src="/assets/js/intelligent-system.min.js"></script>
+  <script defer src="/assets/js/intelligent-system.js"></script>
 
   <!-- Deferred JS -->
-  <script defer src="/assets/js/version.min.js"></script>
+  <script defer src="/assets/js/version.js"></script>
   <script defer src="/assets/js/header.js"></script>
-  <script defer src="/assets/js/modern-navigation.min.js"></script>
-  <script defer src="/assets/js/back-to-top.min.js"></script>
-  <script defer src="/assets/js/copyNotification.min.js"></script>
+  <script defer src="/assets/js/modern-navigation.js"></script>
+  <script defer src="/assets/js/back-to-top.js"></script>
+  <script defer src="/assets/js/copyNotification.js"></script>
   <script defer src="/assets/js/lang-links.js"></script>
   <script defer src="/assets/js/fantrove-console-bridge.js"></script>
 </body>

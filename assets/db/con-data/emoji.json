@@ -11,7 +11,7 @@
         "th": "หน้ายิ้มและอารมณ์",
         "en": "Smileys & Emotion"
       },
-      "file": "/assets/db/con-data/emoji/smileys_emotion.min.json"
+      "file": "/assets/db/con-data/emoji/smileys_emotion.json"
     },
     {
       "id": "people_body",
@@ -19,7 +19,7 @@
         "th": "บุคคลและร่างกาย",
         "en": "People & Body"
       },
-      "file": "/assets/db/con-data/emoji/people_body.min.json"
+      "file": "/assets/db/con-data/emoji/people_body.json"
     },
     {
       "id": "animal_nature",
@@ -27,7 +27,7 @@
         "th": "สัตว์และธรรมชาติ",
         "en": "Animals & Nature"
       },
-      "file": "/assets/db/con-data/emoji/animal_nature.min.json"
+      "file": "/assets/db/con-data/emoji/animal_nature.json"
     },
     {
       "id": "food_drink",
@@ -35,7 +35,7 @@
         "th": "อาหารและเครื่องดื่ม",
         "en": "Food & Drink"
       },
-      "file": "/assets/db/con-data/emoji/food_drink.min.json"
+      "file": "/assets/db/con-data/emoji/food_drink.json"
     },
     {
       "id": "travel_places",
@@ -43,7 +43,7 @@
         "th": "การเดินทางและสถานที่",
         "en": "Travel & Places"
       },
-      "file": "/assets/db/con-data/emoji/travel_places.min.json"
+      "file": "/assets/db/con-data/emoji/travel_places.json"
     },
     {
       "id": "activities",
@@ -51,7 +51,7 @@
         "th": "กิจกรรม",
         "en": "Activities"
       },
-      "file": "/assets/db/con-data/emoji/activities.min.json"
+      "file": "/assets/db/con-data/emoji/activities.json"
     },
     {
       "id": "objects",
@@ -59,7 +59,7 @@
         "th": "สิ่งของ",
         "en": "Objects"
       },
-      "file": "/assets/db/con-data/emoji/objects.min.json"
+      "file": "/assets/db/con-data/emoji/objects.json"
     },
     {
       "id": "symbols",
@@ -67,7 +67,7 @@
         "th": "สัญลักษณ์",
         "en": "Symbols"
       },
-      "file": "/assets/db/con-data/emoji/symbols.min.json"
+      "file": "/assets/db/con-data/emoji/symbols.json"
     },
     {
       "id": "flags",
@@ -75,7 +75,7 @@
         "th": "ธง",
         "en": "Flags"
       },
-      "file": "/assets/db/con-data/emoji/flags.min.json"
+      "file": "/assets/db/con-data/emoji/flags.json"
     }
   ]
 }

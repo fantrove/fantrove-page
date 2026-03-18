@@ -40,14 +40,14 @@
   ></script>
 
   <!-- Preload critical CSS with fallback -->
-  <link rel="preload" href="/assets/css/bg.min.css" as="style" onload="this.rel='stylesheet'" />
-  <noscript><link rel="stylesheet" href="/assets/css/bg.min.css" /></noscript>
+  <link rel="preload" href="/assets/css/bg.css" as="style" onload="this.rel='stylesheet'" />
+  <noscript><link rel="stylesheet" href="/assets/css/bg.css" /></noscript>
 
-  <link rel="preload" href="/assets/css/roadmap.min.css" as="style" onload="this.rel='stylesheet'" />
-  <noscript><link rel="stylesheet" href="/assets/css/roadmap.min.css" /></noscript>
+  <link rel="preload" href="/assets/css/roadmap.css" as="style" onload="this.rel='stylesheet'" />
+  <noscript><link rel="stylesheet" href="/assets/css/roadmap.css" /></noscript>
 
   <!-- Other CSS -->
-  <link rel="stylesheet" href="/assets/css/top-navigation-bar.min.css" media="all" />
+  <link rel="stylesheet" href="/assets/css/top-navigation-bar.css" media="all" />
 
   <!-- Google Fonts -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Sofia" />
@@ -153,14 +153,14 @@
     </section>
   </div>
 
-  <!-- โหลด language.min.js ก่อน ไม่ defer/async -->
-  <script src="/assets/js/language.min.js"></script>
+  <!-- โหลด language.js ก่อน ไม่ defer/async -->
+  <script src="/assets/js/language.js"></script>
 
   <!-- โหลดไฟล์ JS อื่นๆ แบบ defer -->
-  <script defer src="/assets/js/roadmap.min.js"></script>
-  <script defer src="/assets/js/back-button.min.js"></script>
+  <script defer src="/assets/js/roadmap.js"></script>
+  <script defer src="/assets/js/back-button.js"></script>
   <script defer src="/assets/js/footer-template.js"></script>
-  <script defer src="/assets/js/version.min.js"></script>
+  <script defer src="/assets/js/version.js"></script>
 
 <!-- Inline Script สำหรับโหลดเวอร์ชันแบบทำงานทันที ไม่ต้องรอ DOMContentLoaded -->
 <script>
@@ -175,7 +175,7 @@
       else doPaint();
     }
     // เริ่มดึงข้อมูลทันทีที่ script ถูก parse
-    fetch("/assets/json/version.min.json")
+    fetch("/assets/json/version.json")
       .then(r => r.json())
       .then(data => paintVersion(data.version))
       .catch(e => console.error("Error loading version:", e));

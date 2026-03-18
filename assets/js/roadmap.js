@@ -154,7 +154,7 @@
     });
     // 2. Fire async network update, update if different
     let controller = new AbortController();
-    let fetchPromise = fetch("/assets/json/current-stage.min.json", {signal: controller.signal})
+    let fetchPromise = fetch("/assets/json/current-stage.json", {signal: controller.signal})
       .then(r => r.ok ? r.json() : Promise.reject(r.statusText));
     let cached = await getFeatureDataCache();
     let freshData = null;

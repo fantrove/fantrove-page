@@ -1,7 +1,7 @@
 // ระบบตรวจสอบเวอร์ชันอัตโนมัติ (พร้อมปุ่ม toggle สมัยใหม่ รองรับ SPA, IndexedDB/localStorage, สวิตช์ทำงานทันที)
 
 (function () {
-  const VERSION_URL = "/assets/json/version.min.json";
+  const VERSION_URL = "/assets/json/version.json";
   const CHECK_INTERVAL = 10000;
   const STORAGE_KEY = "siteVersionContent";
   const UPDATE_DISABLE_KEY = "auto-update-disabled";

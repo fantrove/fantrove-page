@@ -4,7 +4,7 @@
  * - Defensive wrappers around storage, broadcast, fetch, and DOM operations
  * - Throttled sync and active-state updates to reduce races on fast hosts (Cloudflare Pages)
  *
- * Replacement for previous modern-navigation.min.js. Place in assets/js/.
+ * Replacement for previous modern-navigation.js. Place in assets/js/.
  */
  /* --- [BEGIN: Wave Effect Loader] --- */
 (function() {
@@ -86,7 +86,7 @@
 
   // --- NavConfigLoader ---
   class NavConfigLoader {
-    constructor(configPath) { this.configPath = configPath || '/assets/json/template/template.min.json'; this._cached = null; this._loading = false; }
+    constructor(configPath) { this.configPath = configPath || '/assets/json/template/template.json'; this._cached = null; this._loading = false; }
     async load(force = false) {
       if (this._cached && !force) return this._cached;
       if (this._loading) {
@@ -289,8 +289,8 @@
   // --- NavController: orchestrates behavior, ensures stored-lang authoritative ---
   class NavController {
     constructor(opts = {}) {
-      this.cssPath = opts.cssPath || '/assets/css/modern-styles.min.css';
-      this.configPath = opts.configPath || '/assets/json/template/template.min.json';
+      this.cssPath = opts.cssPath || '/assets/css/modern-styles.css';
+      this.configPath = opts.configPath || '/assets/json/template/template.json';
       this.defaultLang = opts.defaultLang || 'en';
       this.supportedLangCodes = opts.supportedLangCodes || ['th','en','ja','ko','zh','fr','de','es','it','pt','ru','ar','vi','id','ms','tl'];
       this.eventBus = new EventBus();
@@ -938,8 +938,8 @@
 
   // --- Bootstrap single instance and expose global API ---
   const controller = new NavController({
-    cssPath: '/assets/css/modern-styles.min.css',
-    configPath: '/assets/json/template/template.min.json',
+    cssPath: '/assets/css/modern-styles.css',
+    configPath: '/assets/json/template/template.json',
     defaultLang: 'en',
     supportedLangCodes: ['th','en','ja','ko','zh','fr','de','es','it','pt','ru','ar','vi','id','ms','tl'],
     defaultButtonClass: 'default-button'

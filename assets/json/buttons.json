@@ -9,38 +9,38 @@
         {
          "en_label": "page 1",
          "th_label": "หน้าที่ 1",
-         "jsonFile": "/assets/json/content/symbols-page1.min.json",
+         "jsonFile": "/assets/json/content/symbols-page1.json",
          "isDefault": true,
          "url": "1"
         },
         {
          "en_label": "page 2",
          "th_label": "หน้า 2",
-         "jsonFile": "/assets/json/content/symbols-page2.min.json",
+         "jsonFile": "/assets/json/content/symbols-page2.json",
          "url": "2"
         },
         {
           "en_label": "page 3",
           "th_label": "หน้า 3",
-          "jsonFile": "/assets/json/content/symbols-page2.min.json",
+          "jsonFile": "/assets/json/content/symbols-page2.json",
           "url": "3"
         },
 {
   "en_label": "page 4",
   "th_label": "หน้า 4",
-  "jsonFile": "/assets/json/content/symbols-page2.min.json",
+  "jsonFile": "/assets/json/content/symbols-page2.json",
   "url": "4"
 },
 {
   "en_label": "page 5",
   "th_label": "หน้า 5",
-  "jsonFile": "/assets/json/content/symbols-page2.min.json",
+  "jsonFile": "/assets/json/content/symbols-page2.json",
   "url": "5"
 },
 {
   "en_label": "page 6",
   "th_label": "หน้า 6",
-  "jsonFile": "/assets/json/content/symbols-page2.min.json",
+  "jsonFile": "/assets/json/content/symbols-page2.json",
   "url": "6"
 }
       ]
@@ -48,7 +48,7 @@
     {
       "en_label": "Emojis",
       "th_label": "อีโมจิ",
-      "jsonFile": "/assets/json/content/emojis-page1.min.json",
+      "jsonFile": "/assets/json/content/emojis-page1.json",
       "url": "emojis"
     }
   ]

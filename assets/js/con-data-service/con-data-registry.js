@@ -28,7 +28,7 @@ const ConDataRegistry = {
       }
     },
     
-    // Layer 2: {type}.min.json
+    // Layer 2: {type}.json
     typeIndex: {
       required: ['id', 'name', 'categories'],
       categories: {
@@ -37,7 +37,7 @@ const ConDataRegistry = {
       }
     },
     
-    // Layer 3: {subcategory}.min.json
+    // Layer 3: {subcategory}.json
     dataFile: {
       required: ['id', 'name', 'data'],
       data: {
@@ -72,10 +72,10 @@ const ConDataRegistry = {
       return ConDataRegistry.TOP_INDEX;
     },
     typeIndex(typeId) {
-      return `${ConDataRegistry.BASE_PATH}/${typeId}.min.json`;
+      return `${ConDataRegistry.BASE_PATH}/${typeId}.json`;
     },
     subcategoryData(typeId, subcategoryId) {
-      return `${ConDataRegistry.BASE_PATH}/${typeId}/${subcategoryId}.min.json`;
+      return `${ConDataRegistry.BASE_PATH}/${typeId}/${subcategoryId}.json`;
     }
   },
   

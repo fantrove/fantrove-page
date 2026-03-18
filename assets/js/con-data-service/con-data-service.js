@@ -208,7 +208,7 @@ const _loader = {
       try {
         topIndex = await this.loadTopIndex();
       } catch (e) {
-        topIndex = { categories: ConDataRegistry.knownTypes.map(id => ({ id, name: { en: id }, file: `${id}.min.json` })) };
+        topIndex = { categories: ConDataRegistry.knownTypes.map(id => ({ id, name: { en: id }, file: `${id}.json` })) };
       }
 
       const typeResults = await Promise.all(

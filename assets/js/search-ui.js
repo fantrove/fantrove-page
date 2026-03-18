@@ -69,7 +69,7 @@
       urlSearchMaxRetries     : 25,
     },
     STORAGE : { historyKey: 'searchHistory_v1', langKey: 'selectedLang' },
-    DB      : { path: '/assets/db/db.min.json' },
+    DB      : { path: '/assets/db/db.json' },
     LANG    : { default: 'en', autoDetect: true },
     TEXTS: {
       th: {

@@ -3,12 +3,12 @@
     {
       "id": "emoji",
       "name": { "th": "อีโมจิ", "en": "Emoji" },
-      "file": "emoji.min.json"
+      "file": "emoji.json"
     },
     {
       "id": "symbol",
       "name": { "th": "อักษรพิเศษ", "en": "Symbol" },
-      "file": "symbol.min.json"
+      "file": "symbol.json"
     }
   ]
 }

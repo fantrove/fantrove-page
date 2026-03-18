@@ -3,7 +3,7 @@
 const CACHE_STATIC = 'hf-static-v1';
 const CACHE_JSON = 'hf-json-v1';
 const STATIC_FILES = [
-  '/', '/assets/js/header.min.js', '/assets/css/header.min.css', '/assets/css/styles.min.css'
+  '/', '/assets/js/header.js', '/assets/css/header.css', '/assets/css/styles.css'
   // add other static assets you want to pre-cache
 ];
 

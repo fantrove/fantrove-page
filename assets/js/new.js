@@ -9,7 +9,7 @@
   else doPaint();
  }
  // เริ่มดึงข้อมูลทันทีที่ script ถูก parse
- fetch("/assets/json/version.min.json")
+ fetch("/assets/json/version.json")
   .then(r => r.json())
   .then(data => paintVersion(data.version))
   .catch(e => console.error("Error loading version:", e));

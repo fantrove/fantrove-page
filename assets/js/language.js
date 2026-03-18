@@ -478,7 +478,7 @@ class LanguageManager {
         const preload = document.createElement('link');
         preload.rel = "preload";
         preload.as = "fetch";
-        preload.href = "/assets/lang/options/db.min.json";
+        preload.href = "/assets/lang/options/db.json";
         preload.crossOrigin = "anonymous";
         document.head.appendChild(preload);
       }
@@ -493,7 +493,7 @@ class LanguageManager {
       if (!config && sessionConfig) config = JSON.parse(sessionConfig);
     } catch (e) {}
     
-    const url = '/assets/lang/options/db.min.json';
+    const url = '/assets/lang/options/db.json';
     try {
       const resp = await fetch(url, { cache: 'no-cache' });
       if (resp.ok) {
@@ -510,7 +510,7 @@ class LanguageManager {
   async loadLanguageData(lang) {
     if (this.languageCache[lang]) return this.languageCache[lang];
     
-    const url = `/assets/lang/${lang}.min.json`;
+    const url = `/assets/lang/${lang}.json`;
     try {
       const resp = await fetch(url, { cache: 'no-cache' });
       if (!resp.ok) throw new Error('Failed to load');

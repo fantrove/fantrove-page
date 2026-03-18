@@ -1,4 +1,4 @@
-@import url('variables.min.css'); /* นำเข้าไฟล์ CSS ที่มีตัวแปร */
+@import url('variables.css'); /* นำเข้าไฟล์ CSS ที่มีตัวแปร */
 
 :root {
     --navbar-bg: linear-gradient(135deg, #3A47D5 0%, #6E72FC 100%);

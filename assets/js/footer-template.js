@@ -2,10 +2,10 @@
 // - Creates a site-root that contains a site-content-wrapper and footer (on desktop only).
 // - Does NOT add classes or inline styles to <body>.
 // - Ensures footer is last child of site-root and content-wrapper receives padding-bottom safety.
-// - Loads footer.min.css with fallback.
+// - Loads footer.css with fallback.
 
 (function() {
-  const FOOTER_CSS_PATH = "/assets/css/footer.min.css";
+  const FOOTER_CSS_PATH = "/assets/css/footer.css";
   const FOOTER_TEMPLATE_PATH = "/assets/template-html/footer-template.html";
   const FALLBACK_STYLE_ID = "fantrove-footer-fallback-style";
   const DESKTOP_QUERY = "(min-width: 880px)";
@@ -17,7 +17,7 @@
      Load CSS (with fallback)
      ------------------------- */
   function ensureFooterCSS() {
-    const exists = [...document.styleSheets].some(s => s.href && s.href.indexOf('footer.min.css') !== -1);
+    const exists = [...document.styleSheets].some(s => s.href && s.href.indexOf('footer.css') !== -1);
     if (!exists) {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
@@ -29,7 +29,7 @@
       document.head.appendChild(link);
 
       setTimeout(() => {
-        const nowExists = [...document.styleSheets].some(s => s.href && s.href.indexOf('footer.min.css') !== -1);
+        const nowExists = [...document.styleSheets].some(s => s.href && s.href.indexOf('footer.css') !== -1);
         if (!nowExists) injectFallbackStyle();
       }, 900);
     }

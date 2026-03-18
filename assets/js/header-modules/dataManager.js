@@ -20,7 +20,7 @@ const dataManager = {
         RETRY_DELAY: 300,
         MAX_RETRIES: 1,
         CACHE_DURATION: 2 * 60 * 60 * 1000,
-        BUTTONS_CONFIG_PATH: '/assets/json/buttons.min.json',
+        BUTTONS_CONFIG_PATH: '/assets/json/buttons.json',
         API_DATABASE_PATH: '/assets/db/con-data/',
         TOP_INDEX_FILE: 'index.json',
         KNOWN_TOP_CATEGORIES: ['emoji', 'symbol', 'unicode']
@@ -156,7 +156,7 @@ const dataManager = {
     // =========================================================
     async _fetchViaService(url, options = {}) {
         const assembled = await ConDataService.getAssembled();
-        const match = url.match(/\/con-data\/([^/]+)\/([^/]+)\.min\.json/);
+        const match = url.match(/\/con-data\/([^/]+)\/([^/]+)(?:\.min)?\.json/);
         if (match) {
             const [, typeId, catId] = match;
             const items = await ConDataService.getItems(typeId, catId).catch(() => null);
@@ -343,7 +343,7 @@ const dataManager = {
         if (this._topLevelIndexPromise) return this._topLevelIndexPromise;
         this._topLevelIndexPromise = ConDataService.getAssembled()
             .then(db => {
-                const idx = { categories: (db.type || []).map(t => ({ id: t.id, name: t.name, file: `${t.id}.min.json` })) };
+                const idx = { categories: (db.type || []).map(t => ({ id: t.id, name: t.name, file: `${t.id}.json` })) };
                 this._topLevelIndex = idx;
                 return idx;
             })
