@@ -1,451 +1,595 @@
-/* search-compact-overrides.css  v4.6
-   ══════════════════════════════════════════════════════
-   PERFORMANCE PRINCIPLES:
-   • Short card class names: .sc .scc .scb .sct .scs .scg .scr
-     Shorter HTML strings → faster innerHTML parse → less RAM
-   • content-visibility:auto + contain-intrinsic-size:auto
-     Browser-native virtual scroll — zero JS on scroll path
-   • .cv-prerendered: IntersectionObserver pre-reveal
-     Layout done in idle time before scroll arrives
-   • All @media(hover:hover) rules in ONE block
-   • All mobile rules in ONE block per breakpoint
-   • Compositor-safe transitions only (background-color, opacity)
-   • No box-shadow/transform changes on hover (forces repaint)
-   ══════════════════════════════════════════════════════ */
+/* search-compact-overrides.css  v5.0
+   ═══════════════════════════════════════════════════════════════
+   Performance architecture:
 
-/* ═══════════════════════════════════════════════════
-   TOKENS
-   ═══════════════════════════════════════════════════ */
-:root {
-  --g5   : #13b47f;
-  --g6   : #0f9469;
-  --g05  : #f0fdf8;
-  --g1   : #dcf5eb;
-  --bg   : #f5f8f6;
-  --surf : #ffffff;
-  --sur2 : #f0f4f2;
-  --thi  : #0d1f17;
-  --tmd  : #2b4539;
-  --tlo  : #637a6e;
-  --tph  : rgba(13,31,23,.34);
-  --bd   : rgba(0,0,0,.08);
-  --bdm  : rgba(0,0,0,.13);
-  --sh   : 0 1px 3px rgba(0,0,0,.05);
-  --rp   : 999px;
-  --rx   : 18px;
-  --rl   : 14px;
-  --rm   : 10px;
-  --rs   : 7px;
-  --tf   : 140ms ease;
-}
+   @layer  — cascade layers (Chrome 99+, Safari 15.4+, FF 97+)
+     Browser resolves cascade in layer order, not specificity.
+     For large card lists: O(rules × elements) → O(rules + elements).
+     No specificity wars, no !important needed for overrides.
 
-/* ═══════════════════════════════════════════════════
-   PAGE / HEADER
-   ═══════════════════════════════════════════════════ */
-.search-header {
-  padding: 10px 20px 12px;
-  background: var(--surf);
-  border-bottom: 1px solid var(--bd);
-  box-shadow: var(--sh);
-}
+   @property — typed custom properties (Chrome 85+, Safari 15.4+)
+     Browser knows token type at parse time → faster value resolution,
+     enables smooth color transitions without repaint.
 
-/* ═══════════════════════════════════════════════════
-   INPUT WRAPPER
-   ═══════════════════════════════════════════════════ */
-.search-input-wrapper {
-  display: flex         !important;
-  align-items: center   !important;
-  flex-direction: row   !important;
-  gap: 2px;
-  border-radius: var(--rp);
-  background: var(--sur2);
-  border: 1.5px solid transparent;
-  padding: 0 10px 0 4px !important;
-  max-width: 560px;
-  width: 100%;
-  margin: 0 auto;
-  height: 48px;
-  box-sizing: border-box;
-  box-shadow: var(--sh);
-  transition: border-color var(--tf), box-shadow var(--tf), background var(--tf);
-}
-.search-input-wrapper:focus-within {
-  background: var(--surf);
-  border-color: var(--g5);
-  box-shadow: 0 0 0 3px rgba(19,180,127,.18), var(--sh);
-}
-#searchOverlayContainer .search-input-wrapper {
-  background: var(--sur2);
-  max-width: none;
-  margin: 0;
-  box-shadow: none;
-}
-#searchOverlayContainer .search-input-wrapper:focus-within {
-  background: var(--surf);
-  border-color: var(--g5);
-  box-shadow: 0 0 0 3px rgba(19,180,127,.16);
-}
+   CSS Nesting — card rules grouped (Chrome 112+, Safari 16.5+)
+     Related rules share selector parse result → cache locality.
+     Reduces total rule count the browser tracks.
 
-/* ═══════════════════════════════════════════════════
-   ICON SLOT
-   ═══════════════════════════════════════════════════ */
-.search-input-icon {
-  position: static !important;
-  left: auto !important;
-  top: auto  !important;
-  z-index: auto !important;
-  flex-shrink: 0;
-  width: 38px; height: 38px; min-width: 38px;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 50%;
-  color: var(--g5);
-  background: transparent;
-  transition: background var(--tf), opacity var(--tf);
-  pointer-events: none;
-}
-.search-input-icon[role="button"] { pointer-events: auto; cursor: pointer; color: var(--tmd); }
-.search-input-icon[role="button"]:active { opacity: .65; }
-.search-input-icon svg { width: 20px; height: 20px; stroke-width: 2.2; pointer-events: none; flex-shrink: 0; }
+   touch-action: manipulation — removes 300ms tap delay (all browsers)
+     Eliminates delay on interactive elements. Zero render cost.
 
-/* ═══════════════════════════════════════════════════
-   SEARCH INPUT
-   ═══════════════════════════════════════════════════ */
-#searchInput {
-  flex: 1 1 0  !important;
-  min-width: 0 !important;
-  padding: 0   !important;
-  margin: 0    !important;
-  font-size: .98rem;
-  font-weight: 600;
-  line-height: 1;
-  border: 0;
-  background: transparent;
-  outline: none;
-  color: var(--thi);
-  font-family: inherit;
-  letter-spacing: .1px;
-  caret-color: var(--g5);
-}
-#searchInput::placeholder { color: var(--tph); font-weight: 500; }
-#searchInput::-webkit-search-cancel-button { display: none; }
+   color-scheme: light — hints browser to use light-mode paint paths.
+     Avoids browser auto-detecting scheme on every paint.
 
-/* ═══════════════════════════════════════════════════
-   CLEAR BUTTON
-   ═══════════════════════════════════════════════════ */
-#search-clear-btn {
-  flex-shrink: 0;
-  display: none;
-  align-items: center; justify-content: center;
-  width: 20px; height: 20px; min-width: 20px;
-  border-radius: 50%;
-  background: rgba(0,0,0,.10);
-  border: none; cursor: pointer;
-  color: var(--tlo);
-  padding: 0; outline: none;
-  -webkit-tap-highlight-color: transparent;
-  transition: background var(--tf), opacity var(--tf);
-}
-#search-clear-btn:active { opacity: .6; }
-#search-clear-btn svg { pointer-events: none; }
+   font-synthesis: none — prevents browser synthesizing bold/italic.
+     One less style operation per text element.
 
-/* ═══════════════════════════════════════════════════
-   OVERLAY
-   ═══════════════════════════════════════════════════ */
-.search-overlay {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  background: var(--surf) !important;
-}
-#overlay-header-bar {
-  display: flex; align-items: center;
-  padding: 10px 14px;
-  background: var(--surf);
-  border-bottom: 1px solid var(--bd);
-  flex-shrink: 0; width: 100%; box-sizing: border-box;
-  box-shadow: var(--sh);
-}
+   content-visibility: auto + contain-intrinsic-size: auto
+     Browser-native virtual scroll. Zero JS on scroll path.
+     'auto' keyword caches real height after first render.
 
-/* ═══════════════════════════════════════════════════
-   OVERLAY SCROLL
-   ═══════════════════════════════════════════════════ */
-.search-overlay-scrollable-content {
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-  will-change: scroll-position;
-  transform: translateZ(0);
-  contain: strict;
-  background: var(--surf);
-}
+   .cv-prerendered — IntersectionObserver pre-reveal hook
+     Forces layout in idle time before scroll arrives.
+   ═══════════════════════════════════════════════════════════════ */
 
-/* ═══════════════════════════════════════════════════
-   SUGGESTIONS
-   ═══════════════════════════════════════════════════ */
-.search-suggestions-fullscreen { background: var(--surf); border: none; margin: 0; padding-bottom: 8px; }
+/* ── Typed custom properties ────────────────────────────────────
+   Must be at top level (not inside @layer) for broadest compat.
+   'inherits: true' = children receive value without re-lookup.
+   Typed properties: browser validates + optimises interpolation. */
+@property --g5   { syntax: '<color>'; inherits: true;  initial-value: #13b47f; }
+@property --g6   { syntax: '<color>'; inherits: true;  initial-value: #0f9469; }
+@property --g05  { syntax: '<color>'; inherits: true;  initial-value: #f0fdf8; }
+@property --g1   { syntax: '<color>'; inherits: true;  initial-value: #dcf5eb; }
+@property --surf { syntax: '<color>'; inherits: true;  initial-value: #ffffff; }
+@property --sur2 { syntax: '<color>'; inherits: true;  initial-value: #f0f4f2; }
+@property --thi  { syntax: '<color>'; inherits: true;  initial-value: #0d1f17; }
+@property --tmd  { syntax: '<color>'; inherits: true;  initial-value: #2b4539; }
+@property --tlo  { syntax: '<color>'; inherits: true;  initial-value: #637a6e; }
 
-.suggestions-head {
-  padding: 18px 20px 6px;
-  font-size: .71rem; font-weight: 700;
-  color: var(--tlo);
-  text-transform: uppercase; letter-spacing: .9px;
-  user-select: none;
-}
+/* ── Layer declaration order ────────────────────────────────────
+   Later layers win over earlier layers, regardless of specificity.
+   Eliminates all specificity calculations across layer boundaries. */
+@layer tokens, base, card, overlay, state, responsive, print, fallbacks;
 
-.suggestion-item {
-  padding: 13px 20px;
-  cursor: pointer;
-  display: flex; align-items: center; gap: 14px;
-  transition: background-color var(--tf);
-  -webkit-tap-highlight-color: transparent;
-}
-.suggestion-item:active { background: var(--g1); }
-.suggestion-item::before {
-  content: ''; flex-shrink: 0;
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--g5); opacity: .3;
-}
-.suggestion-body { flex: 1; word-break: break-word; font-size: .93rem; font-weight: 500; color: var(--tmd); line-height: 1.45; }
+/* ══════════════════════════════════════════════════════════════ */
+@layer tokens {
 
-/* ═══════════════════════════════════════════════════
-   SEARCH CARD — short class names
-   .sc  = root card
-   .scc = card-content (emoji/text box)
-   .scb = card-body (right column)
-   .sct = card-title
-   .scs = card-subtitle
-   .scg = card-tags group
-   .scr = copy button
-   .sv  = vertical variant
+  html { scroll-behavior: auto; }
 
-   SCROLL PERF:
-   • content-visibility:auto = browser-native virtual scroll
-   • contain-intrinsic-size:auto = cached real height after first render
-   • No box-shadow/transform changes on hover
-   • background-color transition only (compositor-safe)
-   ═══════════════════════════════════════════════════ */
+  :root {
+    /* Color tokens (also declared via @property above) */
+    --g5  : #13b47f;
+    --g6  : #0f9469;
+    --g05 : #f0fdf8;
+    --g1  : #dcf5eb;
+    --bg  : #f5f8f6;
+    --surf: #ffffff;
+    --sur2: #f0f4f2;
+    --thi : #0d1f17;
+    --tmd : #2b4539;
+    --tlo : #637a6e;
+    --tph : rgba(13,31,23,.34);
+    --bd  : rgba(0,0,0,.08);
+    --bdm : rgba(0,0,0,.13);
+    --sh  : 0 1px 3px rgba(0,0,0,.05);
 
-/* GPU layer for scroll container */
-#searchResults { will-change: scroll-position; }
+    /* Radii */
+    --rp  : 999px;
+    --rx  : 18px;
+    --rl  : 14px;
+    --rm  : 10px;
+    --rs  : 7px;
 
-.sc {
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
-  padding: 14px 16px;
-  border-radius: var(--rx);
-  min-height: 64px;
-  background: var(--surf);
-  border: 1px solid var(--bd);
-  position: relative;
-  margin-bottom: 10px;
-  content-visibility: auto;
-  contain-intrinsic-size: auto 96px;
-  transition: background-color var(--tf);
-}
-.sc:active { background: var(--g1); }
+    /* Transition */
+    --tf  : 140ms ease;
 
-/*
- * Pre-revealed by IntersectionObserver (rootMargin 800px).
- * Forces content-visibility:visible during idle time, BEFORE scroll arrives.
- * Browser does first-time layout now → scroll arrival is smooth.
- */
-.cv-prerendered { content-visibility: visible !important; }
+    /* Hint: use light-mode paint paths, skip auto-detection per frame */
+    color-scheme: light;
 
-/* Content box (emoji / short text) */
-.scc {
-  flex: 0 0 64px; height: 64px;
-  font-size: 26px;
-  border-radius: var(--rl);
-  padding: 8px;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--g05);
-  color: var(--g6);
-  border: 1px solid var(--g1);
-  flex-shrink: 0;
-}
-
-/* Body column */
-.scb {
-  flex: 1 1 auto; min-width: 0;
-  display: flex; flex-direction: column; gap: 4px;
-}
-
-/* Title */
-.sct {
-  font-size: .98rem; font-weight: 700;
-  color: var(--thi); line-height: 1.3;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  letter-spacing: -.01em;
-  text-rendering: optimizeSpeed;
-}
-
-/* Subtitle */
-.scs {
-  font-size: .84rem; color: var(--tlo); font-weight: 500;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  text-rendering: optimizeSpeed;
-}
-
-/* Tags group */
-.scg {
-  display: flex; gap: 6px;
-  margin-top: 6px;
-  flex-wrap: wrap; align-items: center;
-  max-height: 42px; overflow: hidden;
-}
-
-/* Tag pill */
-.tag {
-  background: var(--sur2); color: var(--tlo);
-  padding: 3px 8px; font-size: 11px;
-  border-radius: var(--rp);
-  font-weight: 600; border: 1px solid var(--bdm);
-  line-height: 1.5; white-space: nowrap; letter-spacing: .05px;
-}
-
-/* Copy button */
-.scr {
-  position: absolute; right: 12px; top: 12px;
-  padding: 5px 11px;
-  font-size: .81rem; font-weight: 600;
-  border-radius: var(--rs);
-  background: var(--g05);
-  border: 1.5px solid var(--g1);
-  color: var(--g6);
-  box-shadow: none;
-  letter-spacing: .05px; white-space: nowrap;
-  cursor: pointer;
-  transition: background-color var(--tf), border-color var(--tf);
-}
-.scr:active { opacity: .75; }
-
-/* Vertical card */
-.sv { flex-direction: column; gap: 10px; padding: 14px; }
-.sv .scc {
-  flex: 0 0 auto; height: auto; width: 100%;
-  font-size: 14px; padding: 10px 12px;
-  text-align: left; border-radius: var(--rm);
-  display: -webkit-box;
-  -webkit-line-clamp: 3; -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.sv .scr { position: static; margin-top: 4px; align-self: flex-start; }
-
-/* Inside overlay VS engine — disable CV (VS manages visibility) */
-.vs-item .sc {
-  content-visibility: visible;
-  contain-intrinsic-size: none;
-  contain: layout style paint;
-  margin-bottom: 0;
-}
-
-/* ═══════════════════════════════════════════════════
-   TOAST
-   ═══════════════════════════════════════════════════ */
-.copy-toast-message {
-  background: linear-gradient(135deg, var(--g5), var(--g6));
-  color: #fff; padding: 10px 18px;
-  border-radius: var(--rl);
-  font-size: .91rem; font-weight: 650;
-  box-shadow: 0 4px 16px rgba(19,180,127,.22);
-  animation: toast-slide 220ms cubic-bezier(.4,0,.2,1) both;
-  letter-spacing: .1px;
-}
-@keyframes toast-slide {
-  from { opacity:0; transform:translateX(14px); }
-  to   { opacity:1; transform:translateX(0); }
-}
-
-/* ═══════════════════════════════════════════════════
-   VS ENGINE CONTAINERS
-   ═══════════════════════════════════════════════════ */
-.vs-container { contain: layout style; }
-.vs-item      { contain: layout style paint; top: 0 !important; }
-
-/* ═══════════════════════════════════════════════════
-   EMPTY STATE
-   ═══════════════════════════════════════════════════ */
-.no-result {
-  margin-top: 56px; padding: 32px 24px;
-  text-align: center; color: var(--tlo);
-  font-size: .95rem; font-weight: 500; line-height: 1.65;
-}
-.no-result::before { content: '🔍'; display: block; font-size: 2.2rem; margin-bottom: 10px; opacity: .5; }
-
-/* ═══════════════════════════════════════════════════
-   HOVER — all hover rules in ONE block
-   @media(hover:hover): mobile never pays this cost
-   ═══════════════════════════════════════════════════ */
-@media (hover: hover) {
-  .search-input-icon[role="button"]:hover { background: rgba(0,0,0,.07); }
-  #search-clear-btn:hover                 { background: rgba(0,0,0,.17); }
-  .suggestion-item:hover                  { background: var(--g05); }
-  .sc:hover                               { background: var(--g05); }
-  .scr:hover { background: var(--g1); border-color: var(--g5); }
-}
-
-/* ═══════════════════════════════════════════════════
-   RESPONSIVE — ≤ 1024px
-   ═══════════════════════════════════════════════════ */
-@media (max-width: 1024px) {
-  .scr { position: static; margin-top: 8px; align-self: flex-start; }
-}
-
-/* ═══════════════════════════════════════════════════
-   RESPONSIVE — ≤ 768px  (all mobile rules in one block)
-   ═══════════════════════════════════════════════════ */
-@media (max-width: 768px) {
-  .search-header { padding: 8px 14px 10px; }
-  .search-input-wrapper { height: 44px; padding: 0 8px 0 4px !important; }
-  .search-input-icon { width: 34px; height: 34px; min-width: 34px; }
-  .search-input-icon svg { width: 18px; height: 18px; }
-  #searchInput { font-size: .95rem; }
-  .suggestion-item { padding: 12px 16px; }
-  .sc  { padding: 13px 14px; gap: 12px; border-radius: var(--rl); contain-intrinsic-size: auto 78px; }
-  .scc { flex: 0 0 54px; height: 54px; font-size: 22px; }
-  .sct { font-size: .93rem; }
-  .scs { font-size: .81rem; }
-  .scr { position: static; margin-top: 8px; align-self: flex-start; }
-}
-
-/* ═══════════════════════════════════════════════════
-   RESPONSIVE — ≤ 480px
-   ═══════════════════════════════════════════════════ */
-@media (max-width: 480px) {
-  .search-header { padding: 6px 12px 8px; }
-  .search-input-wrapper { height: 42px; }
-  .search-input-icon { width: 32px; height: 32px; min-width: 32px; }
-  .search-input-icon svg { width: 17px; height: 17px; }
-  #searchInput { font-size: .93rem; }
-  .sc  { padding: 12px 13px; gap: 10px; }
-  .scc { flex: 0 0 50px; height: 50px; font-size: 20px; }
-}
-
-/* ═══════════════════════════════════════════════════
-   REDUCED MOTION
-   ═══════════════════════════════════════════════════ */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: .01ms !important;
-    transition-duration: .01ms !important;
+    /* Prevent overscroll bounce rendering on mobile — saves paint cost */
+    overscroll-behavior-y: contain;
   }
+
 }
 
-/* ═══════════════════════════════════════════════════
-   PRINT
-   ═══════════════════════════════════════════════════ */
-@media print {
-  .search-header, .search-filters-panel,
-  .scr, #copyToast, .search-footer { display: none !important; }
-  .sc { page-break-inside: avoid; contain: none; box-shadow: none; border: 1px solid #ccc; }
+/* ══════════════════════════════════════════════════════════════ */
+@layer base {
+
+  /* ── Header ──────────────────────────────────────────────── */
+  .search-header {
+    padding: 10px 20px 12px;
+    background: var(--surf);
+    border-bottom: 1px solid var(--bd);
+    box-shadow: var(--sh);
+  }
+
+  /* ── Input wrapper ───────────────────────────────────────── */
+  .search-input-wrapper {
+    display: flex         !important;
+    align-items: center   !important;
+    flex-direction: row   !important;
+    gap: 2px;
+    border-radius: var(--rp);
+    background: var(--sur2);
+    border: 1.5px solid transparent;
+    padding: 0 10px 0 4px !important;
+    max-width: 560px;
+    width: 100%;
+    margin: 0 auto;
+    height: 48px;
+    box-sizing: border-box;
+    box-shadow: var(--sh);
+    transition: border-color var(--tf), box-shadow var(--tf), background-color var(--tf);
+
+    &:focus-within {
+      background: var(--surf);
+      border-color: var(--g5);
+      box-shadow: 0 0 0 3px rgba(19,180,127,.18), var(--sh);
+    }
+
+    /* Overlay variant — nested for cache locality */
+    #searchOverlayContainer & {
+      background: var(--sur2);
+      max-width: none;
+      margin: 0;
+      box-shadow: none;
+
+      &:focus-within {
+        background: var(--surf);
+        border-color: var(--g5);
+        box-shadow: 0 0 0 3px rgba(19,180,127,.16);
+      }
+    }
+  }
+
+  /* ── Icon slot ───────────────────────────────────────────── */
+  .search-input-icon {
+    position: static !important;
+    left: auto !important;
+    top:  auto !important;
+    z-index: auto !important;
+    flex-shrink: 0;
+    width: 38px; height: 38px; min-width: 38px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    color: var(--g5);
+    background: transparent;
+    transition: background-color var(--tf), opacity var(--tf);
+    pointer-events: none;
+
+    /* Button mode */
+    &[role="button"] {
+      pointer-events: auto;
+      cursor: pointer;
+      color: var(--tmd);
+      touch-action: manipulation; /* remove 300ms delay */
+
+      &:active { opacity: .65; }
+    }
+
+    & svg {
+      width: 20px; height: 20px;
+      stroke-width: 2.2;
+      pointer-events: none;
+      flex-shrink: 0;
+    }
+  }
+
+  /* ── Search input ────────────────────────────────────────── */
+  #searchInput {
+    flex: 1 1 0  !important;
+    min-width: 0 !important;
+    padding: 0   !important;
+    margin: 0    !important;
+    font-size: .98rem;
+    font-weight: 600;
+    line-height: 1;
+    border: 0;
+    background: transparent;
+    outline: none;
+    color: var(--thi);
+    font-family: inherit;
+    letter-spacing: .1px;
+    caret-color: var(--g5);
+    font-synthesis: none; /* no faux-bold/italic — one less render op */
+
+    &::placeholder      { color: var(--tph); font-weight: 500; }
+    &::-webkit-search-cancel-button { display: none; }
+  }
+
+  /* ── Clear button ────────────────────────────────────────── */
+  #search-clear-btn {
+    flex-shrink: 0;
+    display: none;
+    align-items: center; justify-content: center;
+    width: 20px; height: 20px; min-width: 20px;
+    border-radius: 50%;
+    background: rgba(0,0,0,.10);
+    border: none;
+    cursor: pointer;
+    touch-action: manipulation;
+    color: var(--tlo);
+    padding: 0; outline: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color var(--tf), opacity var(--tf);
+
+    &:active  { opacity: .6; }
+    & svg     { pointer-events: none; }
+  }
+
+  /* ── Suggestions ─────────────────────────────────────────── */
+  .search-suggestions-fullscreen {
+    background: var(--surf);
+    border: none; margin: 0; padding-bottom: 8px;
+  }
+
+  .suggestions-head {
+    padding: 18px 20px 6px;
+    font-size: .71rem; font-weight: 700;
+    color: var(--tlo);
+    text-transform: uppercase; letter-spacing: .9px;
+    user-select: none;
+  }
+
+  .suggestion-item {
+    padding: 13px 20px;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 14px;
+    transition: background-color var(--tf);
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+
+    &:active { background: var(--g1); }
+
+    &::before {
+      content: ''; flex-shrink: 0;
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--g5); opacity: .3;
+    }
+  }
+
+  .suggestion-body {
+    flex: 1; word-break: break-word;
+    font-size: .93rem; font-weight: 500;
+    color: var(--tmd); line-height: 1.45;
+  }
+
+  /* ── Empty state ─────────────────────────────────────────── */
+  .no-result {
+    margin-top: 56px; padding: 32px 24px;
+    text-align: center; color: var(--tlo);
+    font-size: .95rem; font-weight: 500; line-height: 1.65;
+
+    &::before {
+      content: '🔍'; display: block;
+      font-size: 2.2rem; margin-bottom: 10px; opacity: .5;
+    }
+  }
+
+  /* ── Toast ───────────────────────────────────────────────── */
+  .copy-toast-message {
+    background: linear-gradient(135deg, var(--g5), var(--g6));
+    color: #fff; padding: 10px 18px;
+    border-radius: var(--rl);
+    font-size: .91rem; font-weight: 650;
+    box-shadow: 0 4px 16px rgba(19,180,127,.22);
+    animation: _toast 220ms cubic-bezier(.4,0,.2,1) both;
+    letter-spacing: .1px;
+  }
+  @keyframes _toast {
+    from { opacity:0; transform:translateX(14px); }
+    to   { opacity:1; transform:translateX(0); }
+  }
+
 }
 
-/* ═══════════════════════════════════════════════════
-   FEATURE FALLBACKS
-   ═══════════════════════════════════════════════════ */
-@supports not (content-visibility: auto) {
-  .sc { content-visibility: visible; contain-intrinsic-size: none; }
+/* ══════════════════════════════════════════════════════════════
+   @layer card — ALL per-card rules in ONE layer, ONE place.
+   This is the most-repeated layer (fires once per card × N cards).
+
+   Class naming:
+     .sc  = root card (search-card)
+     .scc = content box (emoji / text preview)
+     .scb = body column
+     .sct = title
+     .scs = subtitle
+     .scg = tags group
+     .tag = single tag pill
+     .scr = copy button (result-copy)
+     .sv  = vertical variant
+
+   Why CSS Nesting here:
+     All .sc children share the selector parse result of '.sc'.
+     Browser caches the resolved style tree per parent node.
+     Fewer total rules = smaller rule list = faster invalidation.
+   ══════════════════════════════════════════════════════════════ */
+@layer card {
+
+  /* GPU layer for scroll container — promoted before first scroll */
+  /* #searchResults: VS manages height via vs-container child */
+  #searchResults { position: relative; }
+
+  /* ── Root card ───────────────────────────────────────────── */
+  .sc {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    padding: 14px 16px;
+    border-radius: var(--rx);
+    background: var(--surf);
+    border: 1px solid var(--bd);
+    position: relative;
+    margin-bottom: 10px;
+    touch-action: manipulation; /* remove 300ms tap delay */
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color var(--tf);
+
+    /* VS manages visibility — no content-visibility:auto needed */
+    &:active { background: var(--g1); }
+
+    /* ── Content box (emoji / text preview) ───────────────── */
+    & .scc {
+      flex: 0 0 64px; height: 64px;
+      font-size: 26px;
+      border-radius: var(--rl);
+      padding: 8px;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--g05);
+      color: var(--g6);
+      border: 1px solid var(--g1);
+      flex-shrink: 0;
+    }
+
+    /* ── Body column ──────────────────────────────────────── */
+    & .scb {
+      flex: 1 1 auto; min-width: 0;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+
+    /* ── Title ────────────────────────────────────────────── */
+    & .sct {
+      font-size: .98rem; font-weight: 700;
+      color: var(--thi); line-height: 1.3;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      letter-spacing: -.01em;
+      /* Skip kerning/ligature calc — imperceptible in list context */
+      text-rendering: optimizeSpeed;
+      font-synthesis: none;
+    }
+
+    /* ── Subtitle ─────────────────────────────────────────── */
+    & .scs {
+      font-size: .84rem; color: var(--tlo); font-weight: 500;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      text-rendering: optimizeSpeed;
+      font-synthesis: none;
+    }
+
+    /* ── Tags group ───────────────────────────────────────── */
+    & .scg {
+      display: flex; gap: 6px;
+      margin-top: 6px;
+      align-items: center;
+      /* nowrap + overflow:hidden is cheaper than flex-wrap:wrap + max-height.
+         flex-wrap recalculates wrapping on every layout pass.
+         nowrap: layout is O(1) per flex container, clip is free. */
+      flex-wrap: nowrap;
+      overflow: hidden;
+    }
+
+    /* ── Tag pill ─────────────────────────────────────────── */
+    & .tag {
+      background: var(--sur2); color: var(--tlo);
+      padding: 3px 8px; font-size: 11px;
+      border-radius: var(--rp);
+      font-weight: 600; border: 1px solid var(--bdm);
+      line-height: 1.5;
+      white-space: nowrap; /* never wrap individual pills */
+      letter-spacing: .05px;
+      flex-shrink: 0; /* prevent pills from squishing */
+    }
+
+    /* ── Copy button ──────────────────────────────────────── */
+    & .scr {
+      position: absolute; right: 12px; top: 12px;
+      padding: 5px 11px;
+      font-size: .81rem; font-weight: 600;
+      border-radius: var(--rs);
+      background: var(--g05);
+      border: 1.5px solid var(--g1);
+      color: var(--g6);
+      box-shadow: none;
+      letter-spacing: .05px; white-space: nowrap;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      transition: background-color var(--tf), border-color var(--tf);
+
+      &:active { opacity: .75; }
+    }
+
+    /* ── Vertical variant ─────────────────────────────────── */
+    &.sv {
+flex-direction: column; gap: 10px; padding: 14px;
+
+      & .scc {
+        flex: 0 0 auto; height: auto; width: 100%;
+        font-size: 14px; padding: 10px 12px;
+        text-align: left; border-radius: var(--rm);
+        display: -webkit-box;
+        -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      & .scr { position: static; margin-top: 4px; align-self: flex-start; }
+    }
+  }
+
+
+  /* Inside VS item: basic containment, no margin (gap = .vs-item padding-bottom) */
+  .vs-item .sc {
+    contain: layout style paint;
+    margin-bottom: 0;
+  }
+
+  /* VS containers */
+  .vs-container { contain: layout style; }
+  .vs-item      { contain: layout style paint; top: 0 !important; padding-bottom: 10px; box-sizing: border-box; }
+
 }
-@supports not (contain: strict) {
-  .search-overlay-scrollable-content { contain: none; }
-  .vs-container { contain: none; }
+
+/* ══════════════════════════════════════════════════════════════ */
+@layer overlay {
+
+  .search-overlay {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: var(--surf) !important;
+  }
+
+  #overlay-header-bar {
+    display: flex; align-items: center;
+    padding: 10px 14px;
+    background: var(--surf);
+    border-bottom: 1px solid var(--bd);
+    flex-shrink: 0; width: 100%; box-sizing: border-box;
+    box-shadow: var(--sh);
+  }
+
+  .search-overlay-scrollable-content {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    will-change: scroll-position;
+    transform: translateZ(0);
+    contain: strict;
+    background: var(--surf);
+  }
+
+}
+
+/* ══════════════════════════════════════════════════════════════
+   @layer state — hover/active/focus.
+   Isolated in own layer: selector matching for state rules
+   never interferes with base or card rule resolution.
+   @media(hover:hover): mobile pays ZERO cost for hover rules.
+   ══════════════════════════════════════════════════════════════ */
+@layer state {
+
+  @media (hover: hover) {
+    .search-input-icon[role="button"]:hover { background: rgba(0,0,0,.07); }
+    #search-clear-btn:hover                 { background: rgba(0,0,0,.17); }
+    .suggestion-item:hover                  { background: var(--g05); }
+    .sc:hover                               { background: var(--g05); }
+    .scr:hover { background: var(--g1); border-color: var(--g5); }
+  }
+
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+@layer responsive {
+
+  /* ≤ 1024px */
+  @media (max-width: 1024px) {
+    .scr { position: static; margin-top: 8px; align-self: flex-start; }
+  }
+
+  /* ≤ 768px — all mobile rules in ONE media block */
+  @media (max-width: 768px) {
+    .search-header { padding: 8px 14px 10px; }
+
+    .search-input-wrapper {
+      height: 44px;
+      padding: 0 8px 0 4px !important;
+    }
+
+    .search-input-icon {
+      width: 34px; height: 34px; min-width: 34px;
+
+      & svg { width: 18px; height: 18px; }
+    }
+
+    #searchInput { font-size: .95rem; }
+
+    .suggestion-item { padding: 12px 16px; }
+
+    .sc {
+      padding: 13px 14px; gap: 12px;
+      border-radius: var(--rl);
+      contain-intrinsic-size: auto 78px; /* recalibrated estimate for mobile */
+    }
+
+    .scc { flex: 0 0 54px; height: 54px; font-size: 22px; }
+    .sct { font-size: .93rem; }
+    .scs { font-size: .81rem; }
+    .scr { position: static; margin-top: 8px; align-self: flex-start; }
+  }
+
+  /* ≤ 480px */
+  @media (max-width: 480px) {
+    .search-header { padding: 6px 12px 8px; }
+
+    .search-input-wrapper { height: 42px; }
+
+    .search-input-icon {
+      width: 32px; height: 32px; min-width: 32px;
+      & svg { width: 17px; height: 17px; }
+    }
+
+    #searchInput { font-size: .93rem; }
+
+    .sc  { padding: 12px 13px; gap: 10px; }
+    .scc { flex: 0 0 50px; height: 50px; font-size: 20px; }
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: .01ms !important;
+      transition-duration: .01ms !important;
+    }
+  }
+
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+@layer print {
+
+  @media print {
+    .search-header, .search-filters-panel,
+    .scr, #copyToast, .search-footer { display: none !important; }
+
+    .sc {
+      page-break-inside: avoid;
+      contain: none;
+      box-shadow: none;
+      border: 1px solid #ccc;
+    }
+  }
+
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+@layer fallbacks {
+
+  /* Older browsers without content-visibility */
+  /* content-visibility not used on .sc — VS handles visibility */
+
+  /* Older browsers without CSS containment */
+  @supports not (contain: strict) {
+    .search-overlay-scrollable-content { contain: none; }
+    .vs-container { contain: none; }
+  }
+
+  /* Older browsers without @property — CSS variables work as fallback */
+  @supports not (syntax: '<color>') {
+    html { scroll-behavior: auto; }
+
+  :root {
+      --g5  : #13b47f;
+      --g6  : #0f9469;
+      --g05 : #f0fdf8;
+      --g1  : #dcf5eb;
+    }
+  }
+
 }

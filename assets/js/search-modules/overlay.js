@@ -36,7 +36,8 @@
  *
  * @module overlay
  * @depends {config.js, state.js, utils.js, url-history.js,
- *           virtual-scroll.js, keyboard.js, suggestions.js, input-bar.js}
+ *           keyboard.js, suggestions.js, input-bar.js}
+ * Note: VirtualScrollEngine is owned by rendering.js, not imported here.
  */
 (function (M) {
   'use strict';
@@ -44,7 +45,7 @@
   const {
     CONFIG, State, Handlers,
     DOMService, URLService,
-    KeyboardAutoToggleService, VirtualScrollEngine,
+    KeyboardAutoToggleService,
     ReadyModeService, SuggestionService,
     IconSlotService, ClearBtnService,
   } = M;
@@ -198,8 +199,7 @@
           URLService.collapseOverlayEntry(closingState);
         }
 
-        // ② Cleanup
-        VirtualScrollEngine.destroy();
+        // ② Cleanup — VS owned by RenderingService, not overlay
         KeyboardAutoToggleService.disableAutoToggle();
 
         // ③ Return .search-input-wrapper to its original header position

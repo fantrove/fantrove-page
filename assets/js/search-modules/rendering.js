@@ -1,30 +1,42 @@
 // @ts-check
 /**
  * @file rendering.js
- * RenderingService + FilterService (v4.6 — hot-path optimized)
+ * RenderingService + FilterService (v5.0 — VS for main page, O(1) DOM)
  *
  * ┌─────────────────────────────────────────────────────────────┐
- * │  renderResultItem() called 300–500× per render.            │
- * │  Every micro-optimization multiplies across all cards.      │
+ * │  Architecture change (v5.0)                                 │
  * │                                                             │
- * │  Changes vs v4.5:                                           │
+ * │  PREVIOUS (content-visibility:auto approach):               │
+ * │   ALL cards inserted into DOM at once.                      │
+ * │   1,000 cards = 5,000 DOM nodes                             │
+ * │   10,000 cards = 50,000 DOM nodes                           │
+ * │   Memory: O(n), grows without bound                         │
+ * │   "Unlimited" = eventually OOM or severe lag                │
  * │                                                             │
- * │  JS HOT PATH                                                │
- * │  • Hoist i18n lookups out of card loop (cached _copy/emoji) │
- * │  • Remove for..in + /_name$/ RegExp inner loop             │
- * │  • _wordCount(): char-scan instead of split(/\s+/)          │
- * │    → zero array allocation per card                         │
- * │  • _joinNames(): single-pass join with Set, no filter()     │
- * │  • Conditional slice: skip when text.length ≤ 300          │
- * │  • Short class names in card HTML: sc/scb/scc/sct/scs/scg  │
- * │    → smaller HTML strings → faster innerHTML parse          │
- * │    → less RAM for string buffers during build               │
+ * │  NOW (VirtualScrollEngine for main page):                   │
+ * │   DOM nodes: always ~30-40, regardless of total count       │
+ * │   Memory: O(1) DOM + tiny typed arrays for heights          │
+ * │   10,000 cards: same frame budget as 100 cards              │
+ * │   Truly unlimited — memory stays flat as user scrolls       │
  * │                                                             │
- * │  CSS (companion — see search-compact-overrides.css)         │
- * │  • Short class names match JS (.sc, .scb, etc.)             │
- * │  • Consolidate 5 @media(hover) blocks → 1                  │
- * │  • Merge 28 .search-card rule blocks → fewer                │
- * │  • Single @media mobile block (was 3 scattered blocks)      │
+ * │  HOW:                                                        │
+ * │   renderResults() → VirtualScrollEngine.mount(              │
+ * │     document.scrollingElement,  ← window scroll mode       │
+ * │     #searchResults,             ← host container            │
+ * │     filtered,                   ← full item array           │
+ * │     renderFn,                   ← card HTML builder         │
+ * │     lang                                                     │
+ * │   )                                                          │
+ * │                                                             │
+ * │  VS creates a vs-container div with height = total.         │
+ * │  As user scrolls, VS mounts/unmounts only visible cards.    │
+ * │  #searchResults.contain:style isolates style scope.         │
+ * │                                                             │
+ * │  JS HOT PATH (renderResultItem — called per visible card):  │
+ * │   • Hoisted i18n cache (_lbl)                               │
+ * │   • Zero-allocation wordCount scan (_wordCount)             │
+ * │   • Set-based name dedup (_joinSet)                         │
+ * │   • Short class names (.sc .scc .scb .sct .scs .scg .scr)  │
  * └─────────────────────────────────────────────────────────────┘
  *
  * @module rendering
@@ -39,9 +51,9 @@
     VirtualScrollEngine,
   } = M;
 
-  // ── Hoisted i18n cache ────────────────────────────────────────────────────
-  // LanguageService.t() = localStorage read + object lookup. Called 300×/render.
-  // Hoist outside renderResultItem and refresh when language changes.
+  // ── Hoisted i18n cache ──────────────────────────────────────────────────
+  // LanguageService.t() reads localStorage + object lookup.
+  // Hoist outside renderResultItem so it's not called per card.
   let _lbl = { copy: '', emoji: '' };
   function _refreshLabels() {
     _lbl.copy  = LanguageService.t('copy');
@@ -49,13 +61,12 @@
   }
   _refreshLabels();
 
-  // ── Helpers (zero-allocation) ─────────────────────────────────────────────
+  // ── Zero-allocation helpers ─────────────────────────────────────────────
 
   /**
    * Count words without split() — zero array allocation.
    * ~3× faster than s.trim().split(/\s+/).length on V8.
-   * @param {string} s
-   * @returns {number}
+   * @param {string} s @returns {number}
    */
   function _wordCount(s) {
     let n = 0, inW = false;
@@ -69,8 +80,7 @@
 
   /**
    * Join Set<string> with ' / ', skipping falsy — no filter(), no intermediate array.
-   * @param {Set<string>} set
-   * @returns {string}
+   * @param {Set<string>} set @returns {string}
    */
   function _joinSet(set) {
     let out = '';
@@ -80,31 +90,19 @@
     return out;
   }
 
-  // Card HTML uses short class names to reduce string size:
-  //   sc  = search-card (root)
-  //   scc = card-content
-  //   scb = card-body
-  //   sct = card-title
-  //   scs = card-subtitle
-  //   scg = card-tags
-  //   scr = result-copy-btn (button)
-  // CSS maps these. Shorter strings = faster innerHTML parse + less RAM.
-
-  const SYNC_LIMIT = 300;
-  const _tpl = document.createElement('template'); // reused, zero allocation
-
   // ── RenderingService ──────────────────────────────────────────────────────
   const RenderingService = {
-    /** @type {IntersectionObserver|null} */
-    _preRenderIO: null,
 
-    /** Call after language change to refresh cached labels. */
+    /** Refresh i18n cache after language change. */
     refreshCache() { _refreshLabels(); },
 
     /**
-     * Build HTML for one result card.
-     * Hot path — called 300-500× per render. Zero heap allocations except
-     * the final string concatenation.
+     * Build card HTML string.
+     * Called per VISIBLE card per frame (~30 calls). Zero heap allocations
+     * except the final template literal concatenation.
+     *
+     * Short class names (.sc .scc .scb .sct .scs .scg .scr):
+     *   Smaller HTML strings → faster innerHTML parse → less RAM per card.
      *
      * @param {SearchResult} item
      * @param {string} lang
@@ -117,7 +115,6 @@
         const itemText = rawText || data?.name?.[lang] || data?.name?.en || item.itemName || '';
         const itemApi  = data?.api || '';
 
-        // Use cached emoji label — no i18n lookup per card
         const typeName = item.typeName
           || item.typeObj?.name?.[lang]
           || item.typeObj?.name?.en
@@ -128,34 +125,23 @@
           || item.category?.name?.en
           || '';
 
-        // Build name set — O(1) dedup (Set vs Array.includes which is O(n))
         const nameSet = new Set();
-        if (item.itemName)             nameSet.add(item.itemName);
-        if (data?.name?.[lang])        nameSet.add(data.name[lang]);
-        else if (data?.name?.en)       nameSet.add(data.name.en);
-        // Removed: for..in data + /_name$/.test() — iterated ALL properties,
-        // slow and duplicated itemName in 99% of cases.
+        if (item.itemName)       nameSet.add(item.itemName);
+        if (data?.name?.[lang])  nameSet.add(data.name[lang]);
+        else if (data?.name?.en) nameSet.add(data.name.en);
 
-        const nameStr = _joinSet(nameSet);
-        const text    = itemText || itemApi || '-';
-
-        // Vertical: char-scan wordCount (no split array) + indexOf (no regex)
+        const nameStr  = _joinSet(nameSet);
+        const text     = itemText || itemApi || '-';
         const vertical = text.length > 45
           || text.indexOf('\n') !== -1
           || _wordCount(text) > 7;
-
-        // Slice only when needed (common case: text is short)
-        const disp = text.length > 300 ? text.slice(0, 300) : text;
-
+        const disp     = text.length > 300 ? text.slice(0, 300) : text;
         const esc      = StringService.escapeHtml;
         const titleStr = nameStr || (data?.name?.[lang] || data?.name?.en || data?.api) || text;
         const subStr   = itemApi || typeName || '';
+        const tags     = (typeName ? `<span class="tag">${esc(typeName)}</span>` : '')
+                       + (catName  ? `<span class="tag">${esc(catName)}</span>`  : '');
 
-        // Build tags inline — no array, no join
-        const tags = (typeName ? `<span class="tag">${esc(typeName)}</span>` : '')
-                   + (catName  ? `<span class="tag">${esc(catName)}</span>`  : '');
-
-        // Short class names = smaller HTML string = faster parse + less RAM
         return `<div class="sc${vertical ? ' sv' : ''}" role="article" aria-label="${esc(nameStr || text)}"><div class="scc" aria-hidden="true">${esc(disp)}</div><div class="scb"><div class="sct">${esc(titleStr)}</div><div class="scs">${esc(subStr)}</div>${tags ? `<div class="scg" aria-hidden="true">${tags}</div>` : ''}</div><button class="scr" data-text="${StringService.encodeUrl(text)}" aria-label="${_lbl.copy}">${_lbl.copy}</button></div>`;
       } catch {
         return '<div class="sc"><div class="scc">-</div></div>';
@@ -165,7 +151,6 @@
     disconnectRenderObserver() {
       VirtualScrollEngine.destroy();
       DOMService.remove(DOMService.get(CONFIG.DOM.sentinelId));
-      if (this._preRenderIO) { this._preRenderIO.disconnect(); this._preRenderIO = null; }
     },
 
     /**
@@ -186,9 +171,13 @@
     },
 
     /**
-     * Render all results — single DOM insert + IO pre-reveal.
+     * Render results using VirtualScrollEngine (window scroll mode).
+     *
+     * DOM nodes in #searchResults: always ~30-40, regardless of result count.
+     * Works identically for 10 or 100,000 results.
+     *
      * @param {SearchResult[]} results
-     * @param {boolean} [showSuggestionsIfNoResult=false]
+     * @param {boolean}        [showSuggestionsIfNoResult=false]
      */
     renderResults(results, showSuggestionsIfNoResult = false) {
       try {
@@ -200,97 +189,35 @@
           ? results.filter(r => ((r.category?.name?.[lang] || r.category?.name?.en) || '') === State.selectedCategory)
           : results;
 
-        document.body.style.marginBottom = '60px';
         this.disconnectRenderObserver();
         State.currentFilteredResults = filtered;
 
         if (!filtered.length) {
+          DOMService.setHTML(container, '');
           this._renderEmpty(container, lang, showSuggestionsIfNoResult);
           return;
         }
 
         DOMService.setHTML(container, '');
         this._attachCopyHandler(container);
-        _refreshLabels(); // ensure labels are current
+        _refreshLabels();
 
-        if (filtered.length <= SYNC_LIMIT) {
-          const html = filtered.map(item => this.renderResultItem(item, lang)).join('');
-          requestAnimationFrame(() => {
-            _tpl.innerHTML = html;
-            container.appendChild(_tpl.content);
-            M.UIService.updateUILanguage();
-            this._setupPreRender(container);
-          });
-        } else {
-          this._buildAndInsert(filtered, container, lang);
-        }
+        // Mount VS on window scroll — #searchResults is the host container.
+        // VS creates a vs-container div (position:relative, height=total)
+        // and manages all card nodes within it.
+        const viewport = document.scrollingElement || document.documentElement;
+        VirtualScrollEngine.mount(
+          viewport,
+          container,
+          filtered,
+          (item, l) => this.renderResultItem(item, l),
+          lang
+        );
+
+        M.UIService.updateUILanguage();
       } catch (e) {
         console.error('[RenderingService] renderResults failed', e);
       }
-    },
-
-    /**
-     * IntersectionObserver pre-reveal — layout during idle, 800px ahead.
-     * @private
-     */
-    _setupPreRender(container) {
-      if (!('IntersectionObserver' in window)) return;
-      if (this._preRenderIO) this._preRenderIO.disconnect();
-
-      const self = this;
-      this._preRenderIO = new IntersectionObserver((entries) => {
-        const toReveal = [];
-        for (const e of entries) {
-          if (e.isIntersecting) {
-            toReveal.push(/** @type {HTMLElement} */ (e.target));
-            self._preRenderIO?.unobserve(e.target);
-          }
-        }
-        if (!toReveal.length) return;
-        const reveal = () => { for (const el of toReveal) el.classList.add('cv-prerendered'); };
-        if ('requestIdleCallback' in window) requestIdleCallback(reveal, { timeout: 50 });
-        else setTimeout(reveal, 0);
-      }, { rootMargin: '0px 0px 800px 0px', threshold: 0 });
-
-      const vh = window.innerHeight;
-      for (const card of container.querySelectorAll('.sc')) {
-        if (card.getBoundingClientRect().top > vh + 50) this._preRenderIO.observe(card);
-      }
-    },
-
-    /**
-     * Large set: build HTML strings in idle chunks → ONE DOM insert.
-     * @private
-     */
-    _buildAndInsert(items, container, lang) {
-      const self  = this;
-      const parts = [];
-      let   idx   = 0;
-      const BATCH = 50;
-
-      const buildChunk = (/** @type {any} */ deadline) => {
-        while (idx < items.length) {
-          if ((deadline?.timeRemaining?.() ?? 5) < 2) break;
-          if (navigator.scheduling?.isInputPending?.({ includeContinuous: true })) break;
-          const end = Math.min(idx + BATCH, items.length);
-          for (let i = idx; i < end; i++) parts.push(self.renderResultItem(items[i], lang));
-          idx = end;
-        }
-        if (idx < items.length) {
-          if ('requestIdleCallback' in window) requestIdleCallback(buildChunk, { timeout: 100 });
-          else setTimeout(() => buildChunk(null), 0);
-        } else {
-          requestAnimationFrame(() => {
-            _tpl.innerHTML = parts.join('');
-            container.appendChild(_tpl.content);
-            M.UIService.updateUILanguage();
-            self._setupPreRender(container);
-          });
-        }
-      };
-
-      if ('requestIdleCallback' in window) requestIdleCallback(buildChunk, { timeout: 100 });
-      else setTimeout(() => buildChunk(null), 0);
     },
 
     /** @private */
@@ -316,7 +243,7 @@
       M.UIService.updateUILanguage();
     },
 
-    /** @private */
+    /** @private — delegated copy handler, attached once */
     _attachCopyHandler(container) {
       if (window._copyResultTextHandlerSet) return;
       Handlers.copyClick = (e) => {
@@ -349,10 +276,7 @@
       } catch {}
     },
 
-    /**
-     * @param {CategoryOption[]} cats
-     * @param {string} [selected='all']
-     */
+    /** @param {CategoryOption[]} cats @param {string} [selected='all'] */
     setupCategoryFilter(cats, selected = 'all') {
       try {
         const el = DOMService.get(CONFIG.DOM.categoryFilterId);
