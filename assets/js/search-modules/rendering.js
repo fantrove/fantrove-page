@@ -277,178 +277,37 @@
     },
   };
 
-  // ── FilterService — segmented chip bar ─────────────────────────────────────
-  //
-  // Design: YouTube/App-Store/Spotify style horizontal chip filter.
-  //   Two rows:
-  //     Row 1 (#typeFilter)     — type chips (primary, always visible)
-  //     Row 2 (#categoryFilter) — category chips (secondary, shown when >1)
-  //
-  //   Type row:   larger chips, brand green active state, icon optional
-  //   Category row: smaller chips, dark active state, subtle appearance
-  //
-  // Architecture:
-  //   typeFilterId     → #typeFilter    (scroll container div)
-  //   categoryFilterId → #categoryFilter (scroll container div)
-  //
-  //   .fpill             base chip
-  //   .fpill--active     selected chip
-  //   .fpill--type       type row variant
-  //   .fpill--cat        category row variant
-  //
-  // Event model: delegated click on container, State updated directly.
-  // Keyboard: ArrowLeft/Right move focus, Enter/Space activate.
-  // Scroll position preserved on re-render (no visual jump).
-  //
+  // ── FilterService ─────────────────────────────────────────────────────────
   const FilterService = {
-    /**
-     * Render type pills from apiData.
-     * @param {string} [selected='all']
-     */
+    /** @param {string} [selected='all'] */
     setupTypeFilter(selected = 'all') {
       try {
         const el = DOMService.get(CONFIG.DOM.typeFilterId);
         if (!el) return;
         const lang = LanguageService.getLang();
-
-        const pills = [{ val: 'all', label: LanguageService.t('all_types') }];
+        const opts = [`<option value="all">${LanguageService.t('all_types')}</option>`];
         for (const t of (State.apiData?.type || [])) {
           const lbl = t.name?.[lang] || t.name?.en || '';
-          if (lbl) pills.push({ val: lbl, label: lbl });
+          opts.push(`<option value="${StringService.escapeHtml(lbl)}">${StringService.escapeHtml(lbl)}</option>`);
         }
-
-        el.setAttribute('role', 'radiogroup');
-        el.setAttribute('aria-label', LanguageService.t('type'));
-        el.innerHTML     = this._pillsHTML(pills, selected, 'fpill--type');
-        el.style.display = pills.length > 1 ? '' : 'none';
-        this._bindPillEvents(el, (val) => {
-          State.selectedType = val;
-          M.SearchService.doSearch();
-        });
+        el.innerHTML = opts.join('');
+        el.value     = selected;
       } catch {}
     },
 
-    /**
-     * Render category pills from extracted categories.
-     * @param {CategoryOption[]} cats
-     * @param {string} [selected='all']
-     */
+    /** @param {CategoryOption[]} cats @param {string} [selected='all'] */
     setupCategoryFilter(cats, selected = 'all') {
       try {
         const el = DOMService.get(CONFIG.DOM.categoryFilterId);
         if (!el) return;
-
-        if (!cats.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
-
-        const pills = [{ val: 'all', label: LanguageService.t('all_categories') }];
+        const opts = [`<option value="all">${LanguageService.t('all_categories')}</option>`];
         for (const { key, displayName } of cats) {
-          if (displayName) pills.push({ val: key, label: displayName });
+          opts.push(`<option value="${StringService.escapeHtml(key)}">${StringService.escapeHtml(displayName)}</option>`);
         }
-
-        const prevScroll = el.scrollLeft || 0;
-        el.setAttribute('role', 'radiogroup');
-        el.setAttribute('aria-label', LanguageService.t('category'));
-        el.innerHTML     = this._pillsHTML(pills, selected, 'fpill--cat');
+        el.innerHTML     = opts.join('');
         el.style.display = '';
-        // rAF so layout is settled before restoring scroll
-        requestAnimationFrame(() => { el.scrollLeft = prevScroll; });
-        this._bindPillEvents(el, (val) => {
-          State.selectedCategory = val;
-          M.RenderingService.renderResults(State.currentResults, false);
-          M.UIService.updateUILanguage();
-        });
+        el.value         = selected;
       } catch {}
-    },
-
-    /**
-     * Build chips HTML string.
-     * @param {{val:string, label:string}[]} pills
-     * @param {string} selected
-     * @param {string} [variant='']  extra class added to each chip
-     * @returns {string}
-     */
-    _pillsHTML(pills, selected, variant = '') {
-      const esc = StringService.escapeHtml;
-      return pills.map(({ val, label }, i) => {
-        const active  = (val === selected) ? ' fpill--active' : '';
-        const vclass  = variant ? ` ${variant}` : '';
-        // All-pill is first, give it no extra identifier
-        return `<button type="button" class="fpill${vclass}${active}" data-val="${esc(val)}" tabindex="${i === 0 ? '0' : '-1'}" role="radio" aria-checked="${val === selected}">${esc(label)}</button>`;
-      }).join('');
-    },
-
-    /**
-     * Attach click + keyboard handlers to a chip container.
-     * Uses event delegation (one listener) + roving tabindex for a11y.
-     * @param {HTMLElement} container
-     * @param {function(string):void} onChange
-     */
-    _bindPillEvents(container, onChange) {
-      // Replace with fresh clone to remove any stale listeners
-      const fresh = container.cloneNode(true);
-      container.parentNode?.replaceChild(fresh, container);
-
-      const getPills = () => [...fresh.querySelectorAll('.fpill')];
-
-      const activate = (pill) => {
-        if (!pill) return;
-        // Update ARIA + classes
-        getPills().forEach(p => {
-          p.classList.remove('fpill--active');
-          p.setAttribute('aria-checked', 'false');
-          p.setAttribute('tabindex', '-1');
-        });
-        pill.classList.add('fpill--active');
-        pill.setAttribute('aria-checked', 'true');
-        pill.setAttribute('tabindex', '0');
-        // Smooth scroll chip into full view
-        pill.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
-        onChange(pill.getAttribute('data-val') || 'all');
-      };
-
-      fresh.addEventListener('click', (e) => {
-        const pill = e.target.closest('.fpill');
-        if (pill) activate(pill);
-      }, { passive: true });
-
-      // Roving tabindex keyboard nav (ARIA radiogroup pattern)
-      fresh.addEventListener('keydown', (e) => {
-        const pills = getPills();
-        const idx   = pills.indexOf(document.activeElement);
-        if (idx === -1) return;
-        if      (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-          e.preventDefault();
-          const next = pills[Math.min(idx + 1, pills.length - 1)];
-          next?.focus();
-          activate(next);
-        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-          e.preventDefault();
-          const prev = pills[Math.max(idx - 1, 0)];
-          prev?.focus();
-          activate(prev);
-        } else if (e.key === 'Home') {
-          e.preventDefault();
-          pills[0]?.focus(); activate(pills[0]);
-        } else if (e.key === 'End') {
-          e.preventDefault();
-          pills[pills.length - 1]?.focus(); activate(pills[pills.length - 1]);
-        }
-      });
-    },
-
-    /**
-     * Update active pill without full re-render.
-     * @param {string} containerId
-     * @param {string} val
-     */
-    setActive(containerId, val) {
-      const el = DOMService.get(containerId);
-      if (!el) return;
-      el.querySelectorAll('.fpill').forEach(p => {
-        const active = p.getAttribute('data-val') === val;
-        p.classList.toggle('fpill--active', active);
-        p.setAttribute('aria-pressed', String(active));
-      });
     },
   };
 
