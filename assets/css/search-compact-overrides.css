@@ -254,6 +254,23 @@
     color: var(--tmd); line-height: 1.45;
   }
 
+  /* Highlight match grapheme clusters from HighlightService.
+     Thai diacritic fix:
+       - display:inline + vertical-align:baseline ensures combining chars
+         stay in the text flow without causing displacement
+       - border-radius removed: radius creates a new formatting context
+         that can shift combining diacritics on some engines
+       - padding: 0 only — horizontal padding safe, vertical shifts baseline */
+  .suggestion-body mark {
+    background: var(--g1);
+    color: var(--thi);
+    font-weight: 700;
+    display: inline;
+    vertical-align: baseline;
+    padding: 0;
+    border-radius: 0;
+  }
+
   /* ── Empty state ─────────────────────────────────────────── */
   .no-result {
     margin-top: 56px; padding: 32px 24px;

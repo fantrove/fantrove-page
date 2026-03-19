@@ -105,8 +105,27 @@
   // ── StringService ─────────────────────────────────────────────────────────
   const StringService = {
     /** @param {unknown} s @returns {string} */
-    escapeHtml: (s) =>
-      String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'),
+    /**
+     * Escape HTML special characters.
+     * Single-pass char scan — one output string, zero regex, zero intermediate strings.
+     * 3 chained .replace() = 3 full scans + 2 intermediate strings per call.
+     * Called ~300×/render frame (10× per card × 30 visible cards).
+     * @param {unknown} s
+     * @returns {string}
+     */
+    escapeHtml(s) {
+      const str = String(s);
+      let out = '';
+      for (let i = 0; i < str.length; i++) {
+        const c = str.charCodeAt(i);
+        if      (c === 38) out += '&amp;';   // &
+        else if (c === 60) out += '&lt;';    // <
+        else if (c === 62) out += '&gt;';    // >
+        else if (c === 34) out += '&quot;';  // " (bonus: safe in attributes)
+        else               out += str[i];
+      }
+      return out;
+    },
 
     /** @param {string} s @returns {string} */
     encodeUrl: (s) => encodeURIComponent(s),
@@ -190,9 +209,31 @@
 
   // ── HighlightService ──────────────────────────────────────────────────────
   const HighlightService = {
+    // Cache last query's char Set — one Set per query, reused for all items in batch
+    _lastQuery : '',
+    _lastChars : /** @type {Set<string>} */ (new Set()),
+
     /**
-     * Wrap characters that appear in `query` with <strong> tags.
-     * Character-level (not substring) matching — intentional for CJK/emoji data.
+     * Wrap matching grapheme clusters in <mark> tags.
+     *
+     * KEY FIX — Thai diacritic displacement:
+     *   Thai vowel marks (U+0E30–U+0E4E) are COMBINING characters.
+     *   They render relative to the PRECEDING base consonant.
+     *   Wrapping a combining char alone in <mark> = separate inline box =
+     *   the mark floats away from its base → visual displacement.
+     *
+     *   Fix: use Intl.Segmenter (Chrome 87+, Safari 16.4+, FF 125+) to get
+     *   grapheme clusters. Each cluster = base consonant + all its combining
+     *   marks = one visual unit. We highlight the whole cluster together.
+     *
+     *   Fallback for older browsers: manual Thai combining char detection.
+     *   Thai combining range: U+0E30–U+0E4E (sara, mai han akat, tone marks).
+     *   We attach combining chars to the PREVIOUS cluster before deciding
+     *   whether to wrap in <mark>.
+     *
+     * A cluster is highlighted if ANY character in it matches the query chars.
+     * This is correct: highlighting ย in ยิ้ม highlights the whole cluster.
+     *
      * @param {string} text
      * @param {string} query
      * @returns {string} Safe HTML string
@@ -200,18 +241,90 @@
     highlight(text, query) {
       if (!text || !query) return StringService.escapeHtml(text || '');
       try {
-        const lower = String(text).toLowerCase();
-        const chars = new Set(String(query).toLowerCase());
+        const t = String(text);
+        const q = String(query).toLowerCase();
+
+        // Rebuild char set only when query changes (amortised O(1) per item)
+        if (q !== this._lastQuery) {
+          this._lastQuery = q;
+          this._lastChars = new Set(q);
+        }
+
+        const chars   = this._lastChars;
+        const clusters = this._graphemeClusters(t);
         let out = '';
-        for (let i = 0; i < lower.length; i++) {
-          out += chars.has(lower[i])
-            ? `<strong style="background-color:#fff3cd;font-weight:700">${StringService.escapeHtml(String(text)[i])}</strong>`
-            : StringService.escapeHtml(String(text)[i]);
+
+        for (const cluster of clusters) {
+          // Escape the entire cluster as a unit
+          let esc = '';
+          for (let i = 0; i < cluster.length; i++) {
+            const c = cluster[i];
+            esc += c === '&' ? '&amp;' : c === '<' ? '&lt;' : c === '>' ? '&gt;' : c === '"' ? '&quot;' : c;
+          }
+          // Check if any char in this cluster matches query chars
+          const match = cluster.toLowerCase().split('').some(c => chars.has(c));
+          out += match ? `<mark>${esc}</mark>` : esc;
         }
         return out;
       } catch {
         return StringService.escapeHtml(text);
       }
+    },
+
+    /**
+     * Split text into grapheme clusters (base + combining chars stay together).
+     *
+     * Uses Intl.Segmenter when available (modern browsers).
+     * Falls back to manual Thai combining char grouping for older browsers.
+     *
+     * Thai combining range U+0E30–U+0E4E:
+     *   sara a, sara aa, sara i, sara ii, sara ue, sara uee, sara u, sara uu,
+     *   sara e, sara ae, sara o, sara ai, sara am, mai han akat,
+     *   and all tone marks (mai ek, mai tho, mai tri, mai chattawa).
+     *
+     * @param {string} text
+     * @returns {string[]} array of grapheme cluster strings
+     */
+    _graphemeClusters(text) {
+      // Modern path: Intl.Segmenter with grapheme granularity
+      if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+        try {
+          const seg = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+          return Array.from(seg.segment(text), s => s.segment);
+        } catch {}
+      }
+
+      // Fallback: manual combining char grouping
+      // Thai combining characters U+0E30–U+0E4E attach to the preceding consonant
+      const out     = [];
+      let   cluster = '';
+
+      for (let i = 0; i < text.length; i++) {
+        const cp = text.codePointAt(i) ?? 0;
+
+        // Skip the second code unit of a surrogate pair
+        if (cp > 0xFFFF) i++;
+
+        const ch = String.fromCodePoint(cp);
+
+        // Thai combining: sara, mai han akat, tone marks
+        const isThaicombining = cp >= 0x0E30 && cp <= 0x0E4E;
+        // General Unicode combining categories (Mn, Mc, Me):
+        // Simple heuristic — most common ranges
+        const isGeneralCombining = (cp >= 0x0300 && cp <= 0x036F)   // Combining Diacritical Marks
+                                 || (cp >= 0x1AB0 && cp <= 0x1AFF)  // Combining Diacritical Marks Extended
+                                 || (cp >= 0x20D0 && cp <= 0x20FF); // Combining Diacritical Marks for Symbols
+
+        if (isThaicombining || isGeneralCombining) {
+          // Attach to current cluster (or start a new one if none)
+          cluster += ch;
+        } else {
+          if (cluster) out.push(cluster);
+          cluster = ch;
+        }
+      }
+      if (cluster) out.push(cluster);
+      return out;
     },
   };
 

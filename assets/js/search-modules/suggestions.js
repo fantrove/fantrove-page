@@ -73,6 +73,8 @@
         }
         container.innerHTML     = html;
         container.style.display = 'block';
+        // Reset overlay scroll to top — user may have scrolled down in suggestions
+        if (State.overlayScrollable) State.overlayScrollable.scrollTop = 0;
       } catch {}
     },
   };
@@ -149,6 +151,8 @@
         }
         container.innerHTML     = html;
         container.style.display = 'block';
+        // Reset overlay scroll to top on every suggestion update
+        if (State.overlayScrollable) State.overlayScrollable.scrollTop = 0;
 
         // Let ArrowDown from the input focus the first suggestion
         const inp = DOMService.get(CONFIG.DOM.searchInputId);

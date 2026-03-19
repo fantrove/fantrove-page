@@ -143,16 +143,23 @@
         IconSlotService.update();
         ClearBtnService.sync();
 
-        // Show trending or query-based suggestions
-        const currentQ = (inp?.value || '').trim();
-        if (currentQ) SuggestionService.renderQuerySuggestions(currentQ);
-        else          ReadyModeService.renderReadyModeSuggestions();
-
         KeyboardAutoToggleService.enableAutoToggle(sc);
         this._hideNav();
 
         // Push overlay history entry (Stack B — see url-history.js)
         URLService.pushOverlayEntry(State.preOverlayState);
+
+        // Clear transitioning flag BEFORE rendering suggestions.
+        // renderQuerySuggestions() guards on overlayTransitioning — if still true
+        // when called, it returns early and suggestions never appear.
+        // Sequence: mark open → clear flag → render → focus.
+        State.overlayTransitioning = false;
+
+        // Show suggestions for the current input value immediately.
+        // Must happen AFTER overlayTransitioning=false (see above).
+        const currentQ = (inp?.value || '').trim();
+        if (currentQ) SuggestionService.renderQuerySuggestions(currentQ);
+        else          ReadyModeService.renderReadyModeSuggestions();
 
         // Focus input, cursor at end, no text selection
         if (inp) {
@@ -164,8 +171,6 @@
             } catch { try { inp.focus(); } catch {} }
           }, CONFIG.TIMING.focusDelayMs);
         }
-
-        State.overlayTransitioning = false;
       } catch (e) {
         console.error('[OverlayService] open failed', e);
         State.overlayTransitioning = false;

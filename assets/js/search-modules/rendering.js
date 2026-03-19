@@ -115,29 +115,41 @@
         const itemText = rawText || data?.name?.[lang] || data?.name?.en || item.itemName || '';
         const itemApi  = data?.api || '';
 
-        const typeName = item.typeName
-          || item.typeObj?.name?.[lang]
+        // Resolve typeName and catName from the name OBJECT in the active language.
+        // Do NOT use item.typeName / item.catName — they are pre-resolved by
+        // SearchEngine in a fixed language (often Thai) and do not follow the
+        // current UI language, causing Thai tags to show when UI is English.
+        const typeName = item.typeObj?.name?.[lang]
           || item.typeObj?.name?.en
+          || item.typeName          // fallback: pre-resolved string (any lang)
           || _lbl.emoji;
 
-        const catName = item.catName
-          || item.category?.name?.[lang]
+        const catName = item.category?.name?.[lang]
           || item.category?.name?.en
+          || item.catName           // fallback: pre-resolved string (any lang)
           || '';
 
-        const nameSet = new Set();
-        if (item.itemName)       nameSet.add(item.itemName);
-        if (data?.name?.[lang])  nameSet.add(data.name[lang]);
-        else if (data?.name?.en) nameSet.add(data.name.en);
-
-        const nameStr  = _joinSet(nameSet);
+        // Build display name in the ACTIVE UI LANGUAGE only.
+        // Do NOT include names from other languages.
+        //
+        // Why: item.itemName is set by SearchEngine from the matched keyword
+        // and can be in any language (e.g. Thai name when UI is English).
+        // Adding it to nameSet would show both languages: "ยิ้ม / Smile".
+        //
+        // Rule: use data.name[lang] (UI language) as the canonical name.
+        // Fall back to en only if the current language has no entry.
+        // item.itemName is used only as last-resort when no name obj exists.
+        const nameStr = data?.name?.[lang]
+          || (lang !== 'en' ? data?.name?.en : '')
+          || item.itemName
+          || '';
         const text     = itemText || itemApi || '-';
         const vertical = text.length > 45
           || text.indexOf('\n') !== -1
           || _wordCount(text) > 7;
         const disp     = text.length > 300 ? text.slice(0, 300) : text;
         const esc      = StringService.escapeHtml;
-        const titleStr = nameStr || (data?.name?.[lang] || data?.name?.en || data?.api) || text;
+        const titleStr = nameStr || data?.api || text;
         const subStr   = itemApi || typeName || '';
         const tags     = (typeName ? `<span class="tag">${esc(typeName)}</span>` : '')
                        + (catName  ? `<span class="tag">${esc(catName)}</span>`  : '');
@@ -213,6 +225,13 @@
           (item, l) => this.renderResultItem(item, l),
           lang
         );
+
+        // Scroll to top of results immediately on every new search.
+        // behavior:'instant' = no animation, no delay, works even with
+        // scroll-behavior:smooth on html (instant overrides it).
+        // Using scrollTo on window rather than container because VS uses
+        // window scroll mode — the scroll container IS the window.
+        window.scrollTo({ top: 0, behavior: 'instant' });
 
         M.UIService.updateUILanguage();
       } catch (e) {

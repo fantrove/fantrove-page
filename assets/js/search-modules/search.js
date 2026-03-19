@@ -194,7 +194,6 @@
      * @private
      */
     _showPlaceholder() {
-      document.body.style.marginBottom = '';
       const rc = DOMService.get(CONFIG.DOM.searchResultsId);
       if (rc) {
         rc.innerHTML = `<div class="search-result-here" style="text-align:center;color:#969ca8;font-size:1.05em;margin-top:30px;">${LanguageService.t('search_result_here')}</div>`;

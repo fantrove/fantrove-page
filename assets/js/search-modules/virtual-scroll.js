@@ -109,7 +109,7 @@
       this._onScroll = () => {
         this._scrolling = true;
         if (this._scrollTimer) clearTimeout(this._scrollTimer);
-        this._scrollTimer = setTimeout(() => { this._scrolling = false; }, 150);
+        this._scrollTimer = setTimeout(() => { this._scrolling = false; }, 100);
         this._sched();
       };
       this._scrollTarget.addEventListener('scroll', this._onScroll, { passive: true });
@@ -204,7 +204,8 @@
       if (!dirty || this._correctTimer) return;
 
       const elapsed = performance.now() - this._lastCorr;
-      const wait    = elapsed >= 64 ? 0 : 64 - elapsed;
+      // 100ms cap: correction is scroll-anchor polish only, 10fps is imperceptible
+      const wait    = elapsed >= 100 ? 0 : 100 - elapsed;
       this._correctTimer = setTimeout(() => {
         this._correctTimer = null;
         this._lastCorr     = performance.now();
