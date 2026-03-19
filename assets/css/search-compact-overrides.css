@@ -1,9 +1,11 @@
-/* search-compact-overrides.css  v3.1
+/* search-compact-overrides.css  v3.3
    ──────────────────────────────────────────────────
-   v3.1 additions:
-   • Platform-style overlay input bar styles
-   • #overlay-search-bar — back arrow + input pill + clear btn
-   • Removes old .search-overlay-input-wrapper pattern
+   v3.3 fixes:
+   • Wrapper uses flex row — icon / input / clear btn in natural flow
+   • NO absolute positioning on icon → NO SVG overlap with text
+   • Clear (✕) button restored as flex item on the right
+   • Header wrapper design matches overlay wrapper (same pill, same bg)
+   • Overlay top bar: same wrapper pill inside a simple flex bar
 */
 
 :root{
@@ -14,319 +16,341 @@
   --accent-dark : #0f8f66;
   --border-soft : rgba(226,230,236,.7);
   --tag-bg      : rgba(241,243,244,.95);
+  --text-main   : #0f2335;
 }
 
-/* ─── Header ─────────────────────────────────────── */
-.search-header{
-  padding:5px 12px 5px;
-  border-bottom:1px solid var(--border-soft);
-  background:var(--sf-bg);
-  box-shadow:none;
-  contain:layout style paint;
+/* ═══ HEADER ═══════════════════════════════════════ */
+.search-header {
+  padding: 8px 16px 10px;
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--sf-bg);
+  box-shadow: none;
+  contain: layout style paint;
 }
 
-/* ─── Input wrapper (page header) ────────────────── */
-.search-input-wrapper{
-  border-radius:28px;
-  padding:8px 12px;
-  max-width:520px;
-  margin:0 auto;
-  align-items:center;
-  gap:8px;
-  height:44px;
-  display:flex;
-  background:var(--sf-bg);
-  border:1px solid rgba(196,205,217,.35);
-  transition:border-color 160ms ease, box-shadow 160ms ease;
-  contain:layout style paint;
+/* ═══ INPUT WRAPPER
+     Flex row: [icon-slot] [input] [clear-btn]
+     MUST override search.min.css padding:12px 18px and position:relative
+════════════════════════════════════════════════════ */
+.search-input-wrapper {
+  display: flex         !important;
+  align-items: center   !important;
+  flex-direction: row   !important;
+  gap: 4px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.055);
+  border: 1.5px solid transparent;
+  padding: 0 10px 0 4px !important;   /* kill search.min.css padding:12px 18px */
+  max-width: 540px;
+  width: 100%;
+  margin: 0 auto;
+  height: 46px;
+  box-sizing: border-box;
+  transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+  contain: layout style paint;
 }
 
-.search-input-wrapper:focus-within{
-  border-color:rgba(19,180,127,.75);
-  box-shadow:0 6px 14px rgba(19,180,127,.06);
+.search-input-wrapper:focus-within {
+  background: #fff;
+  border-color: rgba(19,180,127,.65);
+  box-shadow: 0 0 0 3px rgba(19,180,127,.10);
 }
 
-.search-input-icon{
-  left:10px;
-  width:36px;
-  height:36px;
-  background:rgba(19,180,127,.06);
-  border-radius:10px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  flex-shrink:0;
-  contain:layout style paint;
+/* Inside overlay: pill adapts slightly */
+#searchOverlayContainer .search-input-wrapper {
+  background: rgba(0,0,0,0.055);
+  max-width: none;
+  margin: 0;
+}
+#searchOverlayContainer .search-input-wrapper:focus-within {
+  background: rgba(255,255,255,.9);
+  border-color: rgba(19,180,127,.6);
+  box-shadow: 0 0 0 3px rgba(19,180,127,.09);
 }
 
-.search-input-icon svg{ width:16px; height:16px; stroke-width:1.8; }
-
-#searchInput{
-  padding:8px 12px 8px 56px;
-  font-size:.96rem;
-  font-weight:700;
-  line-height:1;
-  border:0;
-  background:transparent;
-  outline:none;
+/* ═══ ICON SLOT — flex item, NOT absolute ══════════
+   MUST reset position + left from search.min.css which sets
+   position:absolute; left:18px on this element.
+   Without !important these rules lose to the original stylesheet.
+══════════════════════════════════════════════════════ */
+.search-input-icon {
+  position: static  !important;   /* kill absolute from search.min.css */
+  left:     auto    !important;   /* kill left:18px from search.min.css */
+  top:      auto    !important;
+  z-index:  auto    !important;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--accent);
+  background: transparent;
+  transition: background-color 150ms ease, color 150ms ease;
+  contain: layout style paint;
+  /* pointer-events controlled by JS (none=search, auto=back) */
+  pointer-events: none;
 }
 
-/* ─── Overlay (no backdrop-filter on scroll path) ── */
-.search-overlay-backdrop,
-.search-overlay{
-  backdrop-filter:none !important;
-  -webkit-backdrop-filter:none !important;
+/* Back-arrow state — set by JS via role=button */
+.search-input-icon[role="button"] {
+  pointer-events: auto;
+  cursor: pointer;
+  color: var(--text-main);
+}
+.search-input-icon[role="button"]:hover  { background: rgba(0,0,0,0.07); }
+.search-input-icon[role="button"]:active { background: rgba(0,0,0,0.13); }
+
+.search-input-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2.2;
+  pointer-events: none;
+  flex-shrink: 0;
 }
 
-.search-overlay-scrollable-content{
-  -webkit-overflow-scrolling:touch;
-  overscroll-behavior:contain;
-  will-change:scroll-position;
-  transform:translateZ(0);
-  contain:strict;
+/* ═══ SEARCH INPUT ══════════════════════════════════
+   MUST reset padding-left from search.min.css which sets
+   padding: 13px 18px 13px 68px to make room for the absolute icon.
+   Now icon is a flex sibling — no padding needed.
+════════════════════════════════════════════════════ */
+#searchInput {
+  flex: 1 1 0  !important;
+  min-width: 0 !important;
+  padding:   0 !important;   /* kill the 68px-left padding from search.min.css */
+  margin:    0 !important;
+  font-size: .97rem;
+  font-weight: 700;
+  line-height: 1;
+  border: 0;
+  background: transparent;
+  outline: none;
+  color: var(--text-main);
+  font-family: inherit;
+  letter-spacing: .2px;
+}
+#searchInput::placeholder {
+  color: rgba(15,35,53,.38);
+  font-weight: 600;
+}
+#searchInput::-webkit-search-cancel-button { display: none; }
+
+/* ═══ CLEAR BUTTON — flex item on the right ════════ */
+#search-clear-btn {
+  flex-shrink: 0;
+  display: none;           /* toggled by JS */
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.13);
+  border: none;
+  cursor: pointer;
+  color: #555;
+  padding: 0;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 120ms ease;
+  contain: layout style paint;
+}
+#search-clear-btn:hover  { background: rgba(0,0,0,0.20); }
+#search-clear-btn:active { background: rgba(0,0,0,0.28); }
+#search-clear-btn svg { pointer-events: none; }
+
+/* ═══ OVERLAY ═══════════════════════════════════════ */
+.search-overlay {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: #fff;
 }
 
-/* ─── Platform-style Overlay Bar (v3.1) ─────────── */
-#overlay-search-bar{
-  display:flex;
-  align-items:center;
-  width:100%;
-  padding:8px 12px;
-  background:#fff;
-  border-bottom:1px solid rgba(0,0,0,.07);
-  gap:8px;
-  box-sizing:border-box;
-  flex-shrink:0;
-  z-index:10001;
-  min-height:56px;
-  contain:layout style paint;
+/* Overlay header bar that holds .search-input-wrapper */
+#overlay-header-bar {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background: #fff;
+  border-bottom: 1px solid rgba(0,0,0,0.07);
+  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
+  contain: layout style paint;
 }
 
-#overlay-back-btn{
-  background:none;
-  border:none;
-  cursor:pointer;
-  padding:8px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  flex-shrink:0;
-  border-radius:50%;
-  width:40px;
-  height:40px;
-  min-width:40px;
-  color:#444;
-  transition:background 150ms ease;
-  outline:none;
-  -webkit-tap-highlight-color:transparent;
-}
-#overlay-back-btn:hover,
-#overlay-back-btn:focus-visible{ background:rgba(0,0,0,.06); }
-#overlay-back-btn svg{ display:block; pointer-events:none; }
-
-#overlay-input-pill{
-  flex:1;
-  display:flex;
-  align-items:center;
-  background:#f4f6f8;
-  border-radius:24px;
-  padding:0 12px 0 14px;
-  height:42px;
-  gap:6px;
-  overflow:hidden;
-  min-width:0;
-  transition:background 150ms ease;
+/* ═══ OVERLAY SCROLLABLE + SUGGESTIONS ═════════════ */
+.search-overlay-scrollable-content {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  will-change: scroll-position;
+  transform: translateZ(0);
+  contain: strict;
 }
 
-/* Input inside overlay — override page-header indented styles */
-#overlay-search-bar #searchInput{
-  flex:1 !important;
-  background:transparent !important;
-  border:none !important;
-  outline:none !important;
-  font-size:1rem !important;
-  font-weight:600 !important;
-  color:#0f2335 !important;
-  min-width:0 !important;
-  padding:0 !important;
-  font-family:inherit !important;
-  letter-spacing:.2px !important;
+.search-suggestions-fullscreen {
+  background: #fff;
+  border: none;
+  margin: 0;
 }
 
-#overlay-clear-btn{
-  background:rgba(0,0,0,.12);
-  border:none;
-  cursor:pointer;
-  padding:0;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  flex-shrink:0;
-  width:20px;
-  height:20px;
-  min-width:20px;
-  color:#555;
-  border-radius:50%;
-  transition:opacity 120ms ease, background 120ms ease;
-  -webkit-tap-highlight-color:transparent;
-  outline:none;
-}
-#overlay-clear-btn:hover{ background:rgba(0,0,0,.2); }
-#overlay-clear-btn svg{ display:block; pointer-events:none; }
-
-/* ─── Virtual scroll ─────────────────────────────── */
-.vs-container{ contain:layout style paint; }
-.vs-item{ contain:layout style paint; }
-
-/* ─── SEARCH CARD ─────────────────────────────────── */
-.search-card{
-  display:flex;
-  gap:14px;
-  align-items:flex-start;
-  padding:16px 18px;
-  border-radius:16px;
-  min-height:64px;
-  background:var(--card-bg);
-  contain:layout style paint;
-  content-visibility:auto;
-  contain-intrinsic-size:0 88px;
-  transition:transform 160ms ease;
+.suggestions-head {
+  padding: 14px 20px 8px;
+  font-size: .75rem;
+  font-weight: 750;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  user-select: none;
 }
 
-.vs-item .search-card{
-  content-visibility:visible;
-  contain-intrinsic-size:none;
-  contain:layout style paint;
+.suggestion-item {
+  padding: 13px 20px;
+  border-bottom: 1px solid rgba(0,0,0,0.04);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: background-color 100ms linear;
+  contain: layout style paint;
+  -webkit-tap-highlight-color: transparent;
+}
+.suggestion-item:hover  { background: #f7f7f7; }
+.suggestion-item:active { background: #f0f0f0; }
+.suggestion-body { flex: 1; word-break: break-word; font-size: .95rem; }
+
+/* ═══ SEARCH CARD (main page) ═══════════════════════ */
+.search-card {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 16px 18px;
+  border-radius: 16px;
+  min-height: 64px;
+  background: var(--card-bg);
+  contain: layout style paint;
+  content-visibility: auto;
+  contain-intrinsic-size: 0 88px;
+  transition: transform 160ms ease;
+}
+.vs-item .search-card {
+  content-visibility: visible;
+  contain-intrinsic-size: none;
+  contain: layout style paint;
 }
 
-.search-card .card-content{
-  flex:0 0 72px;
-  height:72px;
-  font-size:28px;
-  border-radius:12px;
-  padding:8px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  background:rgba(19,180,127,.04);
-  color:var(--accent);
-  contain:layout style paint;
+.search-card .card-content {
+  flex: 0 0 72px;
+  height: 72px;
+  font-size: 28px;
+  border-radius: 12px;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(19,180,127,.04);
+  color: var(--accent);
+  contain: layout style paint;
 }
 
-.search-card .card-body{ gap:6px; flex:1 1 auto; min-width:0; }
-
-.search-card .card-title{
-  font-size:1.05rem;
-  font-weight:800;
-  color:#0f2335;
-  line-height:1.25;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
+.search-card .card-body { gap: 6px; flex: 1 1 auto; min-width: 0; }
+.search-card .card-title {
+  font-size: 1.05rem; font-weight: 800; color: #0f2335;
+  line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.search-card .card-subtitle {
+  font-size: .95rem; color: var(--muted); font-weight: 700; opacity: .9;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.search-card .card-tags {
+  display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap;
+  align-items: center; max-height: 44px; overflow: hidden;
+  transition: opacity 140ms linear; contain: layout style paint;
+}
+.search-card .tag {
+  background: var(--tag-bg); color: var(--muted); padding: 4px 8px;
+  font-size: 11px; border-radius: 999px; font-weight: 700;
+  border: 1px solid rgba(230,235,240,.75); line-height: 1;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-.search-card .card-subtitle{
-  font-size:.95rem;
-  color:var(--muted);
-  font-weight:700;
-  opacity:.9;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
+.search-card .result-copy-btn {
+  position: absolute; right: 12px; top: 12px;
+  padding: 6px 10px; font-size: .88rem; border-radius: 10px;
+  background: #fbfffd; border: 1px solid rgba(200,210,220,.6);
+  color: var(--accent-dark); box-shadow: none;
+  transition: background-color 140ms ease, color 140ms ease;
+  contain: layout style paint;
 }
 
-.search-card .card-tags{
-  display:flex;
-  gap:8px;
-  margin-top:6px;
-  flex-wrap:wrap;
-  align-items:center;
-  max-height:44px;
-  overflow:hidden;
-  transition:opacity 140ms linear;
-  contain:layout style paint;
+#searchResults .search-card + .search-card { margin-top: 12px; margin-bottom: 12px; }
+.vs-item + .vs-item { margin-top: 0; margin-bottom: 0; }
+
+/* vertical variant */
+.search-card.vertical { padding: 14px; }
+.search-card.vertical .card-content {
+  height: auto; width: 100%; font-size: 16px; padding: 10px;
+  display: -webkit-box; -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical; overflow: hidden;
 }
 
-.search-card .tag{
-  background:var(--tag-bg);
-  color:var(--muted);
-  padding:4px 8px;
-  font-size:11px;
-  border-radius:999px;
-  font-weight:700;
-  border:1px solid rgba(230,235,240,.75);
-  line-height:1;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
+/* ═══ VS CONTAINERS ══════════════════════════════════ */
+.vs-container { contain: layout style paint; }
+.vs-item      { contain: layout style paint; }
+
+/* ═══ EMPTY STATE ════════════════════════════════════ */
+.no-result {
+  margin-top: 48px; padding: 32px; border-radius: 18px;
+  background: transparent; color: var(--muted);
 }
 
-.search-card .result-copy-btn{
-  position:absolute;
-  right:12px;
-  top:12px;
-  padding:6px 10px;
-  font-size:.88rem;
-  border-radius:10px;
-  background:#fbfffd;
-  border:1px solid rgba(200,210,220,.6);
-  color:var(--accent-dark);
-  box-shadow:none;
-  transition:background-color 140ms ease, color 140ms ease;
-  contain:layout style paint;
-}
-
-#searchResults .search-card + .search-card{ margin-top:12px; margin-bottom:12px; }
-.vs-item + .vs-item{ margin-top:0; margin-bottom:0; }
-
-.search-card.vertical{ padding:14px; }
-.search-card.vertical .card-content{
-  height:auto; width:100%; font-size:16px; padding:10px;
-  display:-webkit-box; -webkit-line-clamp:3;
-  -webkit-box-orient:vertical; overflow:hidden;
-}
-
-.no-result{
-  margin-top:48px; padding:32px; border-radius:18px;
-  background:transparent; color:var(--muted);
-}
-
-/* ─── Mobile ──────────────────────────────────────── */
+/* ═══ RESPONSIVE: Mobile ═════════════════════════════ */
 @media(max-width:768px){
-  .search-input-wrapper{ padding:8px 10px; height:42px; border-radius:18px; }
-  .search-input-icon{ width:32px; height:32px; left:8px; }
-  #searchInput{ padding:8px 10px 8px 48px; font-size:.98rem; }
-
-  #overlay-search-bar{ padding:6px 8px; min-height:52px; }
-  #overlay-back-btn{ width:36px; height:36px; min-width:36px; padding:6px; }
-  #overlay-input-pill{ height:38px; padding:0 10px 0 12px; }
-
-  .search-card .card-content{ flex:0 0 56px; height:56px; font-size:22px; }
-  .search-card .card-title{ font-size:1rem; }
-  .search-card .card-subtitle{ font-size:.92rem; }
-  .search-card .card-tags{ max-height:38px; }
-  .search-card .result-copy-btn{ position:static; margin-top:8px; align-self:flex-start; }
-  .search-card{ contain-intrinsic-size:0 72px; }
+  .search-header { padding: 6px 12px 8px; }
+  .search-input-wrapper { height: 42px; padding: 0 8px 0 4px; gap: 4px; }
+  .search-input-icon { width: 30px; height: 30px; }
+  .search-input-icon svg { width: 18px; height: 18px; }
+  #searchInput { font-size: .95rem; }
+  .search-card .card-content { flex: 0 0 56px; height: 56px; font-size: 22px; }
+  .search-card .card-title { font-size: 1rem; }
+  .search-card .card-subtitle { font-size: .92rem; }
+  .search-card .card-tags { max-height: 38px; }
+  .search-card .result-copy-btn { position: static; margin-top: 8px; align-self: flex-start; }
+  .search-card { contain-intrinsic-size: 0 72px; }
 }
 
-/* ─── Reduced motion ─────────────────────────────── */
+@media(max-width:480px){
+  .search-header { padding: 4px 10px 6px; }
+  .search-input-wrapper { height: 40px; }
+  .search-input-icon { width: 28px; height: 28px; }
+  .search-input-icon svg { width: 17px; height: 17px; }
+  #searchInput { font-size: .93rem; }
+}
+
+/* ═══ REDUCED MOTION ═════════════════════════════════ */
 @media(prefers-reduced-motion:reduce){
-  .search-card,
-  .search-input-wrapper,
-  .search-card .result-copy-btn,
-  .search-card .card-tags,
-  #overlay-back-btn,
-  #overlay-clear-btn{
-    transition:none !important;
-    transform:none !important;
+  .search-card, .search-input-wrapper,
+  .search-card .result-copy-btn, .search-card .card-tags,
+  .search-input-icon, .suggestion-item, #search-clear-btn {
+    transition: none !important;
+    transform: none !important;
   }
 }
 
-/* ─── Feature fallbacks ──────────────────────────── */
+/* ═══ PRINT ══════════════════════════════════════════ */
+@media print{
+  .search-header, .search-filters-panel, .result-copy-btn,
+  #copyToast, .search-footer { display: none; }
+  .search-card { page-break-inside: avoid; contain: none; content-visibility: visible; }
+}
+
+/* ═══ FEATURE FALLBACKS ══════════════════════════════ */
 @supports not (content-visibility:auto){
-  .search-card{ content-visibility:visible; contain-intrinsic-size:none; }
+  .search-card { content-visibility: visible; contain-intrinsic-size: none; }
 }
 @supports not (contain:strict){
-  .search-overlay-scrollable-content{ contain:none; }
-  .vs-container{ contain:none; }
+  .search-overlay-scrollable-content { contain: none; }
+  .vs-container { contain: none; }
 }
