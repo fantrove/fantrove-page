@@ -254,21 +254,51 @@
     color: var(--tmd); line-height: 1.45;
   }
 
-  /* Highlight match grapheme clusters from HighlightService.
-     Thai diacritic fix:
-       - display:inline + vertical-align:baseline ensures combining chars
-         stay in the text flow without causing displacement
-       - border-radius removed: radius creates a new formatting context
-         that can shift combining diacritics on some engines
-       - padding: 0 only — horizontal padding safe, vertical shifts baseline */
+  /* ── Tier 1: CSS Custom Highlight API (Chrome 105+, Safari 17.2+, FF 117+) ──
+     Browser paints highlight BEHIND glyphs at font-rendering level.
+     Zero DOM changes → covers full glyph extent including above-baseline
+     Thai diacritics (ิ ้ ั etc.) which a box background cannot reach.
+     Same mechanism as browser "Find in Page". */
+  ::highlight(sg-match) {
+    background-color: var(--g1);
+    color: var(--thi);
+  }
+
+  /* ── Tier 2: <mark> fallback (older browsers without CSS.highlights) ──
+     Wraps whole grapheme cluster. Extended padding-top pulls the background
+     rectangle upward to visually cover above-baseline Thai diacritics.
+     box-decoration-break:clone ensures padding applies on wrapped lines.
+     display:inline + vertical-align:baseline prevents displacement. */
   .suggestion-body mark {
+    /*
+     * Thai diacritic coverage (Tier 2 / <mark> path):
+     *   Thai above-baseline vowels (ิ ี ึ ็ ั) and tone marks (้ ่ ๊ ๋)
+     *   sit above the baseline, outside a normal line-height box.
+     *   A block background-color rectangle lives at baseline and doesn't
+     *   extend high enough to visually cover these marks.
+     *
+     *   Fix: padding-top pulls the background rectangle upward.
+     *   0.6em ≈ enough to reach the topmost Thai above-baseline mark.
+     *   box-decoration-break:clone: padding applies to EACH line of a
+     *   wrapped inline — required for multi-line Thai text.
+     *   vertical-align:baseline: ensures the mark stays in text flow
+     *   without shifting the cluster downward.
+     *
+     *   Tier 1 (CSS Custom Highlight API) supersedes this when available —
+     *   it paints at font-rendering level and covers exactly the glyph's
+     *   ink bounding box including above-baseline extents automatically.
+     */
     background: var(--g1);
     color: var(--thi);
     font-weight: 700;
     display: inline;
     vertical-align: baseline;
-    padding: 0;
-    border-radius: 0;
+    /* Generous top padding to cover high Thai above-baseline marks */
+    padding: 0.6em 0.05em 0 0.05em;
+    margin: 0 -0.05em;           /* cancel horizontal padding from affecting spacing */
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    border-radius: 0;            /* no radius — avoids formatting-context issues */
   }
 
   /* ── Empty state ─────────────────────────────────────────── */
@@ -456,6 +486,168 @@ flex-direction: column; gap: 10px; padding: 14px;
 }
 
 /* ══════════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════════════
+   @layer filter-bar
+   Horizontal scrollable chip/pill filter — YouTube / App Store style.
+
+   Design decisions:
+   ┌────────────────────────────────────────────────────────────┐
+   │  TYPE ROW  (#typeFilter)                                   │
+   │  • Taller chips (34px), medium font weight                 │
+   │  • Active: solid brand green fill + white text             │
+   │  • Inactive: semi-transparent bg, green tint border        │
+   │  • Subtle bottom separator line below row                  │
+   │                                                            │
+   │  CATEGORY ROW  (#categoryFilter)                           │
+   │  • Shorter chips (28px), smaller font                      │
+   │  • Active: near-black fill (contrast)                      │
+   │  • Inactive: ghost style, muted colour                     │
+   │  • Only visible when categories > 1                        │
+   │                                                            │
+   │  BOTH ROWS                                                 │
+   │  • overflow-x:auto, scrollbar hidden                       │
+   │  • Side fade-mask so chips don't hard-clip at edges        │
+   │  • scroll-snap for precise swipe snapping                  │
+   │  • -webkit-overflow-scrolling:touch for momentum scroll    │
+   │  • Roving tabindex keyboard nav (aria radiogroup)          │
+   │  • touch-action:manipulation removes 300ms tap delay       │
+   │  • Transitions: background-color + color only (compositor) │
+   └────────────────────────────────────────────────────────────┘
+   ══════════════════════════════════════════════════════════════ */
+@layer filter-bar {
+
+  /* ── Shared row container ──────────────────────────────────── */
+  #typeFilter,
+  #categoryFilter {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    padding: 8px 16px;
+    /* Side fade — chips appear to dissolve into the edge */
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      black 14px,
+      black calc(100% - 14px),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      black 14px,
+      black calc(100% - 14px),
+      transparent 100%
+    );
+  }
+  #typeFilter::-webkit-scrollbar,
+  #categoryFilter::-webkit-scrollbar { display: none; }
+
+  /* Separator under type row when both rows show */
+  #typeFilter {
+    padding-bottom: 8px;
+  }
+  #categoryFilter {
+    padding-top: 2px;
+    padding-bottom: 8px;
+    gap: 5px;
+  }
+
+  /* ── Chip base ─────────────────────────────────────────────── */
+  .fpill {
+    flex-shrink: 0;
+    scroll-snap-align: start;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--rp);
+    font-family: inherit;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    outline: none;
+    user-select: none;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    /* Compositor-safe transitions only */
+    transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+  }
+
+  /* ── Type chip (.fpill--type) ──────────────────────────────── */
+  .fpill--type {
+    height: 34px;
+    padding: 0 16px;
+    font-size: .85rem;
+    background: rgba(19, 180, 127, .07);
+    border: 1.5px solid rgba(19, 180, 127, .22);
+    color: var(--g6);
+  }
+  .fpill--type.fpill--active {
+    background: var(--g5);
+    border-color: var(--g5);
+    color: #fff;
+  }
+  @media (hover: hover) {
+    .fpill--type:not(.fpill--active):hover {
+      background: rgba(19, 180, 127, .14);
+      border-color: var(--g5);
+      color: var(--g6);
+    }
+  }
+
+  /* ── Category chip (.fpill--cat) ───────────────────────────── */
+  .fpill--cat {
+    height: 28px;
+    padding: 0 12px;
+    font-size: .80rem;
+    background: var(--sur2);
+    border: 1.5px solid var(--bd);
+    color: var(--tlo);
+  }
+  .fpill--cat.fpill--active {
+    background: var(--thi);
+    border-color: var(--thi);
+    color: #fff;
+  }
+  @media (hover: hover) {
+    .fpill--cat:not(.fpill--active):hover {
+      background: var(--sur2);
+      border-color: var(--tmd);
+      color: var(--tmd);
+    }
+  }
+
+  /* ── Press feedback ────────────────────────────────────────── */
+  .fpill:active { opacity: .70; }
+
+  /* ── Focus ring (keyboard nav) ─────────────────────────────── */
+  .fpill:focus-visible {
+    outline: 2px solid var(--g5);
+    outline-offset: 2px;
+  }
+
+  /* ── Mobile ────────────────────────────────────────────────── */
+  @media (max-width: 768px) {
+    #typeFilter,
+    #categoryFilter    { padding: 6px 12px; gap: 5px; }
+    .fpill--type       { height: 32px; padding: 0 14px; font-size: .83rem; }
+    .fpill--cat        { height: 26px; padding: 0 10px; font-size: .78rem; }
+  }
+  @media (max-width: 480px) {
+    .fpill--type       { height: 30px; padding: 0 12px; font-size: .81rem; }
+    .fpill--cat        { height: 24px; padding: 0 9px;  font-size: .76rem; }
+  }
+
+}
+
 @layer overlay {
 
   .search-overlay {

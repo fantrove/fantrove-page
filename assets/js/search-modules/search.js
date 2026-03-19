@@ -57,8 +57,8 @@
 
         const inp  = DOMService.get(CONFIG.DOM.searchInputId);
         const q    = inp?.value || '';
-        const tfEl = DOMService.get(CONFIG.DOM.typeFilterId);
-        State.selectedType     = tfEl?.value || State.selectedType;
+        // selectedType is kept current by pill click handlers in FilterService.
+        // No need to read from the DOM — State is the single source of truth.
         State.selectedCategory = 'all';
 
         // ── Empty query ────────────────────────────────────────────────────
