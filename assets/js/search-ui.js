@@ -419,63 +419,215 @@
   };
 
   // =========================================================
-  // VIRTUAL SCROLL ENGINE  (unchanged)
+  // VIRTUAL SCROLL ENGINE  (v3.4 — zero-jank scroll)
+  //
+  // Root causes of previous jank, now fixed:
+  //
+  // 1. _coOff() walked offsetParent every RAf → forced reflow each frame.
+  //    Fix: cached as _cachedCoOff; recomputed only when ResizeObserver fires.
+  //
+  // 2. _measure() wrote vp.scrollTop mid-scroll → layout thrash + visual jump.
+  //    Fix: guarded by _scrolling flag; correction only applied when idle.
+  //
+  // 3. No distinction between scroll-active and scroll-idle frames.
+  //    Fix: _onScroll sets _scrolling=true; clears after 150ms idle.
+  //
+  // 4. Read-write order: all DOM reads happen before any writes per frame.
   // =========================================================
   const VirtualScrollEngine = {
-    OVERSCAN:CONFIG.RENDER.vsOverscanPx, POOL_MAX:CONFIG.RENDER.vsPoolMax, EST_H:CONFIG.RENDER.vsEstimatedItemHeight,
-    _vp:null,_host:null,_box:null,_items:[],_fn:null,_lang:'en',
-    _hgt:null,_off:null,_total:0,_vis:null,_pool:[],_raf:null,_onScroll:null,_vpObs:null,
+    OVERSCAN : CONFIG.RENDER.vsOverscanPx,
+    POOL_MAX : CONFIG.RENDER.vsPoolMax,
+    EST_H    : CONFIG.RENDER.vsEstimatedItemHeight,
 
-    mount(viewport,host,items,renderFn,lang){
+    _vp:null,_host:null,_box:null,_items:[],_fn:null,_lang:'en',
+    _hgt:null,_off:null,_total:0,_vis:null,_pool:[],
+    _raf:null,_onScroll:null,_vpObs:null,
+    _cachedCoOff : 0,
+    _coOffDirty  : true,
+    _scrolling   : false,
+    _scrollTimer : null,
+
+    mount(viewport, host, items, renderFn, lang) {
       this.destroy();
-      this._vp=viewport;this._host=host;this._items=items||[];this._fn=renderFn;this._lang=lang||'en';this._vis=new Map();
-      this._hgt=new Float32Array(this._items.length).fill(this.EST_H);this._buildOff();
-      const box=document.createElement('div');box.className='vs-container';
-      box.style.cssText=`position:relative;height:${this._total}px;min-height:2px;contain:layout style;`;
-      host.appendChild(box);this._box=box;
-      this._onScroll=()=>this._sched();viewport.addEventListener('scroll',this._onScroll,{passive:true});
-      if('ResizeObserver'in window){this._vpObs=new ResizeObserver(()=>this._sched());this._vpObs.observe(viewport);}
+      this._vp    = viewport;
+      this._host  = host;
+      this._items = items || [];
+      this._fn    = renderFn;
+      this._lang  = lang || 'en';
+      this._vis   = new Map();
+      this._hgt   = new Float32Array(this._items.length).fill(this.EST_H);
+      this._buildOff();
+      this._coOffDirty = true;
+
+      const box = document.createElement('div');
+      box.className = 'vs-container';
+      box.style.cssText = `position:relative;height:${this._total}px;min-height:2px;contain:layout style;`;
+      host.appendChild(box);
+      this._box = box;
+
+      this._onScroll = () => {
+        // Mark active scroll — prevents scrollTop write in _measure
+        this._scrolling = true;
+        if (this._scrollTimer) clearTimeout(this._scrollTimer);
+        this._scrollTimer = setTimeout(() => { this._scrolling = false; }, 150);
+        this._sched();
+      };
+      viewport.addEventListener('scroll', this._onScroll, { passive: true });
+
+      if ('ResizeObserver' in window) {
+        this._vpObs = new ResizeObserver(() => {
+          this._coOffDirty = true;   // layout changed — invalidate cache
+          this._sched();
+        });
+        this._vpObs.observe(viewport);
+      }
       this._sched();
     },
-    destroy(){
-      if(this._raf){cancelAnimationFrame(this._raf);this._raf=null;}
-      if(this._vp&&this._onScroll)this._vp.removeEventListener('scroll',this._onScroll);
-      this._vpObs?.disconnect();this._vpObs=null;this._box?.remove();this._box=null;
-      this._vis?.clear();this._pool=[];this._items=[];this._vp=this._host=this._fn=this._onScroll=null;this._vis=null;
+
+    destroy() {
+      if (this._raf) { cancelAnimationFrame(this._raf); this._raf = null; }
+      if (this._scrollTimer) { clearTimeout(this._scrollTimer); this._scrollTimer = null; }
+      if (this._vp && this._onScroll) this._vp.removeEventListener('scroll', this._onScroll);
+      this._vpObs?.disconnect(); this._vpObs = null;
+      this._box?.remove(); this._box = null;
+      this._vis?.clear(); this._pool = []; this._items = [];
+      this._vp = this._host = this._fn = this._onScroll = null;
+      this._vis = null;
+      this._scrolling = false;
     },
-    _sched(){if(this._raf)return;this._raf=requestAnimationFrame(()=>{this._raf=null;this._render();});},
-    _buildOff(){const n=this._hgt.length;this._off=new Float64Array(n+1);for(let i=0;i<n;i++)this._off[i+1]=this._off[i]+this._hgt[i];this._total=this._off[n]||0;},
-    _find(t){if(!this._off||this._off.length<2)return 0;let lo=0,hi=this._off.length-2;while(lo<hi){const mid=(lo+hi+1)>>>1;if(this._off[mid]<=t)lo=mid;else hi=mid-1;}return lo;},
-    _coOff(){let off=0,el=this._box;while(el&&el!==this._vp){off+=el.offsetTop;el=el.offsetParent;}return off;},
-    _render(){
-      if(!this._vp||!this._box||!this._items.length)return;
-      const st=this._vp.scrollTop,vh=this._vp.clientHeight;if(!vh)return;
-      const co=this._coOff(),lo=st-co-this.OVERSCAN,hi=st-co+vh+this.OVERSCAN;
-      const si=this._find(Math.max(0,lo)),ei=Math.min(this._items.length-1,this._find(Math.max(0,hi))+1);
-      const recycle=[];for(const[idx,el]of this._vis){if(idx<si||idx>ei)recycle.push([idx,el]);}
-      const frag=document.createDocumentFragment(),meas=[];
-      for(const[idx,el]of recycle){el.style.display='none';this._vis.delete(idx);if(this._pool.length<this.POOL_MAX)this._pool.push(el);else el.remove();}
-      for(let i=si;i<=ei;i++){
-        if(this._vis.has(i))continue;
-        const top=this._off[i],html=this._fn(this._items[i],this._lang);
-        let el=this._pool.pop();
-        if(el){el.style.cssText=`position:absolute;left:0;right:0;top:${top}px;`;el.style.display='';el.innerHTML=html;}
-        else{el=document.createElement('div');el.className='vs-item';el.style.cssText=`position:absolute;left:0;right:0;top:${top}px;contain:layout style paint;`;el.innerHTML=html;frag.appendChild(el);}
-        this._vis.set(i,el);meas.push(i);
+
+    _sched() {
+      if (this._raf) return;
+      this._raf = requestAnimationFrame(() => { this._raf = null; this._render(); });
+    },
+
+    _buildOff() {
+      const n = this._hgt.length;
+      this._off = new Float64Array(n + 1);
+      for (let i = 0; i < n; i++) this._off[i+1] = this._off[i] + this._hgt[i];
+      this._total = this._off[n] || 0;
+    },
+
+    _find(target) {
+      if (!this._off || this._off.length < 2) return 0;
+      let lo = 0, hi = this._off.length - 2;
+      while (lo < hi) {
+        const mid = (lo + hi + 1) >>> 1;
+        if (this._off[mid] <= target) lo = mid; else hi = mid - 1;
       }
-      if(frag.hasChildNodes())this._box.appendChild(frag);if(meas.length)this._measure(meas);
+      return lo;
     },
-    _measure(indices){
-      const exec=()=>{
-        if(!this._vis)return;
-        const reads=[];for(const i of indices){const el=this._vis.get(i);if(!el||el.style.display==='none')continue;const h=el.firstElementChild?.offsetHeight||el.offsetHeight;if(h>4)reads.push([i,h]);}
-        let changed=false;const st=this._vp?.scrollTop||0,co=this._coOff();let adj=0;
-        for(const[i,h]of reads){const diff=h-this._hgt[i];if(Math.abs(diff)<=4)continue;if(this._off[i]+co<st)adj+=diff;this._hgt[i]=h;changed=true;}
-        if(!changed)return;this._buildOff();if(this._box)this._box.style.height=this._total+'px';
-        for(const[idx,el]of this._vis){const t=this._off[idx]+'px';if(el.style.top!==t)el.style.top=t;}
-        if(adj!==0&&this._vp)this._vp.scrollTop+=adj;
+
+    // Cached container offset — no reflow unless dirty flag set by ResizeObserver
+    _getCoOff() {
+      if (!this._coOffDirty) return this._cachedCoOff;
+      let off = 0, el = this._box;
+      while (el && el !== this._vp) { off += el.offsetTop; el = el.offsetParent; }
+      this._cachedCoOff = off;
+      this._coOffDirty  = false;
+      return off;
+    },
+
+    _render() {
+      if (!this._vp || !this._box || !this._items.length) return;
+
+      // ── All reads first ──────────────────────────────────
+      const st = this._vp.scrollTop;
+      const vh = this._vp.clientHeight;
+      if (!vh) return;
+
+      const co = this._getCoOff();          // cached — no reflow
+      const lo = st - co - this.OVERSCAN;
+      const hi = st - co + vh + this.OVERSCAN;
+      const si = this._find(Math.max(0, lo));
+      const ei = Math.min(this._items.length - 1, this._find(Math.max(0, hi)) + 1);
+
+      const recycle = [];
+      for (const [idx, el] of this._vis) {
+        if (idx < si || idx > ei) recycle.push([idx, el]);
+      }
+
+      // ── All writes ───────────────────────────────────────
+      const frag = document.createDocumentFragment();
+      const meas = [];
+
+      for (const [idx, el] of recycle) {
+        el.style.display = 'none';
+        this._vis.delete(idx);
+        if (this._pool.length < this.POOL_MAX) this._pool.push(el); else el.remove();
+      }
+
+      for (let i = si; i <= ei; i++) {
+        if (this._vis.has(i)) continue;
+        const top  = this._off[i];
+        const html = this._fn(this._items[i], this._lang);
+        let el = this._pool.pop();
+        if (el) {
+          el.style.cssText = `position:absolute;left:0;right:0;top:${top}px;`;
+          el.style.display = '';
+          el.innerHTML = html;
+        } else {
+          el = document.createElement('div');
+          el.className = 'vs-item';
+          el.style.cssText = `position:absolute;left:0;right:0;top:${top}px;contain:layout style paint;`;
+          el.innerHTML = html;
+          frag.appendChild(el);
+        }
+        this._vis.set(i, el);
+        meas.push(i);
+      }
+
+      if (frag.hasChildNodes()) this._box.appendChild(frag);
+      if (meas.length) this._measure(meas);
+    },
+
+    _measure(indices) {
+      const self = this;
+      const exec = () => {
+        if (!self._vis) return;
+
+        // Phase 1 — reads only
+        const reads = [];
+        for (const i of indices) {
+          const el = self._vis.get(i);
+          if (!el || el.style.display === 'none') continue;
+          const h = el.firstElementChild?.offsetHeight || el.offsetHeight;
+          if (h > 4) reads.push([i, h]);
+        }
+
+        // Phase 2 — compute (no DOM)
+        let changed = false, adj = 0;
+        const co = self._cachedCoOff;   // already cached — no reflow
+        const st = self._vp?.scrollTop || 0;
+        for (const [i, h] of reads) {
+          const diff = h - self._hgt[i];
+          if (Math.abs(diff) <= 2) continue;   // tighter threshold
+          if (self._off[i] + co < st) adj += diff;
+          self._hgt[i] = h;
+          changed = true;
+        }
+        if (!changed) return;
+
+        // Phase 3 — writes
+        self._buildOff();
+        if (self._box) self._box.style.height = self._total + 'px';
+        for (const [idx, el] of self._vis) {
+          const t = self._off[idx] + 'px';
+          if (el.style.top !== t) el.style.top = t;
+        }
+
+        // Scroll correction ONLY when idle — never during active scroll
+        if (adj !== 0 && self._vp && !self._scrolling) {
+          self._vp.scrollTop += adj;
+        }
       };
-      if('requestIdleCallback'in window)requestIdleCallback(exec,{timeout:500});else setTimeout(exec,50);
+
+      // Idle callback — never on the critical scroll path
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(exec, { timeout: 800 });
+      } else {
+        setTimeout(exec, 100);
+      }
     },
   };
 
