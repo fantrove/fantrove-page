@@ -1,11 +1,15 @@
 // @ts-check
 /**
  * @file rendering.js
- * RenderingService — builds card HTML, renders results to the main page.
+ * RenderingService — builds card HTML, renders results via VirtualScrollEngine.
  * FilterService    — populates type/category <select> elements.
  *
- * Important: results always render to #searchResults on the main page.
- * The overlay contains only the input + suggestions (see overlay.js).
+ * Results always render to #searchResults on the main page (never overlay).
+ *
+ * Rendering strategy (v4.1):
+ *   VirtualScrollEngine with window scroll — only ~20 nodes in DOM at any time.
+ *   This eliminates the content-visibility:auto jank pattern where each card
+ *   triggered a layout restoration as it entered the viewport.
  *
  * @module rendering
  * @depends {config.js, state.js, utils.js, virtual-scroll.js}
@@ -23,8 +27,8 @@
   const RenderingService = {
 
     /**
-     * Build the HTML string for one result card.
-     * Automatically detects vertical layout from text length.
+     * Build HTML string for one result card.
+     * Layout heuristic (vertical vs horizontal) avoids DOM measurement.
      * @param {SearchResult} item
      * @param {string} lang
      * @returns {string}
@@ -38,7 +42,7 @@
         const typeName = item.typeName || item.typeObj?.name?.[lang] || item.typeObj?.name?.en || LanguageService.t('emoji');
         const catName  = item.catName  || item.category?.name?.[lang] || item.category?.name?.en || '';
 
-        // Build display name list (primary + alternate names)
+        // Collect all display names
         const names = [];
         if (item.itemName) names.push(item.itemName);
         if (data?.name) {
@@ -54,7 +58,6 @@
 
         const nameStr  = names.filter(Boolean).join(' / ');
         const text     = itemText || itemApi || '-';
-        // Heuristic for vertical layout — avoids DOM measurement
         const vertical = text.includes('\n') || text.length > 45 || text.trim().split(/\s+/).length > 7;
         const esc      = StringService.escapeHtml;
 
@@ -75,7 +78,7 @@
       }
     },
 
-    /** Destroy virtual scroller and remove the legacy sentinel element. */
+    /** Destroy virtual scroller and remove legacy sentinel. */
     disconnectRenderObserver() {
       VirtualScrollEngine.destroy();
       DOMService.remove(DOMService.get(CONFIG.DOM.sentinelId));
@@ -101,7 +104,13 @@
 
     /**
      * Render results to #searchResults on the main page.
-     * Applies category filter, then batch-renders via DocumentFragment.
+     *
+     * Uses VirtualScrollEngine with window scroll so only the visible window
+     * of cards (~20 nodes) is ever in the DOM. This replaces the old
+     * _batchRender approach that dumped all cards into DOM at once and
+     * relied on content-visibility:auto for deferred layout — which caused
+     * per-card layout restoration jank as each card entered the viewport.
+     *
      * @param {SearchResult[]} results
      * @param {boolean}        [showSuggestionsIfNoResult=false]
      */
@@ -124,9 +133,22 @@
           return;
         }
 
+        // Clear container — VS engine will manage all child nodes
         DOMService.setHTML(container, '');
-        // rAF defers to next frame so overlay close animation isn't blocked
-        requestAnimationFrame(() => this._batchRender(filtered, container, lang));
+
+        // Use window as the scroll viewport for main page results.
+        // document.scrollingElement is the root scroll element (html or body).
+        const viewport = document.scrollingElement || document.documentElement;
+
+        VirtualScrollEngine.mount(
+          viewport,
+          container,
+          filtered,
+          (item, l) => this.renderResultItem(item, l),
+          lang
+        );
+
+        // Attach copy handler once (delegated click on the container)
         this._attachCopyHandler(container);
         M.UIService.updateUILanguage();
       } catch (e) {
@@ -136,10 +158,7 @@
 
     // ── Private helpers ───────────────────────────────────────────────────────
 
-    /**
-     * Render the no-result state, optionally with sample suggestions.
-     * @private
-     */
+    /** @private */
     _renderEmpty(container, lang, showSuggestions) {
       let html = `<div class="no-result">${LanguageService.t('not_found')}</div>`;
 
@@ -166,25 +185,7 @@
       M.UIService.updateUILanguage();
     },
 
-    /**
-     * Insert all cards via a <template> + DocumentFragment — single reflow.
-     * @private
-     */
-    _batchRender(items, container, lang) {
-      try {
-        const tpl     = document.createElement('template');
-        tpl.innerHTML = items.map(item => this.renderResultItem(item, lang)).join('');
-        container.appendChild(tpl.content);
-        this._attachCopyHandler(container);
-      } catch (e) {
-        console.error('[RenderingService] _batchRender failed', e);
-      }
-    },
-
-    /**
-     * Attach a delegated click handler for copy buttons (once per container).
-     * @private
-     */
+    /** @private — attach delegated copy handler once per container lifetime */
     _attachCopyHandler(container) {
       if (window._copyResultTextHandlerSet) return;
       Handlers.copyClick = (e) => {
@@ -221,7 +222,7 @@
     },
 
     /**
-     * Populate the category <select> from extracted category options.
+     * Populate the category <select>.
      * @param {CategoryOption[]} cats
      * @param {string} [selected='all']
      */
@@ -233,9 +234,9 @@
         for (const { key, displayName } of cats) {
           opts.push(`<option value="${StringService.escapeHtml(key)}">${StringService.escapeHtml(displayName)}</option>`);
         }
-        el.innerHTML    = opts.join('');
+        el.innerHTML     = opts.join('');
         el.style.display = '';
-        el.value        = selected;
+        el.value         = selected;
       } catch {}
     },
   };

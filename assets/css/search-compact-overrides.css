@@ -328,8 +328,6 @@
   position: relative;
   overflow: hidden;
   contain: layout style paint;
-  content-visibility: auto;
-  contain-intrinsic-size: 0 88px;
   /* background-color only — GPU composited, zero paint cost */
   transition: background-color var(--tf);
 }
@@ -339,9 +337,8 @@
 .search-card:active { background: var(--g1); }
 
 /* VS context — managed by JS */
+/* .vs-item .search-card — VS manages visibility natively, no overrides needed */
 .vs-item .search-card {
-  content-visibility: visible;
-  contain-intrinsic-size: none;
   contain: layout style paint;
 }
 
@@ -443,8 +440,8 @@
 .search-card .result-copy-btn:active { opacity: .75; }
 
 /* Card spacing */
-#searchResults .search-card + .search-card { margin-top: 10px; }
-.vs-item + .vs-item { margin-top: 0; }
+/* inter-card gap handled by .vs-item padding-bottom */
+
 
 /* Vertical variant */
 .search-card.vertical {
@@ -496,8 +493,8 @@
 /* ═══════════════════════════════════════════════════
    VS CONTAINERS
    ═══════════════════════════════════════════════════ */
-.vs-container { contain: layout style paint; }
-.vs-item      { contain: layout style paint; }
+.vs-container { contain: layout style; will-change: transform; }
+.vs-item      { contain: layout style paint; top: 0 !important; padding-bottom: 10px; box-sizing: border-box; }
 
 
 /* ═══════════════════════════════════════════════════
@@ -552,7 +549,7 @@
   .search-card .card-title { font-size: .93rem; }
   .search-card .card-subtitle { font-size: .81rem; }
   .search-card .result-copy-btn { position: static; margin-top: 8px; align-self: flex-start; }
-  .search-card { contain-intrinsic-size: 0 78px; }
+  .search-card {  }
 
   .suggestion-item { padding: 12px 16px; }
 }
@@ -592,7 +589,7 @@
   .search-card {
     page-break-inside: avoid;
     contain: none;
-    content-visibility: visible;
+
     box-shadow: none;
     border: 1px solid #ccc;
   }
@@ -602,9 +599,7 @@
 /* ═══════════════════════════════════════════════════
    FEATURE FALLBACKS
    ═══════════════════════════════════════════════════ */
-@supports not (content-visibility: auto) {
-  .search-card { content-visibility: visible; contain-intrinsic-size: none; }
-}
+/* content-visibility:auto removed — VirtualScrollEngine handles visibility */
 @supports not (contain: strict) {
   .search-overlay-scrollable-content { contain: none; }
   .vs-container { contain: none; }
