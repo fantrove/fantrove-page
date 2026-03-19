@@ -33,6 +33,7 @@
     overlayHistoryPushed     : false,
     preOverlayState          : null,
     overlayOpenedAt          : null,
+    _savedScrollY            : 0,    // scroll position saved before overlay scroll-lock
     overlayScrollable        : null,
     _wrapperParent           : null,
     _wrapperNext             : null,

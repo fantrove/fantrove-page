@@ -129,9 +129,30 @@
         DOMService.on(sg, 'mouseenter', () => { State.suggestionsLocked = true;  });
         DOMService.on(sg, 'mouseleave', () => { State.suggestionsLocked = false; });
 
-        // Lock body scroll while overlay is open
-        document.documentElement.style.overflow = 'hidden';
-        document.body.style.overflow            = 'hidden';
+        // ── Scroll-lock: no layout shift technique ─────────────────────────
+        // BAD: document.documentElement.overflow='hidden' removes the scrollbar
+        //      → page widens by ~15px → all fixed elements shift → results jump.
+        //
+        // CORRECT (Bootstrap/MUI/Headless UI pattern):
+        //   Save scrollY → body position:fixed + top:-scrollY + width:100%
+        //   Body stays visually in place, scrollbar stays visible → zero shift.
+        //
+        // BUG 2 fix (overlay clipped when keyboard open + scrolled):
+        //   When keyboard is open, visualViewport.offsetTop can be > 0.
+        //   Scroll window to top FIRST, then lock. overlay inset:0 then
+        //   correctly anchors to the actual viewport top edge.
+        const _savedScrollY = window.scrollY || window.pageYOffset || 0;
+        State._savedScrollY = _savedScrollY;
+
+        // Bring page to top so overlay position:fixed inset:0 is correct
+        if (_savedScrollY > 0) {
+          window.scrollTo({ top: 0, behavior: 'instant' });
+        }
+
+        // Lock scroll — body fixed keeps it visually in place, no scrollbar jump
+        document.body.style.position = 'fixed';
+        document.body.style.top      = `-${_savedScrollY}px`;
+        document.body.style.width    = '100%';
 
         // Escape → close (routed through OverlayService.close, the one authority)
         Handlers.documentKeydownOverlay = (e) => { if (e.key === 'Escape') OverlayService.close('escape'); };
@@ -222,9 +243,17 @@
         // ④ Remove overlay DOM
         DOMService.remove(DOMService.get(CONFIG.DOM.overlayContainerId));
 
-        // ⑤ Restore page scroll
-        document.documentElement.style.overflow = '';
-        document.body.style.overflow            = '';
+        // ⑤ Restore scroll-lock — reverse of the body-fixed technique
+        // Remove fixed lock first, then restore scroll position atomically.
+        const savedScrollY = State._savedScrollY || 0;
+        document.body.style.position = '';
+        document.body.style.top      = '';
+        document.body.style.width    = '';
+        State._savedScrollY = 0;
+        // Restore scroll position (body-fixed caused apparent scroll=0)
+        if (savedScrollY > 0) {
+          window.scrollTo({ top: savedScrollY, behavior: 'instant' });
+        }
 
         // ⑥ Remove document keydown listener
         DOMService.off(document, 'keydown', Handlers.documentKeydownOverlay);
