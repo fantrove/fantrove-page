@@ -55,35 +55,6 @@
       } catch { return []; }
     },
 
-    /**
-     * Extract type/category names for the trending list.
-     * Adds structural names (type/category) in the active UI language.
-     * @returns {{raw:string, highlightedHtml:string}[]}
-     */
-    extractStructuralNames() {
-      try {
-        const lang = LanguageService.getLang();
-        const out  = [];
-        const seen = new Set();
-
-        for (const t of (State.apiData?.type || [])) {
-          const name = t.name?.[lang] || t.name?.en || '';
-          if (name && !seen.has(name)) {
-            seen.add(name);
-            out.push({ raw: name, highlightedHtml: StringService.escapeHtml(name) });
-          }
-          for (const c of (t.category || [])) {
-            const cname = c.name?.[lang] || c.name?.en || '';
-            if (cname && !seen.has(cname)) {
-              seen.add(cname);
-              out.push({ raw: cname, highlightedHtml: StringService.escapeHtml(cname) });
-            }
-          }
-        }
-        return out;
-      } catch { return []; }
-    },
-
     /** Render trending suggestions into #searchSuggestions. */
     renderReadyModeSuggestions() {
       try {
@@ -91,22 +62,7 @@
         const container = DOMService.get(CONFIG.DOM.suggestionContainerId);
         if (!container) return;
 
-        const itemNames  = this.extractSmartNames();
-        const typeNames  = this.extractStructuralNames();
-
-        // Merge: item names first (more specific), then type/category names
-        // Deduplicate by raw value
-        const seen   = new Set(itemNames.map(s => s.raw));
-        const merged = [...itemNames];
-        for (const s of typeNames) {
-          if (!seen.has(s.raw)) {
-            seen.add(s.raw);
-            merged.push(s);
-          }
-          if (merged.length >= CONFIG.RENDER.suggestionsFullscreenMax) break;
-        }
-        const sgs = merged;
-
+        const sgs = this.extractSmartNames();
         if (!sgs.length) { container.style.display = 'none'; return; }
 
         let html = `<div class="suggestions-head">${LanguageService.t('trending')}</div>`;
@@ -115,7 +71,6 @@
   <div class="suggestion-body">${s.highlightedHtml}</div>
 </div>`;
         }
-        HighlightService.clearHighlights();
         container.innerHTML     = html;
         container.style.display = 'block';
         // Reset overlay scroll to top — user may have scrolled down in suggestions
@@ -171,68 +126,6 @@
      * Falls back to ReadyModeService if no suggestions found.
      * @param {string} query
      */
-    /**
-     * Extract type/category names from apiData that match the query.
-     * Used to supplement SearchEngine suggestions with structural names.
-     * @param {string} q  lowercased query
-     * @returns {{raw:string}[]}
-     */
-    /**
-     * Search ALL language variants of type/category names against the query.
-     *
-     * Why all languages:
-     *   If UI lang = 'en' and user types 'อีโมจิ' (Thai), the name in lang='en'
-     *   is 'Emoji' — 'emoji'.includes('อีโมจิ') = false → never matched.
-     *   By searching ALL available language keys (th, en, etc.), we match
-     *   regardless of which language the user is typing in.
-     *
-     *   The displayed suggestion always uses the UI-language name (lang-aware).
-     *   We only use the other-language values for matching, not display.
-     *
-     * @param {string} q  lowercased query
-     * @returns {{raw:string}[]}
-     */
-    _matchStructuralNames(q) {
-      try {
-        const lang    = LanguageService.getLang();
-        const results = [];
-        const seen    = new Set();
-
-        for (const t of (State.apiData?.type || [])) {
-          // Display name: UI language first, then English fallback
-          const displayName = t.name?.[lang] || t.name?.en || '';
-          if (!displayName) continue;
-
-          // Match against ALL language variants (not just current lang)
-          const nameObj = t.name || {};
-          const matchFound = Object.values(nameObj).some(
-            v => typeof v === 'string' && v.toLowerCase().includes(q)
-          );
-
-          if (matchFound && !seen.has(displayName)) {
-            seen.add(displayName);
-            results.push({ raw: displayName });
-          }
-
-          for (const c of (t.category || [])) {
-            const catDisplay = c.name?.[lang] || c.name?.en || '';
-            if (!catDisplay) continue;
-
-            const catNameObj   = c.name || {};
-            const catMatchFound = Object.values(catNameObj).some(
-              v => typeof v === 'string' && v.toLowerCase().includes(q)
-            );
-
-            if (catMatchFound && !seen.has(catDisplay)) {
-              seen.add(catDisplay);
-              results.push({ raw: catDisplay });
-            }
-          }
-        }
-        return results;
-      } catch { return []; }
-    },
-
     renderQuerySuggestions(query) {
       try {
         if (State.overlayTransitioning) return;
@@ -244,62 +137,22 @@
           return;
         }
 
-        const q   = query.trim().toLowerCase();
-        const max = CONFIG.RENDER.suggestionsFullscreenMax;
-
-        // Get keyword-based suggestions from SearchEngine
-        const engineSgs = window.SearchEngine?.querySuggestions?.(query, max) || [];
-
-        // Also match type and category names (not in SearchEngine index)
-        const structSgs  = this._matchStructuralNames(q);
-
-        // Merge: engine suggestions first, then structural matches, deduplicated
-        const seen   = new Set(engineSgs.map(s => s.raw.toLowerCase()));
-        const merged = [...engineSgs];
-        for (const s of structSgs) {
-          if (!seen.has(s.raw.toLowerCase())) {
-            seen.add(s.raw.toLowerCase());
-            merged.push(s);
-          }
-          if (merged.length >= max) break;
-        }
-
-        const sgs = merged;
+        const sgs = window.SearchEngine?.querySuggestions?.(query, CONFIG.RENDER.suggestionsFullscreenMax) || [];
         if (!sgs.length) {
           ReadyModeService.renderReadyModeSuggestions();
           return;
         }
 
-        // Always clear stale ranges first (single call, before render)
-        HighlightService.clearHighlights();
-
         let html = `<div class="suggestions-head">${LanguageService.t('suggestion_label')}</div>`;
         for (const s of sgs) {
-          // Tier 2 fallback: <mark> wrapping whole grapheme cluster.
-          // On browsers with CSS Custom Highlight API, Tier 1 is applied
-          // AFTER innerHTML via _applyTier1Highlights() below — it supersedes
-          // these <mark> tags by painting at the font rendering level.
           html += `<div class="suggestion-item" role="option" tabindex="0" data-val="${StringService.encodeUrl(s.raw)}">
   <div class="suggestion-body">${HighlightService.highlight(s.raw, query)}</div>
 </div>`;
         }
         container.innerHTML     = html;
         container.style.display = 'block';
+        // Reset overlay scroll to top on every suggestion update
         if (State.overlayScrollable) State.overlayScrollable.scrollTop = 0;
-
-        // Tier 1: CSS Custom Highlight API (Chrome 105+, Safari 17.2+, FF 117+).
-        // Paints highlight BEHIND glyphs at font-rendering level — covers
-        // above-baseline Thai diacritics (ิ ้ ั ็ etc.) that CSS box cannot reach.
-        // Applied after innerHTML so DOM nodes exist.
-        if (typeof CSS !== 'undefined' && CSS.highlights) {
-          // Re-clear: innerHTML may have triggered micro-tasks that set ranges
-          HighlightService.clearHighlights();
-          const bodies = container.querySelectorAll('.suggestion-body');
-          for (const node of bodies) {
-            // Pass domNode → _highlightViaCSS path: creates Ranges from text node
-            HighlightService.highlight(node.textContent || '', query, node);
-          }
-        }
 
         // Let ArrowDown from the input focus the first suggestion
         const inp = DOMService.get(CONFIG.DOM.searchInputId);

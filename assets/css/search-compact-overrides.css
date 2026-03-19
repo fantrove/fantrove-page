@@ -254,51 +254,21 @@
     color: var(--tmd); line-height: 1.45;
   }
 
-  /* ── Tier 1: CSS Custom Highlight API (Chrome 105+, Safari 17.2+, FF 117+) ──
-     Browser paints highlight BEHIND glyphs at font-rendering level.
-     Zero DOM changes → covers full glyph extent including above-baseline
-     Thai diacritics (ิ ้ ั etc.) which a box background cannot reach.
-     Same mechanism as browser "Find in Page". */
-  ::highlight(sg-match) {
-    background-color: var(--g1);
-    color: var(--thi);
-  }
-
-  /* ── Tier 2: <mark> fallback (older browsers without CSS.highlights) ──
-     Wraps whole grapheme cluster. Extended padding-top pulls the background
-     rectangle upward to visually cover above-baseline Thai diacritics.
-     box-decoration-break:clone ensures padding applies on wrapped lines.
-     display:inline + vertical-align:baseline prevents displacement. */
+  /* Highlight match grapheme clusters from HighlightService.
+     Thai diacritic fix:
+       - display:inline + vertical-align:baseline ensures combining chars
+         stay in the text flow without causing displacement
+       - border-radius removed: radius creates a new formatting context
+         that can shift combining diacritics on some engines
+       - padding: 0 only — horizontal padding safe, vertical shifts baseline */
   .suggestion-body mark {
-    /*
-     * Thai diacritic coverage (Tier 2 / <mark> path):
-     *   Thai above-baseline vowels (ิ ี ึ ็ ั) and tone marks (้ ่ ๊ ๋)
-     *   sit above the baseline, outside a normal line-height box.
-     *   A block background-color rectangle lives at baseline and doesn't
-     *   extend high enough to visually cover these marks.
-     *
-     *   Fix: padding-top pulls the background rectangle upward.
-     *   0.6em ≈ enough to reach the topmost Thai above-baseline mark.
-     *   box-decoration-break:clone: padding applies to EACH line of a
-     *   wrapped inline — required for multi-line Thai text.
-     *   vertical-align:baseline: ensures the mark stays in text flow
-     *   without shifting the cluster downward.
-     *
-     *   Tier 1 (CSS Custom Highlight API) supersedes this when available —
-     *   it paints at font-rendering level and covers exactly the glyph's
-     *   ink bounding box including above-baseline extents automatically.
-     */
     background: var(--g1);
     color: var(--thi);
     font-weight: 700;
     display: inline;
     vertical-align: baseline;
-    /* Generous top padding to cover high Thai above-baseline marks */
-    padding: 0.6em 0.05em 0 0.05em;
-    margin: 0 -0.05em;           /* cancel horizontal padding from affecting spacing */
-    -webkit-box-decoration-break: clone;
-    box-decoration-break: clone;
-    border-radius: 0;            /* no radius — avoids formatting-context issues */
+    padding: 0;
+    border-radius: 0;
   }
 
   /* ── Empty state ─────────────────────────────────────────── */
