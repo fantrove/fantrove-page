@@ -1,64 +1,93 @@
-/* search-compact-overrides.css  v4.6
+/* search-compact-overrides.css  v4.1
    ══════════════════════════════════════════════════════
-   PERFORMANCE PRINCIPLES:
-   • Short card class names: .sc .scc .scb .sct .scs .scg .scr
-     Shorter HTML strings → faster innerHTML parse → less RAM
-   • content-visibility:auto + contain-intrinsic-size:auto
-     Browser-native virtual scroll — zero JS on scroll path
-   • .cv-prerendered: IntersectionObserver pre-reveal
-     Layout done in idle time before scroll arrives
-   • All @media(hover:hover) rules in ONE block
-   • All mobile rules in ONE block per breakpoint
-   • Compositor-safe transitions only (background-color, opacity)
-   • No box-shadow/transform changes on hover (forces repaint)
+   SCROLL PERFORMANCE RULES:
+   • NO box-shadow changes on hover (triggers paint)
+   • NO transform on .search-card hover (triggers composite layer creation per card)
+   • NO ::before pseudo transitions in scroll path
+   • Hover effects ONLY via background-color (compositor-safe on GPU)
+   • @media(hover:hover) guards so mobile never pays hover cost
+
+   DESIGN: Clean, modern, minimal — warm greens, soft neutrals
+   Cards: restored to flat-border style (no elevation change on hover)
    ══════════════════════════════════════════════════════ */
 
 /* ═══════════════════════════════════════════════════
    TOKENS
    ═══════════════════════════════════════════════════ */
 :root {
-  --g5   : #13b47f;
-  --g6   : #0f9469;
-  --g05  : #f0fdf8;
-  --g1   : #dcf5eb;
-  --bg   : #f5f8f6;
-  --surf : #ffffff;
-  --sur2 : #f0f4f2;
-  --thi  : #0d1f17;
-  --tmd  : #2b4539;
-  --tlo  : #637a6e;
-  --tph  : rgba(13,31,23,.34);
-  --bd   : rgba(0,0,0,.08);
-  --bdm  : rgba(0,0,0,.13);
-  --sh   : 0 1px 3px rgba(0,0,0,.05);
-  --rp   : 999px;
-  --rx   : 18px;
-  --rl   : 14px;
-  --rm   : 10px;
-  --rs   : 7px;
-  --tf   : 140ms ease;
+  /* Brand green */
+  --g5  : #13b47f;
+  --g6  : #0f9469;
+  --g7  : #0b7353;
+  --g05 : #f0fdf8;
+  --g1  : #dcf5eb;
+
+  /* Page surface */
+  --bg      : #f5f8f6;
+  --surface : #ffffff;
+  --surf2   : #f0f4f2;
+
+  /* Text — warm forest tones */
+  --tx-hi  : #0d1f17;
+  --tx-mid : #2b4539;
+  --tx-lo  : #637a6e;
+  --tx-ph  : rgba(13,31,23,.34);
+
+  /* Borders */
+  --bd     : rgba(0,0,0,.08);
+  --bd-med : rgba(0,0,0,.13);
+
+  /* Shadows — light, no hover changes */
+  --sh-xs  : 0 1px 3px rgba(0,0,0,.05);
+  --sh-sm  : 0 2px 8px rgba(0,0,0,.07);
+
+  /* Radius */
+  --r-pill : 999px;
+  --r-xl   : 18px;
+  --r-lg   : 14px;
+  --r-md   : 10px;
+  --r-sm   : 7px;
+
+  /* Transitions — compositor-safe only */
+  --tf  : 140ms ease;
+  --tn  : 200ms ease;
+
+  /* Legacy aliases */
+  --sf-bg       : var(--surface);
+  --card-bg     : var(--surface);
+  --muted       : var(--tx-lo);
+  --accent      : var(--g5);
+  --accent-dark : var(--g6);
+  --border-soft : var(--bd);
+  --tag-bg      : var(--surf2);
+  --text-main   : var(--tx-hi);
 }
+
 
 /* ═══════════════════════════════════════════════════
    PAGE / HEADER
    ═══════════════════════════════════════════════════ */
 .search-header {
   padding: 10px 20px 12px;
-  background: var(--surf);
+  background: var(--surface);
   border-bottom: 1px solid var(--bd);
-  box-shadow: var(--sh);
+  box-shadow: var(--sh-xs);
+  contain: layout style paint;
 }
+
 
 /* ═══════════════════════════════════════════════════
    INPUT WRAPPER
+   flex row: [icon] [input] [clear]
+   !important beats search.min.css position:relative, padding:12px 18px
    ═══════════════════════════════════════════════════ */
 .search-input-wrapper {
   display: flex         !important;
   align-items: center   !important;
   flex-direction: row   !important;
   gap: 2px;
-  border-radius: var(--rp);
-  background: var(--sur2);
+  border-radius: var(--r-pill);
+  background: var(--surf2);
   border: 1.5px solid transparent;
   padding: 0 10px 0 4px !important;
   max-width: 560px;
@@ -66,87 +95,129 @@
   margin: 0 auto;
   height: 48px;
   box-sizing: border-box;
-  box-shadow: var(--sh);
+  box-shadow: var(--sh-xs);
+  /* Only opacity+shadow on focus — no layout triggered */
   transition: border-color var(--tf), box-shadow var(--tf), background var(--tf);
+  contain: layout style paint;
 }
 .search-input-wrapper:focus-within {
-  background: var(--surf);
+  background: var(--surface);
   border-color: var(--g5);
-  box-shadow: 0 0 0 3px rgba(19,180,127,.18), var(--sh);
+  box-shadow: 0 0 0 3px rgba(19,180,127,.18), var(--sh-xs);
 }
+
+/* Overlay variant */
 #searchOverlayContainer .search-input-wrapper {
-  background: var(--sur2);
+  background: var(--surf2);
   max-width: none;
   margin: 0;
   box-shadow: none;
 }
 #searchOverlayContainer .search-input-wrapper:focus-within {
-  background: var(--surf);
+  background: var(--surface);
   border-color: var(--g5);
   box-shadow: 0 0 0 3px rgba(19,180,127,.16);
 }
 
+
 /* ═══════════════════════════════════════════════════
    ICON SLOT
+   !important resets search.min.css position:absolute; left:18px
    ═══════════════════════════════════════════════════ */
 .search-input-icon {
   position: static !important;
-  left: auto !important;
-  top: auto  !important;
-  z-index: auto !important;
+  left:     auto   !important;
+  top:      auto   !important;
+  z-index:  auto   !important;
   flex-shrink: 0;
-  width: 38px; height: 38px; min-width: 38px;
-  display: flex; align-items: center; justify-content: center;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 50%;
   color: var(--g5);
   background: transparent;
+  /* opacity only — compositor-safe */
   transition: background var(--tf), opacity var(--tf);
+  contain: layout style paint;
   pointer-events: none;
 }
-.search-input-icon[role="button"] { pointer-events: auto; cursor: pointer; color: var(--tmd); }
+.search-input-icon[role="button"] {
+  pointer-events: auto;
+  cursor: pointer;
+  color: var(--tx-mid);
+}
+@media (hover: hover) {
+  .search-input-icon[role="button"]:hover { background: rgba(0,0,0,.07); }
+}
 .search-input-icon[role="button"]:active { opacity: .65; }
-.search-input-icon svg { width: 20px; height: 20px; stroke-width: 2.2; pointer-events: none; flex-shrink: 0; }
+
+.search-input-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2.2;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
 
 /* ═══════════════════════════════════════════════════
    SEARCH INPUT
+   !important resets search.min.css padding-left:68px
    ═══════════════════════════════════════════════════ */
 #searchInput {
   flex: 1 1 0  !important;
   min-width: 0 !important;
-  padding: 0   !important;
-  margin: 0    !important;
+  padding:   0 !important;
+  margin:    0 !important;
   font-size: .98rem;
   font-weight: 600;
   line-height: 1;
   border: 0;
   background: transparent;
   outline: none;
-  color: var(--thi);
+  color: var(--tx-hi);
   font-family: inherit;
   letter-spacing: .1px;
   caret-color: var(--g5);
 }
-#searchInput::placeholder { color: var(--tph); font-weight: 500; }
+#searchInput::placeholder {
+  color: var(--tx-ph);
+  font-weight: 500;
+}
 #searchInput::-webkit-search-cancel-button { display: none; }
 
+
 /* ═══════════════════════════════════════════════════
-   CLEAR BUTTON
+   CLEAR BUTTON (✕)
    ═══════════════════════════════════════════════════ */
 #search-clear-btn {
   flex-shrink: 0;
   display: none;
-  align-items: center; justify-content: center;
-  width: 20px; height: 20px; min-width: 20px;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
   border-radius: 50%;
   background: rgba(0,0,0,.10);
-  border: none; cursor: pointer;
-  color: var(--tlo);
-  padding: 0; outline: none;
+  border: none;
+  cursor: pointer;
+  color: var(--tx-lo);
+  padding: 0;
+  outline: none;
   -webkit-tap-highlight-color: transparent;
   transition: background var(--tf), opacity var(--tf);
+  contain: layout style paint;
+}
+@media (hover: hover) {
+  #search-clear-btn:hover { background: rgba(0,0,0,.17); }
 }
 #search-clear-btn:active { opacity: .6; }
 #search-clear-btn svg { pointer-events: none; }
+
 
 /* ═══════════════════════════════════════════════════
    OVERLAY
@@ -154,19 +225,25 @@
 .search-overlay {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-  background: var(--surf) !important;
-}
-#overlay-header-bar {
-  display: flex; align-items: center;
-  padding: 10px 14px;
-  background: var(--surf);
-  border-bottom: 1px solid var(--bd);
-  flex-shrink: 0; width: 100%; box-sizing: border-box;
-  box-shadow: var(--sh);
+  background: var(--surface) !important;
 }
 
+#overlay-header-bar {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--bd);
+  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
+  box-shadow: var(--sh-xs);
+  contain: layout style paint;
+}
+
+
 /* ═══════════════════════════════════════════════════
-   OVERLAY SCROLL
+   OVERLAY SCROLL + SUGGESTIONS
    ═══════════════════════════════════════════════════ */
 .search-overlay-scrollable-content {
   -webkit-overflow-scrolling: touch;
@@ -174,241 +251,312 @@
   will-change: scroll-position;
   transform: translateZ(0);
   contain: strict;
-  background: var(--surf);
+  background: var(--surface);
 }
 
-/* ═══════════════════════════════════════════════════
-   SUGGESTIONS
-   ═══════════════════════════════════════════════════ */
-.search-suggestions-fullscreen { background: var(--surf); border: none; margin: 0; padding-bottom: 8px; }
+.search-suggestions-fullscreen {
+  background: var(--surface);
+  border: none;
+  margin: 0;
+  padding-bottom: 8px;
+}
 
 .suggestions-head {
   padding: 18px 20px 6px;
-  font-size: .71rem; font-weight: 700;
-  color: var(--tlo);
-  text-transform: uppercase; letter-spacing: .9px;
+  font-size: .71rem;
+  font-weight: 700;
+  color: var(--tx-lo);
+  text-transform: uppercase;
+  letter-spacing: .9px;
   user-select: none;
 }
 
 .suggestion-item {
   padding: 13px 20px;
   cursor: pointer;
-  display: flex; align-items: center; gap: 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  /* background-color only — compositor doesn't need to repaint layout */
   transition: background-color var(--tf);
+  contain: layout style paint;
   -webkit-tap-highlight-color: transparent;
 }
-.suggestion-item:active { background: var(--g1); }
-.suggestion-item::before {
-  content: ''; flex-shrink: 0;
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--g5); opacity: .3;
+@media (hover: hover) {
+  .suggestion-item:hover { background: var(--g05); }
 }
-.suggestion-body { flex: 1; word-break: break-word; font-size: .93rem; font-weight: 500; color: var(--tmd); line-height: 1.45; }
+.suggestion-item:active { background: var(--g1); }
+
+.suggestion-item::before {
+  content: '';
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--g5);
+  opacity: .3;
+}
+
+.suggestion-body {
+  flex: 1;
+  word-break: break-word;
+  font-size: .93rem;
+  font-weight: 500;
+  color: var(--tx-mid);
+  line-height: 1.45;
+}
+
 
 /* ═══════════════════════════════════════════════════
-   SEARCH CARD — short class names
-   .sc  = root card
-   .scc = card-content (emoji/text box)
-   .scb = card-body (right column)
-   .sct = card-title
-   .scs = card-subtitle
-   .scg = card-tags group
-   .scr = copy button
-   .sv  = vertical variant
-
-   SCROLL PERF:
-   • content-visibility:auto = browser-native virtual scroll
-   • contain-intrinsic-size:auto = cached real height after first render
-   • No box-shadow/transform changes on hover
-   • background-color transition only (compositor-safe)
+   SEARCH CARD
+   ─────────────────────────────────────────────────
+   SCROLL PERF: no box-shadow change, no transform on hover.
+   Only background-color transition — runs on compositor.
+   Card style: flat border (like v3.x) — clean, readable.
    ═══════════════════════════════════════════════════ */
-
-/* GPU layer for scroll container */
-#searchResults { will-change: scroll-position; }
-
-.sc {
+.search-card {
   display: flex;
   gap: 14px;
   align-items: flex-start;
   padding: 14px 16px;
-  border-radius: var(--rx);
+  border-radius: var(--r-xl);
   min-height: 64px;
-  background: var(--surf);
+  background: var(--surface);
+  /* Static shadow — never changes on hover (avoids repaint per card) */
+  box-shadow: var(--sh-xs);
   border: 1px solid var(--bd);
   position: relative;
-  margin-bottom: 10px;
-  content-visibility: auto;
-  contain-intrinsic-size: auto 96px;
+  overflow: hidden;
+  contain: layout style paint;
+  /* background-color only — GPU composited, zero paint cost */
   transition: background-color var(--tf);
 }
-.sc:active { background: var(--g1); }
+@media (hover: hover) {
+  .search-card:hover { background: var(--g05); }
+}
+.search-card:active { background: var(--g1); }
 
-/*
- * Pre-revealed by IntersectionObserver (rootMargin 800px).
- * Forces content-visibility:visible during idle time, BEFORE scroll arrives.
- * Browser does first-time layout now → scroll arrival is smooth.
- */
-.cv-prerendered { content-visibility: visible !important; }
+/* VS context — managed by JS */
+/* .vs-item .search-card — VS manages visibility natively, no overrides needed */
+.vs-item .search-card {
+  contain: layout style paint;
+}
 
-/* Content box (emoji / short text) */
-.scc {
-  flex: 0 0 64px; height: 64px;
+/* Card content (emoji box) */
+.search-card .card-content {
+  flex: 0 0 64px;
+  height: 64px;
   font-size: 26px;
-  border-radius: var(--rl);
+  border-radius: var(--r-lg);
   padding: 8px;
-  display: flex; align-items: center; justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: var(--g05);
   color: var(--g6);
   border: 1px solid var(--g1);
   flex-shrink: 0;
+  contain: layout style paint;
 }
 
-/* Body column */
-.scb {
-  flex: 1 1 auto; min-width: 0;
-  display: flex; flex-direction: column; gap: 4px;
+/* Card body */
+.search-card .card-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-/* Title */
-.sct {
-  font-size: .98rem; font-weight: 700;
-  color: var(--thi); line-height: 1.3;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+.search-card .card-title {
+  font-size: .98rem;
+  font-weight: 700;
+  color: var(--tx-hi);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   letter-spacing: -.01em;
-  text-rendering: optimizeSpeed;
 }
 
-/* Subtitle */
-.scs {
-  font-size: .84rem; color: var(--tlo); font-weight: 500;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  text-rendering: optimizeSpeed;
+.search-card .card-subtitle {
+  font-size: .84rem;
+  color: var(--tx-lo);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* Tags group */
-.scg {
-  display: flex; gap: 6px;
+.search-card .card-tags {
+  display: flex;
+  gap: 6px;
   margin-top: 6px;
-  flex-wrap: wrap; align-items: center;
-  max-height: 42px; overflow: hidden;
+  flex-wrap: wrap;
+  align-items: center;
+  max-height: 42px;
+  overflow: hidden;
+  contain: layout style paint;
 }
 
-/* Tag pill */
-.tag {
-  background: var(--sur2); color: var(--tlo);
-  padding: 3px 8px; font-size: 11px;
-  border-radius: var(--rp);
-  font-weight: 600; border: 1px solid var(--bdm);
-  line-height: 1.5; white-space: nowrap; letter-spacing: .05px;
+.search-card .tag {
+  background: var(--surf2);
+  color: var(--tx-lo);
+  padding: 3px 8px;
+  font-size: 11px;
+  border-radius: var(--r-pill);
+  font-weight: 600;
+  border: 1px solid var(--bd-med);
+  line-height: 1.5;
+  white-space: nowrap;
+  letter-spacing: .05px;
 }
 
-/* Copy button */
-.scr {
-  position: absolute; right: 12px; top: 12px;
+/* Copy button — absolute, static shadow, only bg-color on hover */
+.search-card .result-copy-btn {
+  position: absolute;
+  right: 12px;
+  top: 12px;
   padding: 5px 11px;
-  font-size: .81rem; font-weight: 600;
-  border-radius: var(--rs);
+  font-size: .81rem;
+  font-weight: 600;
+  border-radius: var(--r-sm);
   background: var(--g05);
   border: 1.5px solid var(--g1);
   color: var(--g6);
   box-shadow: none;
-  letter-spacing: .05px; white-space: nowrap;
-  cursor: pointer;
+  letter-spacing: .05px;
+  white-space: nowrap;
+  /* bg-color only — compositor-safe */
   transition: background-color var(--tf), border-color var(--tf);
+  contain: layout style paint;
 }
-.scr:active { opacity: .75; }
+@media (hover: hover) {
+  .search-card .result-copy-btn:hover {
+    background: var(--g1);
+    border-color: var(--g5);
+  }
+}
+.search-card .result-copy-btn:active { opacity: .75; }
 
-/* Vertical card */
-.sv { flex-direction: column; gap: 10px; padding: 14px; }
-.sv .scc {
-  flex: 0 0 auto; height: auto; width: 100%;
-  font-size: 14px; padding: 10px 12px;
-  text-align: left; border-radius: var(--rm);
+/* Card spacing */
+/* inter-card gap handled by .vs-item padding-bottom */
+
+
+/* Vertical variant */
+.search-card.vertical {
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+}
+.search-card.vertical .card-content {
+  flex: 0 0 auto;
+  height: auto;
+  width: 100%;
+  font-size: 14px;
+  padding: 10px 12px;
+  text-align: left;
+  border-radius: var(--r-md);
   display: -webkit-box;
-  -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.sv .scr { position: static; margin-top: 4px; align-self: flex-start; }
-
-/* Inside overlay VS engine — disable CV (VS manages visibility) */
-.vs-item .sc {
-  content-visibility: visible;
-  contain-intrinsic-size: none;
-  contain: layout style paint;
-  margin-bottom: 0;
+.search-card.vertical .result-copy-btn {
+  position: static;
+  margin-top: 4px;
+  align-self: flex-start;
 }
+
 
 /* ═══════════════════════════════════════════════════
    TOAST
    ═══════════════════════════════════════════════════ */
 .copy-toast-message {
   background: linear-gradient(135deg, var(--g5), var(--g6));
-  color: #fff; padding: 10px 18px;
-  border-radius: var(--rl);
-  font-size: .91rem; font-weight: 650;
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: var(--r-lg);
+  font-size: .91rem;
+  font-weight: 650;
   box-shadow: 0 4px 16px rgba(19,180,127,.22);
   animation: toast-slide 220ms cubic-bezier(.4,0,.2,1) both;
   letter-spacing: .1px;
+  contain: layout style paint;
 }
 @keyframes toast-slide {
   from { opacity:0; transform:translateX(14px); }
   to   { opacity:1; transform:translateX(0); }
 }
 
+
 /* ═══════════════════════════════════════════════════
-   VS ENGINE CONTAINERS
+   VS CONTAINERS
    ═══════════════════════════════════════════════════ */
-.vs-container { contain: layout style; }
-.vs-item      { contain: layout style paint; top: 0 !important; }
+.vs-container { contain: layout style; will-change: transform; }
+.vs-item      { contain: layout style paint; top: 0 !important; padding-bottom: 10px; box-sizing: border-box; }
+
 
 /* ═══════════════════════════════════════════════════
    EMPTY STATE
    ═══════════════════════════════════════════════════ */
 .no-result {
-  margin-top: 56px; padding: 32px 24px;
-  text-align: center; color: var(--tlo);
-  font-size: .95rem; font-weight: 500; line-height: 1.65;
+  margin-top: 56px;
+  padding: 32px 24px;
+  text-align: center;
+  color: var(--tx-lo);
+  font-size: .95rem;
+  font-weight: 500;
+  line-height: 1.65;
 }
-.no-result::before { content: '🔍'; display: block; font-size: 2.2rem; margin-bottom: 10px; opacity: .5; }
-
-/* ═══════════════════════════════════════════════════
-   HOVER — all hover rules in ONE block
-   @media(hover:hover): mobile never pays this cost
-   ═══════════════════════════════════════════════════ */
-@media (hover: hover) {
-  .search-input-icon[role="button"]:hover { background: rgba(0,0,0,.07); }
-  #search-clear-btn:hover                 { background: rgba(0,0,0,.17); }
-  .suggestion-item:hover                  { background: var(--g05); }
-  .sc:hover                               { background: var(--g05); }
-  .scr:hover { background: var(--g1); border-color: var(--g5); }
+.no-result::before {
+  content: '🔍';
+  display: block;
+  font-size: 2.2rem;
+  margin-bottom: 10px;
+  opacity: .5;
 }
 
+
 /* ═══════════════════════════════════════════════════
-   RESPONSIVE — ≤ 1024px
+   RESPONSIVE — Tablet ≤ 1024px
    ═══════════════════════════════════════════════════ */
 @media (max-width: 1024px) {
-  .scr { position: static; margin-top: 8px; align-self: flex-start; }
+  .search-card .result-copy-btn {
+    position: static;
+    margin-top: 8px;
+    align-self: flex-start;
+  }
 }
 
+
 /* ═══════════════════════════════════════════════════
-   RESPONSIVE — ≤ 768px  (all mobile rules in one block)
+   RESPONSIVE — Mobile ≤ 768px
    ═══════════════════════════════════════════════════ */
 @media (max-width: 768px) {
   .search-header { padding: 8px 14px 10px; }
-  .search-input-wrapper { height: 44px; padding: 0 8px 0 4px !important; }
+
+  .search-input-wrapper {
+    height: 44px;
+    padding: 0 8px 0 4px !important;
+  }
   .search-input-icon { width: 34px; height: 34px; min-width: 34px; }
   .search-input-icon svg { width: 18px; height: 18px; }
   #searchInput { font-size: .95rem; }
+
+  .search-card { padding: 13px 14px; gap: 12px; border-radius: var(--r-lg); }
+  .search-card .card-content { flex: 0 0 54px; height: 54px; font-size: 22px; }
+  .search-card .card-title { font-size: .93rem; }
+  .search-card .card-subtitle { font-size: .81rem; }
+  .search-card .result-copy-btn { position: static; margin-top: 8px; align-self: flex-start; }
+  .search-card {  }
+
   .suggestion-item { padding: 12px 16px; }
-  .sc  { padding: 13px 14px; gap: 12px; border-radius: var(--rl); contain-intrinsic-size: auto 78px; }
-  .scc { flex: 0 0 54px; height: 54px; font-size: 22px; }
-  .sct { font-size: .93rem; }
-  .scs { font-size: .81rem; }
-  .scr { position: static; margin-top: 8px; align-self: flex-start; }
 }
 
+
 /* ═══════════════════════════════════════════════════
-   RESPONSIVE — ≤ 480px
+   RESPONSIVE — Small ≤ 480px
    ═══════════════════════════════════════════════════ */
 @media (max-width: 480px) {
   .search-header { padding: 6px 12px 8px; }
@@ -416,9 +564,10 @@
   .search-input-icon { width: 32px; height: 32px; min-width: 32px; }
   .search-input-icon svg { width: 17px; height: 17px; }
   #searchInput { font-size: .93rem; }
-  .sc  { padding: 12px 13px; gap: 10px; }
-  .scc { flex: 0 0 50px; height: 50px; font-size: 20px; }
+  .search-card { padding: 12px 13px; gap: 10px; }
+  .search-card .card-content { flex: 0 0 50px; height: 50px; font-size: 20px; }
 }
+
 
 /* ═══════════════════════════════════════════════════
    REDUCED MOTION
@@ -430,21 +579,27 @@
   }
 }
 
+
 /* ═══════════════════════════════════════════════════
    PRINT
    ═══════════════════════════════════════════════════ */
 @media print {
   .search-header, .search-filters-panel,
-  .scr, #copyToast, .search-footer { display: none !important; }
-  .sc { page-break-inside: avoid; contain: none; box-shadow: none; border: 1px solid #ccc; }
+  .result-copy-btn, #copyToast, .search-footer { display: none !important; }
+  .search-card {
+    page-break-inside: avoid;
+    contain: none;
+
+    box-shadow: none;
+    border: 1px solid #ccc;
+  }
 }
+
 
 /* ═══════════════════════════════════════════════════
    FEATURE FALLBACKS
    ═══════════════════════════════════════════════════ */
-@supports not (content-visibility: auto) {
-  .sc { content-visibility: visible; contain-intrinsic-size: none; }
-}
+/* content-visibility:auto removed — VirtualScrollEngine handles visibility */
 @supports not (contain: strict) {
   .search-overlay-scrollable-content { contain: none; }
   .vs-container { contain: none; }
