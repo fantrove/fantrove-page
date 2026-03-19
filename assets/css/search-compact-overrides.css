@@ -277,9 +277,7 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  /* background-color only — compositor doesn't need to repaint layout */
   transition: background-color var(--tf);
-  contain: layout style paint;
   -webkit-tap-highlight-color: transparent;
 }
 @media (hover: hover) {
@@ -307,6 +305,9 @@
 }
 
 
+/* GPU layer for main results scroll */
+#searchResults { will-change: scroll-position; }
+
 /* ═══════════════════════════════════════════════════
    SEARCH CARD
    ─────────────────────────────────────────────────
@@ -322,12 +323,23 @@
   border-radius: var(--r-xl);
   min-height: 64px;
   background: var(--surface);
-  /* Static shadow — never changes on hover (avoids repaint per card) */
-  box-shadow: var(--sh-xs);
   border: 1px solid var(--bd);
   position: relative;
-  overflow: hidden;
-  contain: layout style paint;
+  margin-bottom: 10px;
+
+  /*
+   * CSS-NATIVE VIRTUAL SCROLL (eliminates all JS scroll overhead):
+   *   content-visibility:auto  — browser skips layout+paint for off-screen cards.
+   *                              Zero JS on the scroll path. Compositor unblocked.
+   *   contain-intrinsic-size   — 'auto' keyword: browser CACHES actual size after
+   *                              first render. Subsequent scrolls are perfectly smooth
+   *                              because browser doesn't recalculate. Falls back to
+   *                              96px estimate for never-rendered cards.
+   *   No explicit 'contain' needed — content-visibility:auto implies strong containment.
+   */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 96px;
+
   /* background-color only — GPU composited, zero paint cost */
   transition: background-color var(--tf);
 }
@@ -336,10 +348,24 @@
 }
 .search-card:active { background: var(--g1); }
 
+/*
+ * Pre-rendered cards (IntersectionObserver pre-reveal):
+ *   Added by _setupPreRender() during requestIdleCallback.
+ *   Forces browser to do first-time layout before user scrolls here.
+ *   contain-intrinsic-size:auto then caches the real height.
+ *   result: scroll arrival = layout already done = smooth.
+ */
+.cv-prerendered {
+  content-visibility: visible !important;
+}
+
 /* VS context — managed by JS */
-/* .vs-item .search-card — VS manages visibility natively, no overrides needed */
+/* Inside VS (overlay): disable browser deferred rendering — VS manages it */
 .vs-item .search-card {
+  content-visibility: visible;
+  contain-intrinsic-size: none;
   contain: layout style paint;
+  margin-bottom: 0;
 }
 
 /* Card content (emoji box) */
@@ -356,7 +382,6 @@
   color: var(--g6);
   border: 1px solid var(--g1);
   flex-shrink: 0;
-  contain: layout style paint;
 }
 
 /* Card body */
@@ -377,6 +402,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   letter-spacing: -.01em;
+  text-rendering: optimizeSpeed;
 }
 
 .search-card .card-subtitle {
@@ -386,6 +412,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-rendering: optimizeSpeed;
 }
 
 .search-card .card-tags {
@@ -396,7 +423,6 @@
   align-items: center;
   max-height: 42px;
   overflow: hidden;
-  contain: layout style paint;
 }
 
 .search-card .tag {
@@ -427,9 +453,7 @@
   box-shadow: none;
   letter-spacing: .05px;
   white-space: nowrap;
-  /* bg-color only — compositor-safe */
   transition: background-color var(--tf), border-color var(--tf);
-  contain: layout style paint;
 }
 @media (hover: hover) {
   .search-card .result-copy-btn:hover {
@@ -440,7 +464,7 @@
 .search-card .result-copy-btn:active { opacity: .75; }
 
 /* Card spacing */
-/* inter-card gap handled by .vs-item padding-bottom */
+
 
 
 /* Vertical variant */
@@ -493,8 +517,8 @@
 /* ═══════════════════════════════════════════════════
    VS CONTAINERS
    ═══════════════════════════════════════════════════ */
-.vs-container { contain: layout style; will-change: transform; }
-.vs-item      { contain: layout style paint; top: 0 !important; padding-bottom: 10px; box-sizing: border-box; }
+.vs-container { contain: layout style; }
+.vs-item      { contain: layout style paint; top: 0 !important; }
 
 
 /* ═══════════════════════════════════════════════════
@@ -599,7 +623,10 @@
 /* ═══════════════════════════════════════════════════
    FEATURE FALLBACKS
    ═══════════════════════════════════════════════════ */
-/* content-visibility:auto removed — VirtualScrollEngine handles visibility */
+@supports not (content-visibility: auto) {
+  /* Fallback for older browsers — explicit containment */
+  .search-card { contain: layout style paint; }
+}
 @supports not (contain: strict) {
   .search-overlay-scrollable-content { contain: none; }
   .vs-container { contain: none; }
