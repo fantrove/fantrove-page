@@ -9,16 +9,6 @@
       "id": "symbol",
       "name": { "th": "อักษรพิเศษ", "en": "Symbol" },
       "file": "symbol.json"
-    },
-{
-  "id": "symbol",
-  "name": { "th": "อักษรพิเศษ", "en": "Symbol" },
-  "file": "symbol.json"
-},
-{
-  "id": "symbol",
-  "name": { "th": "อักษรพิเศษ", "en": "Symbol" },
-  "file": "symbol.json"
-}
+    }
   ]
 }
