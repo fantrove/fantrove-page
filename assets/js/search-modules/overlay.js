@@ -34,6 +34,18 @@
  *   ⑧ Update icon slot
  *   ⑨ Restore nav
  *
+ * Scroll restoration strategy:
+ *   open()  → save history.scrollRestoration, set 'manual'.
+ *             Prevents the browser's automatic scroll restore (fired after
+ *             popstate returns) from overriding our explicit scrollTo() in
+ *             close(). Without 'manual', the browser restores to 0 (the
+ *             position recorded when the history entry was pushed while
+ *             page was at top), cancelling our scrollTo(savedScrollY).
+ *   close() → issue scrollTo(savedScrollY), THEN restore the original
+ *             scrollRestoration mode. Order matters: restore must happen
+ *             after our scrollTo so the browser does not immediately
+ *             re-apply auto-restore for this entry.
+ *
  * @module overlay
  * @depends {config.js, state.js, utils.js, url-history.js,
  *           keyboard.js, suggestions.js, input-bar.js}
@@ -50,6 +62,13 @@
     IconSlotService, ClearBtnService,
   } = M;
 
+  // ── Scroll restoration guard ────────────────────────────────────────────
+  // Saved value of history.scrollRestoration before overlay opens.
+  // Set to 'manual' during overlay lifetime so the browser cannot
+  // auto-restore scroll on popstate and override our explicit scrollTo.
+  // Restored to original mode inside close() once our scrollTo has fired.
+  let _scrollRestorationOrig = null;
+
   const OverlayService = {
 
     // ── Open ──────────────────────────────────────────────────────────────
@@ -58,6 +77,14 @@
       try {
         if (State.overlayOpen || State.overlayTransitioning) return;
         State.overlayTransitioning = true;
+
+        // Switch to manual scroll restoration BEFORE pushing any history entry.
+        // This ensures the browser never auto-restores scroll position on
+        // the popstate that fires when the overlay is closed via history.back().
+        _scrollRestorationOrig = 'scrollRestoration' in history
+          ? history.scrollRestoration
+          : null;
+        if (_scrollRestorationOrig !== null) history.scrollRestoration = 'manual';
 
         const inp = DOMService.get(CONFIG.DOM.searchInputId);
 
@@ -269,6 +296,16 @@
           });
         } else if (_sr) {
           _sr.style.visibility = '';
+        }
+
+        // Restore scroll restoration to its original mode now that our
+        // manual scrollTo has fired. The browser's auto-restore for this
+        // popstate entry is already suppressed by the 'manual' override
+        // set in open(). Restoring here keeps normal back-navigation
+        // (between search entries, no overlay) working as before.
+        if (_scrollRestorationOrig !== null && 'scrollRestoration' in history) {
+          history.scrollRestoration = _scrollRestorationOrig;
+          _scrollRestorationOrig = null;
         }
 
         // ⑥ Remove document keydown listener

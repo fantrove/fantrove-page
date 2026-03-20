@@ -225,7 +225,27 @@
             if (State.overlayOpen) {
               OverlayService.close('popstate');
               if (!isOverlayEntry && s.q !== undefined) {
-                setTimeout(() => _restoreUIState(s), 50);
+                // Build a normalised representation of the state we are going back to.
+                const backState = {
+                  q        : s.q        || '',
+                  type     : s.type     || 'all',
+                  category : s.category || 'all',
+                };
+                // Only re-render if the state we're navigating back to differs
+                // from what is already shown on the main page.
+                //
+                // WHY: if the user opened the overlay and closed it WITHOUT
+                // changing the query, backState === lastCommittedSearchState.
+                // Calling _restoreUIState anyway would:
+                //   1. Trigger VirtualScrollEngine.destroy() + mount()
+                //   2. Cause a brief empty-frame flash
+                //   3. Scroll position stays correct but content blinks
+                //
+                // Skipping is safe because the results, type-filter state, and
+                // input value are already correct — nothing changed.
+                if (!URLService.isEqual(backState, State.lastCommittedSearchState)) {
+                  setTimeout(() => _restoreUIState(backState), 50);
+                }
               }
               return;
             }
