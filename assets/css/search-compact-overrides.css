@@ -114,7 +114,7 @@
   }
 
   .search-header {
-    padding: 14px 0 0;
+    padding: 10px 0 4px;
     background: var(--surf);
     border-bottom: 0.8px solid rgba(13,186,146,0.2);
     box-shadow: 0 1px 12px rgba(0,0,0,.05);
@@ -136,8 +136,11 @@
   }
 
   #searchForm {
-    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
     width: 100%;
+    box-sizing: border-box;
   }
 
   /* ── Input wrapper ───────────────────────────────────────── */
@@ -150,10 +153,10 @@
     background: var(--sur2);
     border: 1.5px solid transparent;
     padding: 0 10px 0 4px !important;
-    max-width: 560px;
+    max-width: none;
     width: 100%;
-    margin: 0 auto;
-    height: 46px;
+    margin: 0;
+    height: 44px;
     box-sizing: border-box;
     box-shadow: none;
     transition: border-color var(--tf), background-color var(--tf);
@@ -164,11 +167,12 @@
       box-shadow: 0 0 0 2.5px rgba(13,186,146,0.18);
     }
 
-    /* Overlay variant — nested for cache locality */
+    /* Overlay variant — same size as main header */
     #searchOverlayContainer & {
       background: var(--sur2);
       max-width: none;
       margin: 0;
+      height: 44px;
       box-shadow: none;
 
       &:focus-within {
@@ -218,7 +222,7 @@
     min-width: 0 !important;
     padding: 0   !important;
     margin: 0    !important;
-    font-size: .98rem;
+    font-size: .97rem;
     font-weight: 500;
     line-height: 1;
     border: 0;
@@ -261,34 +265,34 @@
   }
 
   .suggestions-head {
-    padding: 18px 20px 6px;
-    font-size: .71rem; font-weight: 500;
-    color: var(--tlo);
-    text-transform: uppercase; letter-spacing: .9px;
+    padding: 20px 20px 8px;
+    font-size: .78rem; font-weight: 600;
+    color: var(--tmd);
+    text-transform: uppercase; letter-spacing: .8px;
     user-select: none;
   }
 
   .suggestion-item {
-    padding: 13px 20px;
+    padding: 15px 20px;
     cursor: pointer;
     display: flex; align-items: center; gap: 14px;
     transition: background-color var(--tf);
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
 
-    &:active { background: var(--g1); }
+    &:active { background: rgba(0,0,0,.03); }
 
     &::before {
       content: ''; flex-shrink: 0;
-      width: 6px; height: 6px; border-radius: 50%;
+      width: 7px; height: 7px; border-radius: 50%;
       background: var(--g5); opacity: .3;
     }
   }
 
   .suggestion-body {
     flex: 1; word-break: break-word;
-    font-size: .97rem; font-weight: 500;
-    color: var(--tmd); line-height: 1.45;
+    font-size: 1.02rem; font-weight: 500;
+    color: var(--tmd); line-height: 1.5;
   }
 
   /* Highlight match grapheme clusters from HighlightService.
@@ -436,9 +440,9 @@
 
     /* ── Tag pill — neutral, not teal ─────────────────────── */
     & .tag {
-      background: rgba(13,186,146,.1);
+      background: rgba(13,186,146,.05);
       color: #0a7d6d;
-      padding: 4px 11px; font-size: 12.5px;
+      padding: 5px 13px; font-size: 14px;
       border-radius: var(--rp);
       font-weight: 500; border: none;
       line-height: 1.5;
@@ -510,7 +514,7 @@
     flex: 1 1 0;
     display: flex; align-items: center;
     gap: 9px;
-    padding-block: 12px;
+    padding-block: 9px;
     padding-inline: 16px;
     overflow-x: auto; overflow-y: hidden;
     scrollbar-width: none; -ms-overflow-style: none;
@@ -520,7 +524,7 @@
     &::-webkit-scrollbar { display: none; }
   }
 
-  .filter-pills-row--cat { padding-block: 10px 13px; }
+  .filter-pills-row--cat { padding-block: 7px 10px; }
 
   /* Right fade + toggle slot */
   .filter-row-end {
@@ -645,16 +649,20 @@
      * Active = full brand color = clear selection state
      * Larger, heavier — the main navigation level
      */
+  /* ── Type pill — PRIMARY FOCAL POINT ─────────────────────────
+     * Visually dominant: larger, heavier, solid bg even inactive.
+     * Eye naturally lands here first.
+     */
   .filter-pill {
     flex-shrink: 0;
     display: inline-flex; align-items: center; justify-content: center;
-    padding-block: 0.82em;
-    padding-inline: 0.88em;
+    padding-block: 0.88em;
+    padding-inline: 1.1em;
     border-radius: var(--rp);
-    font-size: .95rem; font-weight: 600; line-height: 1;
+    font-size: 1rem; font-weight: 700; line-height: 1;
     font-family: inherit;
-    /* Subtle fill: visible as button but not overwhelming */
-    background: rgba(0,0,0,.045);
+    /* Quiet inactive — active state is the focal point */
+    background: transparent;
     border: none;
     color: var(--tmd);
     cursor: pointer; white-space: nowrap;
@@ -664,35 +672,36 @@
     outline: none; user-select: none; font-synthesis: none;
     transition: opacity 140ms ease;
 
-    &:active { opacity: .65; }
+    &:active { opacity: .6; }
 
-    /* Active: solid brand = unmissable selection */
+    /* Active: full brand fill + shadow = unmissable selection */
     &.active {
       background: var(--g5);
       color: #fff;
       opacity: 1;
-      box-shadow: 0 2px 8px rgba(13,186,146,.3);
+      box-shadow: 0 2px 10px rgba(13,186,146,.35);
     }
   }
 
-  /* ── Category pill (secondary filter) ──────────────────────
-     * Ghost/outline only inactive = secondary, quieter
-     * Smaller font + lighter weight = visual hierarchy below type
-     * Active = tinted bg + brand border (not solid — still secondary)
+  /* ── Category pill — SECONDARY, SUBORDINATE ────────────────
+     * Ghost outline only: clearly lower hierarchy than type pills.
+     * Smaller + lighter so eye moves to type row first.
+     * Active: just a colour hint — doesn't compete with type active.
      */
   .filter-pill--cat {
-    padding-block: 0.58em;
-    padding-inline: 0.76em;
-    font-size: .84rem; font-weight: 500;
+    padding-block: 0.78em;
+    padding-inline: 1.0em;
+    font-size: .97rem; font-weight: 500;
     background: transparent;
-    border: 1px solid rgba(0,0,0,.09);
+    border: 1px solid rgba(0,0,0,.13);
     color: var(--tlo);
-    opacity: .75;
+    opacity: .8;
 
     &.active {
-      background: rgba(13,186,146,.1);
-      border-color: rgba(13,186,146,.55);
+      background: rgba(13,186,146,.06);
+      border-color: rgba(13,186,146,.5);
       color: var(--g6);
+      font-weight: 500;
       opacity: 1;
       box-shadow: none;
     }
@@ -742,8 +751,8 @@
   @media (hover: hover) {
     .search-input-icon[role="button"]:hover { background: rgba(0,0,0,.07); }
     #search-clear-btn:hover                 { background: rgba(0,0,0,.17); }
-    .suggestion-item:hover                  { background: rgba(13,186,146,.06); }
-    .sc:hover                               { background: rgba(13,186,146,.06); }
+    .suggestion-item:hover                  { background: rgba(0,0,0,.03); }
+    .sc:hover                               { background: rgba(0,0,0,.03); }
     .scr:hover { background: rgba(13,186,146,.12); border-color: var(--g5); }
 
     /* All filter interactives: opacity only on hover — zero style recalc */
@@ -783,8 +792,8 @@
     .suggestion-item { padding: 12px 16px; }
 
     .filter-pills-row  { padding-block: 7px; padding-inline: 12px; gap: 6px; }
-    .filter-pill       { font-size: .92rem;  padding-block: 0.78em; padding-inline: 0.82em; }
-    .filter-pill--cat  { font-size: .82rem;  padding-block: 0.55em; padding-inline: 0.7em; }
+    .filter-pill       { font-size: .96rem;  padding-block: 0.84em; padding-inline: 1.05em; }
+    .filter-pill--cat  { font-size: .94rem;  padding-block: 0.74em; padding-inline: 0.94em; }
     .filter-cat-toggle { width: 32px; height: 32px; }
     .filter-row-end    { padding-inline-end: 10px; }
 
@@ -806,18 +815,18 @@
 
     #searchForm { padding: 0 10px; }
 
-    .search-input-wrapper { height: 42px; }
+    .search-input-wrapper { height: 46px; }
 
     .search-input-icon {
       width: 32px; height: 32px; min-width: 32px;
       & svg { width: 17px; height: 17px; }
     }
 
-    #searchInput { font-size: .93rem; }
+    #searchInput { font-size: .98rem; }
 
     .filter-pills-row  { padding-block: 6px; padding-inline: 10px; gap: 5px; }
-    .filter-pill       { font-size: .89rem;  padding-block: 0.75em; padding-inline: 0.78em; }
-    .filter-pill--cat  { font-size: .79rem;  padding-block: 0.52em; padding-inline: 0.66em; }
+    .filter-pill       { font-size: .93rem;  padding-block: 0.8em;  padding-inline: 1.0em; }
+    .filter-pill--cat  { font-size: .91rem;  padding-block: 0.70em; padding-inline: 0.88em; }
     .filter-cat-toggle { width: 30px; height: 30px; }
 
     .sc  { padding: 12px 13px; gap: 10px; }
