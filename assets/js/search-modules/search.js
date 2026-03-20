@@ -57,8 +57,7 @@
 
         const inp  = DOMService.get(CONFIG.DOM.searchInputId);
         const q    = inp?.value || '';
-        const tfEl = DOMService.get(CONFIG.DOM.typeFilterId);
-        State.selectedType     = tfEl?.value || State.selectedType;
+        // typeFilter is now a pill-bar div — read from State, not .value
         State.selectedCategory = 'all';
 
         // ── Empty query ────────────────────────────────────────────────────

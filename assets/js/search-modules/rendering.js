@@ -226,12 +226,10 @@
           lang
         );
 
-        // Scroll to top of results immediately on every new search.
-        // behavior:'instant' = no animation, no delay, works even with
-        // scroll-behavior:smooth on html (instant overrides it).
-        // Using scrollTo on window rather than container because VS uses
-        // window scroll mode — the scroll container IS the window.
+        // Scroll to top instantly on every filter/search change.
+        // Also ensure sticky header is visible (may have been scroll-hidden).
         window.scrollTo({ top: 0, behavior: 'instant' });
+        if (window._showStickyHeader) window._showStickyHeader();
 
         M.UIService.updateUILanguage();
       } catch (e) {
@@ -279,34 +277,134 @@
 
   // ── FilterService ─────────────────────────────────────────────────────────
   const FilterService = {
-    /** @param {string} [selected='all'] */
+
+    /**
+     * Build type pill buttons.
+     * The container (#typeFilter) is now a div.filter-pills-row, not a <select>.
+     * Clicking a pill sets State.selectedType and re-runs doSearch.
+     * @param {string} [selected='all']
+     */
     setupTypeFilter(selected = 'all') {
       try {
         const el = DOMService.get(CONFIG.DOM.typeFilterId);
         if (!el) return;
-        const lang = LanguageService.getLang();
-        const opts = [`<option value="all">${LanguageService.t('all_types')}</option>`];
+        const lang   = LanguageService.getLang();
+        const active = selected || 'all';
+        const pills  = [];
+
+        // "All" pill
+        pills.push(
+          `<button class="filter-pill${active === 'all' ? ' active' : ''}" data-filter-type="all" aria-pressed="${active === 'all'}">`
+          + StringService.escapeHtml(LanguageService.t('all_types'))
+          + `</button>`
+        );
+
         for (const t of (State.apiData?.type || [])) {
           const lbl = t.name?.[lang] || t.name?.en || '';
-          opts.push(`<option value="${StringService.escapeHtml(lbl)}">${StringService.escapeHtml(lbl)}</option>`);
+          if (!lbl) continue;
+          const esc = StringService.escapeHtml(lbl);
+          pills.push(
+            `<button class="filter-pill${active === lbl ? ' active' : ''}" data-filter-type="${esc}" aria-pressed="${active === lbl}">`
+            + esc
+            + `</button>`
+          );
         }
-        el.innerHTML = opts.join('');
-        el.value     = selected;
+
+        el.innerHTML = pills.join('');
+        State.selectedType = active;
+
+        // Delegate click on the container (single listener, no per-pill binding)
+        el._pillHandler && el.removeEventListener('click', el._pillHandler);
+        el._pillHandler = (e) => {
+          const btn = e.target.closest('.filter-pill');
+          if (!btn) return;
+          const val = btn.getAttribute('data-filter-type') || 'all';
+          if (val === State.selectedType) return;
+          State.selectedType = val;
+          // Update active state visually
+          el.querySelectorAll('.filter-pill').forEach(p => {
+            const isActive = p.getAttribute('data-filter-type') === val;
+            p.classList.toggle('active', isActive);
+            p.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+          });
+          // Reset category, re-search
+          State.selectedCategory = 'all';
+          if (window.SearchModules?.SearchService) {
+            window.SearchModules.SearchService.doSearch(null, false);
+          }
+        };
+        el.addEventListener('click', el._pillHandler);
       } catch {}
     },
 
-    /** @param {CategoryOption[]} cats @param {string} [selected='all'] */
+    /**
+     * Build category pill buttons.
+     * Visibility is handled by grid-template-rows (0fr/1fr) + opacity in CSS.
+     * We never use display:none on the inner row — it breaks grid animation.
+     * @param {CategoryOption[]} cats
+     * @param {string} [selected='all']
+     */
     setupCategoryFilter(cats, selected = 'all') {
       try {
-        const el = DOMService.get(CONFIG.DOM.categoryFilterId);
+        const el   = DOMService.get(CONFIG.DOM.categoryFilterId);
+        const btn  = document.getElementById('filterCatToggle');
+        const wrap = document.getElementById('filterCatWrap');
         if (!el) return;
-        const opts = [`<option value="all">${LanguageService.t('all_categories')}</option>`];
-        for (const { key, displayName } of cats) {
-          opts.push(`<option value="${StringService.escapeHtml(key)}">${StringService.escapeHtml(displayName)}</option>`);
+
+        // No categories — clear pills and hide toggle button.
+        // Close the wrap if open. Leave display intact (grid handles hiding).
+        if (!cats || cats.length === 0) {
+          el.innerHTML = '';
+          if (btn)  { btn.style.visibility = 'hidden'; btn.classList.remove('active'); }
+          if (wrap) {
+            wrap.classList.remove('open');
+            wrap.setAttribute('aria-hidden', 'true');
+            if (btn) btn.setAttribute('aria-expanded', 'false');
+          }
+          return;
         }
-        el.innerHTML     = opts.join('');
-        el.style.display = '';
-        el.value         = selected;
+
+        const active = selected || 'all';
+        const pills  = [];
+
+        pills.push(
+          `<button class="filter-pill filter-pill--cat${active === 'all' ? ' active' : ''}" data-filter-cat="all" aria-pressed="${active === 'all'}">`
+          + StringService.escapeHtml(LanguageService.t('all_categories'))
+          + `</button>`
+        );
+
+        for (const { key, displayName } of cats) {
+          if (!key) continue;
+          const esc = StringService.escapeHtml(key);
+          const lbl = StringService.escapeHtml(displayName || key);
+          pills.push(
+            `<button class="filter-pill filter-pill--cat${active === key ? ' active' : ''}" data-filter-cat="${esc}" aria-pressed="${active === key}">`
+            + lbl
+            + `</button>`
+          );
+        }
+
+        el.innerHTML = pills.join('');
+        // Reveal toggle button (was hidden when no cats)
+        if (btn) btn.style.visibility = '';
+        // Update --cat-bar-h so CSS spacer has correct height
+        if (window._updateCatBarHeight) requestAnimationFrame(window._updateCatBarHeight);
+
+        el._pillHandler && el.removeEventListener('click', el._pillHandler);
+        el._pillHandler = (e) => {
+          const p = e.target.closest('.filter-pill--cat');
+          if (!p) return;
+          const val = p.getAttribute('data-filter-cat') || 'all';
+          if (val === State.selectedCategory) return;
+          State.selectedCategory = val;
+          el.querySelectorAll('.filter-pill--cat').forEach(chip => {
+            const isActive = chip.getAttribute('data-filter-cat') === val;
+            chip.classList.toggle('active', isActive);
+            chip.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+          });
+          RenderingService.renderResults(State.currentResults);
+        };
+        el.addEventListener('click', el._pillHandler);
       } catch {}
     },
   };

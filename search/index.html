@@ -24,42 +24,81 @@
   <link rel="icon" type="image/x-icon" href="/assets/images/fantrove-hub360.ico" />
 </head>
 <body>
-  <header class="search-header">
-    <form id="searchForm" autocomplete="off" role="search" aria-label="ระบบค้นหา FanTrove">
-      <div class="search-input-wrapper">
-        <span class="search-input-icon" aria-hidden="true">
-          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#13b47f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8"></circle>
-            <path d="m21 21-4.35-4.35"></path>
-          </svg>
-        </span>
-        <input 
-          type="search" 
-          id="searchInput" 
-          name="q" 
-          placeholder="ค้นหาข้อมูล..." 
-          inputmode="search" 
-          enterkeyhint="search" 
-          aria-label="ค้นหาข้อมูลใน Fantrove"
-          autocomplete="off"
-          spellcheck="false"
-        />
-      </div>
-    </form>
-  </header>
+  <!--
+    #search-sticky: the single sticky+animated unit.
+    - position:sticky so it stays at top while scrolling
+    - transform written by JS to hide/show both header & category bar together
+    - .search-header inside: the visible bar (input + type pills)
+    - .filter-cat-wrap inside: absolute overlay below header
+      → not inside header so header height never changes
+      → but inside #search-sticky so it hides with the header
+    - #cat-spacer: a zero-height div whose padding-top animates open/close
+      → pushes content down when category bar is visible, zero reflow during animation
+  -->
+  <div id="search-sticky">
+    <header class="search-header">
+      <form id="searchForm" autocomplete="off" role="search" aria-label="ระบบค้นหา FanTrove">
+        <div class="search-input-wrapper">
+          <span class="search-input-icon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#13b47f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+          </span>
+          <input 
+            type="search" 
+            id="searchInput" 
+            name="q" 
+            placeholder="ค้นหาข้อมูล..." 
+            inputmode="search" 
+            enterkeyhint="search" 
+            aria-label="ค้นหาข้อมูลใน Fantrove"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </div>
+      </form>
+
+      <!-- Filter chip bar — type pills + toggle button -->
+      <nav class="search-filters-panel" aria-label="ตัวกรองการค้นหา">
+        <div class="filter-row-wrapper">
+          <div id="typeFilter"
+               class="filter-pills-row"
+               role="group"
+               aria-label="ประเภท"></div>
+          <div class="filter-row-end">
+            <button class="filter-cat-toggle"
+                    id="filterCatToggle"
+                    type="button"
+                    aria-label="แสดง/ซ่อนหมวดหมู่"
+                    aria-expanded="false"
+                    aria-controls="filterCatWrap">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                   viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
+                   aria-hidden="true">
+                <path d="M6 9l6 6 6-6"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <!-- Category bar: absolute overlay inside sticky wrapper
+         Hides with the header when scrolled. Overlays content when open. -->
+    <div class="filter-cat-wrap" id="filterCatWrap" aria-hidden="true">
+      <div id="categoryFilter"
+           class="filter-pills-row filter-pills-row--cat"
+           role="group"
+           aria-label="หมวดหมู่"></div>
+    </div>
+  </div>
+
+  <!-- Spacer: animates padding-top to compensate when category bar opens -->
+  <div id="cat-spacer"></div>
 
   <div class="search-main-layout">
-    <nav class="search-filters-panel" aria-label="ตัวกรองการค้นหา">
-      <div class="filter-section">
-        <label  class="filter-group-label">ประเภท</label>
-        <select id="typeFilter" aria-label="เลือกประเภทข้อมูล"></select>
-      </div>
-      <div class="filter-section">
-        <label class="filter-group-label">หมวดหมู่</label>
-        <select id="categoryFilter" style="display:none" aria-label="เลือกหมวดหมู่ข้อมูล"></select>
-      </div>
-    </nav>
-
     <main id="searchResults" aria-live="polite" aria-label="ผลการค้นหา" tabindex="0">
       <!-- ผลลัพธ์การค้นหาจะมาแสดงที่นี่ -->
     </main>
@@ -78,5 +117,136 @@
 
   <script defer src="/assets/js/lang-links.js"></script>
   <script src="/fantrove-console-bridge.js"></script>
+
+  <!-- ── Header scroll-hide + category toggle ────────────────────────── -->
+  <script>
+  (function(){
+    'use strict';
+
+    var sticky = document.getElementById('search-sticky');
+    var btn    = document.getElementById('filterCatToggle');
+    var wrap   = document.getElementById('filterCatWrap');
+    var spacer = document.getElementById('cat-spacer');
+    var OVERLAP = 28;  /* px — matches header border-radius */
+
+    var _visible  = true;
+    var _touching = false;
+    var _lastY    = 0;
+    var _catOpen  = false;
+
+    /* ── Hide / show sticky (mirrors ModernNavigation exactly) ─── */
+    function _hide() {
+      sticky.style.transform     = 'translateZ(0) translateY(-100%)';
+      sticky.style.pointerEvents = 'none';
+      _visible = false;
+    }
+    function _show() {
+      sticky.style.transform     = 'translateZ(0) translateY(0%)';
+      sticky.style.pointerEvents = '';
+      _visible = true;
+    }
+
+    /* Expose so rendering.js scrollTo(0) can sync the visible flag */
+    window._showStickyHeader = function() {
+      if (!_visible && sticky) _show();
+    };
+
+    /* ── Init ────────────────────────────────────────────────────── */
+    if (sticky) {
+      sticky.style.transition = 'transform 0.22s cubic-bezier(0.33,1,0.68,1)';
+      _lastY = window.scrollY;
+    }
+
+    /*
+     * visibilitychange: re-prime GPU layer when page becomes active.
+     *
+     * When a tab regains focus or screen wakes, the compositor layer for
+     * #search-sticky may have been discarded by the browser to save memory.
+     * The first scroll event then forces a synchronous layer promotion —
+     * this is the source of the one-frame jank when scrolling right after
+     * page activation.
+     *
+     * Fix: on visibilitychange → visible, read scrollY (forces compositor
+     * to re-establish the scroll position on the GPU thread) and sync _lastY.
+     * The requestAnimationFrame ensures this happens at the start of the
+     * next paint frame, not synchronously during the event (which would
+     * block the main thread unnecessarily).
+     *
+     * Cost: zero per scroll — this only fires on page activation, not
+     * on every frame.
+     */
+    document.addEventListener('visibilitychange', function() {
+      if (document.visibilityState === 'visible' && sticky) {
+        requestAnimationFrame(function() {
+          _lastY = window.scrollY;
+        });
+      }
+    }, { passive: true });
+
+    /* ── Touch tracking ──────────────────────────────────────────── */
+    window.addEventListener('touchstart', function() {
+      _touching = true;
+      _lastY    = window.scrollY;
+    }, { passive: true });
+
+    window.addEventListener('touchend', function() {
+      _touching = false;
+    }, { passive: true });
+
+    /* ── Scroll handler — raw, no rAF (nav pattern) ──────────────── */
+    window.addEventListener('scroll', function() {
+      var y = window.scrollY, delta = y - _lastY;
+      _lastY = y;
+      if (y <= 40) { if (!_visible) _show(); return; }
+      if (_touching) {
+        if (delta > 15  && _visible)  _hide();
+        else if (delta < -10 && !_visible) _show();
+      }
+    }, { passive: true });
+
+    /* ── Category toggle ─────────────────────────────────────────── */
+    if (btn && wrap) {
+      btn.addEventListener('click', function() {
+        if (!_visible) _show();
+        _catOpen = !_catOpen;
+
+        /*
+         * will-change lifecycle — correct pattern:
+         * Set BEFORE animation starts (while element still hidden/visible).
+         * Browser promotes GPU layer in advance → first frame already composited.
+         * Clear AFTER transitionend → browser drops promotion hint, frees memory.
+         * Combined with visibility:hidden (CSS) when closed:
+         * browser skips compositing entirely when element is not visible.
+         */
+        wrap.style.willChange = 'transform, opacity';
+
+        wrap.classList.toggle('open', _catOpen);
+        btn.classList.toggle('active', _catOpen);
+        if (sticky) sticky.classList.toggle('cat-open', _catOpen);
+        btn.setAttribute('aria-expanded', _catOpen ? 'true' : 'false');
+        wrap.setAttribute('aria-hidden',  _catOpen ? 'false' : 'true');
+
+        /* offsetHeight: 1 forced layout on click only, never in animation loop */
+        var h = _catOpen ? Math.max(0, wrap.offsetHeight - OVERLAP) : 0;
+        if (spacer) spacer.style.height = h + 'px';
+
+        /* Clear will-change after animation — frees GPU promotion hint */
+        wrap.addEventListener('transitionend', function onEnd(e) {
+          if (e.target !== wrap) return;
+          wrap.removeEventListener('transitionend', onEnd);
+          wrap.style.willChange = '';
+        }, { once: true, passive: true });
+      }, { passive: true });
+    }
+
+    /* Called by rendering.js if pill rebuild changes bar height */
+    window._updateCatBarHeight = function() {
+      if (!_catOpen || !wrap || !spacer) return;
+      spacer.style.height = Math.max(0, wrap.offsetHeight - OVERLAP) + 'px';
+    };
+
+  })();
+  </script>
+
 </body>
 </html>

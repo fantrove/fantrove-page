@@ -231,39 +231,17 @@
     },
 
     /**
-     * Attach onChange handlers to the type and category <select> elements.
+     * Filter events are now handled by pill-button click delegates
+     * inside FilterService.setupTypeFilter() and setupCategoryFilter().
+     * This method is kept as a safe no-op for call-site compatibility.
      */
-    setupFilters() {
-      try {
-        [CONFIG.DOM.typeFilterId, CONFIG.DOM.categoryFilterId].forEach((id) => {
-          const el = DOMService.get(id);
-          if (!el) return;
-          const onChange = () => {
-            if (id === CONFIG.DOM.typeFilterId) this.onTypeChange();
-            else this.onCatChange();
-          };
-          el.onchange = onChange;
-          el.onkeyup  = (e) => { if (e.key === 'Enter') onChange(); };
-        });
-      } catch {}
-    },
+    setupFilters() {},
 
-    /** Handle type filter change — re-runs the current search. */
-    onTypeChange() {
-      try {
-        State.selectedType = DOMService.get(CONFIG.DOM.typeFilterId)?.value;
-        M.SearchService.doSearch();
-      } catch {}
-    },
+    /** @deprecated — pill click handler inside FilterService handles this */
+    onTypeChange() {},
 
-    /** Handle category filter change — re-filters current results. */
-    onCatChange() {
-      try {
-        State.selectedCategory = DOMService.get(CONFIG.DOM.categoryFilterId)?.value;
-        M.RenderingService.renderResults(State.currentResults, false);
-        this.updateUILanguage();
-      } catch {}
-    },
+    /** @deprecated — pill click handler inside FilterService handles this */
+    onCatChange() {},
 
     /** Blur the input to dismiss the soft keyboard. */
     closeKB() {
@@ -274,18 +252,15 @@
     },
 
     /**
-     * Sync placeholder text and filter labels to the active language.
-     * Safe to call at any time — checks before writing.
+     * Sync placeholder text to the active language.
+     * Filter pills are rebuilt by FilterService on language change.
+     * Safe to call at any time.
      */
     updateUILanguage() {
       try {
         const inp = DOMService.get(CONFIG.DOM.searchInputId);
         const ph  = LanguageService.t('search_placeholder');
         if (inp && inp.placeholder !== ph) inp.placeholder = ph;
-
-        const lbls = DOMService.queryAll('.search-filters-panel .filter-group-label');
-        if (lbls[0] && lbls[0].textContent !== LanguageService.t('type'))     lbls[0].textContent = LanguageService.t('type');
-        if (lbls[1] && lbls[1].textContent !== LanguageService.t('category')) lbls[1].textContent = LanguageService.t('category');
       } catch {}
     },
   };
