@@ -25,7 +25,7 @@
 html,body{ margin:0; padding:0 }
 
 body{
-  background:linear-gradient(160deg,#f5faf8 0%,#edf5f2 100%);
+  background:var(--bg);
   font-family:'Sarabun','Tahoma','Segoe UI',sans-serif;
   color:var(--text-main);
   font-size:16px;

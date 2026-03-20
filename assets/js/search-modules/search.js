@@ -140,7 +140,6 @@
       const maxR    = CONFIG.TIMING.urlSearchMaxRetries;
       const retryMs = CONFIG.TIMING.urlSearchRetryMs;
 
-      /** Schedule one more retry or warn if exhausted. */
       const scheduleRetry = () => {
         if (retryCount < maxR) {
           setTimeout(() => this.doSearchFromURL(q, type, category, retryCount + 1), retryMs);
@@ -153,17 +152,38 @@
         const se = window.SearchEngine;
         if (!se?.search) { scheduleRetry(); return; }
 
-        // Check whether the immediate doc index has been built yet
+        // Check both _docs AND _fuse are ready.
+        // search() uses Fuse when ready (rich results) vs immediateSearch (rough).
+        // Showing rough results then replacing with Fuse results = inconsistency.
+        // Wait until Fuse is built so first render is always the final result.
+        const internals = se._internals;
         const hasDocs = (() => {
-          try { return (se._internals?.getDocs?.()?.length || 0) > 0; }
+          try { return (internals?.getDocs?.()?.length || 0) > 0; }
           catch { return false; }
         })();
+        const hasFuse = (() => {
+          try { return internals?.getFuse?.() != null; }
+          catch { return false; }
+        })();
+
+        // If docs aren't loaded yet, retry
+        if (!hasDocs && retryCount < maxR) {
+          scheduleRetry();
+          return;
+        }
+
+        // If docs loaded but Fuse not yet built and we have retries left, wait
+        // (only for first few retries — don't block forever if Fuse fails)
+        if (hasDocs && !hasFuse && retryCount < Math.floor(maxR / 2)) {
+          scheduleRetry();
+          return;
+        }
 
         let out = { results: [], keywords: [] };
         try { out = se.search(q, type) || out; } catch {}
 
-        // If no results and docs not ready yet, retry
-        if (out.results.length === 0 && !hasDocs && retryCount < maxR) {
+        // If still no results and we haven't hit the limit, retry once more
+        if (out.results.length === 0 && !hasFuse && retryCount < maxR) {
           scheduleRetry();
           return;
         }
@@ -177,7 +197,6 @@
           State.selectedCategory = category || 'all';
           FilterService.setupTypeFilter(State.selectedType);
           this.doSearch(null, /* preventPush */ true);
-          // Use replaceSearch — this doesn't count as a user-initiated push
           URLService.replaceSearch({ q, type: State.selectedType, category: State.selectedCategory });
         } finally {
           State.suppressHistoryPush = false;

@@ -114,12 +114,12 @@
   }
 
   .search-header {
-    padding: 10px 0 4px;
+    padding: 14px 0 0;
     background: var(--surf);
-    border-bottom: 0.8px solid rgba(13,186,146,0.2);
-    box-shadow: 0 1px 12px rgba(0,0,0,.05);
-    border-bottom-left-radius: 28px;
-    border-bottom-right-radius: 28px;
+    border-bottom: 1px solid rgba(0,0,0,.08);
+    box-shadow: 0 1px 0 rgba(0,0,0,.06), 0 2px 8px rgba(0,0,0,.04);
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
     position: relative;
     z-index: 2;
     contain: style;
@@ -150,8 +150,8 @@
     flex-direction: row   !important;
     gap: 2px;
     border-radius: var(--rp);
-    background: var(--sur2);
-    border: 1.5px solid transparent;
+    background: rgba(255,255,255,.96);
+    border: 1px solid rgba(0,0,0,.09);
     padding: 0 10px 0 4px !important;
     max-width: none;
     width: 100%;
@@ -164,12 +164,12 @@
     &:focus-within {
       background: var(--surf);
       border-color: var(--g5);
-      box-shadow: 0 0 0 2.5px rgba(13,186,146,0.18);
+      box-shadow: 0 0 0 2px rgba(13,186,146,.2);
     }
 
     /* Overlay variant — same size as main header */
     #searchOverlayContainer & {
-      background: var(--sur2);
+      background: rgba(255,255,255,.96);
       max-width: none;
       margin: 0;
       height: 44px;
@@ -222,7 +222,7 @@
     min-width: 0 !important;
     padding: 0   !important;
     margin: 0    !important;
-    font-size: .97rem;
+    font-size: .92rem;
     font-weight: 500;
     line-height: 1;
     border: 0;
@@ -266,21 +266,21 @@
 
   .suggestions-head {
     padding: 20px 20px 8px;
-    font-size: .78rem; font-weight: 600;
+    font-size: .69rem; font-weight: 600;
     color: var(--tmd);
     text-transform: uppercase; letter-spacing: .8px;
     user-select: none;
   }
 
   .suggestion-item {
-    padding: 15px 20px;
+    padding: 13px 20px;
     cursor: pointer;
     display: flex; align-items: center; gap: 14px;
     transition: background-color var(--tf);
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
 
-    &:active { background: rgba(0,0,0,.03); }
+    &:active { background: rgba(0,0,0,.015); }
 
     &::before {
       content: ''; flex-shrink: 0;
@@ -291,7 +291,7 @@
 
   .suggestion-body {
     flex: 1; word-break: break-word;
-    font-size: 1.02rem; font-weight: 500;
+    font-size: .95rem; font-weight: 500;
     color: var(--tmd); line-height: 1.5;
   }
 
@@ -316,7 +316,7 @@
   .no-result {
     margin-top: 56px; padding: 32px 24px;
     text-align: center; color: var(--tlo);
-    font-size: .95rem; font-weight: 500; line-height: 1.65;
+    font-size: .91rem; font-weight: 500; line-height: 1.65;
 
     &::before {
       content: '🔍'; display: block;
@@ -388,7 +388,7 @@
     -webkit-tap-highlight-color: transparent;
     transition: background-color var(--tf);
 
-    &:active { background: #e9ecef; }
+    &:active { background: rgba(15,23,42,.06); }
 
     /* ── Content box ─────────────────────────────────────── */
     & .scc {
@@ -411,7 +411,7 @@
 
     /* ── Title — platform c-heading (#494E59) ─────────────── */
     & .sct {
-      font-size: 1.1rem; font-weight: 700;
+      font-size: 1.05rem; font-weight: 700;
       color: #111827; line-height: 1.45;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       letter-spacing: -.01em;
@@ -421,7 +421,7 @@
 
     /* ── Subtitle — platform c-body (#52638A) ─────────────── */
     & .scs {
-      font-size: .96rem; font-weight: 500;
+      font-size: .91rem; font-weight: 500;
       color: #374151;
       line-height: 1.4;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -442,7 +442,7 @@
     & .tag {
       background: rgba(13,186,146,.05);
       color: #0a7d6d;
-      padding: 5px 13px; font-size: 14px;
+      padding: 4px 11px; font-size: 13px;
       border-radius: var(--rp);
       font-weight: 500; border: none;
       line-height: 1.5;
@@ -454,7 +454,7 @@
     & .scr {
       position: absolute; right: 12px; top: 12px;
       padding: 9px 12px;
-      font-size: .9rem; font-weight: 500;
+      font-size: .84rem; font-weight: 500;
       border-radius: var(--rp);
       background: transparent;
       border: 1px solid rgba(0,0,0,.18);
@@ -502,20 +502,21 @@
     width: 100%; max-width: none;
     padding: 0; background: transparent;
     border: none; border-radius: 0; box-shadow: none;
-    position: static; margin-top: 4px;
+    position: static; margin-top: 8px;
   }
 
   .filter-row-wrapper {
     display: flex; align-items: center; overflow: hidden;
+    border-top: 1px solid rgba(0,0,0,.06);
   }
 
   /* contain:layout style paint — pill repaints isolated here */
   .filter-pills-row {
     flex: 1 1 0;
     display: flex; align-items: center;
-    gap: 9px;
-    padding-block: 9px;
-    padding-inline: 16px;
+    gap: 8px;
+    padding-block: 10px;
+    padding-inline: 14px;
     overflow-x: auto; overflow-y: hidden;
     scrollbar-width: none; -ms-overflow-style: none;
     overscroll-behavior-x: contain;
@@ -524,7 +525,7 @@
     &::-webkit-scrollbar { display: none; }
   }
 
-  .filter-pills-row--cat { padding-block: 7px 10px; }
+  .filter-pills-row--cat { padding-block: 9px 12px; }
 
   /* Right fade + toggle slot */
   .filter-row-end {
@@ -545,10 +546,10 @@
    */
   .filter-cat-toggle {
     display: flex; align-items: center; justify-content: center;
-    width: 36px; height: 36px;
+    width: 33px; height: 33px;
     border-radius: 50%;
-    border: 1.5px solid var(--bdm);
-    background: var(--surf);
+    border: 1px solid rgba(0,0,0,.09);
+    background: var(--sur2);
     color: var(--tlo);
     cursor: pointer;
     touch-action: manipulation;
@@ -581,13 +582,13 @@
   .filter-cat-wrap {
     position: absolute;
     left: 0; right: 0;
-    top: calc(100% - 28px);
-    padding-top: 28px;
+    top: 100%;
+    padding-top: 0;
     z-index: 1;
     background: var(--surf);
-    border-bottom: 2px solid var(--g1);
-    border-bottom-left-radius: 28px;
-    border-bottom-right-radius: 28px;
+    border-bottom: 1px solid rgba(0,0,0,.08);
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
     opacity: 0;
     transform: translateY(-100%);
     pointer-events: none;
@@ -602,9 +603,8 @@
     content: '';
     position: absolute;
     inset: 0;
-    border-bottom-left-radius: 28px;
-    border-bottom-right-radius: 28px;
-    box-shadow: 0 6px 24px rgba(0,0,0,.08);
+    border-radius: 0;
+    box-shadow: none;
     pointer-events: none;
     opacity: 0;
     transition: opacity 220ms cubic-bezier(0.16,1,0.3,1);
@@ -623,19 +623,7 @@
 
   .filter-cat-wrap.open::after { opacity: 1; }
 
-  /* Subtle bottom border on open cat bar for clean separation */
-  .filter-cat-wrap::before {
-    content: '';
-    position: absolute;
-    bottom: 0; left: 16px; right: 16px;
-    height: 1px;
-    background: var(--bd);
-    border-radius: 1px;
-    opacity: 0;
-    transition: opacity 220ms cubic-bezier(0.16,1,0.3,1);
-    pointer-events: none;
-  }
-  .filter-cat-wrap.open::before { opacity: 1; }
+
 
   /*
    * Type pill:
@@ -656,15 +644,16 @@
   .filter-pill {
     flex-shrink: 0;
     display: inline-flex; align-items: center; justify-content: center;
-    padding-block: 0.88em;
-    padding-inline: 1.1em;
+    padding-block: 0.78em;
+    padding-inline: 0.95em;
     border-radius: var(--rp);
-    font-size: 1rem; font-weight: 700; line-height: 1;
+    font-size: .91rem; font-weight: 700; line-height: 1;
     font-family: inherit;
-    /* Quiet inactive — active state is the focal point */
+    /* Segment-control style: text-only inactive, solid active */
     background: transparent;
     border: none;
     color: var(--tmd);
+    opacity: .7;
     cursor: pointer; white-space: nowrap;
     letter-spacing: .01em;
     touch-action: manipulation;
@@ -679,7 +668,7 @@
       background: var(--g5);
       color: #fff;
       opacity: 1;
-      box-shadow: 0 2px 10px rgba(13,186,146,.35);
+      box-shadow: none;
     }
   }
 
@@ -689,13 +678,13 @@
      * Active: just a colour hint — doesn't compete with type active.
      */
   .filter-pill--cat {
-    padding-block: 0.78em;
-    padding-inline: 1.0em;
-    font-size: .97rem; font-weight: 500;
+    padding-block: 0.74em;
+    padding-inline: 0.94em;
+    font-size: .91rem; font-weight: 500;
     background: transparent;
-    border: 1px solid rgba(0,0,0,.13);
+    border: 1px solid rgba(0,0,0,.09);
     color: var(--tlo);
-    opacity: .8;
+    opacity: .85;
 
     &.active {
       background: rgba(13,186,146,.06);
@@ -792,8 +781,8 @@
     .suggestion-item { padding: 12px 16px; }
 
     .filter-pills-row  { padding-block: 7px; padding-inline: 12px; gap: 6px; }
-    .filter-pill       { font-size: .96rem;  padding-block: 0.84em; padding-inline: 1.05em; }
-    .filter-pill--cat  { font-size: .94rem;  padding-block: 0.74em; padding-inline: 0.94em; }
+    .filter-pill       { font-size: .89rem;  padding-block: 0.74em; padding-inline: 0.9em; }
+    .filter-pill--cat  { font-size: .85rem;  padding-block: 0.7em;  padding-inline: 0.88em; }
     .filter-cat-toggle { width: 32px; height: 32px; }
     .filter-row-end    { padding-inline-end: 10px; }
 
@@ -804,7 +793,7 @@
     }
 
     .scc { flex: 0 0 54px; height: 54px; font-size: 22px; }
-    .sct { font-size: .97rem; font-weight: 600; }
+    .sct { font-size: .94rem; font-weight: 600; }
     .scs { font-size: .89rem; }
     .scr { position: static; margin-top: 8px; align-self: flex-start; }
   }
@@ -825,8 +814,8 @@
     #searchInput { font-size: .98rem; }
 
     .filter-pills-row  { padding-block: 6px; padding-inline: 10px; gap: 5px; }
-    .filter-pill       { font-size: .93rem;  padding-block: 0.8em;  padding-inline: 1.0em; }
-    .filter-pill--cat  { font-size: .91rem;  padding-block: 0.70em; padding-inline: 0.88em; }
+    .filter-pill       { font-size: .87rem;  padding-block: 0.7em;  padding-inline: 0.88em; }
+    .filter-pill--cat  { font-size: .82rem;  padding-block: 0.66em; padding-inline: 0.82em; }
     .filter-cat-toggle { width: 30px; height: 30px; }
 
     .sc  { padding: 12px 13px; gap: 10px; }

@@ -246,18 +246,29 @@
         // ⑤ Restore scroll-lock — reverse of the body-fixed technique
         // Remove fixed lock first, then restore scroll position atomically.
         const savedScrollY = State._savedScrollY || 0;
+        const _didSearch = !!window.__overlayDidSearch;
+        window.__overlayDidSearch = false;
+
+        // Hide #searchResults during body restoration to prevent VS flash.
+        // When body position:fixed is removed, scrollY briefly appears as 0.
+        // VS sees this and re-renders items from top before scrollTo fires.
+        // visibility:hidden hides that transient re-render without layout cost.
+        const _sr = DOMService.get(CONFIG.DOM.searchResultsId || 'searchResults');
+        if (_sr && savedScrollY > 0 && !_didSearch) _sr.style.visibility = 'hidden';
+
         document.body.style.position = '';
         document.body.style.top      = '';
         document.body.style.width    = '';
         State._savedScrollY = 0;
-        // Only restore scroll if NO new search was run inside the overlay.
-        // renderResults() sets window.__overlayDidSearch = true before scrollTo(0).
-        // If that flag is set, user performed a search → stay at top of new results.
-        // If not set, user just dismissed the overlay → restore their position.
-        const _didSearch = !!window.__overlayDidSearch;
-        window.__overlayDidSearch = false;   // reset for next overlay session
+
         if (savedScrollY > 0 && !_didSearch) {
           window.scrollTo({ top: savedScrollY, behavior: 'instant' });
+          // Restore visibility after scroll settles (next paint frame)
+          requestAnimationFrame(() => {
+            if (_sr) _sr.style.visibility = '';
+          });
+        } else if (_sr) {
+          _sr.style.visibility = '';
         }
 
         // ⑥ Remove document keydown listener
