@@ -207,6 +207,11 @@
         if (!filtered.length) {
           DOMService.setHTML(container, '');
           this._renderEmpty(container, lang, showSuggestionsIfNoResult);
+          if (!window.__renderIsRestore) {
+            if (window.SearchModules?.State?.overlayOpen) window.__overlayDidSearch = true;
+            window.scrollTo({ top: 0, behavior: 'instant' });
+            if (window._showStickyHeader) window._showStickyHeader();
+          }
           return;
         }
 
@@ -226,10 +231,14 @@
           lang
         );
 
-        // Scroll to top instantly on every filter/search change.
-        // Also ensure sticky header is visible (may have been scroll-hidden).
-        window.scrollTo({ top: 0, behavior: 'instant' });
-        if (window._showStickyHeader) window._showStickyHeader();
+        // Scroll to top instantly on every NEW search/filter change.
+        // Skip when it's a state-restore (preventPush=true path) — user
+        // didn't initiate a new search, so keep their scroll position.
+        if (!window.__renderIsRestore) {
+          if (window.SearchModules?.State?.overlayOpen) window.__overlayDidSearch = true;
+          window.scrollTo({ top: 0, behavior: 'instant' });
+          if (window._showStickyHeader) window._showStickyHeader();
+        }
 
         M.UIService.updateUILanguage();
       } catch (e) {
@@ -351,16 +360,15 @@
         const wrap = document.getElementById('filterCatWrap');
         if (!el) return;
 
-        // No categories — clear pills and hide toggle button.
-        // Close the wrap if open. Leave display intact (grid handles hiding).
+        // No categories — clear pills, hide toggle, always close & reset state.
         if (!cats || cats.length === 0) {
           el.innerHTML = '';
-          if (btn)  { btn.style.visibility = 'hidden'; btn.classList.remove('active'); }
-          if (wrap) {
-            wrap.classList.remove('open');
-            wrap.setAttribute('aria-hidden', 'true');
-            if (btn) btn.setAttribute('aria-expanded', 'false');
-          }
+          if (btn)  { btn.style.visibility = 'hidden'; btn.classList.remove('active'); btn.setAttribute('aria-expanded', 'false'); }
+          if (wrap) { wrap.classList.remove('open'); wrap.setAttribute('aria-hidden', 'true'); }
+          const sticky = document.getElementById('search-sticky');
+          if (sticky) sticky.classList.remove('cat-open');
+          // Always sync JS state + reset spacer regardless of visual state
+          if (window._closeCatBar) window._closeCatBar();
           return;
         }
 

@@ -36,10 +36,10 @@
    Must be at top level (not inside @layer) for broadest compat.
    'inherits: true' = children receive value without re-lookup.
    Typed properties: browser validates + optimises interpolation. */
-@property --g5   { syntax: '<color>'; inherits: true;  initial-value: #13b47f; }
-@property --g6   { syntax: '<color>'; inherits: true;  initial-value: #0f9469; }
-@property --g05  { syntax: '<color>'; inherits: true;  initial-value: #f0fdf8; }
-@property --g1   { syntax: '<color>'; inherits: true;  initial-value: #dcf5eb; }
+@property --g5   { syntax: '<color>'; inherits: true;  initial-value: #0dba92; }
+@property --g6   { syntax: '<color>'; inherits: true;  initial-value: #0a9273; }
+@property --g05  { syntax: '<color>'; inherits: true;  initial-value: #f0f7f5; }
+@property --g1   { syntax: '<color>'; inherits: true;  initial-value: #c5ece5; }
 @property --surf { syntax: '<color>'; inherits: true;  initial-value: #ffffff; }
 @property --sur2 { syntax: '<color>'; inherits: true;  initial-value: #f0f4f2; }
 @property --thi  { syntax: '<color>'; inherits: true;  initial-value: #0d1f17; }
@@ -59,28 +59,29 @@
   html { scroll-behavior: auto; }
 
   :root {
-    /* Color tokens (also declared via @property above) */
-    --g5  : #13b47f;
-    --g6  : #0f9469;
-    --g05 : #f0fdf8;
-    --g1  : #dcf5eb;
-    --bg  : #f8faf9;
+    /* Color tokens */
+    --g5  : #0dba92;
+    --g6  : #0a9273;
+    --g05 : rgba(13,186,146,.07);
+    --g1  : #b8ede6;
+    --g2  : #0dba92;
+    --bg  : #f0f4f2;
     --surf: #ffffff;
-    --sur2: #f0f4f2;
-    --thi : #0d1f17;
-    --tmd : #2b4539;
-    --tlo : #637a6e;
+    --sur2: #e8eceb;
+    --thi : #111827;
+    --tmd : #374151;
+    --tlo : #6b7280;
     --tph : rgba(13,31,23,.34);
-    --bd  : rgba(0,0,0,.08);
+    --bd  : rgba(0,0,0,.13);
     --bdm : rgba(0,0,0,.13);
     --sh  : 0 1px 3px rgba(0,0,0,.05);
 
     /* Radii */
     --rp  : 999px;
-    --rx  : 18px;
-    --rl  : 14px;
-    --rm  : 10px;
-    --rs  : 7px;
+    --rx  : 26px;
+    --rl  : 20px;
+    --rm  : 16px;
+    --rs  : 10px;
 
     /* Transition */
     --tf  : 140ms ease;
@@ -115,7 +116,7 @@
   .search-header {
     padding: 14px 0 0;
     background: var(--surf);
-    border-bottom: none;
+    border-bottom: 0.8px solid rgba(13,186,146,0.2);
     box-shadow: 0 1px 12px rgba(0,0,0,.05);
     border-bottom-left-radius: 28px;
     border-bottom-right-radius: 28px;
@@ -160,7 +161,7 @@
     &:focus-within {
       background: var(--surf);
       border-color: var(--g5);
-      box-shadow: 0 0 0 3px rgba(19,180,127,.14);
+      box-shadow: 0 0 0 2.5px rgba(13,186,146,0.18);
     }
 
     /* Overlay variant — nested for cache locality */
@@ -173,7 +174,7 @@
       &:focus-within {
         background: var(--surf);
         border-color: var(--g5);
-        box-shadow: 0 0 0 3px rgba(19,180,127,.16);
+        box-shadow: 0 0 0 3px rgba(13,186,146,.16);
       }
     }
   }
@@ -325,7 +326,7 @@
     color: #fff; padding: 10px 18px;
     border-radius: var(--rl);
     font-size: .91rem; font-weight: 650;
-    box-shadow: 0 4px 16px rgba(19,180,127,.22);
+    box-shadow: 0 4px 16px rgba(13,186,146,.22);
     animation: _toast 220ms cubic-bezier(.4,0,.2,1) both;
     letter-spacing: .1px;
   }
@@ -363,31 +364,37 @@
   #searchResults { position: relative; }
 
   /* ── Root card ───────────────────────────────────────────── */
+  /*
+   * Platform card style (from styles.css):
+   *   #fff bg, no left accent, subtle border only
+   *   heading: #494E59, body: #52638A — neutral slate, not teal
+   *   teal appears only in subtle border and active/hover border
+   */
   .sc {
     display: flex;
-    gap: 16px;
+    gap: 18px;
     align-items: flex-start;
-    padding: 16px 18px;
+    padding: 20px 20px;
     border-radius: var(--rx);
-    background: var(--surf);
+    background: rgba(255,255,255,.72);
     border: none;
     position: relative;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
     transition: background-color var(--tf);
 
-    &:active { background: var(--g05); }
+    &:active { background: #e9ecef; }
 
-    /* ── Content box (emoji / text preview) ───────────────── */
+    /* ── Content box ─────────────────────────────────────── */
     & .scc {
-      flex: 0 0 56px; height: 56px;
-      font-size: 24px;
+      flex: 0 0 58px; height: 58px;
+      font-size: 26px;
       border-radius: var(--rl);
       padding: 6px;
       display: flex; align-items: center; justify-content: center;
-      background: var(--g05);
-      color: var(--g6);
+      background: rgba(13,186,146,.11);
+      color: #0a9273;
       border: none;
       flex-shrink: 0;
     }
@@ -395,23 +402,24 @@
     /* ── Body column ──────────────────────────────────────── */
     & .scb {
       flex: 1 1 auto; min-width: 0;
-      display: flex; flex-direction: column; gap: 6px;
+      display: flex; flex-direction: column; gap: 7px;
     }
 
-    /* ── Title ────────────────────────────────────────────── */
+    /* ── Title — platform c-heading (#494E59) ─────────────── */
     & .sct {
-      font-size: 1.03rem; font-weight: 600;
-      color: var(--thi); line-height: 1.4;
+      font-size: 1.1rem; font-weight: 700;
+      color: #111827; line-height: 1.45;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       letter-spacing: -.01em;
-      /* Skip kerning/ligature calc — imperceptible in list context */
       text-rendering: optimizeSpeed;
       font-synthesis: none;
     }
 
-    /* ── Subtitle ─────────────────────────────────────────── */
+    /* ── Subtitle — platform c-body (#52638A) ─────────────── */
     & .scs {
-      font-size: .93rem; color: var(--tlo); font-weight: 500;
+      font-size: .96rem; font-weight: 500;
+      color: #374151;
+      line-height: 1.4;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       text-rendering: optimizeSpeed;
       font-synthesis: none;
@@ -419,50 +427,47 @@
 
     /* ── Tags group ───────────────────────────────────────── */
     & .scg {
-      display: flex; gap: 7px;
-      margin-top: 8px;
+      display: flex; gap: 6px;
+      margin-top: 6px;
       align-items: center;
-      /* nowrap + overflow:hidden is cheaper than flex-wrap:wrap + max-height.
-         flex-wrap recalculates wrapping on every layout pass.
-         nowrap: layout is O(1) per flex container, clip is free. */
       flex-wrap: nowrap;
       overflow: hidden;
     }
 
-    /* ── Tag pill ─────────────────────────────────────────── */
+    /* ── Tag pill — neutral, not teal ─────────────────────── */
     & .tag {
-      background: var(--g05); color: var(--tlo);
-      padding: 3px 10px; font-size: 12.5px;
+      background: rgba(13,186,146,.1);
+      color: #0a7d6d;
+      padding: 4px 11px; font-size: 12.5px;
       border-radius: var(--rp);
-      font-weight: 600; border: none;
+      font-weight: 500; border: none;
       line-height: 1.5;
       white-space: nowrap;
-      letter-spacing: .04px;
       flex-shrink: 0;
     }
 
-    /* ── Copy button ──────────────────────────────────────── */
+    /* ── Copy button — ghost, platform style ─────────────── */
     & .scr {
       position: absolute; right: 12px; top: 12px;
-      padding: 4px 10px;
-      font-size: .86rem; font-weight: 500;
-      border-radius: 999px;
+      padding: 9px 12px;
+      font-size: .9rem; font-weight: 500;
+      border-radius: var(--rp);
       background: transparent;
-      border: 1px solid var(--bdm);
-      color: var(--tlo);
+      border: 1px solid rgba(0,0,0,.18);
+      color: #374151;
       box-shadow: none;
-      letter-spacing: .04px; white-space: nowrap;
+      letter-spacing: .02px; white-space: nowrap;
       cursor: pointer;
       touch-action: manipulation;
       -webkit-tap-highlight-color: transparent;
-      transition: background-color var(--tf), border-color var(--tf), color var(--tf);
+      transition: opacity var(--tf);
 
-      &:active { background: var(--g05); border-color: var(--g5); color: var(--g6); }
+      &:active { background: #e9ecef; border-color: rgba(0,0,0,.28); color: #111827; opacity:1; }
     }
 
     /* ── Vertical variant ─────────────────────────────────── */
     &.sv {
-flex-direction: column; gap: 10px; padding: 14px;
+      flex-direction: column; gap: 10px; padding: 14px;
 
       & .scc {
         flex: 0 0 auto; height: auto; width: 100%;
@@ -504,8 +509,8 @@ flex-direction: column; gap: 10px; padding: 14px;
   .filter-pills-row {
     flex: 1 1 0;
     display: flex; align-items: center;
-    gap: 8px;
-    padding-block: 10px;
+    gap: 9px;
+    padding-block: 12px;
     padding-inline: 16px;
     overflow-x: auto; overflow-y: hidden;
     scrollbar-width: none; -ms-overflow-style: none;
@@ -515,7 +520,7 @@ flex-direction: column; gap: 10px; padding: 14px;
     &::-webkit-scrollbar { display: none; }
   }
 
-  .filter-pills-row--cat { padding-block: 8px 11px; }
+  .filter-pills-row--cat { padding-block: 10px 13px; }
 
   /* Right fade + toggle slot */
   .filter-row-end {
@@ -554,8 +559,8 @@ flex-direction: column; gap: 10px; padding: 14px;
     }
 
     &.active {
-      background: var(--g05);
-      border-color: rgba(19,180,127,.5);
+      background: rgba(13,186,146,.12);
+      border-color: var(--g5);
       color: var(--g5);
       opacity: 1;
       & svg { transform: rotate(180deg); }
@@ -576,6 +581,7 @@ flex-direction: column; gap: 10px; padding: 14px;
     padding-top: 28px;
     z-index: 1;
     background: var(--surf);
+    border-bottom: 2px solid var(--g1);
     border-bottom-left-radius: 28px;
     border-bottom-right-radius: 28px;
     opacity: 0;
@@ -634,45 +640,58 @@ flex-direction: column; gap: 10px; padding: 14px;
    *   Transition: bg-color + color + transform only (NO box-shadow = no repaint)
    *   Static box-shadow on .active: instant, zero animation cost
    */
+  /* ── Type pill (primary filter) ─────────────────────────────
+     * Solid filled background inactive = visually prominent
+     * Active = full brand color = clear selection state
+     * Larger, heavier — the main navigation level
+     */
   .filter-pill {
     flex-shrink: 0;
     display: inline-flex; align-items: center; justify-content: center;
-    padding-block: 0.65em;
-    padding-inline: 1.2em;
+    padding-block: 0.82em;
+    padding-inline: 0.88em;
     border-radius: var(--rp);
-    font-size: .97rem; font-weight: 600; line-height: 1;
-    font-family: inherit; border: none;
-    background: transparent;
+    font-size: .95rem; font-weight: 600; line-height: 1;
+    font-family: inherit;
+    /* Subtle fill: visible as button but not overwhelming */
+    background: rgba(0,0,0,.045);
+    border: none;
     color: var(--tmd);
     cursor: pointer; white-space: nowrap;
     letter-spacing: .01em;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
     outline: none; user-select: none; font-synthesis: none;
-    /* opacity only — cheapest possible state change */
     transition: opacity 140ms ease;
 
-    &:active { opacity: .6; }
+    &:active { opacity: .65; }
 
+    /* Active: solid brand = unmissable selection */
     &.active {
-      background: var(--g5); color: #fff; opacity: 1;
-      font-weight: 600;
+      background: var(--g5);
+      color: #fff;
+      opacity: 1;
+      box-shadow: 0 2px 8px rgba(13,186,146,.3);
     }
   }
 
-  /* Category pill */
+  /* ── Category pill (secondary filter) ──────────────────────
+     * Ghost/outline only inactive = secondary, quieter
+     * Smaller font + lighter weight = visual hierarchy below type
+     * Active = tinted bg + brand border (not solid — still secondary)
+     */
   .filter-pill--cat {
     padding-block: 0.58em;
-    padding-inline: 1.0em;
-    font-size: .91rem; font-weight: 600;
+    padding-inline: 0.76em;
+    font-size: .84rem; font-weight: 500;
     background: transparent;
-    border: 1px solid var(--bd);
+    border: 1px solid rgba(0,0,0,.09);
     color: var(--tlo);
-    opacity: .85;
+    opacity: .75;
 
     &.active {
-      background: var(--g05);
-      border-color: var(--g5);
+      background: rgba(13,186,146,.1);
+      border-color: rgba(13,186,146,.55);
       color: var(--g6);
       opacity: 1;
       box-shadow: none;
@@ -723,9 +742,9 @@ flex-direction: column; gap: 10px; padding: 14px;
   @media (hover: hover) {
     .search-input-icon[role="button"]:hover { background: rgba(0,0,0,.07); }
     #search-clear-btn:hover                 { background: rgba(0,0,0,.17); }
-    .suggestion-item:hover                  { background: var(--g05); }
-    .sc:hover                               { background: var(--g05); }
-    .scr:hover { background: var(--g1); border-color: var(--g5); }
+    .suggestion-item:hover                  { background: rgba(13,186,146,.06); }
+    .sc:hover                               { background: rgba(13,186,146,.06); }
+    .scr:hover { background: rgba(13,186,146,.12); border-color: var(--g5); }
 
     /* All filter interactives: opacity only on hover — zero style recalc */
     .filter-pill:not(.active):hover { opacity: .7; }
@@ -764,8 +783,8 @@ flex-direction: column; gap: 10px; padding: 14px;
     .suggestion-item { padding: 12px 16px; }
 
     .filter-pills-row  { padding-block: 7px; padding-inline: 12px; gap: 6px; }
-    .filter-pill       { font-size: .91rem;  padding-block: 0.6em;  padding-inline: 1em; }
-    .filter-pill--cat  { font-size: .84rem;  padding-block: 0.5em;  padding-inline: 0.85em; }
+    .filter-pill       { font-size: .92rem;  padding-block: 0.78em; padding-inline: 0.82em; }
+    .filter-pill--cat  { font-size: .82rem;  padding-block: 0.55em; padding-inline: 0.7em; }
     .filter-cat-toggle { width: 32px; height: 32px; }
     .filter-row-end    { padding-inline-end: 10px; }
 
@@ -797,8 +816,8 @@ flex-direction: column; gap: 10px; padding: 14px;
     #searchInput { font-size: .93rem; }
 
     .filter-pills-row  { padding-block: 6px; padding-inline: 10px; gap: 5px; }
-    .filter-pill       { font-size: .89rem;  padding-block: 0.57em; padding-inline: 0.95em; }
-    .filter-pill--cat  { font-size: .82rem;  padding-block: 0.48em; padding-inline: 0.8em; }
+    .filter-pill       { font-size: .89rem;  padding-block: 0.75em; padding-inline: 0.78em; }
+    .filter-pill--cat  { font-size: .79rem;  padding-block: 0.52em; padding-inline: 0.66em; }
     .filter-cat-toggle { width: 30px; height: 30px; }
 
     .sc  { padding: 12px 13px; gap: 10px; }
@@ -849,10 +868,10 @@ flex-direction: column; gap: 10px; padding: 14px;
     html { scroll-behavior: auto; }
 
   :root {
-      --g5  : #13b47f;
-      --g6  : #0f9469;
-      --g05 : #f0fdf8;
-      --g1  : #dcf5eb;
+      --g5  : #0dba92;
+      --g6  : #0a9273;
+      --g05 : #f0f7f5;
+      --g1  : rgba(13,186,146,.18);
     }
   }
 

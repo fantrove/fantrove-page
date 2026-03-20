@@ -250,8 +250,13 @@
         document.body.style.top      = '';
         document.body.style.width    = '';
         State._savedScrollY = 0;
-        // Restore scroll position (body-fixed caused apparent scroll=0)
-        if (savedScrollY > 0) {
+        // Only restore scroll if NO new search was run inside the overlay.
+        // renderResults() sets window.__overlayDidSearch = true before scrollTo(0).
+        // If that flag is set, user performed a search → stay at top of new results.
+        // If not set, user just dismissed the overlay → restore their position.
+        const _didSearch = !!window.__overlayDidSearch;
+        window.__overlayDidSearch = false;   // reset for next overlay session
+        if (savedScrollY > 0 && !_didSearch) {
           window.scrollTo({ top: savedScrollY, behavior: 'instant' });
         }
 

@@ -55,6 +55,10 @@
       try {
         e?.preventDefault?.();
 
+        // Set restore flag at the TOP — covers ALL paths including _showPlaceholder.
+        // preventPush=true = state-restore (back button / _restoreUIState), not new search.
+        window.__renderIsRestore = !!preventPush;
+
         const inp  = DOMService.get(CONFIG.DOM.searchInputId);
         const q    = inp?.value || '';
         // typeFilter is now a pill-bar div — read from State, not .value
@@ -75,6 +79,7 @@
           if (State.overlayOpen && options.closeOverlay) OverlayService.close('manual');
           ClearBtnService.sync();
           IconSlotService.update();
+          window.__renderIsRestore = false;
           return;
         }
 
@@ -106,6 +111,7 @@
 
         // ── Render (main page only) ────────────────────────────────────────
         RenderingService.renderResults(State.currentResults, State.currentResults.length === 0);
+        window.__renderIsRestore = false;
 
         // Close overlay — results are now on the main page
         if (State.overlayOpen) OverlayService.close('manual');
@@ -200,6 +206,11 @@
       VirtualScrollEngine.destroy();
       FilterService.setupCategoryFilter([], 'all');
       UIService.updateUILanguage();
+      // Only scroll to top when this is a NEW user-initiated clear, not a restore
+      if (!window.__renderIsRestore) {
+        window.scrollTo({ top: 0, behavior: 'instant' });
+        if (window._showStickyHeader) window._showStickyHeader();
+      }
     },
   };
 
