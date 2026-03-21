@@ -1,15 +1,17 @@
 /**
- * LanguageManager v3.1 - URL-Aware Smart Language System
- * 
+ * LanguageManager v3.2 - URL-Aware Smart Language System
+ *
  * Priority (สูง -> ต่ำ):
  * 1. User Explicit Choice (localStorage จากการเลือกโดยตรง) - สูงสุดเสมอ
- * 2. URL Path Prefix (/en/, /th/) - เมื่อ load หน้าใหม่ครั้งแรก (ไม่ใช่ popstate)
+ * 2. URL Path Prefix (/en/, /th/) - เฉพาะ navType='navigate' เท่านั้น
  * 3. Browser Detection - ภาษาเบราว์เซอร์
- * 
- * การแก้ไข v3.1:
- * - localhost: ปิดระบบ prefix/URL ทั้งหมด ทำงานเหมือนไม่มีระบบภาษา URL
- * - popstate: ใช้ภาษาที่ user เลือกล่าสุด (localStorage) เสมอ ไม่ยึด URL ของหน้าเก่า
- * - lang-proxy: เมื่อ redirect จะเช็ค localStorage ก่อน ไม่ยึด URL prefix อย่างเดียว
+ *
+ * การเปลี่ยนแปลงใน v3.2:
+ * - เพิ่ม _getNavType(): อ่านประเภท navigation (navigate/back_forward/reload)
+ * - แก้ resolveCurrentLang(): back_forward/reload → ใช้ storage ก่อน URL
+ * - เพิ่ม pageshow handler: จัดการ BFCache restoration
+ *   เมื่อ browser restore หน้าจาก bfcache, JS state เก่ากลับมา (selectedLang
+ *   อาจเป็นภาษาเก่า) → ต้อง reconcile กับ localStorage ที่อาจเปลี่ยนไปแล้ว
  */
 
 //////////////////// IndexedDB Utilities ////////////////////
@@ -99,7 +101,7 @@ class WorkerPool {
     }
     this.jobMap = new Map();
   }
-  
+
   execute(data) {
     return new Promise((resolve, reject) => {
       const job = { data, resolve, reject };
@@ -111,12 +113,12 @@ class WorkerPool {
       }
     });
   }
-  
+
   _runJob(worker, job) {
     this.jobMap.set(worker, job);
     worker.postMessage(job.data);
   }
-  
+
   _onMessage(worker, e) {
     const job = this.jobMap.get(worker);
     this.jobMap.delete(worker);
@@ -127,7 +129,7 @@ class WorkerPool {
       this._runJob(worker, nextJob);
     }
   }
-  
+
   destroy() {
     this.workers.forEach(w => w.terminate && w.terminate());
     this.workers = [];
@@ -154,15 +156,13 @@ class LanguageManager {
     this.FADE_DURATION = 300;
     this.SUPPORTED_LANGS = ['en', 'th'];
     this.DEFAULT_LANG = 'en';
-    
-    // ==================== v3.1: ติดตามภาษาที่ user เลือกโดยตรง ====================
+
     // _userExplicitLang: ภาษาที่ user กดเลือกเอง (ไม่ใช่มาจาก URL หรือ browser)
     // ค่านี้จะ override URL ในทุกกรณี รวมถึงตอน popstate
     this._userExplicitLang = null;
-    // =====================================================================
-    
+
     this.maxWorker = navigator.hardwareConcurrency ? Math.max(4, Math.floor(navigator.hardwareConcurrency * 0.9)) : 8;
-    
+
     const workerCode = `
       function splitMarkersAndHtml(str) {
         const htmlSplit = str.split(/(<\\/?.+?>)/g);
@@ -218,53 +218,82 @@ class LanguageManager {
         self.postMessage({ batchIdx, result });
       };
     `;
-    
+
     this.workerPool = new WorkerPool(workerCode, this.maxWorker);
     this._prefetchPromise = this.prefetchEnterprise();
-    
+
     // BroadcastChannel สำหรับ cross-tab sync
-    try { 
-      this._bc = (typeof BroadcastChannel !== 'undefined') ? new BroadcastChannel('fv-lang-v3') : null; 
-    } catch (e) { 
-      this._bc = null; 
+    try {
+      this._bc = (typeof BroadcastChannel !== 'undefined') ? new BroadcastChannel('fv-lang-v3') : null;
+    } catch (e) {
+      this._bc = null;
     }
     if (this._bc) {
       this._bc.onmessage = (ev) => this._onBroadcastLang(ev.data);
     }
-    
+
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", () => this.initialize());
     } else {
       this.initialize();
     }
   }
-  
+
   // ==================== LOCALHOST DETECTION ====================
-  
-  /**
-   * ตรวจสอบว่าเป็น localhost หรือไม่
-   * ถ้าใช่ → ปิดทุกอย่างที่เกี่ยวกับ URL prefix
-   */
+
   isLocalDev() {
     try {
       const host = location.hostname || '';
-      return host === 'localhost' || host === '127.0.0.1' || 
+      return host === 'localhost' || host === '127.0.0.1' ||
              host === '0.0.0.0' || host.endsWith('.local');
-    } catch (e) { 
-      return false; 
+    } catch (e) {
+      return false;
     }
   }
-  
+
+  // ==================== NAV TYPE DETECTION (v3.2) ====================
+
+  /**
+   * อ่านประเภทของ navigation ที่พาเรามาถึงหน้านี้
+   *
+   * 'navigate'     → พิมพ์ URL / คลิก link / เปิด bookmark
+   * 'back_forward' → กด Back หรือ Forward
+   * 'reload'       → กด Refresh
+   * 'prerender'    → browser pre-render (ปฏิบัติเหมือน navigate)
+   *
+   * หมายเหตุ: ค่านี้ fixed ตอนโหลดหน้า ไม่เปลี่ยนตาม popstate
+   * สำหรับ popstate/bfcache ให้ใช้ event.persisted หรือ event type แทน
+   */
+  _getNavType() {
+    try {
+      const entries = performance.getEntriesByType('navigation');
+      if (entries && entries.length > 0 && entries[0].type) {
+        return entries[0].type;
+      }
+    } catch (e) { /* ไม่รองรับ */ }
+
+    try {
+      if (performance && performance.navigation) {
+        switch (performance.navigation.type) {
+          case 0: return 'navigate';
+          case 1: return 'reload';
+          case 2: return 'back_forward';
+          default: return 'navigate';
+        }
+      }
+    } catch (e) { /* ไม่รองรับ */ }
+
+    return 'navigate';
+  }
+
   // ==================== URL & LANG DETECTION ====================
-  
+
   /**
    * อ่านภาษาจาก URL path
-   * localhost → คืน null เสมอ (ไม่ใช้ prefix)
+   * localhost → คืน null เสมอ
    */
   getLangFromURL() {
-    // localhost ไม่ใช้ URL prefix เด็ดขาด
     if (this.isLocalDev()) return null;
-    
     try {
       const path = location.pathname;
       const m = path.match(/^\/(en|th)(\/|$)/);
@@ -273,7 +302,7 @@ class LanguageManager {
       return null;
     }
   }
-  
+
   /**
    * อ่านภาษาจาก localStorage
    */
@@ -285,7 +314,7 @@ class LanguageManager {
       return null;
     }
   }
-  
+
   /**
    * Detect ภาษาจาก browser
    */
@@ -299,15 +328,18 @@ class LanguageManager {
     } catch (e) {}
     return this.DEFAULT_LANG;
   }
-  
+
   /**
-   * ตัดสินใจภาษาที่ควรใช้ตอนนี้
-   * 
+   * ตัดสินใจภาษาที่ควรใช้ตอนนี้ (v3.2)
+   *
    * Priority สำหรับ initial load:
-   * - localhost: storage > browser (ไม่มี URL)
-   * - production: URL > storage > browser
-   * 
-   * Priority สำหรับ popstate: ดูที่ setupNavigationHandlers()
+   *   localhost:              storage > browser  (ไม่มี URL)
+   *   navigate / prerender:   URL > storage > browser
+   *   back_forward / reload:  storage > URL > browser
+   *     เหตุผล: user เพิ่งเปลี่ยนภาษาในหน้าอื่น
+   *             URL เก่าในหน้านี้ไม่ควรบังคับเปลี่ยนกลับ
+   *
+   * Priority สำหรับ popstate/bfcache: ดูที่ setupNavigationHandlers()
    */
   resolveCurrentLang() {
     // localhost: ไม่ดู URL เลย
@@ -316,62 +348,62 @@ class LanguageManager {
       if (storedLang) return { lang: storedLang, source: 'storage' };
       return { lang: this.detectBrowserLanguage(), source: 'browser' };
     }
-    
-    // Priority 1: URL Path (สูงสุด บน production)
+
+    const navType = this._getNavType();
+
+    // back_forward / reload → ให้ storage มี priority สูงกว่า URL
+    // (lang-proxy.js จะ redirect ให้แล้วในกรณีนี้ แต่ใส่ไว้เป็น safety net)
+    if (navType === 'back_forward' || navType === 'reload') {
+      const storedLang = this.getLangFromStorage();
+      if (storedLang) return { lang: storedLang, source: 'storage' };
+
+      const urlLang = this.getLangFromURL();
+      if (urlLang) return { lang: urlLang, source: 'url' };
+
+      return { lang: this.detectBrowserLanguage(), source: 'browser' };
+    }
+
+    // navigate / prerender → URL ก่อน (เดิม)
     const urlLang = this.getLangFromURL();
-    if (urlLang) {
-      return { lang: urlLang, source: 'url' };
-    }
-    
-    // Priority 2: localStorage
+    if (urlLang) return { lang: urlLang, source: 'url' };
+
     const storedLang = this.getLangFromStorage();
-    if (storedLang) {
-      return { lang: storedLang, source: 'storage' };
-    }
-    
-    // Priority 3: Browser detection
-    const browserLang = this.detectBrowserLanguage();
-    return { lang: browserLang, source: 'browser' };
+    if (storedLang) return { lang: storedLang, source: 'storage' };
+
+    return { lang: this.detectBrowserLanguage(), source: 'browser' };
   }
-  
+
   /**
    * อัพเดท URL ให้ตรงกับภาษาที่เลือก (โดยไม่ reload)
    * localhost → ไม่ทำอะไรเลย
    */
   updateURLForLanguage(lang) {
-    // localhost ไม่ยุ่งกับ URL เด็ดขาด
     if (this.isLocalDev()) return;
-    
+
     try {
       const currentPath = location.pathname;
       const currentLang = this.getLangFromURL();
-      
-      // ถ้า URL ตรงกับภาษาที่เลือกแล้ว ไม่ต้องทำอะไร
+
       if (currentLang === lang) return;
-      
-      // สร้าง path ใหม่
+
       let newPath;
       if (currentLang) {
-        // แทนที่ prefix เดิม
         newPath = currentPath.replace(/^\/(en|th)(\/|$)/, '/' + lang + '$2');
       } else {
-        // เพิ่ม prefix ใหม่
         newPath = '/' + lang + (currentPath === '/' ? '' : currentPath);
       }
-      
-      // ใช้ replaceState เพื่อไม่สร้าง history entry ใหม่
+
       const newURL = newPath + location.search + location.hash;
       history.replaceState({ lang: lang, ts: Date.now() }, '', newURL);
-      
+
     } catch (e) {
       console.error('Error updating URL:', e);
     }
   }
-  
+
   // ==================== INITIALIZATION ====================
-  
+
   async initialize() {
-    // จัดการ coordinated reload marker
     try {
       const markerRaw = sessionStorage.getItem('fv-forcereload');
       if (markerRaw) {
@@ -379,7 +411,7 @@ class LanguageManager {
           const marker = JSON.parse(markerRaw);
           const inflight = sessionStorage.getItem('fv-reload-inflight');
           const ack = sessionStorage.getItem('fv-reload-ack');
-          
+
           if (ack === marker.id) {
             sessionStorage.removeItem('fv-forcereload');
             sessionStorage.removeItem('fv-reload-inflight');
@@ -389,23 +421,22 @@ class LanguageManager {
         } catch (e) {}
       }
     } catch (e) {}
-    
+
     if (this.isInitialized) return;
-    
+
     try {
       await this.loadLanguagesConfig();
       this.observeMutations();
       this.setupNavigationHandlers();
       this.isInitialized = true;
-      
-      // Fade in body
+
       setTimeout(() => {
         if (document.body && document.body.style.opacity === "0") {
           document.body.style.transition = "opacity 0.28s cubic-bezier(.47,1.64,.41,.8)";
           document.body.style.opacity = "1";
         }
       }, 0);
-      
+
     } catch (error) {
       console.error('Error during initialization:', error);
       this.showError('ไม่สามารถเริ่มต้นระบบได้');
@@ -416,52 +447,48 @@ class LanguageManager {
       }, 0);
     }
   }
-  
+
   async loadLanguagesConfig() {
     await this._prefetchPromise;
-    
+
     if (!this.languagesConfig || !Object.keys(this.languagesConfig).length) {
       throw new Error("Config ไม่ถูกต้อง");
     }
-    
+
     await this.prepareAllButtonTexts();
     await this.handleInitialLanguage();
     this.updateLanguageSelectorUI();
   }
-  
+
   async handleInitialLanguage() {
     this.storeOriginalContent();
-    
-    // ตัดสินใจภาษาที่ควรใช้
+
     const decision = this.resolveCurrentLang();
     this.selectedLang = decision.lang;
-    
-    // ถ้าไม่มี URL prefix แต่มี storage → อัพเดท URL ให้ตรงกับ storage (production only)
+
     if (!this.isLocalDev()) {
       if (decision.source === 'storage' || decision.source === 'browser') {
         this.updateURLForLanguage(this.selectedLang);
       }
     }
-    
-    // Sync ลง localStorage (กรณีมาจาก URL บน production)
+
+    // Sync ลง localStorage (กรณีมาจาก URL navigate บน production)
     if (decision.source === 'url') {
       try {
         localStorage.setItem('selectedLang', this.selectedLang);
       } catch (e) {}
     }
-    
+
     this.showButtonTextForLang(this.selectedLang);
-    
-    // โหลดภาษา
+
     if (this.selectedLang !== 'en' || this.getEnSource() === "json") {
       await this.updatePageLanguage(this.selectedLang, false);
     }
   }
-  
+
   // ==================== DATA LOADING ====================
-  
+
   async prefetchEnterprise() {
-    // Preconnect
     if (typeof document !== "undefined" && document.head) {
       ["//cdn.jsdelivr.net", "//fonts.googleapis.com"].forEach(href => {
         if (!document.head.querySelector(`link[href^="${href}"]`)) {
@@ -472,8 +499,7 @@ class LanguageManager {
           document.head.appendChild(l);
         }
       });
-      
-      // Preload config
+
       if (!document.head.querySelector('link[rel="preload"][as="fetch"]')) {
         const preload = document.createElement('link');
         preload.rel = "preload";
@@ -483,8 +509,7 @@ class LanguageManager {
         document.head.appendChild(preload);
       }
     }
-    
-    // Load config
+
     let config = null;
     try {
       const localConfig = localStorage.getItem('__lang_cfg');
@@ -492,7 +517,7 @@ class LanguageManager {
       if (localConfig) config = JSON.parse(localConfig);
       if (!config && sessionConfig) config = JSON.parse(sessionConfig);
     } catch (e) {}
-    
+
     const url = '/assets/lang/options/db.json';
     try {
       const resp = await fetch(url, { cache: 'no-cache' });
@@ -503,13 +528,13 @@ class LanguageManager {
         sessionStorage.setItem('__lang_cfg', JSON.stringify(config));
       }
     } catch (e) {}
-    
+
     if (config) this.languagesConfig = config;
   }
-  
+
   async loadLanguageData(lang) {
     if (this.languageCache[lang]) return this.languageCache[lang];
-    
+
     const url = `/assets/lang/${lang}.json`;
     try {
       const resp = await fetch(url, { cache: 'no-cache' });
@@ -523,7 +548,7 @@ class LanguageManager {
       return null;
     }
   }
-  
+
   flattenLanguageJson(json) {
     const result = {};
     const recur = (obj) => {
@@ -535,62 +560,51 @@ class LanguageManager {
     recur(json);
     return result;
   }
-  
+
   getEnSource() {
     if (this.languagesConfig?.en?.enSource === "json") return "json";
     return "html";
   }
-  
+
   // ==================== LANGUAGE CHANGE ====================
-  
+
   async selectLanguage(language) {
     if (!this.languagesConfig[language]) {
       console.warn(`ไม่รองรับภาษา: ${language}`);
       language = 'en';
     }
-    
+
     if (this.selectedLang === language) {
       await this.closeLanguageDropdown();
       return;
     }
-    
-    // ==================== v3.1: บันทึก explicit choice ====================
-    // เมื่อ user กดเลือกภาษาเอง ให้บันทึกเป็น "explicit choice"
-    // ค่านี้จะมีผลบังคับใช้ตอน popstate (กด back/forward) ด้วย
+
+    // บันทึก explicit choice ของ user
     this._userExplicitLang = language;
-    // =====================================================================
-    
+
     this.lastSelectedLang = this.selectedLang;
-    
-    // อัพเดท URL ก่อน (production only)
     this.updateURLForLanguage(language);
-    
-    // อัพเดทภาษา
     await this.updatePageLanguage(language, false);
     await this.closeLanguageDropdown();
   }
-  
+
   async updatePageLanguage(language, shouldUpdateURL = true) {
     if (this.isUpdatingLanguage) return;
-    
+
     try {
       this.isUpdatingLanguage = true;
       this.lastSelectedLang = this.selectedLang;
-      
-      // อัพเดท URL ถ้าจำเป็น (production only)
+
       if (shouldUpdateURL && !this.isLocalDev()) {
         this.updateURLForLanguage(language);
       }
-      
-      // อัพเดท localStorage
+
       try {
         localStorage.setItem('selectedLang', language);
       } catch (e) {}
-      
-      // อัพเดท document lang attribute
+
       document.documentElement.setAttribute("lang", language);
-      
-      // จัดการ google translate meta
+
       if (language === this.detectBrowserLanguage()) {
         document.documentElement.setAttribute("translate", "no");
         if (!document.querySelector('meta[name="google"][content="notranslate"]')) {
@@ -604,8 +618,7 @@ class LanguageManager {
         const meta = document.querySelector('meta[name="google"][content="notranslate"]');
         if (meta) meta.remove();
       }
-      
-      // โหลดและแปลภาษา
+
       if (language === 'en') {
         if (this.getEnSource() === "json") {
           const languageData = await this.loadLanguageData("en");
@@ -619,24 +632,22 @@ class LanguageManager {
         if (languageData) await this.parallelStreamingTranslate(languageData);
         else await this.resetToEnglishContent();
       }
-      
+
       this.selectedLang = language;
       this.showButtonTextForLang(language);
-      
-      // Broadcast ให้ tabs อื่นรู้
+
       if (this._bc) {
         try {
           this._bc.postMessage({ lang: language, url: location.href, ts: Date.now() });
         } catch (e) {}
       }
-      
-      // Dispatch event ให้โค้ดอื่นๆ ฟัง
+
       try {
-        window.dispatchEvent(new CustomEvent('languageChange', { 
-          detail: { language: language, previousLanguage: this.lastSelectedLang } 
+        window.dispatchEvent(new CustomEvent('languageChange', {
+          detail: { language: language, previousLanguage: this.lastSelectedLang }
         }));
       } catch (e) {}
-      
+
     } catch (error) {
       console.error('Error updating page language:', error);
       this.showError('เกิดข้อผิดพลาดในการเปลี่ยนภาษา');
@@ -645,53 +656,84 @@ class LanguageManager {
       this.isUpdatingLanguage = false;
     }
   }
-  
+
   // ==================== NAVIGATION HANDLERS ====================
-  
+
   setupNavigationHandlers() {
-    /**
-     * Popstate handler (กดปุ่มย้อนกลับ/ไปข้างหน้า)
-     * 
-     * ==================== v3.1: FIX สำคัญ ====================
-     * ปัญหาเดิม: เมื่อ user เปลี่ยนเป็นภาษาไทย แล้วกด back ไปหน้าที่มี /en/ prefix
-     *           ระบบจะเปลี่ยนกลับเป็นภาษาอังกฤษตาม URL ของหน้าเก่า
-     * 
-     * การแก้ไข: เมื่อ user เคยเลือกภาษาเองแล้ว (_userExplicitLang หรือ localStorage)
-     *           ระบบจะยึดภาษาที่ user เลือกเสมอ ไม่ยึดตาม URL ของหน้าเก่า
-     *           และจะอัพเดท URL ของหน้าปัจจุบันให้ตรงกับภาษาที่ user เลือก
-     * =========================================================
-     */
-    window.addEventListener('popstate', async (event) => {
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // pageshow (v3.2): จัดการ BFCache Restoration
+    // ─────────────────────────────────────────────────────────────────────────
+    //
+    // ปัญหา: modern browser เก็บหน้าไว้ใน bfcache เมื่อ user กด Back/Forward
+    //        → browser restore JS state เดิมของหน้านั้นทั้งหมด
+    //        → lang-proxy.js ไม่รัน (ไม่มี page reload)
+    //        → selectedLang อาจเป็นค่าเก่า แต่ localStorage อาจถูกเปลี่ยนไปแล้ว
+    //          โดยหน้าอื่นที่ user ไปเปลี่ยนภาษา
+    //
+    // การแก้: event.persisted=true บอกว่าหน้านี้มาจาก bfcache
+    //         → อ่าน localStorage ใหม่ แล้ว reconcile กับ state ปัจจุบัน
+    //
+    window.addEventListener('pageshow', (event) => {
+      // event.persisted=false → โหลดหน้าใหม่ปกติ, initialize() จัดการอยู่แล้ว
+      if (!event.persisted) return;
+      if (this.isLocalDev()) return;
+
       try {
-        // localhost: ไม่ต้องทำอะไรกับ URL เลย
-        if (this.isLocalDev()) {
+        const storedLang = this.getLangFromStorage();
+
+        if (!storedLang) {
+          // ไม่มี stored preference → ไม่ต้องทำอะไร
           return;
         }
-        
-        // ==================== v3.1 CORE FIX ====================
+
+        if (storedLang !== this.selectedLang) {
+          // localStorage บอกภาษาต่างจาก state ปัจจุบัน
+          // → user เปลี่ยนภาษาในหน้าอื่นหลังจากออกจากหน้านี้
+          // → ต้อง sync ให้ตรงกัน
+          this._userExplicitLang = storedLang;
+          this.updatePageLanguage(storedLang, true).catch(e => {
+            console.error('[pageshow] language sync error:', e);
+          });
+        } else {
+          // ภาษาตรงกันแล้ว แต่ URL อาจมี prefix เก่า (หน้าที่ restore มาอาจมี prefix เก่า)
+          // → fix URL ให้ตรงกับภาษาปัจจุบัน โดยไม่โหลดหน้าใหม่
+          this.updateURLForLanguage(storedLang);
+        }
+      } catch (e) {
+        console.error('[pageshow] handler error:', e);
+      }
+    });
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // popstate: กดปุ่ม Back/Forward (SPA navigation)
+    // ─────────────────────────────────────────────────────────────────────────
+    //
+    // กรณีนี้เกิดเฉพาะใน SPA ที่ใช้ pushState (เช่น lang-links.js)
+    // ถ้าเป็น full page navigation → lang-proxy.js จัดการก่อนแล้ว
+    //
+    window.addEventListener('popstate', async (event) => {
+      try {
+        if (this.isLocalDev()) return;
+
         // ตรวจสอบว่า user เคยเลือกภาษาเองหรือไม่
-        // ถ้าเคย → ใช้ภาษานั้นเสมอ และแก้ URL ให้ตรงด้วย
         const preferredLang = this._userExplicitLang || this.getLangFromStorage();
-        
+
         if (preferredLang) {
-          // user เคยเลือกภาษาแล้ว → ยึดภาษาที่เลือกไว้
           if (preferredLang !== this.selectedLang) {
-            // ภาษาเปลี่ยน → อัพเดท content
             await this.updatePageLanguage(preferredLang, true);
           } else {
-            // ภาษาเดิม แต่ URL อาจมี prefix ผิด → แก้ URL ให้ตรง
             this.updateURLForLanguage(preferredLang);
           }
           return;
         }
-        // ==================== END CORE FIX ====================
-        
+
         // Fallback: ไม่มี user preference เลย → ดูจาก history state หรือ URL
         if (event.state && event.state.lang && event.state.lang !== this.selectedLang) {
           await this.updatePageLanguage(event.state.lang, false);
           return;
         }
-        
+
         const urlLang = this.getLangFromURL();
         if (urlLang && urlLang !== this.selectedLang) {
           await this.updatePageLanguage(urlLang, false);
@@ -699,42 +741,43 @@ class LanguageManager {
             localStorage.setItem('selectedLang', urlLang);
           } catch (e) {}
         }
-        
+
       } catch (e) {
         console.error('Popstate handler error:', e);
       }
     });
-    
-    // Storage event (cross-tab sync)
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // storage: cross-tab sync
+    // ─────────────────────────────────────────────────────────────────────────
     window.addEventListener('storage', (e) => {
       if (e.key === 'selectedLang') {
         const newLang = e.newValue;
         const urlLang = this.getLangFromURL();
-        
-        // ถ้า URL ไม่ตรงกับภาษาใหม่ ให้อัพเดท URL (production only)
+
         if (!this.isLocalDev() && urlLang && urlLang !== newLang) {
           this.updateURLForLanguage(newLang);
         }
-        
+
         if (newLang && newLang !== this.selectedLang) {
           this.updatePageLanguage(newLang, false).catch(() => {});
         }
       }
     });
-    
-    // Visibility change (กลับมาที่ tab)
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // visibilitychange: กลับมาที่ tab
+    // ─────────────────────────────────────────────────────────────────────────
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
-        // localhost: ไม่ต้องทำอะไรกับ URL
         if (this.isLocalDev()) return;
-        
-        // ตรวจสอบว่าภาษาที่ user เลือกตรงกับ URL หรือไม่
+
         const preferredLang = this._userExplicitLang || this.getLangFromStorage();
         if (preferredLang && preferredLang !== this.selectedLang) {
           this.updatePageLanguage(preferredLang, true).catch(() => {});
           return;
         }
-        
+
         const urlLang = this.getLangFromURL();
         if (urlLang && urlLang !== this.selectedLang) {
           this.updatePageLanguage(urlLang, false).catch(() => {});
@@ -742,16 +785,15 @@ class LanguageManager {
       }
     });
   }
-  
+
   _onBroadcastLang(msg) {
     try {
       if (!msg || typeof msg !== 'object') return;
       const { lang, url } = msg;
       if (!lang || lang === this.selectedLang) return;
-      
-      // ถ้า URL ตรงกับของเรา ไม่ต้องทำอะไร
+
       if (url && url === location.href) return;
-      
+
       if (!this.isLocalDev()) {
         const currentUrlLang = this.getLangFromURL();
         if (currentUrlLang && currentUrlLang !== lang) {
@@ -763,21 +805,19 @@ class LanguageManager {
           this.updatePageLanguage(lang, false).catch(() => {});
         }
       } else {
-        // localhost: แค่อัพเดทภาษา ไม่ยุ่งกับ URL
         this.updatePageLanguage(lang, false).catch(() => {});
       }
     } catch (e) {}
   }
-  
+
   // ==================== UI COMPONENTS ====================
-  
+
   async prepareAllButtonTexts() {
     this.languageButton = document.getElementById('language-button');
     if (!this.languageButton || !this.languagesConfig) return;
-    
-    // Clear existing
+
     Array.from(this.languageButton.querySelectorAll('.lang-btn-txt, .lang-btn-svg')).forEach(e => e.remove());
-    
+
     let flexWrap = this.languageButton.querySelector('.lang-btn-flex');
     if (!flexWrap) {
       flexWrap = document.createElement('span');
@@ -788,15 +828,13 @@ class LanguageManager {
     } else {
       flexWrap.innerHTML = '';
     }
-    
-    // SVG Icon
+
     const svgWrap = document.createElement('span');
     svgWrap.className = 'lang-btn-svg';
     svgWrap.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18.5" height="18.5" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h7"/><path d="M9 3v2c0 4.418 -2.239 8 -5 8"/><path d="M5 9c0 2.144 2.952 3.908 6.7 4"/><path d="M12 20l4 -9l4 9"/><path d="M19.1 18h-6.2"/></svg>';
     svgWrap.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;';
     flexWrap.appendChild(svgWrap);
-    
-    // Language texts
+
     Object.entries(this.languagesConfig).forEach(([lang, config]) => {
       const span = document.createElement('span');
       span.className = 'lang-btn-txt';
@@ -806,58 +844,55 @@ class LanguageManager {
       span.style.lineHeight = '1';
       flexWrap.appendChild(span);
     });
-    
+
     this.showButtonTextForLang(this.selectedLang || 'en');
   }
-  
+
   showButtonTextForLang(lang) {
     this.languageButton = document.getElementById('language-button');
     if (!this.languageButton) return;
     const flexWrap = this.languageButton.querySelector('.lang-btn-flex');
     if (!flexWrap) return;
-    
+
     Array.from(flexWrap.querySelectorAll('.lang-btn-txt')).forEach(span => {
       span.style.display = (span.dataset.lang === lang) ? '' : 'none';
     });
   }
-  
+
   updateLanguageSelectorUI() {
     this.initializeCustomLanguageSelector();
   }
-  
+
   initializeCustomLanguageSelector() {
     const container = document.getElementById('language-selector-container');
     this.languageButton = document.getElementById('language-button');
     if (!this.languageButton) return;
-    
+
     this.prepareAllButtonTexts();
     this.showButtonTextForLang(this.selectedLang || 'en');
-    
-    // Cleanup old elements
+
     if (this.languageOverlay?.parentElement) {
       this.languageOverlay.parentElement.removeChild(this.languageOverlay);
     }
     if (this.languageDropdown?.parentElement) {
       this.languageDropdown.parentElement.removeChild(this.languageDropdown);
     }
-    
-    // Create overlay
+
     this.languageOverlay = document.createElement('div');
     this.languageOverlay.id = 'language-overlay';
     this.languageOverlay.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9998;opacity:0;transition:opacity 0.3s;';
     document.body.appendChild(this.languageOverlay);
-    
-    // Create dropdown
+
     this.languageDropdown = document.createElement('div');
     this.languageDropdown.id = 'language-dropdown';
     this.languageDropdown.style.cssText = 'display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;z-index:9999;max-height:80vh;overflow-y:auto;opacity:0;transition:opacity 0.3s;';
     document.body.appendChild(this.languageDropdown);
-    
+
     this.populateLanguageDropdown();
     this.setupEventListeners();
     this.setupDropdownScrollLock();
   }
-  
+
   populateLanguageDropdown() {
     const fragment = document.createDocumentFragment();
     Object.entries(this.languagesConfig).forEach(([lang, config]) => {
@@ -871,7 +906,7 @@ class LanguageManager {
     this.languageDropdown.innerHTML = '';
     this.languageDropdown.appendChild(fragment);
   }
-  
+
   setupEventListeners() {
     if (!this.languageButton) return;
     this.languageButton.onclick = () => this.toggleLanguageDropdown();
@@ -884,10 +919,10 @@ class LanguageManager {
       }
     };
   }
-  
+
   setupDropdownScrollLock() {
     if (!this.languageDropdown) return;
-    
+
     this._dropdownWheelListener = (e) => {
       const el = this.languageDropdown;
       const delta = e.deltaY;
@@ -896,36 +931,36 @@ class LanguageManager {
       if ((atTop && delta < 0) || (atBottom && delta > 0)) e.preventDefault();
       e.stopPropagation();
     };
-    
+
     this.languageDropdown.addEventListener('wheel', this._dropdownWheelListener, { passive: false });
   }
-  
+
   toggleLanguageDropdown() {
     this.isLanguageDropdownOpen ? this.closeLanguageDropdown() : this.openLanguageDropdown();
   }
-  
+
   async openLanguageDropdown() {
     if (this.isLanguageDropdownOpen) return;
     this.scrollPosition = window.scrollY || 0;
     this.isLanguageDropdownOpen = true;
-    
+
     this.languageOverlay.style.display = 'block';
     this.languageDropdown.style.display = 'block';
     document.body.style.cssText = 'position:fixed;left:0;right:0;overflow-y:scroll;top:-' + this.scrollPosition + 'px;';
-    
+
     requestAnimationFrame(() => {
       this.languageOverlay.style.opacity = '1';
       this.languageDropdown.style.opacity = '1';
     });
   }
-  
+
   async closeLanguageDropdown() {
     if (!this.isLanguageDropdownOpen) return;
     this.isLanguageDropdownOpen = false;
-    
+
     this.languageOverlay.style.opacity = '0';
     this.languageDropdown.style.opacity = '0';
-    
+
     setTimeout(() => {
       this.languageOverlay.style.display = 'none';
       this.languageDropdown.style.display = 'none';
@@ -933,29 +968,29 @@ class LanguageManager {
       window.scrollTo(0, this.scrollPosition);
     }, this.FADE_DURATION);
   }
-  
+
   // ==================== TRANSLATION ENGINE ====================
-  
+
   async parallelStreamingTranslate(languageData, elements) {
     const elList = elements || Array.from(document.querySelectorAll('[data-translate]'));
     if (!elList.length) return;
-    
+
     const chunkSize = Math.max(8, Math.ceil(elList.length / this.maxWorker));
     const batches = [];
     const nodeMeta = [];
-    
+
     for (let i = 0; i < elList.length; i += chunkSize) {
       const batch = elList.slice(i, i + chunkSize);
       batches.push(batch);
       nodeMeta.push(batch.map(el => ({ key: el.getAttribute('data-translate') })));
     }
-    
+
     const jobs = nodeMeta.map((meta, i) =>
       this.workerPool.execute({ nodes: meta, langData: languageData, batchIdx: i })
     );
-    
+
     const results = await Promise.all(jobs);
-    
+
     for (let j = 0; j < results.length; ++j) {
       const batch = batches[j], resArr = results[j].result;
       for (let k = 0; k < resArr.length; ++k) {
@@ -965,12 +1000,12 @@ class LanguageManager {
       }
     }
   }
-  
+
   _replaceDOMWithMarkerReplace(el, parts) {
     const normalized = [];
     let buffer = '';
     let bufferHasHtml = false;
-    
+
     const pushBuffer = () => {
       if (!buffer) return;
       if (bufferHasHtml) normalized.push({ type: 'html', html: buffer });
@@ -978,7 +1013,7 @@ class LanguageManager {
       buffer = '';
       bufferHasHtml = false;
     };
-    
+
     for (let i = 0; i < parts.length; i++) {
       const p = parts[i];
       if (p.type === 'text' || p.type === 'html') {
@@ -999,7 +1034,7 @@ class LanguageManager {
     const newNodes = [];
     const domParser = new DOMParser();
     let containsExplicitSvgOrLsvg = false;
-    
+
     normalized.forEach(p => {
       if (p.type === 'text') {
         newNodes.push(document.createTextNode(p.text));
@@ -1286,7 +1321,7 @@ class LanguageManager {
       try { el.removeChild(node); } catch(e){}
     }
   }
-  
+
   _createMarkerNode(marker) {
     if (marker.type === 'text') return document.createTextNode(marker.text);
     else if (marker.type === 'a') {
@@ -1305,7 +1340,7 @@ class LanguageManager {
     }
     return document.createTextNode('');
   }
-  
+
   storeOriginalContent() {
     document.querySelectorAll('[data-translate]').forEach(el => {
       if (!el.hasAttribute('data-original-text')) {
@@ -1316,7 +1351,7 @@ class LanguageManager {
       }
     });
   }
-  
+
   async resetToEnglishContent() {
     const elements = document.querySelectorAll('[data-translate]');
     for (const el of elements) {
@@ -1330,13 +1365,13 @@ class LanguageManager {
       }
     }
   }
-  
+
   observeMutations() {
     if (this.mutationObserver) this.mutationObserver.disconnect();
-    
+
     this.mutationObserver = new MutationObserver((mutations) => {
       if (this.mutationThrottleTimeout) return;
-      
+
       this.mutationThrottleTimeout = setTimeout(() => {
         const added = [];
         mutations.forEach(mutation => {
@@ -1354,24 +1389,24 @@ class LanguageManager {
             }
           });
         });
-        
+
         if (added.length && this.selectedLang !== 'en') {
           this.parallelStreamingTranslate(this.languageCache[this.selectedLang], added);
         }
         this.mutationThrottleTimeout = null;
       }, 100);
     });
-    
+
     this.mutationObserver.observe(document.body, { childList: true, subtree: true });
   }
-  
+
   showError(message) {
     const errorDiv = document.createElement('div');
     errorDiv.className = 'language-error';
     errorDiv.textContent = message;
     errorDiv.style.cssText = 'position:fixed;top:20px;right:20px;background:#ff4444;color:white;padding:10px 20px;border-radius:4px;z-index:9999;opacity:0;transition:opacity 0.3s;';
     document.body.appendChild(errorDiv);
-    
+
     requestAnimationFrame(() => {
       errorDiv.style.opacity = '1';
       setTimeout(() => {
@@ -1380,7 +1415,7 @@ class LanguageManager {
       }, 3000);
     });
   }
-  
+
   destroy() {
     if (this.languageOverlay) this.languageOverlay.remove();
     if (this.languageDropdown) this.languageDropdown.remove();
