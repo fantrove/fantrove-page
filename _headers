@@ -1,96 +1,19 @@
-# ============================================================
-# Cloudflare Pages — Cache-Control Rules
-# ลำดับสำคัญมาก: specific rules ต้องมาก่อน wildcard
-# ============================================================
-
-# ── HTML: revalidate ทุกครั้ง ─────────────────────────────
-/*.html
-  Cache-Control: no-cache, must-revalidate
-
-/index.html
-  Cache-Control: no-cache, must-revalidate
-
-/home/*
-  Cache-Control: no-cache, must-revalidate
-
-/info/*
-  Cache-Control: no-cache, must-revalidate
-
-/information/*
-  Cache-Control: no-cache, must-revalidate
-
-/setting/*
-  Cache-Control: no-cache, must-revalidate
-
-/search/*
-  Cache-Control: no-cache, must-revalidate
-
-/data/*
-  Cache-Control: no-cache, must-revalidate
-
-/us/*
-  Cache-Control: no-cache, must-revalidate
-
-# ── version.json: ห้าม cache เด็ดขาด ───────────────────────
+# version.json: ห้าม cache เด็ดขาด
 /assets/json/version.json
   Cache-Control: no-store, no-cache, max-age=0, must-revalidate
   Pragma: no-cache
   Expires: 0
 
-# ── current-stage.json: ห้าม cache ─────────────────────────
-# เปลี่ยนทุก deploy ต้องสดเสมอ
+# current-stage.json: ห้าม cache
 /assets/json/current-stage.json
   Cache-Control: no-store, no-cache, max-age=0, must-revalidate
   Pragma: no-cache
   Expires: 0
 
-# ── JSON config/template: cache 5 นาที ─────────────────────
-# เปลี่ยนตาม deploy: navigation, buttons, language config
-/assets/json/template/*
-  Cache-Control: public, max-age=300, stale-while-revalidate=60
-
-/assets/json/buttons.json
-  Cache-Control: public, max-age=300, stale-while-revalidate=60
-
-/assets/json/language.json
-  Cache-Control: public, max-age=300, stale-while-revalidate=60
-
-# ── HTML templates: cache 5 นาที ───────────────────────────
-# footer, home templates ที่ JS fetch ตรง
-/assets/template-html/*
-  Cache-Control: public, max-age=300, stale-while-revalidate=60
-
-# ── Language JSON: cache 1 ชั่วโมง ─────────────────────────
-/assets/lang/*
-  Cache-Control: public, max-age=3600, stale-while-revalidate=1800
-
-# ── ฐานข้อมูลหลัก: cache 2 ชั่วโมง ─────────────────────────
-# ไฟล์ขนาดใหญ่ที่ไม่ค่อยเปลี่ยน
-/assets/db/*
-  Cache-Control: public, max-age=7200, stale-while-revalidate=3600
-
-# ── JSON อื่นๆ: cache 5 นาที ───────────────────────────────
-# ครอบคลุม JSON ที่ยังไม่ได้ระบุข้างบน
-/assets/json/*
-  Cache-Control: public, max-age=300, stale-while-revalidate=60
-
-# ── JS/CSS: cache 1 ปี ─────────────────────────────────────
-# URL เปลี่ยนทุก deploy ด้วย ?v=BUILD_ID ใน HTML
-# ต้องมาหลัง /assets/json/* และ /assets/db/* เสมอ
-/assets/js/*
-  Cache-Control: public, max-age=31536000, immutable
-
-/assets/css/*
-  Cache-Control: public, max-age=31536000, immutable
-
-# ── รูปภาพ/fonts: cache 30 วัน ─────────────────────────────
-/assets/images/*
-  Cache-Control: public, max-age=2592000, immutable
-
-/assets/fonts/*
-  Cache-Control: public, max-age=2592000, immutable
-
-# ── Assets อื่นๆ: cache 1 ปี ───────────────────────────────
-# fallback สำหรับ assets ที่ไม่ได้ระบุไว้ข้างบน
+# assets ทั้งหมด: cache 7 วัน (bust ด้วย ?v= ทุก deploy)
 /assets/*
-  Cache-Control: public, max-age=31536000, immutable
+  Cache-Control: public, max-age=604800, stale-while-revalidate=86400
+
+# ทุก path อื่น (HTML ทุกไฟล์ ทุก folder): revalidate ทุกครั้ง
+/*
+  Cache-Control: no-cache, must-revalidate
