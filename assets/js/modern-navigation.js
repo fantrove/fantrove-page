@@ -90,7 +90,6 @@
     async load(force = false) {
       if (this._cached && !force) return this._cached;
       if (this._loading) {
-        // wait briefly if concurrent
         await new Promise(r => setTimeout(r, 50));
         return this._cached || { navigation: [] };
       }
@@ -145,14 +144,12 @@
       return { hasLangPrefix: false, lang: null, cleanPath: p, originalPath: p };
     }
 
-    // Add prefix using provided lang (explicit takes precedence). If none provided, use readSelectedLang()
     addPrefix(path, explicitLang = null) {
       const base = this.normalizePath(path);
       const parsed = this.parse(base);
       if (parsed.hasLangPrefix) return base;
       const lang = explicitLang || (this.readSelectedLang && this.readSelectedLang()) || this.defaultLang;
       if (this.isDevMode) return base;
-      // ensure we don't create double slashes: '/en' + '/' => '/en/'
       return '/' + lang + (base === '/' ? '/' : (base.startsWith('/') ? base : '/' + base));
     }
 
@@ -165,7 +162,6 @@
       return sel || this.defaultLang;
     }
 
-    // Aggressive candidate generation (same deterministic order)
     buildCandidates(baseUrl) {
       const base = this.normalizePath(baseUrl);
       if (this.isDevMode) return [ base ];
@@ -216,7 +212,6 @@
           if (item.url) a.dataset.link = item.url;
           if (item.go_url) a.dataset.goUrl = item.go_url;
           a.dataset.isExternal = (baseUrl.startsWith('http') || baseUrl.startsWith('//')) ? 'true' : 'false';
-          // initial href uses explicit stored lang to be authoritative
           try {
             const storedLang = (function(){ try { return localStorage.getItem('selectedLang'); } catch (e) { return null; } })();
             a.href = navPrefixManager.addPrefix(baseUrl, storedLang || navPrefixManager.defaultLang);
@@ -232,9 +227,7 @@
           try { lbl.textContent = item[`${currentLang}_label`] || item.en_label || 'Missing Label'; } catch (e) { lbl.textContent = item.en_label || 'Missing Label'; }
           a.appendChild(lbl);
           frag.appendChild(a);
-        } catch (e) {
-          // continue building other items even if one fails
-        }
+        } catch (e) {}
       });
       return frag;
     }
@@ -243,7 +236,6 @@
       const nav = document.createElement('div');
       nav.className = 'bottom-nav';
       nav.setAttribute('role', 'navigation');
-      // to reduce layout flash, hide initially and reveal after CSS loaded
       nav.style.visibility = 'hidden';
       nav.appendChild(fragment);
       return nav;
@@ -252,9 +244,7 @@
     mount(navEl) {
       if (!navEl) return;
       try {
-        // ensure document.body exists
         if (!document.body) {
-          // schedule mount when body is ready
           document.addEventListener('DOMContentLoaded', () => {
             try { if (!document.querySelector('.bottom-nav')) document.body.insertBefore(navEl, document.body.firstChild); } catch (e) {}
           }, { once: true });
@@ -282,11 +272,10 @@
     updateHref(itemEl, href) { try { if (itemEl && itemEl.href !== href) itemEl.href = href; } catch (e) {} }
     updateLabel(itemEl, text) { try { const l = itemEl.querySelector('.' + this.labelClass); if (l) l.textContent = text; } catch (e) {} }
 
-    // reveal nav (used after CSS loaded)
     reveal(navEl) { try { if (!navEl) navEl = this.getNavElement(); if (navEl) { navEl.style.visibility = ''; } } catch (e) {} }
   }
 
-  // --- NavController: orchestrates behavior, ensures stored-lang authoritative ---
+  // --- NavController ---
   class NavController {
     constructor(opts = {}) {
       this.cssPath = opts.cssPath || '/assets/css/modern-styles.css';
@@ -306,31 +295,23 @@
       this._initialized = false;
       this._navEl = null;
 
-      // bindings
       this._onClickBound = this._onClick.bind(this);
       this._onScrollBound = throttle(this._onScrollForActiveState.bind(this), 120);
       this._onStorageBound = this._onStorageEvent.bind(this);
       this._onPopStateBound = this._onPopState.bind(this);
       this._onLangChangedBound = this._onLangChanged.bind(this);
 
-      // BroadcastChannel
       try { this._bc = SUPPORTS_BC ? new BroadcastChannel('fv-lang') : null; } catch (e) { this._bc = null; }
       if (this._bc) this._bc.onmessage = (ev) => { try { if (ev && ev.data && ev.data.lang) this._onLangChanged(ev.data.lang); } catch (e) {} };
 
-      // session prediction window sizes
-      this.RECENT_WINDOW_MS = 45000; // 45s recent heuristic
-
-      // Health-check & recovery
+      this.RECENT_WINDOW_MS = 45000;
       this._healthInterval = null;
       this._healthChecksRun = 0;
       this._maxInitRetries = 4;
       this._initAttempt = 0;
 
-      // throttle heavy syncs
       this.syncAllToStoredLang = throttle(this.syncAllToStoredLang.bind(this), 200);
       this._updateActiveState = throttle(this._updateActiveState.bind(this), 150);
-
-      // debounce mutation heavy updates
       this._updateLinksIn = debounce(this._updateLinksIn.bind(this), 120);
     }
 
@@ -350,42 +331,27 @@
       if (this._initialized) return;
       this._initAttempt++;
       try {
-        // Wait for DOM to be ready (but don't block forever)
         await this._ensureDOMReady(2500);
-
-        // Ensure CSS loaded with timeout and fallback behaviour
         await this._ensureCSSWithTimeout(2500);
-
         const cfg = await this.configLoader.load();
         const storedLang = this._readStoredLang() || this.defaultLang;
         const frag = this.navRenderer.createFragment(cfg.navigation || [], storedLang, this.navPrefixManager);
         const navEl = this.navRenderer.createNavElement(frag);
-        // mount defensively
         this.navRenderer.mount(navEl);
         this._navEl = this.navRenderer.getNavElement();
-
-        // bind events
         this._bind();
         this._initialized = true;
         this._initAttempt = 0;
-
-        // initial sync
         this.syncAllToStoredLang();
         this._updateActiveState();
         this._applyScreenBehavior();
-
-        // make nav visible after CSS load or after small delay to avoid flash
         setTimeout(() => { try { this.navRenderer.reveal(this._navEl); } catch (e) {} }, 120);
-
-        // start health checks
         this._startHealthChecks();
       } catch (e) {
-        // if init failed, schedule a retry with exponential backoff (but limited)
         if (this._initAttempt <= this._maxInitRetries) {
           const backoff = 200 * Math.pow(2, this._initAttempt);
           setTimeout(() => { this.init().catch(() => {}); }, backoff);
         } else {
-          // final fallback: ensure minimal mount to avoid missing UI entirely
           try {
             const frag = this.navRenderer.createFragment([], this.defaultLang, this.navPrefixManager);
             const navEl = this.navRenderer.createNavElement(frag);
@@ -413,13 +379,11 @@
       return new Promise(resolve => {
         try {
           if (!this.cssPath) return resolve();
-          // already loaded?
           if (document.querySelector(`link[href="${this.cssPath}"]`)) return resolve();
           const link = document.createElement('link'); link.rel = 'stylesheet'; link.href = this.cssPath; document.head.appendChild(link);
           let settled = false;
           function done() { if (settled) return; settled = true; resolve(); }
-          link.onload = done;
-          link.onerror = done;
+          link.onload = done; link.onerror = done;
           setTimeout(done, timeoutMs);
         } catch (e) { resolve(); }
       });
@@ -428,15 +392,12 @@
     _bind() {
       try {
         if (!this._navEl) return;
-        // prevent duplicate bindings
         if (this._bound) return;
         this._navEl.addEventListener('click', this._onClickBound, { passive: false });
         window.addEventListener('scroll', this._onScrollBound, { passive: true });
         window.addEventListener('storage', this._onStorageBound);
         window.addEventListener('popstate', this._onPopStateBound);
         window.addEventListener('languageChange', (e) => { try { if (e?.detail?.language) this._onLangChanged(e.detail.language); } catch (e) {} });
-
-        // MutationObserver to update dynamically added links according to stored lang right away
         try {
           this._mo = new MutationObserver(muts => {
             try {
@@ -447,7 +408,6 @@
           });
           this._mo.observe(document.body || document.documentElement, { childList: true, subtree: true });
         } catch (e) {}
-
         this._bound = true;
       } catch (e) {}
     }
@@ -468,7 +428,6 @@
     _readStoredLang() { try { return localStorage.getItem('selectedLang'); } catch (e) { return null; } }
     _writeStoredLang(lang) { try { localStorage.setItem('selectedLang', lang); } catch (e) {} }
 
-    // Heuristic prediction using sessionStorage 'fv-nav-lang-map' and 'fv-lang-recent'
     getPredictedLangForPath(path) {
       try {
         if (!path) return null;
@@ -478,11 +437,7 @@
         const exact = pathname + search;
         const raw = sessionStorage.getItem('fv-nav-lang-map') || '{}';
         const map = safeJSONParse(raw, {});
-
-        // 1) exact match
         if (map[exact] && map[exact].lang) return map[exact].lang;
-
-        // helper variants
         const variants = new Set();
         function addVariants(p, s) {
           let v = p;
@@ -493,13 +448,7 @@
           variants.add(v + (s ? s : ''));
         }
         addVariants(pathname, search);
-
-        // 2) normalized variants
-        for (const v of variants) {
-          if (map[v] && map[v].lang) return map[v].lang;
-        }
-
-        // 3) parent path fallback
+        for (const v of variants) { if (map[v] && map[v].lang) return map[v].lang; }
         const parts = pathname.split('/').filter(Boolean);
         for (let i = parts.length - 1; i >= 0; i--) {
           const p = '/' + parts.slice(0, i).join('/');
@@ -507,8 +456,6 @@
           if (map[k1] && map[k1].lang) return map[k1].lang;
           if (map[k1 + '/'] && map[k1 + '/'].lang) return map[k1 + '/'].lang;
         }
-
-        // 4) recent language-change heuristic (45s window)
         try {
           const recentRaw = sessionStorage.getItem('fv-lang-recent') || '[]';
           const recent = safeJSONParse(recentRaw, []);
@@ -525,7 +472,6 @@
       } catch (e) { return null; }
     }
 
-    // Update hrefs and labels to reflect stored-selected language (authoritative)
     async syncAllToStoredLang() {
       try {
         const storedLang = this._readStoredLang() || this.defaultLang;
@@ -538,7 +484,6 @@
             const newHref = this.navPrefixManager.addPrefix(base, storedLang);
             this.navRenderer.updateHref(it, newHref);
           } catch (e) {}
-          // labels: try to update from cached config (if present)
           try {
             const cfgList = this.configLoader._cached && this.configLoader._cached.navigation ? this.configLoader._cached.navigation : [];
             const cfg = cfgList.find(n => (n.url === (it.dataset.link || '')) || (n.go_url === (it.dataset.goUrl || '')));
@@ -551,7 +496,6 @@
       } catch (e) {}
     }
 
-    // Update newly added DOM subtree links to match stored language immediately
     _updateLinksIn(root) {
       try {
         const anchors = root.querySelectorAll ? root.querySelectorAll('a[href]') : [];
@@ -565,7 +509,6 @@
             if (url.origin !== location.origin) return;
             for (const p of SKIP_PREFIXES) if (url.pathname.startsWith(p)) return;
             if (this.navPrefixManager.hasPrefix(url.pathname)) {
-              // If link already has prefix but not matching storedLang -> rewrite to storedLang
               const parsed = this.navPrefixManager.parse(url.pathname);
               if (parsed.hasLangPrefix && parsed.lang !== storedLang) {
                 const newHref = this.navPrefixManager.addPrefix(parsed.cleanPath, storedLang) + url.search + url.hash;
@@ -573,7 +516,6 @@
               }
               return;
             }
-            // add prefix using storedLang
             if (!this.isDevMode) {
               const newHref = this.navPrefixManager.addPrefix(url.pathname, storedLang) + url.search + url.hash;
               a.setAttribute('href', newHref);
@@ -583,7 +525,6 @@
       } catch (e) {}
     }
 
-    // Click interception: attempt aggressive resolution only when appropriate
     _onClick(ev) {
       try {
         const anchor = ev.target && ev.target.closest ? ev.target.closest('a[href]') : null;
@@ -595,12 +536,9 @@
         const path = url.pathname || '/';
         const SKIP_PREFIXES = ['/assets/', '/static/', '/api/', '/_next/', '/favicon.ico', '/robots.txt', '/sitemap.xml'];
         for (const p of SKIP_PREFIXES) if (path.startsWith(p)) return;
-
-        // If anchor already has a prefix, but it differs from storedLang, prefer storedLang and navigate to that variant
         const storedLang = this._readStoredLang() || this.defaultLang;
         const parsed = this.navPrefixManager.parse(path);
         if (parsed.hasLangPrefix && parsed.lang !== storedLang) {
-          // Prevent default and navigate to storedLang version of cleanPath preserving query/hash
           ev.preventDefault();
           try {
             const targetUrl = this.navPrefixManager.addPrefix(parsed.cleanPath, storedLang) + url.search + url.hash;
@@ -608,11 +546,8 @@
             return;
           } catch (e) {}
         }
-
-        // If link has no prefix and not in dev mode, intercept to try candidate resolution
         if (!parsed.hasLangPrefix && !this.isDevMode) {
           ev.preventDefault();
-          // store click mapping for heuristics
           try {
             const key = path + (url.search || '');
             const rawMap = sessionStorage.getItem('fv-nav-lang-map') || '{}';
@@ -620,7 +555,6 @@
             map[key] = { lang: storedLang, ts: NOW(), evidence: 'click' };
             sessionStorage.setItem('fv-nav-lang-map', JSON.stringify(map));
           } catch (e) {}
-
           (async () => {
             const done = await this._attemptCandidates(path, ev);
             if (!done) {
@@ -638,7 +572,6 @@
         try {
           const resp = await fetch(c, { method: 'HEAD', cache: 'no-store', credentials: 'same-origin' });
           if (resp && resp.ok) {
-            // found candidate
             const parsed = this.navPrefixManager.parse(c);
             if (parsed.hasLangPrefix) {
               try { this._writeStoredLang(parsed.lang); } catch (e) {}
@@ -650,7 +583,6 @@
               } catch (e) {}
             }
             const urlObj = new URL(c, location.origin);
-            // preserve original anchor's search/hash if present
             try {
               const linkEl = originalEvent && originalEvent.target && originalEvent.target.closest ? originalEvent.target.closest('a[href]') : null;
               if (linkEl) {
@@ -668,69 +600,51 @@
       return false;
     }
 
-    // popstate handling: authoritative stored-lang sync using history.state.lang -> session map -> localStorage
     _onPopState(ev) {
       try {
-        // 1) prefer explicit state.lang
         let desiredLang = null;
         try {
           const st = ev && ev.state && typeof ev.state === 'object' ? ev.state : null;
           if (st && st.lang) desiredLang = st.lang;
         } catch (e) {}
-        // 2) if not present, use session prediction for this path
         if (!desiredLang) {
           try {
             const predicted = this.getPredictedLangForPath(location.pathname + (location.search || ''));
             if (predicted) desiredLang = predicted;
           } catch (e) {}
         }
-        // 3) fallback to stored localStorage.selectedLang
         const stored = this._readStoredLang() || this.defaultLang;
         if (!desiredLang) desiredLang = stored;
-
-        // If desiredLang differs from stored -> write and trigger immediate sync
         if (desiredLang && desiredLang !== stored) {
           try { this._writeStoredLang(desiredLang); } catch (e) {}
-          // Broadcast + languageChange custom event for in-page listeners
           try { if (this._bc) this._bc.postMessage({ lang: desiredLang, version: (Number(localStorage.getItem('langVersion')||0) + 1) }); } catch (e) {}
           try { window.dispatchEvent(new CustomEvent('languageChange', { detail: { language: desiredLang } })); } catch (e) {}
-          // Immediately sync nav hrefs to desiredLang synchronously
           this.syncAllToStoredLang();
         } else {
-          // still ensure hrefs reflect stored language
           this.syncAllToStoredLang();
         }
-        // Update active state after sync
         this._updateActiveState();
       } catch (e) {}
     }
 
-    // storage event cross-tab: authoritative localStorage.selectedLang
     _onStorageEvent(e) {
       try {
         if (e.key === 'selectedLang' || e.key === 'langVersion') {
           const newLang = localStorage.getItem('selectedLang') || this.defaultLang;
-          // Immediately sync nav hrefs
           this.syncAllToStoredLang();
-          // dispatch languageChange so other modules update
           try { window.dispatchEvent(new CustomEvent('languageChange', { detail: { language: newLang } })); } catch (e) {}
         }
       } catch (e) {}
     }
 
-    // internal handler when lang changes (from BroadcastChannel or languageChange)
     _onLangChanged(lang) {
       if (!lang) return;
       const stored = this._readStoredLang();
-      if (lang !== stored) {
-        try { this._writeStoredLang(lang); } catch (e) {}
-      }
-      // immediate sync to stored lang
+      if (lang !== stored) { try { this._writeStoredLang(lang); } catch (e) {} }
       this.syncAllToStoredLang();
       this._updateActiveState();
     }
 
-    // scroll/active update
     _onScrollForActiveState() {
       if (this._raf) return;
       this._raf = requestAnimationFrame(() => { this._updateActiveState(); this._raf = null; });
@@ -768,10 +682,8 @@
       return false;
     }
 
-    // public method to force resync (useful externally)
     forceResyncToStoredLang() { this.syncAllToStoredLang(); this._updateActiveState(); }
 
-    // Screen behavior (left rail / mobile)
     _applyScreenBehavior() {
       try {
         const nav = this._navEl;
@@ -841,6 +753,7 @@
         window.removeEventListener('scroll', this._onMobileScrollBound, { passive: true });
         window.removeEventListener('touchstart', this._onTouchStartBound, { passive: true });
         window.removeEventListener('touchend', this._onTouchEndBound, { passive: true });
+        if (this._mobileScrollRaf) { cancelAnimationFrame(this._mobileScrollRaf); this._mobileScrollRaf = null; }
         if (this._navEl && !this._externalHidden) { this._navEl.style.transform = 'translateZ(0) translateY(0%)'; this._navVisible = true; }
         this._mobileSyncEnabled = false;
       } catch (e) {}
@@ -850,34 +763,36 @@
     _onTouchEnd() { this._touching = false; }
 
     _onMobileScroll() {
-      try {
-        if (this._externalHidden) return;
-        const y = window.scrollY; const delta = y - (this._lastScrollY || 0); this._lastScrollY = y;
-        if (y <= 40) { if (!this._navVisible) this._showNav(); return; }
-        if (this._touching) { if (delta > 15 && this._navVisible) this._hideNav(); else if (delta < -10 && !this._navVisible) this._showNav(); }
-      } catch (e) {}
+      // rAF guard: coalesce scroll events → at most 1 DOM write per frame
+      if (this._mobileScrollRaf) return;
+      this._mobileScrollRaf = requestAnimationFrame(() => {
+        this._mobileScrollRaf = null;
+        try {
+          if (this._externalHidden) return;
+          const y = window.scrollY; const delta = y - (this._lastScrollY || 0); this._lastScrollY = y;
+          if (y <= 40) { if (!this._navVisible) this._showNav(); return; }
+          if (this._touching) {
+            if (delta > 5 && this._navVisible) this._hideNav();
+            else if (delta < -12 && !this._navVisible) this._showNav();
+          }
+        } catch (e) {}
+      });
     }
 
     _hideNav() { if (!this._navEl) return; this._navEl.style.transform = 'translateZ(0) translateY(100%)'; this._navVisible = false; }
     _showNav() { if (!this._navEl) return; this._navEl.style.transform = 'translateZ(0) translateY(0%)'; this._navVisible = true; }
 
-    // Public API helpers
     forceResync() { this.syncAllToStoredLang(); }
 
     destroy() { try { this._unbind(); this.navRenderer.unmount(); this._navEl = null; this._initialized = false; this._stopHealthChecks(); } catch (e) {} }
 
-    /* ------------------------
-       Health-check & auto-recovery
-       ------------------------ */
     _startHealthChecks() {
       try {
         if (this._healthInterval) return;
         this._healthChecksRun = 0;
-        // Run more frequently initially, then back off
         this._healthInterval = setInterval(() => {
           this._healthChecksRun++;
           try { this._runHealthCheck(); } catch (e) {}
-          // backoff: after 12 runs (~1 minute if interval=5000), slow down
           if (this._healthChecksRun === 12) {
             clearInterval(this._healthInterval);
             this._healthInterval = setInterval(() => { try { this._runHealthCheck(); } catch (e) {} }, 30000);
@@ -892,10 +807,8 @@
 
     _runHealthCheck() {
       try {
-        // 1) ensure nav exists
         const nav = this.navRenderer.getNavElement();
         if (!nav) {
-          // attempt re-render using cached config
           try {
             const cfg = this.configLoader._cached || { navigation: [] };
             const frag = this.navRenderer.createFragment(cfg.navigation || [], this._readStoredLang() || this.defaultLang, this.navPrefixManager);
@@ -908,10 +821,8 @@
             return;
           } catch (e) {}
         }
-        // 2) ensure at least one nav item exists or re-load config
         const items = this.navRenderer.getItems();
         if (!items || items.length === 0) {
-          // try reload config once
           this.configLoader.load(true).then(cfg => {
             try {
               this.navRenderer.unmount();
@@ -925,18 +836,13 @@
             } catch (e) {}
           }).catch(() => {});
         }
-        // 3) verify CSS visibility: if nav is visible but stylesheet failed, reveal anyway
         try {
-          if (nav && nav.style && nav.style.visibility === 'hidden') {
-            // if page has had time, reveal
-            nav.style.visibility = '';
-          }
+          if (nav && nav.style && nav.style.visibility === 'hidden') { nav.style.visibility = ''; }
         } catch (e) {}
       } catch (e) {}
     }
   }
 
-  // --- Bootstrap single instance and expose global API ---
   const controller = new NavController({
     cssPath: '/assets/css/modern-styles.css',
     configPath: '/assets/json/template/template.json',
@@ -945,7 +851,6 @@
     defaultButtonClass: 'default-button'
   });
 
-  // Defer init until microtask but ensure DOM ready guard handled inside init
   queueMicrotask(() => { controller.init().catch(e => { try { console.error('ModernNavigation init failed:', e); } catch (e2) {} }); });
 
   window.modernNav = {
