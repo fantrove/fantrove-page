@@ -2,17 +2,20 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <script src="assets/js/lang-proxy.js"></script>
-  <script src="assets/js/lang-sync.js"></script>
+  <!-- ══════════════════════════════════════════════════════════════
+       สังเกต: ทุก script/link tag ที่เปลี่ยนได้ตอน deploy
+       จะต้องมี  ?v=BUILD_ID  ต่อท้าย
+       script นี้จะถูก scripts/update-version.js แทนที่อัตโนมัติ
+       ══════════════════════════════════════════════════════════════ -->
+  <script src="/assets/js/lang-proxy.js?v=1.0.0-20250322"></script>
+  <script src="/assets/js/lang-sync.js?v=1.0.0-20250322"></script>
   
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <title>Roadmap | Fantrove Verse</title>
 
-  <!-- Theme color for browsers -->
   <meta name="theme-color" content="#13b47f" />
-  <!-- Status bar color for iOS Safari -->
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 
   <!-- Google Tag Manager -->
@@ -28,7 +31,6 @@
       f.parentNode.insertBefore(j,f);
     })(window,document,'script','dataLayer','GTM-PJ397CLS');
   </script>
-  <!-- End Google Tag Manager -->
 
   <!-- Cookiebot -->
   <script
@@ -39,29 +41,24 @@
     type="text/javascript"
   ></script>
 
-  <!-- Preload critical CSS with fallback -->
-  <link rel="preload" href="/assets/css/bg.css" as="style" onload="this.rel='stylesheet'" />
-  <noscript><link rel="stylesheet" href="/assets/css/bg.css" /></noscript>
+  <!-- CSS พร้อม ?v= ───────────────────────────────────────────── -->
+  <link rel="preload" href="/assets/css/bg.css?v=1.0.0-20250322" as="style" onload="this.rel='stylesheet'" />
+  <noscript><link rel="stylesheet" href="/assets/css/bg.css?v=1.0.0-20250322" /></noscript>
 
-  <link rel="preload" href="/assets/css/roadmap.css" as="style" onload="this.rel='stylesheet'" />
-  <noscript><link rel="stylesheet" href="/assets/css/roadmap.css" /></noscript>
+  <link rel="preload" href="/assets/css/roadmap.css?v=1.0.0-20250322" as="style" onload="this.rel='stylesheet'" />
+  <noscript><link rel="stylesheet" href="/assets/css/roadmap.css?v=1.0.0-20250322" /></noscript>
 
-  <!-- Other CSS -->
-  <link rel="stylesheet" href="/assets/css/top-navigation-bar.css" media="all" />
+  <link rel="stylesheet" href="/assets/css/top-navigation-bar.css?v=1.0.0-20250322" media="all" />
 
-  <!-- Google Fonts -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Sofia" />
 
-  <!-- Favicon & Apple Touch Icon -->
   <link rel="icon" href="/assets/images/favicon.ico" type="image/x-icon" />
   <link rel="apple-touch-icon" href="/assets/images/apple-touch-icon.png" />
 
   <!-- Consent & Analytics config -->
   <script data-cookieconsent="ignore">
     window.dataLayer = window.dataLayer || [];
-    function gtag() {
-      dataLayer.push(arguments);
-    }
+    function gtag() { dataLayer.push(arguments); }
     gtag("consent", "default", {
       ad_personalization: "denied",
       ad_storage: "denied",
@@ -76,49 +73,24 @@
     gtag("set", "url_passthrough", false);
   </script>
 
-  <!-- Google Ads Script async -->
-  <script
-    async
-    src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8233915433564101"
-    crossorigin="anonymous"
-  ></script>
-
-  <!-- Google Analytics -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8233915433564101" crossorigin="anonymous"></script>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-R4DGR81NZ6"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
-    function gtag() {
-      dataLayer.push(arguments);
-    }
+    function gtag() { dataLayer.push(arguments); }
     gtag("js", new Date());
     gtag("config", "G-R4DGR81NZ6");
   </script>
 </head>
 
 <body style="opacity:0">
-  <!-- Google Tag Manager (noscript) -->
   <noscript>
-    <iframe
-      src="https://www.googletagmanager.com/ns.html?id=GTM-PJ397CLS"
-      height="0"
-      width="0"
-      style="display:none;visibility:hidden"
-    ></iframe>
+    <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PJ397CLS" height="0" width="0" style="display:none;visibility:hidden"></iframe>
   </noscript>
-  <!-- End Google Tag Manager (noscript) -->
 
-  <!-- Navigation Bar -->
   <nav>
     <button class="back-button" id="back-button" aria-label="Go back">
-      <svg
-        class="w-6 h-6 text-gray-800 dark:text-white"
-        aria-hidden="true"
-        xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="24"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
+      <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
         <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m15 19-7-7 7-7" />
       </svg>
     </button>
@@ -129,7 +101,6 @@
     <header>
       <h1 data-translate="h1F"></h1>
       <p data-translate="pE">
-        
         <a href="/information/whats_new/" class="new-feature-link"></a>
       </p>
     </header>
@@ -143,42 +114,40 @@
 
     <section id="features">
       <h3 data-translate="FBV"></h3>
-      <ul id="feature-list">
-        <!-- ฟังก์ชันทั้งหมดจะถูกแสดงที่นี่ -->
-      </ul>
+      <ul id="feature-list"></ul>
     </section>
   </div>
 
-  <!-- โหลด language.js ก่อน ไม่ defer/async -->
-  <script src="/assets/js/language.js"></script>
+  <!-- JS พร้อม ?v= ────────────────────────────────────────────── -->
+  <script src="/assets/js/language.js?v=1.0.0-20250322"></script>
 
-  <!-- โหลดไฟล์ JS อื่นๆ แบบ defer -->
-  <script defer src="/assets/js/roadmap.js"></script>
-  <script defer src="/assets/js/back-button.js"></script>
-  <script defer src="/assets/js/footer-template.js"></script>
-  <script defer src="/assets/js/version.js"></script>
+  <script defer src="/assets/js/roadmap.js?v=1.0.0-20250322"></script>
+  <script defer src="/assets/js/back-button.js?v=1.0.0-20250322"></script>
+  <script defer src="/assets/js/footer-template.js?v=1.0.0-20250322"></script>
 
-<!-- Inline Script สำหรับโหลดเวอร์ชันแบบทำงานทันที ไม่ต้องรอ DOMContentLoaded -->
-<script>
-  (function() {
-    function paintVersion(version) {
-      function doPaint() {
-        const el = document.getElementById("version-number");
-        if (el) el.textContent = version;
-        else setTimeout(doPaint, 0); // ลองใหม่จนกว่าจะมี DOM
+  <!-- version-core.js แทน version.js เดิม -->
+  <script defer src="/assets/js/version-core.js?v=1.0.0-20250322"></script>
+
+  <!-- Inline script สำหรับแสดงเวอร์ชัน (fetch version.json โดยตรง) -->
+  <script>
+    (function() {
+      function paintVersion(version) {
+        function doPaint() {
+          var el = document.getElementById("version-number");
+          if (el) el.textContent = version;
+          else setTimeout(doPaint, 0);
+        }
+        if (document.readyState === "loading") setTimeout(doPaint, 0);
+        else doPaint();
       }
-      if (document.readyState === "loading") setTimeout(doPaint, 0);
-      else doPaint();
-    }
-    // เริ่มดึงข้อมูลทันทีที่ script ถูก parse
-    fetch("/assets/json/version.json")
-      .then(r => r.json())
-      .then(data => paintVersion(data.version))
-      .catch(e => console.error("Error loading version:", e));
-  })();
-</script>
+      fetch("/assets/json/version.json")
+        .then(function(r) { return r.json(); })
+        .then(function(data) { paintVersion(data.version); })
+        .catch(function(e) { console.error("Error loading version:", e); });
+    })();
+  </script>
 
-<script defer src="/assets/js/lang-links.js"></script>
-<script src="/fantrove-console-bridge.js"></script>
+  <script defer src="/assets/js/lang-links.js?v=1.0.0-20250322"></script>
+  <script src="/fantrove-console-bridge.js?v=1.0.0-20250322"></script>
 </body>
 </html>

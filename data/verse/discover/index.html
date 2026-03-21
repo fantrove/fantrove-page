@@ -23,20 +23,20 @@
   -->
 
   <!-- loading.css: preload first — overlay must render immediately -->
-  <link rel="preload" href="/assets/css/loading.css" as="style" onload="this.rel='stylesheet'" />
-  <noscript><link rel="stylesheet" href="/assets/css/loading.css" /></noscript>
+  <link rel="preload" href="/assets/css/loading.css?v=1.0.0-20250322" as="style" onload="this.rel='stylesheet'" />
+  <noscript><link rel="stylesheet" href="/assets/css/loading.css?v=1.0.0-20250322" /></noscript>
 
   <!-- header.css -->
-  <link rel="preload" href="/assets/css/nav-core.css" as="style" onload="this.rel='stylesheet'" />
-  <noscript><link rel="stylesheet" href="/assets/css/header.css" /></noscript>
+  <link rel="preload" href="/assets/css/nav-core.css?v=1.0.0-20250322" as="style" onload="this.rel='stylesheet'" />
+  <noscript><link rel="stylesheet" href="/assets/css/header.css?v=1.0.0-20250322" /></noscript>
 
   <!-- styles.css -->
   <link rel="preload" href="/assets/css/nav-core-ext.css" as="style" onload="this.rel='stylesheet'" />
-  <noscript><link rel="stylesheet" href="/assets/css/styles.css" /></noscript>
+  <noscript><link rel="stylesheet" href="/assets/css/styles.css?v=1.0.0-20250322" /></noscript>
 
   <!-- Non-critical CSS -->
-  <link rel="stylesheet" href="/assets/css/bg.css" media="print" onload="this.media='all'" />
-  <noscript><link rel="stylesheet" href="/assets/css/bg.css" /></noscript>
+  <link rel="stylesheet" href="/assets/css/bg.css?v=1.0.0-20250322" media="print" onload="this.media='all'" />
+  <noscript><link rel="stylesheet" href="/assets/css/bg.css?v=1.0.0-20250322" /></noscript>
 
   <!-- Font -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Sofia&display=swap" media="print" onload="this.media='all'" />
@@ -123,12 +123,12 @@
   </main>
 
   <!-- Language system: sync -->
-  <script src="/assets/js/lang-proxy.js"></script>
-  <script src="/assets/js/lang-sync.js"></script>
-  <script src="/assets/js/language.js"></script>
+  <script src="/assets/js/lang-proxy.js?v=1.0.0-20250322"></script>
+  <script src="/assets/js/lang-sync.js?v=1.0.0-20250322"></script>
+  <script src="/assets/js/language.js?v=1.0.0-20250322"></script>
 
   <!-- Deferred JS -->
-  <script defer src="/assets/js/version.js"></script>
+  <script defer src="/assets/js/version-core.js?v=1.0.0-20250322"></script>
 
   <!-- ConData Service: ES module data layer (must load before nav-core) -->
   <!--
@@ -137,15 +137,15 @@
     this tag before nav-core.js guarantees window.ConDataService is set first.
     nav-core/data.js also polls for ConDataService as a safety net.
   -->
-  <script type="module" src="/assets/js/con-data-service/con-data-service.js"></script>
+  <script type="module" src="/assets/js/con-data-service/con-data-service.js?v=1.0.0-20250322"></script>
 
   <!-- NavCore: replaces header.js -->
-  <script defer src="/assets/js/nav-core.js"></script>
+  <script defer src="/assets/js/nav-core.js?v=1.0.0-20250322"></script>
 
-  <script defer src="/assets/js/modern-navigation.js"></script>
-  <script defer src="/assets/js/back-to-top.js"></script>
-  <script defer src="/assets/js/copyNotification.js"></script>
-  <script defer src="/assets/js/lang-links.js"></script>
-  <script defer src="/assets/js/fantrove-console-bridge.js"></script>
+  <script defer src="/assets/js/modern-navigation.js?v=1.0.0-20250322"></script>
+  <script defer src="/assets/js/back-to-top.js?v=1.0.0-20250322"></script>
+  <script defer src="/assets/js/copyNotification.js?v=1.0.0-20250322"></script>
+  <script defer src="/assets/js/lang-links.js?v=1.0.0-20250322"></script>
+  <script defer src="/assets/js/fantrove-console-bridge.js?v=1.0.0-20250322"></script>
 </body>
 </html>

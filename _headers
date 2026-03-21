@@ -1,5 +1,22 @@
-/assets/*
-Cache-Control: public, max-age=31536000, immutable
-
+# HTML: revalidate ทุกครั้ง (ETag check) — ต้องมาก่อน /assets/* เสมอ
 /*.html
-Cache-Control: public, max-age=0, must-revalidate
+  Cache-Control: no-cache, must-revalidate
+
+/index.html
+  Cache-Control: no-cache, must-revalidate
+
+/info/*
+  Cache-Control: no-cache, must-revalidate
+
+/information/*
+  Cache-Control: no-cache, must-revalidate
+
+# version.json: ห้าม cache เด็ดขาด ต้องสดเสมอ
+/assets/json/version.json
+  Cache-Control: no-store, no-cache, max-age=0, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+# assets อื่นๆ ทั้งหมด: cache ยาว 1 ปี (URL เปลี่ยนด้วย ?v= ทุก deploy)
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
