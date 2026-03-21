@@ -3,42 +3,6 @@
  * @file rendering.js
  * RenderingService + FilterService (v5.0 — VS for main page, O(1) DOM)
  *
- * ┌─────────────────────────────────────────────────────────────┐
- * │  Architecture change (v5.0)                                 │
- * │                                                             │
- * │  PREVIOUS (content-visibility:auto approach):               │
- * │   ALL cards inserted into DOM at once.                      │
- * │   1,000 cards = 5,000 DOM nodes                             │
- * │   10,000 cards = 50,000 DOM nodes                           │
- * │   Memory: O(n), grows without bound                         │
- * │   "Unlimited" = eventually OOM or severe lag                │
- * │                                                             │
- * │  NOW (VirtualScrollEngine for main page):                   │
- * │   DOM nodes: always ~30-40, regardless of total count       │
- * │   Memory: O(1) DOM + tiny typed arrays for heights          │
- * │   10,000 cards: same frame budget as 100 cards              │
- * │   Truly unlimited — memory stays flat as user scrolls       │
- * │                                                             │
- * │  HOW:                                                        │
- * │   renderResults() → VirtualScrollEngine.mount(              │
- * │     document.scrollingElement,  ← window scroll mode       │
- * │     #searchResults,             ← host container            │
- * │     filtered,                   ← full item array           │
- * │     renderFn,                   ← card HTML builder         │
- * │     lang                                                     │
- * │   )                                                          │
- * │                                                             │
- * │  VS creates a vs-container div with height = total.         │
- * │  As user scrolls, VS mounts/unmounts only visible cards.    │
- * │  #searchResults.contain:style isolates style scope.         │
- * │                                                             │
- * │  JS HOT PATH (renderResultItem — called per visible card):  │
- * │   • Hoisted i18n cache (_lbl)                               │
- * │   • Zero-allocation wordCount scan (_wordCount)             │
- * │   • Set-based name dedup (_joinSet)                         │
- * │   • Short class names (.sc .scc .scb .sct .scs .scg .scr)  │
- * └─────────────────────────────────────────────────────────────┘
- *
  * @module rendering
  * @depends {config.js, state.js, utils.js, virtual-scroll.js}
  */
@@ -52,22 +16,16 @@
   } = M;
 
   // ── Hoisted i18n cache ──────────────────────────────────────────────────
-  // LanguageService.t() reads localStorage + object lookup.
-  // Hoist outside renderResultItem so it's not called per card.
-  let _lbl = { copy: '', emoji: '' };
+  let _lbl = { emoji: '', clickToCopy: '', clickToCopyDemo: '' };
   function _refreshLabels() {
-    _lbl.copy  = LanguageService.t('copy');
-    _lbl.emoji = LanguageService.t('emoji');
+    _lbl.emoji           = LanguageService.t('emoji');
+    _lbl.clickToCopy     = LanguageService.t('click_to_copy');
+    _lbl.clickToCopyDemo = LanguageService.t('click_to_copy_demo');
   }
   _refreshLabels();
 
   // ── Zero-allocation helpers ─────────────────────────────────────────────
 
-  /**
-   * Count words without split() — zero array allocation.
-   * ~3× faster than s.trim().split(/\s+/).length on V8.
-   * @param {string} s @returns {number}
-   */
   function _wordCount(s) {
     let n = 0, inW = false;
     for (let i = 0; i < s.length; i++) {
@@ -78,18 +36,6 @@
     return n;
   }
 
-  /**
-   * Join Set<string> with ' / ', skipping falsy — no filter(), no intermediate array.
-   * @param {Set<string>} set @returns {string}
-   */
-  function _joinSet(set) {
-    let out = '';
-    for (const v of set) {
-      if (v) out = out ? out + ' / ' + v : v;
-    }
-    return out;
-  }
-
   // ── RenderingService ──────────────────────────────────────────────────────
   const RenderingService = {
 
@@ -98,11 +44,7 @@
 
     /**
      * Build card HTML string.
-     * Called per VISIBLE card per frame (~30 calls). Zero heap allocations
-     * except the final template literal concatenation.
-     *
-     * Short class names (.sc .scc .scb .sct .scs .scg .scr):
-     *   Smaller HTML strings → faster innerHTML parse → less RAM per card.
+     * The entire .sc card is the click target — no copy button.
      *
      * @param {SearchResult} item
      * @param {string} lang
@@ -115,30 +57,16 @@
         const itemText = rawText || data?.name?.[lang] || data?.name?.en || item.itemName || '';
         const itemApi  = data?.api || '';
 
-        // Resolve typeName and catName from the name OBJECT in the active language.
-        // Do NOT use item.typeName / item.catName — they are pre-resolved by
-        // SearchEngine in a fixed language (often Thai) and do not follow the
-        // current UI language, causing Thai tags to show when UI is English.
         const typeName = item.typeObj?.name?.[lang]
           || item.typeObj?.name?.en
-          || item.typeName          // fallback: pre-resolved string (any lang)
+          || item.typeName
           || _lbl.emoji;
 
         const catName = item.category?.name?.[lang]
           || item.category?.name?.en
-          || item.catName           // fallback: pre-resolved string (any lang)
+          || item.catName
           || '';
 
-        // Build display name in the ACTIVE UI LANGUAGE only.
-        // Do NOT include names from other languages.
-        //
-        // Why: item.itemName is set by SearchEngine from the matched keyword
-        // and can be in any language (e.g. Thai name when UI is English).
-        // Adding it to nameSet would show both languages: "ยิ้ม / Smile".
-        //
-        // Rule: use data.name[lang] (UI language) as the canonical name.
-        // Fall back to en only if the current language has no entry.
-        // item.itemName is used only as last-resort when no name obj exists.
         const nameStr = data?.name?.[lang]
           || (lang !== 'en' ? data?.name?.en : '')
           || item.itemName
@@ -154,7 +82,7 @@
         const tags     = (typeName ? `<span class="tag">${esc(typeName)}</span>` : '')
                        + (catName  ? `<span class="tag">${esc(catName)}</span>`  : '');
 
-        return `<div class="sc${vertical ? ' sv' : ''}" role="article" aria-label="${esc(nameStr || text)}"><div class="scc" aria-hidden="true">${esc(disp)}</div><div class="scb"><div class="sct">${esc(titleStr)}</div><div class="scs">${esc(subStr)}</div>${tags ? `<div class="scg" aria-hidden="true">${tags}</div>` : ''}</div><button class="scr" data-text="${StringService.encodeUrl(text)}" aria-label="${_lbl.copy}">${_lbl.copy}</button></div>`;
+        return `<div class="sc${vertical ? ' sv' : ''}" role="button" tabindex="0" aria-label="${esc(nameStr || text)}" data-text="${StringService.encodeUrl(text)}"><div class="scc" aria-hidden="true">${esc(disp)}</div><div class="scb"><div class="sct">${esc(titleStr)}</div><div class="scs">${esc(subStr)}</div>${tags ? `<div class="scg" aria-hidden="true">${tags}</div>` : ''}</div></div>`;
       } catch {
         return '<div class="sc"><div class="scc">-</div></div>';
       }
@@ -183,10 +111,14 @@
     },
 
     /**
-     * Render results using VirtualScrollEngine (window scroll mode).
+     * Render results using VirtualScrollEngine.
      *
-     * DOM nodes in #searchResults: always ~30-40, regardless of result count.
-     * Works identically for 10 or 100,000 results.
+     * Hint animation logic:
+     *   Check if .copy-hint is already in the container BEFORE clearing.
+     *   - Hint already there  → user is refining an existing search
+     *                         → restore hint without animation (stable UX)
+     *   - Hint not there      → fresh appearance from placeholder/empty state
+     *                         → add .copy-hint--enter to trigger CSS animation
      *
      * @param {SearchResult[]} results
      * @param {boolean}        [showSuggestionsIfNoResult=false]
@@ -200,6 +132,10 @@
         const filtered = State.selectedCategory !== 'all'
           ? results.filter(r => ((r.category?.name?.[lang] || r.category?.name?.en) || '') === State.selectedCategory)
           : results;
+
+        // Capture hint state BEFORE clearing — this is the critical read.
+        // Must happen before setHTML('') destroys the existing hint element.
+        const hintWasVisible = !!container.querySelector('.copy-hint');
 
         this.disconnectRenderObserver();
         State.currentFilteredResults = filtered;
@@ -219,9 +155,110 @@
         this._attachCopyHandler(container);
         _refreshLabels();
 
-        // Mount VS on window scroll — #searchResults is the host container.
-        // VS creates a vs-container div (position:relative, height=total)
-        // and manages all card nodes within it.
+        // Build hint element.
+        // Inner <span class="copy-hint__text"> is the animated text slot.
+        const hint = document.createElement('div');
+        hint.className = hintWasVisible ? 'copy-hint' : 'copy-hint copy-hint--enter';
+        // Build inner structure: icon comes from ::before, text in a span
+        const _textSpan = document.createElement('span');
+        _textSpan.className   = 'copy-hint__text';
+        _textSpan.textContent = _lbl.clickToCopy;
+        hint.appendChild(_textSpan);
+        container.appendChild(hint);
+
+        // Interactive demo — only set up on fresh appearance
+        if (!hintWasVisible) {
+          let _autoRemoveTimer = null;
+          let _cycleTimer      = null;
+
+          const _texts = [ _lbl.clickToCopy, LanguageService.t('click_to_copy_demo') ];
+          let   _idx   = 0;
+
+          const _exitHint = () => {
+            if (!hint.parentNode) return;
+            clearInterval(_cycleTimer);
+            hint.classList.remove('copy-hint--enter');
+            hint.classList.add('copy-hint--exit');
+            hint.addEventListener('animationend', () => {
+              try { hint.remove(); } catch {}
+            }, { once: true });
+          };
+
+          // Text slot cycle: slide current text down-out, swap, slide new text up-in.
+          const _cycleText = () => {
+            _textSpan.classList.add('copy-hint__text--out');
+            setTimeout(() => {
+              _idx = (_idx + 1) % _texts.length;
+              _textSpan.textContent = _texts[_idx];
+              _textSpan.classList.remove('copy-hint__text--out');
+              _textSpan.classList.add('copy-hint__text--in');
+              setTimeout(() => _textSpan.classList.remove('copy-hint__text--in'), 640);
+            }, 220);  // matches --out transition duration
+          };
+
+          // Demo: flash first card 2× with tap-label overlay — NO clipboard.
+          const _runDemo = () => {
+            const firstCard = container.querySelector('.sc[data-text]');
+            if (!firstCard) return;
+
+            // Ensure card has position:relative for the absolute label
+            const _prevPos = firstCard.style.position;
+            firstCard.style.position = 'relative';
+
+            // Create tap label overlay
+            const _label = document.createElement('span');
+            _label.className   = 'sc--demo-label';
+            _label.textContent = '👆 ' + _lbl.clickToCopy;
+            firstCard.appendChild(_label);
+
+            const _on  = () => {
+              firstCard.classList.remove('sc--demo-active');
+              // force reflow so animation restarts on second flash
+              void firstCard.offsetWidth;
+              firstCard.classList.add('sc--demo-active');
+            };
+            const _off = () => firstCard.classList.remove('sc--demo-active');
+
+            _on();
+            setTimeout(_off, 350);
+            setTimeout(_on,  600);
+            setTimeout(() => {
+              _off();
+              // Fade label out then remove
+              _label.style.transition = 'opacity 250ms ease';
+              _label.style.opacity    = '0';
+              setTimeout(() => {
+                try { _label.remove(); } catch {}
+                firstCard.style.position = _prevPos;
+              }, 260);
+            }, 950);
+
+            NotificationService.toast('👆 ' + _lbl.clickToCopy);
+          };
+
+          // Click handler
+          hint.addEventListener('click', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            clearTimeout(_autoRemoveTimer);
+            _runDemo();
+            setTimeout(_exitHint, 2500);
+          });
+
+          // Start cycling after enter animation completes
+          hint.addEventListener('animationend', function onEntered() {
+            if (hint.classList.contains('copy-hint--exit')) return;
+            hint.removeEventListener('animationend', onEntered);
+            // First cycle after 2.5s, then every 3s
+            _cycleTimer = setTimeout(function _tick() {
+              _cycleText();
+              _cycleTimer = setTimeout(_tick, 3000);
+            }, 2500);
+            _autoRemoveTimer = setTimeout(_exitHint, 20000);
+          });
+        }
+
+        // Mount VS
         const viewport = document.scrollingElement || document.documentElement;
         VirtualScrollEngine.mount(
           viewport,
@@ -231,9 +268,6 @@
           lang
         );
 
-        // Scroll to top instantly on every NEW search/filter change.
-        // Skip when it's a state-restore (preventPush=true path) — user
-        // didn't initiate a new search, so keep their scroll position.
         if (!window.__renderIsRestore) {
           if (window.SearchModules?.State?.overlayOpen) window.__overlayDidSearch = true;
           window.scrollTo({ top: 0, behavior: 'instant' });
@@ -269,17 +303,34 @@
       M.UIService.updateUILanguage();
     },
 
-    /** @private — delegated copy handler, attached once */
+    /**
+     * Delegated copy handler — whole .sc card is the target.
+     * Keyboard: Enter / Space on focused card also copies.
+     * @private
+     */
     _attachCopyHandler(container) {
       if (window._copyResultTextHandlerSet) return;
+
       Handlers.copyClick = (e) => {
-        const btn = e.target.closest('.scr');
-        if (btn?.hasAttribute('data-text')) {
+        // Guard: demo is running — do not copy to clipboard
+        if (window._hintDemoBlocking) return;
+        const card = e.target.closest('.sc');
+        if (card?.hasAttribute('data-text')) {
           e.preventDefault();
-          NotificationService.copyText(StringService.decodeUrl(btn.getAttribute('data-text')));
+          NotificationService.copyText(StringService.decodeUrl(card.getAttribute('data-text')));
         }
       };
       DOMService.on(container, 'click', Handlers.copyClick);
+
+      DOMService.on(container, 'keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const card = e.target.closest('.sc');
+        if (card?.hasAttribute('data-text')) {
+          e.preventDefault();
+          NotificationService.copyText(StringService.decodeUrl(card.getAttribute('data-text')));
+        }
+      });
+
       window._copyResultTextHandlerSet = true;
     },
   };
@@ -287,12 +338,6 @@
   // ── FilterService ─────────────────────────────────────────────────────────
   const FilterService = {
 
-    /**
-     * Build type pill buttons.
-     * The container (#typeFilter) is now a div.filter-pills-row, not a <select>.
-     * Clicking a pill sets State.selectedType and re-runs doSearch.
-     * @param {string} [selected='all']
-     */
     setupTypeFilter(selected = 'all') {
       try {
         const el = DOMService.get(CONFIG.DOM.typeFilterId);
@@ -301,7 +346,6 @@
         const active = selected || 'all';
         const pills  = [];
 
-        // "All" pill
         pills.push(
           `<button class="filter-pill${active === 'all' ? ' active' : ''}" data-filter-type="all" aria-pressed="${active === 'all'}">`
           + StringService.escapeHtml(LanguageService.t('all_types'))
@@ -322,7 +366,6 @@
         el.innerHTML = pills.join('');
         State.selectedType = active;
 
-        // Delegate click on the container (single listener, no per-pill binding)
         el._pillHandler && el.removeEventListener('click', el._pillHandler);
         el._pillHandler = (e) => {
           const btn = e.target.closest('.filter-pill');
@@ -330,13 +373,11 @@
           const val = btn.getAttribute('data-filter-type') || 'all';
           if (val === State.selectedType) return;
           State.selectedType = val;
-          // Update active state visually
           el.querySelectorAll('.filter-pill').forEach(p => {
             const isActive = p.getAttribute('data-filter-type') === val;
             p.classList.toggle('active', isActive);
             p.setAttribute('aria-pressed', isActive ? 'true' : 'false');
           });
-          // Reset category, re-search
           State.selectedCategory = 'all';
           if (window.SearchModules?.SearchService) {
             window.SearchModules.SearchService.doSearch(null, false);
@@ -346,13 +387,6 @@
       } catch {}
     },
 
-    /**
-     * Build category pill buttons.
-     * Visibility is handled by grid-template-rows (0fr/1fr) + opacity in CSS.
-     * We never use display:none on the inner row — it breaks grid animation.
-     * @param {CategoryOption[]} cats
-     * @param {string} [selected='all']
-     */
     setupCategoryFilter(cats, selected = 'all') {
       try {
         const el   = DOMService.get(CONFIG.DOM.categoryFilterId);
@@ -360,14 +394,12 @@
         const wrap = document.getElementById('filterCatWrap');
         if (!el) return;
 
-        // No categories — clear pills, hide toggle, always close & reset state.
         if (!cats || cats.length === 0) {
           el.innerHTML = '';
           if (btn)  { btn.style.visibility = 'hidden'; btn.classList.remove('active'); btn.setAttribute('aria-expanded', 'false'); }
           if (wrap) { wrap.classList.remove('open'); wrap.setAttribute('aria-hidden', 'true'); }
           const sticky = document.getElementById('search-sticky');
           if (sticky) sticky.classList.remove('cat-open');
-          // Always sync JS state + reset spacer regardless of visual state
           if (window._closeCatBar) window._closeCatBar();
           return;
         }
@@ -393,9 +425,7 @@
         }
 
         el.innerHTML = pills.join('');
-        // Reveal toggle button (was hidden when no cats)
         if (btn) btn.style.visibility = '';
-        // Update --cat-bar-h so CSS spacer has correct height
         if (window._updateCatBarHeight) requestAnimationFrame(window._updateCatBarHeight);
 
         el._pillHandler && el.removeEventListener('click', el._pillHandler);

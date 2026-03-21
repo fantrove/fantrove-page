@@ -1,41 +1,13 @@
-/* search-compact-overrides.css  v5.0
+/* search-compact-overrides.css  v5.1
    ═══════════════════════════════════════════════════════════════
-   Performance architecture:
-
-   @layer  — cascade layers (Chrome 99+, Safari 15.4+, FF 97+)
-     Browser resolves cascade in layer order, not specificity.
-     For large card lists: O(rules × elements) → O(rules + elements).
-     No specificity wars, no !important needed for overrides.
-
-   @property — typed custom properties (Chrome 85+, Safari 15.4+)
-     Browser knows token type at parse time → faster value resolution,
-     enables smooth color transitions without repaint.
-
-   CSS Nesting — card rules grouped (Chrome 112+, Safari 16.5+)
-     Related rules share selector parse result → cache locality.
-     Reduces total rule count the browser tracks.
-
-   touch-action: manipulation — removes 300ms tap delay (all browsers)
-     Eliminates delay on interactive elements. Zero render cost.
-
-   color-scheme: light — hints browser to use light-mode paint paths.
-     Avoids browser auto-detecting scheme on every paint.
-
-   font-synthesis: none — prevents browser synthesizing bold/italic.
-     One less style operation per text element.
-
-   content-visibility: auto + contain-intrinsic-size: auto
-     Browser-native virtual scroll. Zero JS on scroll path.
-     'auto' keyword caches real height after first render.
-
-   .cv-prerendered — IntersectionObserver pre-reveal hook
-     Forces layout in idle time before scroll arrives.
+   v5.1 changes vs v5.0:
+   • Removed .scr (copy button) — whole card is the click target
+   • .sc cursor:pointer + softer :active teal tint (opacity .04)
+   • .copy-hint — subtle tip above results
+   • .copy-hint--enter — entrance animation (fade + rise + blur)
+     plays only when hint first appears; silent on result refinement
    ═══════════════════════════════════════════════════════════════ */
 
-/* ── Typed custom properties ────────────────────────────────────
-   Must be at top level (not inside @layer) for broadest compat.
-   'inherits: true' = children receive value without re-lookup.
-   Typed properties: browser validates + optimises interpolation. */
 @property --g5   { syntax: '<color>'; inherits: true;  initial-value: #0dba92; }
 @property --g6   { syntax: '<color>'; inherits: true;  initial-value: #0a9273; }
 @property --g05  { syntax: '<color>'; inherits: true;  initial-value: #f0f7f5; }
@@ -46,11 +18,6 @@
 @property --tmd  { syntax: '<color>'; inherits: true;  initial-value: #2b4539; }
 @property --tlo  { syntax: '<color>'; inherits: true;  initial-value: #637a6e; }
 
-/* ── Layer declaration order ────────────────────────────────────
-   Later layers win over earlier layers, regardless of specificity.
-   Eliminates all specificity calculations across layer boundaries. */
-/* Layer order: search-base (from search.css) < tokens < base < ... < fallbacks */
-/* Unlayered rules still beat all @layer rules. Only these layers compete. */
 @layer search-base, tokens, base, card, overlay, state, responsive, print, fallbacks;
 
 /* ══════════════════════════════════════════════════════════════ */
@@ -59,7 +26,6 @@
   html { scroll-behavior: auto; }
 
   :root {
-    /* Color tokens */
     --g5  : #0dba92;
     --g6  : #0a9273;
     --g05 : rgba(13,186,146,.07);
@@ -76,24 +42,18 @@
     --bdm : rgba(0,0,0,.13);
     --sh  : 0 1px 3px rgba(0,0,0,.05);
 
-    /* Radii */
     --rp  : 999px;
     --rx  : 26px;
     --rl  : 20px;
     --rm  : 16px;
     --rs  : 10px;
 
-    /* Transition */
     --tf  : 140ms ease;
 
-    /* Easing tokens — parsed once, no repeated inline bezier strings */
-    --ease-expo : var(--ease-expo);  /* expo-out: snappy start, premium land */
-    --ease-nav  : var(--ease-nav); /* matches bottom nav (0.22s) */
+    --ease-expo : var(--ease-expo);
+    --ease-nav  : var(--ease-nav);
 
-    /* Hint: use light-mode paint paths, skip auto-detection per frame */
     color-scheme: light;
-
-    /* Prevent overscroll bounce rendering on mobile — saves paint cost */
     overscroll-behavior-y: contain;
   }
 
@@ -102,8 +62,6 @@
 /* ══════════════════════════════════════════════════════════════ */
 @layer base {
 
-  /* ── Header ──────────────────────────────────────────────── */
-  /* Sticky wrapper — JS targets this for show/hide transform */
   #search-sticky {
     position: sticky;
     top: 0;
@@ -126,14 +84,9 @@
     overflow: hidden;
   }
 
-  /* Instant shadow remove — 1 repaint on click, not per-frame */
   #search-sticky.cat-open .search-header { box-shadow: none; }
 
-  /* cat-spacer: static fixed height — no animation, set instantly on toggle */
-  #cat-spacer {
-    height: 0;
-    overflow: hidden;
-  }
+  #cat-spacer { height: 0; overflow: hidden; }
 
   #searchForm {
     display: flex;
@@ -143,7 +96,6 @@
     box-sizing: border-box;
   }
 
-  /* ── Input wrapper ───────────────────────────────────────── */
   .search-input-wrapper {
     display: flex         !important;
     align-items: center   !important;
@@ -167,7 +119,6 @@
       box-shadow: 0 0 0 2px rgba(13,186,146,.2);
     }
 
-    /* Overlay variant — same size as main header */
     #searchOverlayContainer & {
       background: rgba(255,255,255,.96);
       max-width: none;
@@ -183,7 +134,6 @@
     }
   }
 
-  /* ── Icon slot ───────────────────────────────────────────── */
   .search-input-icon {
     position: static !important;
     left: auto !important;
@@ -198,13 +148,11 @@
     transition: background-color var(--tf), opacity var(--tf);
     pointer-events: none;
 
-    /* Button mode */
     &[role="button"] {
       pointer-events: auto;
       cursor: pointer;
       color: var(--tmd);
-      touch-action: manipulation; /* remove 300ms delay */
-
+      touch-action: manipulation;
       &:active { opacity: .65; }
     }
 
@@ -216,7 +164,6 @@
     }
   }
 
-  /* ── Search input ────────────────────────────────────────── */
   #searchInput {
     flex: 1 1 0  !important;
     min-width: 0 !important;
@@ -232,13 +179,12 @@
     font-family: inherit;
     letter-spacing: .1px;
     caret-color: var(--g5);
-    font-synthesis: none; /* no faux-bold/italic — one less render op */
+    font-synthesis: none;
 
     &::placeholder      { color: var(--tph); font-weight: 500; }
     &::-webkit-search-cancel-button { display: none; }
   }
 
-  /* ── Clear button ────────────────────────────────────────── */
   #search-clear-btn {
     flex-shrink: 0;
     display: none;
@@ -295,13 +241,6 @@
     color: var(--tmd); line-height: 1.5;
   }
 
-  /* Highlight match grapheme clusters from HighlightService.
-     Thai diacritic fix:
-       - display:inline + vertical-align:baseline ensures combining chars
-         stay in the text flow without causing displacement
-       - border-radius removed: radius creates a new formatting context
-         that can shift combining diacritics on some engines
-       - padding: 0 only — horizontal padding safe, vertical shifts baseline */
   .suggestion-body mark {
     background: var(--g1);
     color: var(--thi);
@@ -324,6 +263,137 @@
     }
   }
 
+  /* ── Copy hint text slot ──────────────────────────────────────
+     Animated <span> inside .copy-hint that cycles between two texts.
+     --out: current text slides down + fades (leaving)
+     --in:  new text arrives from above + fades in
+     Timings match JS setTimeout values (280ms / 300ms).              */
+  .copy-hint__text {
+    display: inline-block;
+    /* out-transition: fast ease-in — text leaves quickly, no drag */
+    transition: transform 220ms cubic-bezier(0.4,0,1,1),
+                opacity   220ms cubic-bezier(0.4,0,1,1);
+  }
+
+  .copy-hint__text--out {
+    transform: translateY(45%);
+    opacity: 0;
+  }
+
+  .copy-hint__text--in {
+    animation: _text-in 620ms cubic-bezier(0.34,2.0,0.64,1) both;
+  }
+
+  /* amplitude 2.0 = very visible overshoot ~20%, snaps back with weight */
+  @keyframes _text-in {
+    from { transform: translateY(-60%); opacity: 0; }
+    55%  {                              opacity: 1; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+
+  /* ── Copy hint ────────────────────────────────────────────
+     Simple muted row below header — not a pill, not teal.
+     Clickable: hover (mouseenter) swaps text to demo label.
+     Three lifecycle classes:
+       .copy-hint         — base, invisible (opacity:0)
+       .copy-hint--enter  — spring slide-in from behind header
+       .copy-hint--exit   — drift-up fade out, JS removes on end   */
+  .copy-hint {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 4px 16px 6px;
+    font-size: .88rem;
+    font-weight: 600;
+    color: var(--tlo);
+    letter-spacing: .2px;
+    user-select: none;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    opacity: 0;
+    /* clip the text slot during slide transitions */
+    overflow: hidden;
+
+    &::before {
+      content: '';
+      display: inline-block;
+      width: 17px; height: 17px;
+      flex-shrink: 0;
+      background-color: currentColor;
+      opacity: .55;
+      -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='2' width='6' height='4' rx='1'/%3E%3Cpath d='M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'/%3E%3C/svg%3E");
+              mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='2' width='6' height='4' rx='1'/%3E%3Cpath d='M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'/%3E%3C/svg%3E");
+      -webkit-mask-size: contain; mask-size: contain;
+      -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+    }
+  }
+
+  @keyframes _hint-enter {
+    0%   { opacity: 0; transform: translateY(-110%); }
+    55%  { opacity: 1; transform: translateY(4%);    }
+    75%  { opacity: 1; transform: translateY(-1%);   }
+    100% { opacity: 1; transform: translateY(0);     }
+  }
+
+  @keyframes _hint-exit {
+    from { opacity: 1; transform: translateY(0);     }
+    to   { opacity: 0; transform: translateY(-8px);  }
+  }
+
+  .copy-hint--enter {
+    animation: _hint-enter 480ms cubic-bezier(0.34,1.56,0.64,1) forwards;
+  }
+
+  .copy-hint--exit {
+    animation: _hint-exit 300ms ease-in forwards;
+    pointer-events: none;
+  }
+
+  /* Demo flash: scale + teal ring, compositor-safe */
+  .sc--demo-active {
+    background: rgba(13,186,146,.14) !important;
+    box-shadow:
+      inset 0 0 0 2.5px var(--g5),
+      inset 0 0 18px rgba(13,186,146,.22) !important;
+    transition: background-color 80ms ease, box-shadow 80ms ease !important;
+    /* ripple pulse — draws attention without layout cost */
+    animation: _demo-pulse 400ms ease-out !important;
+  }
+
+  /* Outward ring that fades — like a ripple from the card */
+  @keyframes _demo-pulse {
+    0%   { box-shadow: inset 0 0 0 2.5px var(--g5), inset 0 0 18px rgba(13,186,146,.22), 0 0 0 0   rgba(13,186,146,.45); }
+    60%  { box-shadow: inset 0 0 0 2.5px var(--g5), inset 0 0 18px rgba(13,186,146,.22), 0 0 0 12px rgba(13,186,146,.0); }
+    100% { box-shadow: inset 0 0 0 2.5px var(--g5), inset 0 0 18px rgba(13,186,146,.22), 0 0 0 16px rgba(13,186,146,.0); }
+  }
+
+  /* Tap label: absolute overlay on top-right of card — says "แตะ" briefly */
+  .sc--demo-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.7);
+    background: var(--g5);
+    color: #fff;
+    font-size: .78rem;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: var(--rp);
+    pointer-events: none;
+    white-space: nowrap;
+    letter-spacing: .3px;
+    box-shadow: 0 4px 16px rgba(13,186,146,.4);
+    animation: _demo-label-in 300ms cubic-bezier(0.34,1.56,0.64,1) both;
+    z-index: 10;
+  }
+
+  @keyframes _demo-label-in {
+    from { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+    to   { opacity: 1; transform: translate(-50%, -50%) scale(1);   }
+  }
+
   /* ── Toast ───────────────────────────────────────────────── */
   .copy-toast-message {
     background: linear-gradient(135deg, var(--g5), var(--g6));
@@ -342,38 +412,12 @@
 }
 
 /* ══════════════════════════════════════════════════════════════
-   @layer card — ALL per-card rules in ONE layer, ONE place.
-   This is the most-repeated layer (fires once per card × N cards).
-
-   Class naming:
-     .sc  = root card (search-card)
-     .scc = content box (emoji / text preview)
-     .scb = body column
-     .sct = title
-     .scs = subtitle
-     .scg = tags group
-     .tag = single tag pill
-     .scr = copy button (result-copy)
-     .sv  = vertical variant
-
-   Why CSS Nesting here:
-     All .sc children share the selector parse result of '.sc'.
-     Browser caches the resolved style tree per parent node.
-     Fewer total rules = smaller rule list = faster invalidation.
+   @layer card
    ══════════════════════════════════════════════════════════════ */
 @layer card {
 
-  /* GPU layer for scroll container — promoted before first scroll */
-  /* #searchResults: VS manages height via vs-container child */
   #searchResults { position: relative; }
 
-  /* ── Root card ───────────────────────────────────────────── */
-  /*
-   * Platform card style (from styles.css):
-   *   #fff bg, no left accent, subtle border only
-   *   heading: #494E59, body: #52638A — neutral slate, not teal
-   *   teal appears only in subtle border and active/hover border
-   */
   .sc {
     display: flex;
     gap: 18px;
@@ -387,10 +431,17 @@
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
     transition: background-color var(--tf);
+    cursor: pointer;
 
-    &:active { background: rgba(15,23,42,.06); }
+    /*
+     * :active tint — kept deliberately soft (opacity .04) so it reads as
+     * "acknowledged" not "selected". A stronger tint would fight the card's
+     * existing white background and look heavy on fast taps.
+     * On desktop, hover (.sc:hover in @layer state) provides a slightly
+     * stronger affordance at .06 — hover is slower so more contrast is fine.
+     */
+    &:active { background: rgba(13,186,146,.04); }
 
-    /* ── Content box ─────────────────────────────────────── */
     & .scc {
       flex: 0 0 58px; height: 58px;
       font-size: 26px;
@@ -403,13 +454,11 @@
       flex-shrink: 0;
     }
 
-    /* ── Body column ──────────────────────────────────────── */
     & .scb {
       flex: 1 1 auto; min-width: 0;
       display: flex; flex-direction: column; gap: 7px;
     }
 
-    /* ── Title — platform c-heading (#494E59) ─────────────── */
     & .sct {
       font-size: 1.05rem; font-weight: 700;
       color: #111827; line-height: 1.45;
@@ -419,7 +468,6 @@
       font-synthesis: none;
     }
 
-    /* ── Subtitle — platform c-body (#52638A) ─────────────── */
     & .scs {
       font-size: .91rem; font-weight: 500;
       color: #374151;
@@ -429,7 +477,6 @@
       font-synthesis: none;
     }
 
-    /* ── Tags group ───────────────────────────────────────── */
     & .scg {
       display: flex; gap: 6px;
       margin-top: 6px;
@@ -438,7 +485,6 @@
       overflow: hidden;
     }
 
-    /* ── Tag pill — neutral, not teal ─────────────────────── */
     & .tag {
       background: rgba(13,186,146,.05);
       color: #0a7d6d;
@@ -450,26 +496,6 @@
       flex-shrink: 0;
     }
 
-    /* ── Copy button — ghost, platform style ─────────────── */
-    & .scr {
-      position: absolute; right: 12px; top: 12px;
-      padding: 9px 12px;
-      font-size: .84rem; font-weight: 500;
-      border-radius: var(--rp);
-      background: transparent;
-      border: 1px solid rgba(0,0,0,.18);
-      color: #374151;
-      box-shadow: none;
-      letter-spacing: .02px; white-space: nowrap;
-      cursor: pointer;
-      touch-action: manipulation;
-      -webkit-tap-highlight-color: transparent;
-      transition: opacity var(--tf);
-
-      &:active { background: #e9ecef; border-color: rgba(0,0,0,.28); color: #111827; opacity:1; }
-    }
-
-    /* ── Vertical variant ─────────────────────────────────── */
     &.sv {
       flex-direction: column; gap: 10px; padding: 14px;
 
@@ -481,19 +507,14 @@
         -webkit-line-clamp: 3; -webkit-box-orient: vertical;
         overflow: hidden;
       }
-
-      & .scr { position: static; margin-top: 4px; align-self: flex-start; }
     }
   }
 
-
-  /* Inside VS item: basic containment, no margin (gap = .vs-item padding-bottom) */
   .vs-item .sc {
     contain: layout style paint;
     margin-bottom: 0;
   }
 
-  /* VS containers */
   .vs-container { contain: layout style; }
   .vs-item      { contain: layout style paint; top: 0 !important; padding-bottom: 10px; box-sizing: border-box; }
 
@@ -510,7 +531,6 @@
     border-top: 1px solid rgba(0,0,0,.06);
   }
 
-  /* contain:layout style paint — pill repaints isolated here */
   .filter-pills-row {
     flex: 1 1 0;
     display: flex; align-items: center;
@@ -527,7 +547,6 @@
 
   .filter-pills-row--cat { padding-block: 9px 12px; }
 
-  /* Right fade + toggle slot */
   .filter-row-end {
     flex-shrink: 0;
     display: flex; align-items: center;
@@ -540,10 +559,6 @@
     & > * { pointer-events: auto; }
   }
 
-  /*
-   * Toggle: 36px matches auto-height pills. Compositor-safe transitions only.
-   * expo-out on SVG rotate = native-app-grade rotation feel.
-   */
   .filter-cat-toggle {
     display: flex; align-items: center; justify-content: center;
     width: 33px; height: 33px;
@@ -555,7 +570,6 @@
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
     outline: none; flex-shrink: 0;
-    /* opacity only — no style recalc, compositor-safe */
     transition: opacity 140ms ease;
 
     & svg {
@@ -574,10 +588,7 @@
     &:active { opacity: .55; }
   }
 
-  /* Category bar: slides behind header (z:2), 48px bottom radius */
-  .search-filters-panel {
-    position: relative;
-  }
+  .search-filters-panel { position: relative; }
 
   .filter-cat-wrap {
     position: absolute;
@@ -623,24 +634,6 @@
 
   .filter-cat-wrap.open::after { opacity: 1; }
 
-
-
-  /*
-   * Type pill:
-   *   padding-block 0.58em / padding-inline 1.1em → ratio ≈ 1:1.9
-   *   font-size .93rem aligns with card title (.98rem) for visual harmony
-   *   Transition: bg-color + color + transform only (NO box-shadow = no repaint)
-   *   Static box-shadow on .active: instant, zero animation cost
-   */
-  /* ── Type pill (primary filter) ─────────────────────────────
-     * Solid filled background inactive = visually prominent
-     * Active = full brand color = clear selection state
-     * Larger, heavier — the main navigation level
-     */
-  /* ── Type pill — PRIMARY FOCAL POINT ─────────────────────────
-     * Visually dominant: larger, heavier, solid bg even inactive.
-     * Eye naturally lands here first.
-     */
   .filter-pill {
     flex-shrink: 0;
     display: inline-flex; align-items: center; justify-content: center;
@@ -649,7 +642,6 @@
     border-radius: var(--rp);
     font-size: .91rem; font-weight: 700; line-height: 1;
     font-family: inherit;
-    /* Segment-control style: text-only inactive, solid active */
     background: transparent;
     border: none;
     color: var(--tmd);
@@ -663,7 +655,6 @@
 
     &:active { opacity: .6; }
 
-    /* Active: full brand fill + shadow = unmissable selection */
     &.active {
       background: var(--g5);
       color: #fff;
@@ -672,11 +663,6 @@
     }
   }
 
-  /* ── Category pill — SECONDARY, SUBORDINATE ────────────────
-     * Ghost outline only: clearly lower hierarchy than type pills.
-     * Smaller + lighter so eye moves to type row first.
-     * Active: just a colour hint — doesn't compete with type active.
-     */
   .filter-pill--cat {
     padding-block: 0.74em;
     padding-inline: 0.94em;
@@ -718,36 +704,24 @@
 
   .search-overlay-scrollable-content {
     overscroll-behavior: contain;
-    /*
-     * will-change: scroll-position removed — permanent declaration wastes
-     * GPU memory when overlay is closed. Set dynamically via JS when open.
-     * transform:translateZ(0) promotes to own layer only when overlay is active.
-     */
     contain: strict;
     background: var(--surf);
   }
 
 }
 
-/* ══════════════════════════════════════════════════════════════
-   @layer state — hover/active/focus.
-   Isolated in own layer: selector matching for state rules
-   never interferes with base or card rule resolution.
-   @media(hover:hover): mobile pays ZERO cost for hover rules.
-   ══════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════ */
 @layer state {
 
   @media (hover: hover) {
     .search-input-icon[role="button"]:hover { background: rgba(0,0,0,.07); }
     #search-clear-btn:hover                 { background: rgba(0,0,0,.17); }
     .suggestion-item:hover                  { background: rgba(0,0,0,.03); }
-    .sc:hover                               { background: rgba(0,0,0,.03); }
-    .scr:hover { background: rgba(13,186,146,.12); border-color: var(--g5); }
+    .sc:hover                               { background: rgba(13,186,146,.06); }
 
-    /* All filter interactives: opacity only on hover — zero style recalc */
-    .filter-pill:not(.active):hover { opacity: .7; }
-    .filter-pill--cat:not(.active):hover { opacity: .7; }
-    .filter-cat-toggle:not(.active):hover { opacity: .7; }
+    .filter-pill:not(.active):hover         { opacity: .7; }
+    .filter-pill--cat:not(.active):hover    { opacity: .7; }
+    .filter-cat-toggle:not(.active):hover   { opacity: .7; }
   }
 
 }
@@ -755,12 +729,6 @@
 /* ══════════════════════════════════════════════════════════════ */
 @layer responsive {
 
-  /* ≤ 1024px */
-  @media (max-width: 1024px) {
-    .scr { position: static; margin-top: 8px; align-self: flex-start; }
-  }
-
-  /* ≤ 768px */
   @media (max-width: 768px) {
     .search-header { padding: 10px 0 0; }
 
@@ -795,10 +763,10 @@
     .scc { flex: 0 0 54px; height: 54px; font-size: 22px; }
     .sct { font-size: .94rem; font-weight: 600; }
     .scs { font-size: .89rem; }
-    .scr { position: static; margin-top: 8px; align-self: flex-start; }
+
+    .copy-hint { font-size: .84rem; padding: 3px 14px 5px; }
   }
 
-  /* ≤ 480px */
   @media (max-width: 480px) {
     .search-header { padding: 8px 0 0; }
 
@@ -820,9 +788,10 @@
 
     .sc  { padding: 12px 13px; gap: 10px; }
     .scc { flex: 0 0 50px; height: 50px; font-size: 20px; }
+
+    .copy-hint { font-size: .80rem; }
   }
 
-  /* Reduced motion */
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
       animation-duration: .01ms !important;
@@ -837,13 +806,14 @@
 
   @media print {
     .search-header, .search-filters-panel,
-    .scr, #copyToast, .search-footer { display: none !important; }
+    .copy-hint, #copyToast, .search-footer { display: none !important; }
 
     .sc {
       page-break-inside: avoid;
       contain: none;
       box-shadow: none;
       border: 1px solid #ccc;
+      cursor: default;
     }
   }
 
@@ -852,20 +822,15 @@
 /* ══════════════════════════════════════════════════════════════ */
 @layer fallbacks {
 
-  /* Older browsers without content-visibility */
-  /* content-visibility not used on .sc — VS handles visibility */
-
-  /* Older browsers without CSS containment */
   @supports not (contain: strict) {
     .search-overlay-scrollable-content { contain: none; }
     .vs-container { contain: none; }
   }
 
-  /* Older browsers without @property — CSS variables work as fallback */
   @supports not (syntax: '<color>') {
     html { scroll-behavior: auto; }
 
-  :root {
+    :root {
       --g5  : #0dba92;
       --g6  : #0a9273;
       --g05 : #f0f7f5;
