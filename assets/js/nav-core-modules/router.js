@@ -1,31 +1,16 @@
 // @ts-check
 /**
  * @file router.js
- * RouterService    — SPA routing: navigateTo, validateUrl, parseUrl, changeURL.
- * NavigationService — backward-compatibility proxy to RouterService.
- *
- * Consolidated from router.js + managers.js:navigationManager.
- *
- * Key behaviors (preserved from v3):
- *  ① LoadingService.show() fires BEFORE the isNavigating guard
- *     → user always sees loading instantly, even on rapid nav
- *  ② isNavigating guard prevents double-render but never blocks show()
- *  ③ popstate has exactly ONE handler (registered in init())
- *  ④ replaceState used for initial navigation; pushState for all others
- *
- * @module router
- * @depends {config.js, state.js, utils.js, loading.js, content.js, buttons.js}
+ * RouterService + NavigationService
+ * (patched: navigateTo guard hides loading, safety timeout, auto-recovery)
  */
 (function (M) {
   'use strict';
 
   const { CONFIG, State, Utils } = M;
 
-  // ── RouterService ──────────────────────────────────────────────────────────────
-
   const RouterService = {
 
-    // ── Internal routing state (also exposed for backward compat) ────────────────
     state: {
       isNavigating:       false,
       currentMainRoute:   '',
@@ -35,14 +20,10 @@
     },
 
     _initialNavigation: true,
+    _safetyTimer: null,
 
     // ── URL normalization ────────────────────────────────────────────────────────
 
-    /**
-     * Normalize any route input into a canonical ?type=...&page=... URL.
-     * @param {string|{type:string,page:string}|null} input
-     * @returns {string}
-     */
     normalizeUrl(input) {
       if (!input) return '';
       const btnCfg = State.buttons.config || {};
@@ -70,11 +51,6 @@
       return `?type=${main}`;
     },
 
-    /**
-     * Parse a URL query string into { main, sub }.
-     * @param {string} [q]
-     * @returns {ParsedUrl}
-     */
     parseUrl(q = window.location.search) {
       if (!q?.startsWith('?')) {
         if (q?.includes('-')) { const [m, s] = q.split('-'); return { main: m || '', sub: s || '' }; }
@@ -84,11 +60,6 @@
       return { main: (p.get('type') || '').replace(/__$/, ''), sub: p.get('page') || '' };
     },
 
-    /**
-     * Validate that a route maps to a known button + (optional) sub-button.
-     * @param {string} url
-     * @returns {Promise<boolean>}
-     */
     async validateUrl(url) {
       try {
         const cfg = State.buttons.config;
@@ -101,10 +72,6 @@
       } catch (_) { return false; }
     },
 
-    /**
-     * Resolve the default route from buttons.json.
-     * @returns {Promise<string>}
-     */
     async getDefaultRoute() {
       const cfg = State.buttons.config;
       if (!cfg) return '';
@@ -116,15 +83,8 @@
       return this.normalizeUrl({ type: main, page: defSub?.url || defSub?.jsonFile });
     },
 
-    // ── History management ────────────────────────────────────────────────────────
+    // ── changeURL ────────────────────────────────────────────────────────────────
 
-    /**
-     * Update browser history for the current navigation.
-     * Uses replaceState for the initial navigation; pushState afterwards.
-     * @param {string|{type:string,page:string}} url
-     * @param {boolean} [forcePush=false]
-     * @param {{replace?:boolean}} [opts]
-     */
     async changeURL(url, forcePush = false, opts = {}) {
       try {
         const normalized = this.normalizeUrl(url);
@@ -133,11 +93,7 @@
         if ((window.location.search || '') === normalized) {
           this.state.previousUrl = normalized;
           window.dispatchEvent(new CustomEvent('urlChanged', {
-            detail: {
-              url: normalized,
-              mainRoute: this.state.currentMainRoute,
-              subRoute:  this.state.currentSubRoute,
-            },
+            detail: { url: normalized, mainRoute: this.state.currentMainRoute, subRoute: this.state.currentSubRoute },
           }));
           this._initialNavigation = false;
           return;
@@ -157,22 +113,13 @@
         this.state.previousUrl  = normalized;
 
         window.dispatchEvent(new CustomEvent('urlChanged', {
-          detail: {
-            url: normalized,
-            mainRoute: this.state.currentMainRoute,
-            subRoute:  this.state.currentSubRoute,
-          },
+          detail: { url: normalized, mainRoute: this.state.currentMainRoute, subRoute: this.state.currentSubRoute },
         }));
       } catch (err) { console.error('[NavCore/Router] changeURL error:', err); }
     },
 
     // ── Active button state ───────────────────────────────────────────────────────
 
-    /**
-     * Sync .active classes to match main + sub route.
-     * @param {string} main
-     * @param {string} [sub]
-     */
     setActiveButtons(main, sub) {
       try {
         const navList = State.elements?.navList;
@@ -211,28 +158,41 @@
       } catch (_) {}
     },
 
-    // ── navigateTo — main routing entry point ─────────────────────────────────────
+    // ── navigateTo ───────────────────────────────────────────────────────────────
+    // BUG FIX 1: guard "if (isNavigating) return" ทำให้ loading overlay ที่ show ไปแล้วไม่ถูก hide
+    //            → เปลี่ยนเป็น queue ด้วย waitUntil + safety timeout
+    // BUG FIX 2: เพิ่ม safety timeout 20s force-reset ป้องกัน isNavigating ค้าง
 
-    /**
-     * Navigate to a route, rendering the appropriate content.
-     *
-     * ① show() fires BEFORE isNavigating guard — user always sees spinner instantly.
-     * ② isNavigating guard prevents double-render but never blocks show().
-     *
-     * @param {string|{type:string,page:string}} route
-     * @param {NavOptions} [options]
-     */
     async navigateTo(route, options = {}) {
-      // ① Always show loading immediately — before any guard
+      // แสดง loading ทันที — ก่อน guard ทุกอย่าง
       try { M.LoadingService?.show(); } catch (_) {}
 
-      // ② Guard: prevent double-render
-      if (this.state.isNavigating) return;
-      this.state.isNavigating        = true;
-      this.state.lastScrollPosition  = window.pageYOffset || 0;
+      // ── Guard: isNavigating อยู่ → รอให้จบก่อน (ไม่ return ทิ้ง) ──────────────
+      if (this.state.isNavigating) {
+        try {
+          await this._waitUntilFree(10000);
+        } catch (_) {
+          // timeout → force reset แล้วดำเนินการต่อ
+          console.warn('[NavCore/Router] isNavigating timeout — forcing reset');
+          this.state.isNavigating = false;
+        }
+      }
+
+      this.state.isNavigating       = true;
+      this.state.lastScrollPosition = window.pageYOffset || 0;
+
+      // Safety timeout: ถ้า navigation ใช้เวลานาน 20s → force reset
+      if (this._safetyTimer) clearTimeout(this._safetyTimer);
+      this._safetyTimer = setTimeout(() => {
+        if (this.state.isNavigating) {
+          console.warn('[NavCore/Router] Navigation safety timeout (20s) — forcing reset');
+          this.state.isNavigating = false;
+          try { M.LoadingService?.hide(); } catch (_) {}
+          this._safetyTimer = null;
+        }
+      }, 20000);
 
       try {
-        // Resolve + validate route
         let normalized = (typeof route === 'object' || route?.startsWith?.('?'))
           ? this.normalizeUrl(route)
           : route;
@@ -247,7 +207,6 @@
         this.state.currentMainRoute = main;
         this.state.currentSubRoute  = sub || '';
 
-        // Sync URL state to shared State
         State.navigation.currentMainRoute = main;
         State.navigation.currentSubRoute  = sub || '';
 
@@ -261,8 +220,9 @@
           );
         }
 
-        const cfg       = State.buttons.config;
-        if (!cfg)        throw new Error('[NavCore/Router] buttonConfig not found');
+        const cfg = State.buttons.config;
+        if (!cfg) throw new Error('[NavCore/Router] buttonConfig not found');
+
         const mainButton = (cfg.mainButtons || []).find(b => b.url === main || b.jsonFile === main);
         if (!mainButton) throw new Error('[NavCore/Router] mainButton not found for: ' + main);
 
@@ -279,7 +239,6 @@
           try {
             await M.ButtonService.renderSubButtons(mainButton.subButtons, main, lang);
             M.SubNavService?.showSubNav();
-            // Update --clp-top after subnav becomes visible
             try { M.LoadingService?._updateTopVar(); } catch (_) {}
             this.setActiveButtons(main, chosenSub?.url || chosenSub?.jsonFile || sub);
           } catch (e) { console.warn('[NavCore/Router] renderSubButtons failed:', e); }
@@ -290,7 +249,6 @@
 
         try { await M.ContentService.clearContent(); } catch (_) {}
 
-        // Fetch + render content
         const jobs = [];
         if (mainButton.jsonFile)
           jobs.push(M.DataService.fetchWithRetry(mainButton.jsonFile, {}, 2).catch(() => null));
@@ -318,18 +276,27 @@
         try { Utils.showNotification('เกิดข้อผิดพลาดในการนำทาง', 'error'); } catch (_) {}
         try { M.LoadingService?.hide(); } catch (_) {}
       } finally {
+        // ✅ isNavigating ต้อง reset เสมอ ไม่ว่าจะ success หรือ error
         this.state.isNavigating = false;
-        // Loading hide is called by ContentService after first batch renders
+        if (this._safetyTimer) { clearTimeout(this._safetyTimer); this._safetyTimer = null; }
       }
+    },
+
+    // ── _waitUntilFree: รอให้ isNavigating = false ────────────────────────────────
+
+    _waitUntilFree(timeoutMs = 10000) {
+      return new Promise((resolve, reject) => {
+        if (!this.state.isNavigating) { resolve(); return; }
+        const start = Date.now();
+        const id = setInterval(() => {
+          if (!this.state.isNavigating) { clearInterval(id); resolve(); }
+          else if (Date.now() - start >= timeoutMs) { clearInterval(id); reject(new Error('timeout')); }
+        }, 50);
+      });
     },
 
     // ── Initialization ────────────────────────────────────────────────────────────
 
-    /**
-     * Attach the popstate handler.
-     * Called once from InitService.start().
-     * Having exactly one popstate handler here prevents double-navigation.
-     */
     init() {
       window.addEventListener('popstate', async () => {
         try {
@@ -346,7 +313,6 @@
       this._initialNavigation = false;
     },
 
-    /** @param {string} main @param {string} [sub] */
     activateUiOnly(main, sub) {
       try {
         this.state.currentMainRoute = main;
@@ -355,7 +321,6 @@
       } catch (e) { console.error('[NavCore/Router] activateUiOnly error:', e); }
     },
 
-    /** Scroll active buttons into view in both nav lists. */
     scrollActiveButtonsIntoView() {
       ['nav ul', `#${CONFIG.DOM.SUB_BUTTONS_ID}`].forEach(sel => {
         const c = document.querySelector(sel);
@@ -364,10 +329,7 @@
         requestAnimationFrame(() => {
           try {
             const cb = c.getBoundingClientRect(), ab = a.getBoundingClientRect();
-            c.scrollTo({
-              left: Math.max(0, c.scrollLeft + ab.left - cb.left - 20),
-              behavior: 'smooth',
-            });
+            c.scrollTo({ left: Math.max(0, c.scrollLeft + ab.left - cb.left - 20), behavior: 'smooth' });
           } catch (_) {}
         });
       });
@@ -387,24 +349,18 @@
   };
 
   // ── NavigationService — backward-compat proxy ─────────────────────────────────
-  // External code that still references window._headerV2_navigationManager
-  // or M.NavigationService gets the same RouterService methods through this proxy.
 
   const NavigationService = {
     state: RouterService.state,
-
     normalizeUrl(u)   { return RouterService.normalizeUrl(u); },
     parseUrl(u)       { return RouterService.parseUrl(u); },
     validateUrl(u)    { return RouterService.validateUrl(u); },
     getDefaultRoute() { return RouterService.getDefaultRoute(); },
     changeURL(u, f)   { return RouterService.changeURL(u, f); },
     navigateTo(r, o)  { return RouterService.navigateTo(r, o); },
-
-    updateButtonStates(url)         { return RouterService.updateButtonStates(url); },
-    scrollActiveButtonsIntoView()   { return RouterService.scrollActiveButtonsIntoView(); },
+    updateButtonStates(url)       { return RouterService.updateButtonStates(url); },
+    scrollActiveButtonsIntoView() { return RouterService.scrollActiveButtonsIntoView(); },
   };
-
-  // ── Export ────────────────────────────────────────────────────────────────────
 
   M.RouterService     = RouterService;
   M.NavigationService = NavigationService;
