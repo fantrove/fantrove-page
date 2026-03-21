@@ -3,84 +3,121 @@
  * @file translator.js
  * TranslatorService — Translation engine หลักของระบบ
  *
- * หน้าที่:
- *  initPool()                    — สร้าง WorkerPool จาก WORKER_CODE
- *  parallelStreamingTranslate()  — แปลหน้าทั้งหมดแบบ parallel (ใช้ WorkerPool)
- *  _replaceDOMWithMarkerReplace() — อัพเดท DOM nodes ด้วย translation parts
- *  _createMarkerNode()           — สร้าง DOM node จาก marker
- *  storeOriginalContent()        — บันทึก original content ก่อนแปล
- *  resetToEnglishContent()       — คืนค่า original content (English)
- *  observeMutations()            — ดู dynamic content ที่เพิ่มเข้ามาหลัง init
+ * การปรับปรุง v4.0:
+ *  - _replaceDOMWithMarkerReplace (เดิม 200+ บรรทัด) แตกออกเป็น 4 functions:
+ *
+ *     ┌─────────────────────────────────────────────┐
+ *     │  _replaceDOMWithMarkerReplace(el, parts)    │  ← entry point
+ *     │   │                                         │
+ *     │   ├─ _normalizeParts(parts)                 │  merge text+html buffers
+ *     │   ├─ _buildRefs(el)                         │  สร้าง resolver closures
+ *     │   ├─ _partsToPreNodes(normalized)           │  part → pre-node (simple types)
+ *     │   └─ _reconcile(el, preNodes, refs)         │  DOM diff + update
+ *     └─────────────────────────────────────────────┘
+ *
+ *  - _createSimpleNode ใช้ MarkerRegistry (br, strong, a fallback)
+ *    ทำให้เพิ่ม marker ใหม่ไม่ต้องแก้ translator.js
+ *
+ *  - WORKER_CODE: เพิ่ม module-level regex constants
+ *    (สร้างครั้งเดียวต่อ worker instance)
+ *
+ * โครงสร้าง pre-node array (input ให้ _reconcile):
+ *   DOM Node          — text node, br, strong, html-parsed nodes
+ *   { __marker, ... } — SVG / lSVG / slot / anchor markers
+ *                       (resolve ขณะ reconcile เพื่อรักษา insertion order)
  *
  * @module translator
- * @depends {config.js, state.js, worker-pool.js}
+ * @depends {config.js, state.js, worker-pool.js, markers.js}
  */
 (function (M) {
   'use strict';
 
   // ── Worker source code ────────────────────────────────────────────────────
-  // Worker code นี้รันใน Web Worker context (ไม่มีเข้าถึง DOM)
-  // ทำหน้าที่ parse translation string ที่มี markers พิเศษ
+  /**
+   * รันใน Web Worker context (ไม่มีเข้าถึง DOM)
+   * หน้าที่: parse translation string ที่มี markers → คืน parts array
+   *
+   * Optimization v4.0:
+   *   HTML_TAG_RE  — สร้างครั้งเดียวต่อ worker instance
+   *   MARKER_RE_SRC — template string (new RegExp ต่อ call เพราะต้องการ g flag + reset lastIndex)
+   *
+   * Built-in markers:
+   *   @lsvg[:id]@  — local SVG reference
+   *   @svg[:id]@   — external SVG reference
+   *   @slot:name@  — slot content placeholder
+   *   @a...@       — anchor element
+   *   @br          — line break
+   *   @strong...@  — bold text
+   */
   const WORKER_CODE = `
+    // สร้าง regex constants ครั้งเดียวต่อ worker instance
+    const HTML_TAG_RE   = /(<\\/?[^>]+>)/;
+    const MARKER_RE_SRC =
+      '(@lsvg(?::([^@]+))?@)' +
+      '|(@svg(?::([^@]+))?@)' +
+      '|(@slot:([^@]+)@)'     +
+      '|(@a(.*?)@)'           +
+      '|(@br)'                +
+      '|(@strong(.*?)@)';
+
     function splitMarkersAndHtml(str) {
-      const htmlSplit = str.split(/(<\\/?[^>]+>)/g);
-      const parts = [];
-      const markerRegex = /(@lsvg(?::([^@]+))?@)|(@svg(?::([^@]+))?@)|(@slot:([^@]+)@)|(@a(.*?)@)|(@br)|(@strong(.*?)@)/g;
-      for (let segment of htmlSplit) {
+      const htmlParts   = str.split(HTML_TAG_RE);
+      const parts       = [];
+      const markerRegex = new RegExp(MARKER_RE_SRC, 'g');
+
+      for (const segment of htmlParts) {
         if (!segment) continue;
+
+        // HTML tag segment (จาก split capture group)
         if (/^<\\/?[^>]+>$/.test(segment)) {
           parts.push({ type: 'html', html: segment });
-        } else {
-          let lastIndex = 0;
-          let m;
-          while ((m = markerRegex.exec(segment)) !== null) {
-            if (m.index > lastIndex) {
-              parts.push({ type: 'text', text: segment.slice(lastIndex, m.index) });
-            }
-            if (m[1]) {
-              parts.push({ type: 'lsvg', id: m[2] || null });
-            } else if (m[3]) {
-              parts.push({ type: 'svg', id: m[4] || null });
-            } else if (m[5]) {
-              parts.push({ type: 'slot', name: m[6] || null });
-            } else if (m[7]) {
-              const inner = m[8] || '';
-              parts.push({ type: 'a', translate: inner !== '', text: inner });
-            } else if (m[9]) {
-              parts.push({ type: 'br' });
-            } else if (m[10]) {
-              parts.push({ type: 'strong', text: m[11] || '' });
-            }
-            lastIndex = markerRegex.lastIndex;
-          }
-          if (lastIndex < segment.length) {
-            parts.push({ type: 'text', text: segment.slice(lastIndex) });
-          }
+          continue;
         }
+
+        // Text segment — scan สำหรับ markers
+        let lastIndex = 0;
+        let m;
+        markerRegex.lastIndex = 0; // reset สำหรับ segment ใหม่
+
+        while ((m = markerRegex.exec(segment)) !== null) {
+          if (m.index > lastIndex)
+            parts.push({ type: 'text', text: segment.slice(lastIndex, m.index) });
+
+          if      (m[1])  parts.push({ type: 'lsvg',   id:        m[2] || null });
+          else if (m[3])  parts.push({ type: 'svg',    id:        m[4] || null });
+          else if (m[5])  parts.push({ type: 'slot',   name:      m[6] || null });
+          else if (m[7])  parts.push({ type: 'a',      translate: (m[8] || '') !== '', text: m[8] || '' });
+          else if (m[9])  parts.push({ type: 'br'  });
+          else if (m[10]) parts.push({ type: 'strong', text:      m[11] || '' });
+
+          lastIndex = markerRegex.lastIndex;
+        }
+
+        if (lastIndex < segment.length)
+          parts.push({ type: 'text', text: segment.slice(lastIndex) });
       }
       return parts;
     }
+
     self.onmessage = function(e) {
       const { nodes, langData, batchIdx } = e.data;
-      const result = [];
-      for (let i = 0; i < nodes.length; i++) {
-        const { key } = nodes[i];
-        const translation = langData[key] || '';
-        const parts = splitMarkersAndHtml(translation);
-        result.push({ idx: i, parts });
-      }
+      const result = nodes.map(({ key }, idx) => ({
+        idx,
+        parts: splitMarkersAndHtml(langData[key] || ''),
+      }));
       self.postMessage({ batchIdx, result });
     };
   `;
 
   // ── TranslatorService ─────────────────────────────────────────────────────
+
   const TranslatorService = {
 
     // ── Pool initialization ───────────────────────────────────────────────────
 
     /**
      * สร้าง WorkerPool และเก็บไว้ใน State.workerPool
-     * เรียกครั้งเดียวตอน boot
+     * Workers จะถูกสร้างจริงตอนใช้งานครั้งแรก (lazy via WorkerPool)
      */
     initPool() {
       const { WorkerPool, State } = M;
@@ -93,8 +130,8 @@
      * แปลหน้าทั้งหมดแบบ parallel โดยใช้ WorkerPool
      * แบ่ง elements เป็น batch ตามจำนวน worker
      *
-     * @param {Object} languageData   — flat key-value translation map
-     * @param {Element[]} [elements]  — ถ้าไม่ส่ง จะ query [data-translate] ทั้งหมด
+     * @param {Object}    languageData  — flat key-value translation map
+     * @param {Element[]} [elements]    — ถ้าไม่ส่ง จะ query [data-translate] ทั้งหมด
      */
     async parallelStreamingTranslate(languageData, elements) {
       const { State } = M;
@@ -116,379 +153,52 @@
       );
       const results = await Promise.all(jobs);
 
-      for (let j = 0; j < results.length; ++j) {
+      for (let j = 0; j < results.length; j++) {
         const batch  = batches[j];
         const resArr = results[j].result;
-        for (let k = 0; k < resArr.length; ++k) {
+        for (let k = 0; k < resArr.length; k++) {
           const el = batch[resArr[k].idx];
-          if (!el) continue;
-          this._replaceDOMWithMarkerReplace(el, resArr[k].parts);
+          if (el) this._replaceDOMWithMarkerReplace(el, resArr[k].parts);
         }
       }
     },
 
-    // ── DOM replacement ───────────────────────────────────────────────────────
+    // ── DOM replacement (main entry point) ───────────────────────────────────
 
     /**
-     * อัพเดท DOM nodes ใน element ด้วย translation parts จาก worker
-     * รักษา SVG, slot, anchor nodes เดิมไว้ ไม่ recreate
+     * อัพเดท DOM ของ element ด้วย translation parts จาก worker
+     * Delegates ไปยัง 4 helper functions ด้านล่าง
      *
      * @param {Element}  el    — element ที่มี data-translate
-     * @param {Object[]} parts — parts array จาก worker (text/html/svg/slot/a/br/strong)
+     * @param {Object[]} parts — parts array จาก worker
      */
     _replaceDOMWithMarkerReplace(el, parts) {
-      // ── Normalize: merge consecutive text/html into single parts ─────────────
-      const normalized  = [];
-      let   buffer      = '';
-      let   bufferHasHtml = false;
+      // 1. Merge consecutive text/html parts
+      const normalized = _normalizeParts(parts);
 
-      const pushBuffer = () => {
-        if (!buffer) return;
-        if (bufferHasHtml) normalized.push({ type: 'html', html: buffer });
-        else               normalized.push({ type: 'text', text: buffer });
-        buffer       = '';
-        bufferHasHtml = false;
-      };
+      // 2. Build resolver closures สำหรับ SVG/slot/anchor
+      const refs = _buildRefs(el);
 
-      for (let i = 0; i < parts.length; i++) {
-        const p = parts[i];
-        if (p.type === 'text' || p.type === 'html') {
-          if (!buffer) {
-            buffer       = (p.type === 'text') ? (p.text || '') : (p.html || '');
-            bufferHasHtml = (p.type === 'html') || /<[^>]+>/.test(buffer);
-          } else {
-            buffer       += (p.type === 'text') ? (p.text || '') : (p.html || '');
-            if (p.type === 'html' || /<[^>]+>/.test(p.text || '')) bufferHasHtml = true;
-          }
-        } else {
-          pushBuffer();
-          normalized.push(p);
-        }
-      }
-      pushBuffer();
+      // 3. Convert parts → pre-nodes
+      //    (simple types → DOM nodes, complex types → marker objects)
+      const preNodes = _partsToPreNodes(normalized);
 
-      // ── Build new node list ──────────────────────────────────────────────────
-      const newNodes = [];
-      const domParser = new DOMParser();
-      let   containsExplicitSvgOrLsvg = false;
-
-      normalized.forEach(p => {
-        if (p.type === 'text') {
-          newNodes.push(document.createTextNode(p.text));
-        } else if (p.type === 'html') {
-          const htmlStr = (p.html || '').trim();
-          if (!htmlStr) return;
-          if (/\<svg[\s>]/i.test(htmlStr)) {
-            try {
-              const svgDoc  = domParser.parseFromString(htmlStr, 'image/svg+xml');
-              const svgRoot = svgDoc.documentElement &&
-                              svgDoc.documentElement.nodeName !== 'parsererror'
-                              ? svgDoc.documentElement : null;
-              if (svgRoot) {
-                newNodes.push(document.importNode(svgRoot, true));
-                containsExplicitSvgOrLsvg = true;
-                return;
-              }
-            } catch (e) {}
-          }
-          const tpl = document.createElement('template');
-          tpl.innerHTML = htmlStr;
-          Array.from(tpl.content.cloneNode(true).childNodes).forEach(n => newNodes.push(n));
-        } else if (p.type === 'svg') {
-          newNodes.push({ __svgMarker: true, id: p.id || null });
-          containsExplicitSvgOrLsvg = true;
-        } else if (p.type === 'lsvg') {
-          newNodes.push({ __svgMarker: true, lsvg: true, id: p.id || null });
-          containsExplicitSvgOrLsvg = true;
-        } else if (p.type === 'slot') {
-          newNodes.push({ __slotMarker: true, name: p.name || null });
-        } else {
-          newNodes.push(this._createMarkerNode(p));
-        }
-      });
-
-      // ── Predict SVG ─────────────────────────────────────────────────────────
-      const existingSvgsAll = Array.from(el.querySelectorAll ? el.querySelectorAll('svg') : []).slice();
-      if (!containsExplicitSvgOrLsvg && existingSvgsAll.length > 0) {
-        newNodes.unshift({ __svgMarker: true, lsvg: true, id: null, __predicted: true });
+      // 4. Predicted SVG heuristic:
+      //    ถ้าไม่มี explicit SVG marker ในการแปล แต่ element มี SVG อยู่
+      //    → prepend marker เพื่อรักษา SVG ไว้ที่หน้า
+      const hasExplicitSvg = preNodes.some(n => n?.__marker === 'svg' || n?.__marker === 'lsvg');
+      if (!hasExplicitSvg && refs.svgs.length > 0) {
+        preNodes.unshift({ __marker: 'lsvg', id: null, __predicted: true });
       }
 
-      // ── Prepare existing node references ────────────────────────────────────
-      const existing         = Array.from(el.childNodes);
-      const existingSvgs     = existingSvgsAll.slice();
-      const existingSlotsAll = Array.from(el.querySelectorAll ?
-        el.querySelectorAll('[data-translate-slot],[data-slot]') : []).slice();
-      const existingAnchorsAll = Array.from(el.querySelectorAll ?
-        el.querySelectorAll('a') : []).slice();
-      const usedSvgs    = new Set();
-      const usedSlots   = new Set();
-      const usedAnchors = new Set();
-
-      // ── Resolvers ─────────────────────────────────────────────────────────────
-      const resolveSvg = (id) => {
-        if (id) {
-          for (const s of existingSvgs) {
-            if (usedSvgs.has(s)) continue;
-            if ((s.getAttribute && s.getAttribute('id') === id) ||
-                (s.getAttribute && s.getAttribute('data-svg-id') === id) ||
-                (s.dataset && s.dataset.svgId === id)) {
-              usedSvgs.add(s); return s;
-            }
-          }
-        }
-        const avail = existingSvgs.filter(s => !usedSvgs.has(s));
-        if (avail.length) { usedSvgs.add(avail[0]); return avail[0]; }
-        return null;
-      };
-
-      const resolveSlot = (name) => {
-        if (name) {
-          for (const s of existingSlotsAll) {
-            if (usedSlots.has(s)) continue;
-            if ((s.getAttribute && s.getAttribute('data-translate-slot') === name) ||
-                (s.getAttribute && s.getAttribute('data-slot') === name) ||
-                (s.dataset && (s.dataset.translateSlot === name || s.dataset.slot === name))) {
-              usedSlots.add(s); return s;
-            }
-          }
-        }
-        const avail = existingSlotsAll.filter(s => !usedSlots.has(s));
-        if (!name && avail.length === 1) { usedSlots.add(avail[0]); return avail[0]; }
-        return null;
-      };
-
-      const resolveAnchor = (newNode) => {
-        const id = (newNode && newNode.getAttribute && newNode.getAttribute('id')) ||
-                   (newNode && newNode.dataset && newNode.dataset.id) || null;
-        if (id) {
-          for (const a of existingAnchorsAll) {
-            if (usedAnchors.has(a)) continue;
-            if ((a.getAttribute && a.getAttribute('id') === id) ||
-                (a.getAttribute && a.getAttribute('data-anchor-id') === id) ||
-                (a.dataset && (a.dataset.anchorId === id || a.dataset.id === id))) {
-              usedAnchors.add(a); return a;
-            }
-          }
-        }
-        const avail = existingAnchorsAll.filter(a => !usedAnchors.has(a));
-        if (avail.length) { usedAnchors.add(avail[0]); return avail[0]; }
-        return null;
-      };
-
-      // ── Main reconciliation loop ───────────────────────────────────────────
-      let readIndex = 0;
-
-      for (let i = 0; i < newNodes.length; i++) {
-        const newNode   = newNodes[i];
-        let   currentOld = existing[readIndex];
-
-        // Slot marker
-        if (newNode && newNode.__slotMarker) {
-          const slotEl = resolveSlot(newNode.name);
-          if (slotEl) {
-            if (currentOld !== slotEl) {
-              try { el.insertBefore(slotEl, currentOld || null); } catch (e) {}
-              existing.splice(existing.indexOf(slotEl), 1);
-              existing.splice(readIndex, 0, slotEl);
-              currentOld = existing[readIndex];
-            }
-            readIndex++;
-          } else {
-            const span = document.createElement('span');
-            if (newNode.name) span.setAttribute('data-translate-slot', newNode.name);
-            else              span.setAttribute('data-translate-slot', 'slot');
-            if (currentOld) el.insertBefore(span, currentOld);
-            else            el.appendChild(span);
-            existing.splice(readIndex, 0, span);
-            readIndex++;
-          }
-          continue;
-        }
-
-        // SVG marker
-        if (newNode && newNode.__svgMarker) {
-          const svgRef = resolveSvg(newNode.id);
-          if (svgRef) {
-            if (newNode.__predicted) {
-              try {
-                if (el.firstChild !== svgRef) el.insertBefore(svgRef, el.firstChild);
-                const idxOld = existing.indexOf(svgRef);
-                if (idxOld !== -1) { existing.splice(idxOld, 1); existing.splice(0, 0, svgRef); }
-                if (readIndex === 0) readIndex = 1;
-              } catch (e) {}
-              continue;
-            }
-            if (currentOld !== svgRef) {
-              try { el.insertBefore(svgRef, currentOld || null); } catch (e) {}
-              const prev = existing.indexOf(svgRef);
-              if (prev !== -1) existing.splice(prev, 1);
-              existing.splice(readIndex, 0, svgRef);
-              currentOld = existing[readIndex];
-            }
-            readIndex++;
-          } else {
-            const ns         = 'http://www.w3.org/2000/svg';
-            const createdSvg = document.createElementNS(ns, 'svg');
-            if (newNode.id) {
-              createdSvg.setAttribute('id', newNode.id);
-              createdSvg.setAttribute('data-svg-id', newNode.id);
-            }
-            if (newNode.__predicted) {
-              if (el.firstChild) el.insertBefore(createdSvg, el.firstChild);
-              else               el.appendChild(createdSvg);
-              existing.splice(0, 0, createdSvg);
-              if (readIndex === 0) readIndex = 1;
-            } else {
-              if (currentOld) el.insertBefore(createdSvg, currentOld);
-              else            el.appendChild(createdSvg);
-              existing.splice(readIndex, 0, createdSvg);
-              readIndex++;
-            }
-          }
-          continue;
-        }
-
-        // Anchor node
-        if (newNode && newNode.nodeType === 1 && newNode.tagName &&
-            newNode.tagName.toLowerCase() === 'a') {
-          const anchorRef = resolveAnchor(newNode);
-          if (anchorRef) {
-            if (currentOld !== anchorRef) {
-              try { el.insertBefore(anchorRef, currentOld || null); } catch (e) {}
-              const prev = existing.indexOf(anchorRef);
-              if (prev !== -1) existing.splice(prev, 1);
-              existing.splice(readIndex, 0, anchorRef);
-              currentOld = existing[readIndex];
-            }
-            try {
-              if (newNode.textContent != null && newNode.textContent !== '') {
-                if (anchorRef.textContent !== newNode.textContent)
-                  anchorRef.textContent = newNode.textContent;
-              }
-              Array.from(newNode.attributes || []).forEach(a => {
-                try { anchorRef.setAttribute(a.name, a.value); } catch (e) {}
-              });
-            } catch (e) {}
-            readIndex++;
-          } else {
-            if (currentOld) el.insertBefore(document.importNode(newNode, true), currentOld);
-            else            el.appendChild(document.importNode(newNode, true));
-            existing.splice(readIndex, 0, el.childNodes[readIndex]);
-            readIndex++;
-          }
-          continue;
-        }
-
-        // Regular node replacement
-        if (currentOld) {
-          // Text ↔ Text
-          if (currentOld.nodeType === Node.TEXT_NODE && newNode.nodeType === Node.TEXT_NODE) {
-            if (currentOld.textContent !== newNode.textContent)
-              currentOld.textContent = newNode.textContent;
-            readIndex++;
-            continue;
-          }
-
-          // Element ↔ Element (same tag: patch in-place)
-          if (currentOld.nodeType === 1 && newNode.nodeType === 1) {
-            try {
-              if (currentOld.tagName === newNode.tagName) {
-                while (currentOld.firstChild) currentOld.removeChild(currentOld.firstChild);
-                Array.from(newNode.childNodes).forEach(c =>
-                  currentOld.appendChild(document.importNode(c, true))
-                );
-                const newAttrs = Array.from(newNode.attributes || []);
-                const oldAttrs = Array.from(currentOld.attributes || []);
-                newAttrs.forEach(a => { try { currentOld.setAttribute(a.name, a.value); } catch (e) {} });
-                oldAttrs.forEach(a => {
-                  if (!newNode.hasAttribute(a.name))
-                    try { currentOld.removeAttribute(a.name); } catch (e) {}
-                });
-                readIndex++;
-                continue;
-              }
-            } catch (e) {}
-          }
-
-          // Skip over existing SVG / slot nodes (don't remove them)
-          if (currentOld.nodeType === 1 && currentOld.tagName &&
-              currentOld.tagName.toLowerCase() === 'svg') {
-            readIndex++; i--; continue;
-          }
-          if (currentOld.nodeType === 1 && currentOld.hasAttribute &&
-              (currentOld.hasAttribute('data-translate-slot') ||
-               currentOld.hasAttribute('data-slot'))) {
-            readIndex++; i--; continue;
-          }
-
-          // Replace
-          try {
-            el.replaceChild(document.importNode(newNode, true), currentOld);
-            existing[readIndex] = el.childNodes[readIndex];
-            readIndex++;
-          } catch (e) {
-            try {
-              el.insertBefore(document.importNode(newNode, true), currentOld);
-              el.removeChild(currentOld);
-              existing[readIndex] = el.childNodes[readIndex];
-              readIndex++;
-            } catch (e2) { readIndex++; }
-          }
-        } else {
-          // Append at end
-          try {
-            el.appendChild(document.importNode(newNode, true));
-            existing.push(el.lastChild);
-          } catch (e) {
-            try { el.appendChild(newNode.cloneNode(true)); existing.push(el.lastChild); } catch (e2) {}
-          }
-          readIndex++;
-        }
-      }
-
-      // ── Remove trailing nodes (ยกเว้น SVG และ slot) ─────────────────────────
-      for (let j = el.childNodes.length - 1; j >= readIndex; j--) {
-        const node = el.childNodes[j];
-        if (!node) continue;
-        if (node.nodeType === 1 && node.tagName && node.tagName.toLowerCase() === 'svg') continue;
-        if (node.nodeType === 1 && node.hasAttribute &&
-            (node.hasAttribute('data-translate-slot') || node.hasAttribute('data-slot'))) continue;
-        try { el.removeChild(node); } catch (e) {}
-      }
-    },
-
-    // ── Helper ────────────────────────────────────────────────────────────────
-
-    /**
-     * สร้าง DOM node จาก marker object
-     * @param {Object} marker
-     * @returns {Node}
-     */
-    _createMarkerNode(marker) {
-      if (marker.type === 'text') return document.createTextNode(marker.text);
-      if (marker.type === 'a') {
-        const a = document.createElement('a');
-        if (marker.translate) a.textContent = marker.text;
-        return a;
-      }
-      if (marker.type === 'br')     return document.createElement('br');
-      if (marker.type === 'strong') {
-        const s = document.createElement('strong');
-        s.textContent = marker.text;
-        return s;
-      }
-      if (marker.type === 'html') {
-        const tpl = document.createElement('template');
-        tpl.innerHTML = marker.html || '';
-        return tpl.content.cloneNode(true);
-      }
-      return document.createTextNode('');
+      // 5. Reconcile: อัพเดท DOM ให้ตรงกับ preNodes
+      _reconcile(el, preNodes, refs);
     },
 
     // ── Content management ────────────────────────────────────────────────────
 
     /**
-     * บันทึก original content (ก่อนแปล) สำหรับ reset กลับเป็น English
+     * บันทึก original content ก่อนแปล สำหรับ reset กลับเป็น English
      * เรียกครั้งเดียวตอน init
      */
     storeOriginalContent() {
@@ -506,9 +216,9 @@
     async resetToEnglishContent() {
       document.querySelectorAll('[data-translate]').forEach(el => {
         const orig = el.getAttribute('data-original-text');
-        if (orig) el.textContent = orig;
+        if (orig !== null) el.textContent = orig;
         const origStyle = el.getAttribute('data-original-style');
-        if (origStyle) el.style.cssText = origStyle;
+        if (origStyle !== null) el.style.cssText = origStyle;
       });
     },
 
@@ -528,21 +238,19 @@
 
         State.mutationThrottleTimeout = setTimeout(() => {
           const added = [];
-
-          mutations.forEach(mutation => {
+          mutations.forEach(mutation =>
             mutation.addedNodes.forEach(node => {
-              if (node.nodeType === Node.ELEMENT_NODE) {
-                const translatable = node.querySelectorAll('[data-translate]');
-                if (translatable.length) {
-                  added.push(...translatable);
-                  translatable.forEach(el => {
-                    if (!el.hasAttribute('data-original-text'))
-                      el.setAttribute('data-original-text', el.textContent.trim());
-                  });
-                }
-              }
-            });
-          });
+              if (node.nodeType !== Node.ELEMENT_NODE) return;
+              const translatable = node.querySelectorAll('[data-translate]');
+              if (!translatable.length) return;
+
+              translatable.forEach(el => {
+                if (!el.hasAttribute('data-original-text'))
+                  el.setAttribute('data-original-text', el.textContent.trim());
+              });
+              added.push(...translatable);
+            })
+          );
 
           if (added.length && State.selectedLang !== 'en') {
             this.parallelStreamingTranslate(State.languageCache[State.selectedLang], added);
@@ -554,6 +262,433 @@
       State.mutationObserver.observe(document.body, { childList: true, subtree: true });
     },
   };
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Private helper functions (module-level, not methods)
+  // แต่ละ function มีหน้าที่เดียว — ทดสอบแยกได้
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Merge consecutive text/html parts เข้าด้วยกัน
+   * ลด node count และ simplify reconcile
+   *
+   * ตัวอย่าง:
+   *   [text:"Hello ", html:"<em>", text:"world"] → [html:"Hello <em>world"]
+   *
+   * @param {Object[]} parts
+   * @returns {Object[]}
+   */
+  function _normalizeParts(parts) {
+    const out = [];
+    let buf       = '';
+    let bufHasHtml = false;
+
+    const flush = () => {
+      if (!buf) return;
+      out.push(bufHasHtml ? { type: 'html', html: buf } : { type: 'text', text: buf });
+      buf = '';
+      bufHasHtml = false;
+    };
+
+    for (const p of parts) {
+      if (p.type === 'text' || p.type === 'html') {
+        const str = p.type === 'text' ? (p.text || '') : (p.html || '');
+        buf += str;
+        if (p.type === 'html' || /<[^>]+>/.test(str)) bufHasHtml = true;
+      } else {
+        flush();
+        out.push(p);
+      }
+    }
+    flush();
+    return out;
+  }
+
+  /**
+   * สร้าง refs object ที่รวม:
+   *   - ลิสต์ของ SVG/slot/anchor ที่มีอยู่ใน element
+   *   - resolver functions ที่ track การใช้งาน (ป้องกัน reuse ซ้ำ)
+   *   - snapshot ของ childNodes ก่อน reconcile
+   *
+   * @param {Element} el
+   * @returns {Object} refs
+   */
+  function _buildRefs(el) {
+    const svgs    = Array.from(el.querySelectorAll?.('svg') ?? []);
+    const slots   = Array.from(el.querySelectorAll?.('[data-translate-slot],[data-slot]') ?? []);
+    const anchors = Array.from(el.querySelectorAll?.('a') ?? []);
+    const usedSvgs    = new Set();
+    const usedSlots   = new Set();
+    const usedAnchors = new Set();
+
+    return {
+      svgs,
+      slots,
+      anchors,
+      /** snapshot ของ childNodes สำหรับ reconcile index tracking */
+      existing: Array.from(el.childNodes),
+
+      /**
+       * หา SVG ที่ยังไม่ถูกใช้
+       * ถ้า id ระบุ → หา SVG ที่ตรง id ก่อน, ถ้าไม่เจอ → คืน SVG แรก
+       * @param {string|null} id
+       * @returns {SVGElement|null}
+       */
+      resolveSvg(id) {
+        const pool = svgs.filter(s => !usedSvgs.has(s));
+        let found  = null;
+
+        if (id) {
+          found = pool.find(s =>
+            s.getAttribute?.('id') === id ||
+            s.getAttribute?.('data-svg-id') === id ||
+            s.dataset?.svgId === id
+          ) || null;
+        }
+        if (!found && pool.length) found = pool[0];
+
+        if (found) { usedSvgs.add(found); return found; }
+        return null;
+      },
+
+      /**
+       * หา slot element ที่ยังไม่ถูกใช้
+       * ถ้า name ระบุ → หา slot ที่ตรง name
+       * ถ้า name=null และมีแค่ 1 slot → คืน slot นั้น
+       * @param {string|null} name
+       * @returns {Element|null}
+       */
+      resolveSlot(name) {
+        const pool = slots.filter(s => !usedSlots.has(s));
+        let found  = null;
+
+        if (name) {
+          found = pool.find(s =>
+            s.getAttribute?.('data-translate-slot') === name ||
+            s.getAttribute?.('data-slot') === name ||
+            s.dataset?.translateSlot === name ||
+            s.dataset?.slot === name
+          ) || null;
+        } else if (pool.length === 1) {
+          found = pool[0];
+        }
+
+        if (found) { usedSlots.add(found); return found; }
+        return null;
+      },
+
+      /**
+       * หา anchor ที่ยังไม่ถูกใช้
+       * @param {string|null} hint  — id hint หรือ null สำหรับ first-available
+       * @returns {HTMLAnchorElement|null}
+       */
+      resolveAnchor(hint) {
+        const pool = anchors.filter(a => !usedAnchors.has(a));
+        let found  = null;
+
+        if (hint) {
+          found = pool.find(a =>
+            a.getAttribute?.('id') === hint ||
+            a.getAttribute?.('data-anchor-id') === hint ||
+            a.dataset?.anchorId === hint
+          ) || null;
+        }
+        if (!found && pool.length) found = pool[0];
+
+        if (found) { usedAnchors.add(found); return found; }
+        return null;
+      },
+    };
+  }
+
+  /**
+   * แปลง normalized parts → pre-node array
+   *
+   * Simple types (text, br, strong, html) → สร้าง DOM node ทันที
+   * Complex types (svg, lsvg, slot, a)    → เก็บเป็น marker object
+   *   { __marker: 'svg'|'lsvg'|'slot'|'a', ...props }
+   *   complex types resolve ใน _reconcile เพื่อรักษา insertion order ที่ถูกต้อง
+   *
+   * @param {Object[]} normalized
+   * @returns {Array<Node|Object>}
+   */
+  function _partsToPreNodes(normalized) {
+    const { MarkerRegistry } = M;
+    const domParser = new DOMParser();
+    const nodes     = [];
+
+    for (const p of normalized) {
+      switch (p.type) {
+
+        case 'text':
+          nodes.push(document.createTextNode(p.text || ''));
+          break;
+
+        case 'html': {
+          const html = (p.html || '').trim();
+          if (!html) break;
+
+          // Inline SVG → parse properly
+          if (/\<svg[\s>]/i.test(html)) {
+            try {
+              const doc  = domParser.parseFromString(html, 'image/svg+xml');
+              const root = doc.documentElement;
+              if (root && root.nodeName !== 'parsererror') {
+                nodes.push(document.importNode(root, true));
+                break;
+              }
+            } catch (e) {}
+          }
+
+          // General HTML → template parse
+          const tpl = document.createElement('template');
+          tpl.innerHTML = html;
+          const cloned = tpl.content.cloneNode(true);
+          nodes.push(...cloned.childNodes);
+          break;
+        }
+
+        case 'br':
+          nodes.push(MarkerRegistry.createNode(p, _EMPTY_REFS));
+          break;
+
+        case 'strong':
+          nodes.push(MarkerRegistry.createNode(p, _EMPTY_REFS));
+          break;
+
+        // Complex types: defer resolution ไปยัง _reconcile
+        case 'svg':
+        case 'lsvg':
+          nodes.push({ __marker: p.type, id: p.id || null });
+          break;
+
+        case 'slot':
+          nodes.push({ __marker: 'slot', name: p.name || null });
+          break;
+
+        case 'a':
+          nodes.push({ __marker: 'a', translate: p.translate, text: p.text || '' });
+          break;
+
+        default:
+          // Custom marker types — delegate ไปยัง MarkerRegistry
+          // (resolve ด้วย empty refs ก่อน — custom markers ไม่ต้องการ existing elements)
+          if (MarkerRegistry.has(p.type))
+            nodes.push(MarkerRegistry.createNode(p, _EMPTY_REFS));
+          break;
+      }
+    }
+
+    return nodes;
+  }
+
+  /**
+   * Empty refs object สำหรับ markers ที่ไม่ต้องการ existing elements
+   * (br, strong, custom markers ที่ไม่ reuse DOM)
+   */
+  const _EMPTY_REFS = {
+    svgs: [], slots: [], anchors: [], existing: [],
+    resolveSvg:    () => null,
+    resolveSlot:   () => null,
+    resolveAnchor: () => null,
+  };
+
+  /**
+   * Reconcile DOM ปัจจุบันกับ preNodes ที่ต้องการ
+   *
+   * กลยุทธ์:
+   *   - Reuse node เดิมถ้า type ตรงกัน (avoid createElement/removeChild)
+   *   - Patch in-place ถ้า tag เดิมตรงกัน (innerHTML/attributes)
+   *   - Resolve SVG/slot/anchor จาก refs ระหว่าง loop
+   *   - ไม่ลบ SVG หรือ slot ที่ไม่ได้อ้างถึง (preserve)
+   *
+   * @param {Element}          el
+   * @param {Array<Node|Object>} preNodes  — output จาก _partsToPreNodes
+   * @param {Object}           refs
+   */
+  function _reconcile(el, preNodes, refs) {
+    const existing   = refs.existing;
+    let   readIndex  = 0;
+
+    for (let i = 0; i < preNodes.length; i++) {
+      const pre     = preNodes[i];
+      let   currOld = existing[readIndex];
+
+      // ── Predicted SVG marker ─────────────────────────────────────────────
+      // Prepend SVG ที่มีอยู่ไปด้านหน้า (ไม่กิน readIndex slot)
+      if (pre?.__marker && pre.__predicted) {
+        const svgRef = refs.resolveSvg(pre.id);
+        if (svgRef && el.firstChild !== svgRef) {
+          try { el.insertBefore(svgRef, el.firstChild); } catch (e) {}
+          const idx = existing.indexOf(svgRef);
+          if (idx !== -1) existing.splice(idx, 1);
+          existing.splice(0, 0, svgRef);
+          if (readIndex === 0) readIndex = 1;
+        }
+        continue;
+      }
+
+      // ── SVG marker ───────────────────────────────────────────────────────
+      if (pre?.__marker === 'svg' || pre?.__marker === 'lsvg') {
+        const svgRef = refs.resolveSvg(pre.id);
+        if (svgRef) {
+          _insertAtIndex(el, svgRef, currOld, existing, readIndex);
+          readIndex++;
+        } else {
+          const ns  = 'http://www.w3.org/2000/svg';
+          const svg = document.createElementNS(ns, 'svg');
+          if (pre.id) { svg.setAttribute('id', pre.id); svg.setAttribute('data-svg-id', pre.id); }
+          _insertNode(el, svg, currOld);
+          existing.splice(readIndex, 0, svg);
+          readIndex++;
+        }
+        continue;
+      }
+
+      // ── Slot marker ──────────────────────────────────────────────────────
+      if (pre?.__marker === 'slot') {
+        const slotEl = refs.resolveSlot(pre.name);
+        if (slotEl) {
+          _insertAtIndex(el, slotEl, currOld, existing, readIndex);
+          readIndex++;
+        } else {
+          const span = document.createElement('span');
+          span.setAttribute('data-translate-slot', pre.name || 'slot');
+          _insertNode(el, span, currOld);
+          existing.splice(readIndex, 0, span);
+          readIndex++;
+        }
+        continue;
+      }
+
+      // ── Anchor marker ────────────────────────────────────────────────────
+      if (pre?.__marker === 'a') {
+        const anchorRef = refs.resolveAnchor(null);
+        if (anchorRef) {
+          _insertAtIndex(el, anchorRef, currOld, existing, readIndex);
+          if (pre.translate && pre.text != null) anchorRef.textContent = pre.text;
+          readIndex++;
+        } else {
+          const a = document.createElement('a');
+          if (pre.translate) a.textContent = pre.text;
+          _insertNode(el, a, currOld);
+          existing.splice(readIndex, 0, a);
+          readIndex++;
+        }
+        continue;
+      }
+
+      // ── Regular Node (DOM node จาก _partsToPreNodes) ─────────────────────
+      if (!currOld) {
+        // ไม่มี existing node → append
+        try {
+          el.appendChild(document.importNode(pre, true));
+          existing.push(el.lastChild);
+        } catch (e) {
+          try { el.appendChild(pre.cloneNode(true)); existing.push(el.lastChild); } catch (e2) {}
+        }
+        readIndex++;
+        continue;
+      }
+
+      // Skip existing SVG ที่ยังไม่ถูก consume (preserve)
+      if (_isSvgEl(currOld)) { readIndex++; i--; continue; }
+
+      // Skip existing slot ที่ยังไม่ถูก consume (preserve)
+      if (_isSlotEl(currOld)) { readIndex++; i--; continue; }
+
+      // Text ↔ Text: update in-place
+      if (currOld.nodeType === Node.TEXT_NODE && pre.nodeType === Node.TEXT_NODE) {
+        if (currOld.textContent !== pre.textContent)
+          currOld.textContent = pre.textContent;
+        readIndex++;
+        continue;
+      }
+
+      // Element ↔ Element (same tag): patch attributes + children in-place
+      if (
+        currOld.nodeType === Node.ELEMENT_NODE &&
+        pre.nodeType     === Node.ELEMENT_NODE &&
+        currOld.tagName  === pre.tagName
+      ) {
+        // Replace children
+        while (currOld.firstChild) currOld.removeChild(currOld.firstChild);
+        Array.from(pre.childNodes).forEach(c => currOld.appendChild(document.importNode(c, true)));
+
+        // Sync attributes
+        const newAttrs = Array.from(pre.attributes || []);
+        const oldAttrs = Array.from(currOld.attributes || []);
+        newAttrs.forEach(a => { try { currOld.setAttribute(a.name, a.value); } catch (e) {} });
+        oldAttrs.forEach(a => {
+          if (!pre.hasAttribute(a.name))
+            try { currOld.removeAttribute(a.name); } catch (e) {}
+        });
+
+        readIndex++;
+        continue;
+      }
+
+      // Fallback: replace node
+      try {
+        el.replaceChild(document.importNode(pre, true), currOld);
+        existing[readIndex] = el.childNodes[readIndex];
+      } catch (e) {
+        try {
+          el.insertBefore(document.importNode(pre, true), currOld);
+          el.removeChild(currOld);
+          existing[readIndex] = el.childNodes[readIndex];
+        } catch (e2) {}
+      }
+      readIndex++;
+    }
+
+    // ── Remove trailing nodes (except SVG and slot) ───────────────────────
+    for (let j = el.childNodes.length - 1; j >= readIndex; j--) {
+      const node = el.childNodes[j];
+      if (!node) continue;
+      if (_isSvgEl(node) || _isSlotEl(node)) continue; // preserve
+      try { el.removeChild(node); } catch (e) {}
+    }
+  }
+
+  // ── Reconcile micro-helpers ───────────────────────────────────────────────
+
+  /**
+   * ย้าย target node ไปยังตำแหน่ง readIndex
+   * ถ้า node อยู่ในตำแหน่งนั้นแล้ว → ไม่ทำอะไร
+   * @private
+   */
+  function _insertAtIndex(el, target, currOld, existing, readIndex) {
+    if (currOld === target) return;
+    try { el.insertBefore(target, currOld || null); } catch (e) {}
+    const prev = existing.indexOf(target);
+    if (prev !== -1) existing.splice(prev, 1);
+    existing.splice(readIndex, 0, target);
+  }
+
+  /**
+   * Insert node ก่อน reference (หรือ append ถ้า ref=null)
+   * @private
+   */
+  function _insertNode(el, node, ref) {
+    try {
+      if (ref) el.insertBefore(node, ref);
+      else     el.appendChild(node);
+    } catch (e) {}
+  }
+
+  /** @param {Node} n @returns {boolean} */
+  function _isSvgEl(n) {
+    return n.nodeType === Node.ELEMENT_NODE &&
+           n.tagName?.toLowerCase() === 'svg';
+  }
+
+  /** @param {Node} n @returns {boolean} */
+  function _isSlotEl(n) {
+    return n.nodeType === Node.ELEMENT_NODE &&
+           n.hasAttribute?.('data-translate-slot') ||
+           n.hasAttribute?.('data-slot');
+  }
 
   M.TranslatorService = TranslatorService;
 

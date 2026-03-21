@@ -3,15 +3,25 @@
  * @file loader.js
  * LoaderService — โหลด language config และ translation data
  *
- * หน้าที่:
- *  prefetchEnterprise()   — preconnect + preload + โหลด db.json config
- *  loadLanguagesConfig()  — await prefetch แล้ว validate config
- *  loadLanguageData(lang) — โหลด /assets/lang/{lang}.json แล้ว flatten
- *  flattenLanguageJson()  — flatten nested JSON เป็น flat key-value map
- *  getEnSource()          — อ่านว่า English ใช้ JSON หรือ HTML
+ * การปรับปรุง v4.0:
+ *  - ใช้ DBService (IndexedDB) สำหรับ cache translation data จริง
+ *    เดิมเก็บแค่ใน memory (หายทุก session reload)
+ *    ตอนนี้ persist ข้าม session → เปิดหน้าซ้ำเร็วขึ้นมาก
+ *
+ *  - Version-based cache invalidation:
+ *    ถ้า db.json ประกาศ { en: { version: "2" } }
+ *    และ IDB cache เก็บ version "1" ไว้ → re-fetch อัตโนมัติ
+ *
+ *  - flattenLanguageJson: เปลี่ยนจาก recursive → iterative
+ *    (stack-safe สำหรับ JSON ที่ซ้อนลึกมาก)
+ *
+ * Cache hierarchy (เร็ว → ช้า):
+ *   1. Memory (State.languageCache)     — ไม่ persist
+ *   2. IndexedDB (DBService)            — persist ข้าม session
+ *   3. Network fetch                    — ช้าที่สุด
  *
  * @module loader
- * @depends {config.js, state.js}
+ * @depends {config.js, state.js, db.js}
  */
 (function(M) {
   'use strict';
@@ -22,15 +32,14 @@
     
     /**
      * เริ่ม preconnect, preload, และโหลด db.json ทันที (ก่อน DOM ready)
-     * เก็บ config ลง State.languagesConfig
      * @returns {Promise<void>}
      */
     async prefetchEnterprise() {
       const { CONFIG, State } = M;
       
-      // Preconnect ไว้ก่อน (non-blocking)
-      if (typeof document !== 'undefined' && document.head) {
-        CONFIG.PRECONNECT_URLS.forEach(href => {
+      // Preconnect (non-blocking, ไม่รอ)
+      if (document.head) {
+        for (const href of CONFIG.PRECONNECT_URLS) {
           if (!document.head.querySelector(`link[href^="${href}"]`)) {
             const l = document.createElement('link');
             l.rel = 'preconnect';
@@ -38,9 +47,9 @@
             l.crossOrigin = 'anonymous';
             document.head.appendChild(l);
           }
-        });
+        }
         
-        // Preload db.json
+        // Preload db.json ให้ browser เริ่ม fetch ก่อน
         if (!document.head.querySelector('link[rel="preload"][as="fetch"]')) {
           const preload = document.createElement('link');
           preload.rel = 'preload';
@@ -51,90 +60,124 @@
         }
       }
       
-      // ลองอ่านจาก cache ก่อน
-      let config = null;
-      try {
-        const lc = localStorage.getItem(CONFIG.CFG_CACHE_KEY);
-        const sc = sessionStorage.getItem(CONFIG.CFG_CACHE_KEY);
-        if (lc) config = JSON.parse(lc);
-        else if (sc) config = JSON.parse(sc);
-      } catch (e) {}
+      // ลองอ่าน config cache ก่อน (fast path สำหรับ repeat visit)
+      let config = _readConfigCache(CONFIG);
       
-      // Fetch ใหม่เสมอ (cache: no-cache เพื่อความสดของ config)
+      // Fetch ใหม่เสมอ (no-cache = เช็ค server update)
       try {
         const resp = await fetch(CONFIG.DB_JSON_URL, { cache: 'no-cache' });
         if (resp.ok) {
-          const newConfig = await resp.json();
-          config = newConfig;
-          try {
-            localStorage.setItem(CONFIG.CFG_CACHE_KEY, JSON.stringify(config));
-            sessionStorage.setItem(CONFIG.CFG_CACHE_KEY, JSON.stringify(config));
-          } catch (e) {}
+          config = await resp.json();
+          _writeConfigCache(CONFIG, config);
         }
-      } catch (e) {}
+      } catch (e) {
+        // Network fail → ใช้ cache ที่มีอยู่แล้ว (graceful degradation)
+      }
       
       if (config) State.languagesConfig = config;
     },
     
     /**
-     * รอ prefetch เสร็จ แล้ว validate ว่า config ถูกต้อง
+     * รอ prefetch เสร็จและ validate config
      * เรียกจาก LanguageManager.initialize()
      * @returns {Promise<void>}
-     * @throws {Error} ถ้า config ผิดหรือโหลดไม่ได้
+     * @throws {Error} ถ้า config ไม่ถูกต้อง
      */
     async loadLanguagesConfig() {
-      const { State } = M;
+      await M.State._prefetchPromise;
       
-      // รอ prefetch ที่เริ่มไว้แล้วตอน boot
-      await State._prefetchPromise;
-      
-      if (!State.languagesConfig || !Object.keys(State.languagesConfig).length) {
-        throw new Error('Config ไม่ถูกต้อง');
-      }
+      if (!M.State.languagesConfig || !Object.keys(M.State.languagesConfig).length)
+        throw new Error('[LoaderService] Config invalid or missing');
     },
     
     // ── Language data ─────────────────────────────────────────────────────────
     
     /**
      * โหลด translation data สำหรับภาษาที่ระบุ
-     * cache ไว้ใน State.languageCache เพื่อไม่ต้องโหลดซ้ำ
+     *
+     * Cache flow:
+     *   memory hit  → return immediately
+     *   IDB hit     → verify version → return (or re-fetch if stale)
+     *   miss        → fetch network → save IDB → return
+     *
+     * IDB write เป็น fire-and-forget (ไม่ block return)
+     *
      * @param {string} lang
      * @returns {Promise<Object|null>}
      */
     async loadLanguageData(lang) {
-      const { CONFIG, State } = M;
+      const { CONFIG, State, DBService } = M;
       
-      // return cache ถ้ามีแล้ว
+      // 1. Memory cache (fastest)
       if (State.languageCache[lang]) return State.languageCache[lang];
       
+      // 2. IndexedDB cache
+      try {
+        const [record] = await DBService.getCacheBatch([lang]);
+        const expectedVersion = State.languagesConfig?.[lang]?.version ?? null;
+        
+        if (_isCacheValid(record, expectedVersion)) {
+          // Cache hit + version match → ใช้เลย
+          State.languageCache[lang] = record.data;
+          return record.data;
+        }
+        // Cache miss หรือ version ไม่ตรง → ไป fetch
+      } catch (e) {
+        // IDB unavailable → ไป fetch ต่อ
+      }
+      
+      // 3. Network fetch
       try {
         const resp = await fetch(CONFIG.LANG_JSON_URL(lang), { cache: 'no-cache' });
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const data = await resp.json();
-        const flattened = this.flattenLanguageJson(data);
+        
+        const raw = await resp.json();
+        const flattened = this.flattenLanguageJson(raw);
+        const version = State.languagesConfig?.[lang]?.version ?? null;
+        
+        // Save to IDB (fire and forget — ไม่รอ)
+        DBService.setCacheBatch([{ langKey: lang, data: flattened, version }])
+          .catch(() => {});
+        
         State.languageCache[lang] = flattened;
         return flattened;
+        
       } catch (e) {
-        console.error(`[LoaderService] Error loading language ${lang}:`, e);
+        console.error(`[LoaderService] Error loading language "${lang}":`, e);
         return null;
       }
     },
     
+    // ── JSON flatten ──────────────────────────────────────────────────────────
+    
     /**
-     * Flatten nested JSON เป็น { key: value } map แบบ flat
-     * { a: { b: 'hello' } } → { b: 'hello' }
+     * Flatten nested JSON → flat key-value map (iterative, stack-safe)
+     *
+     * เดิมใช้ recursion → อาจ stack overflow กับ JSON ที่ซ้อนลึกมาก
+     * ตอนนี้ใช้ explicit stack แทน call stack
+     *
+     * { a: { b: 'hello' }, c: 'world' } → { b: 'hello', c: 'world' }
+     *
+     * หมายเหตุ: key ชั้นบนถูกทิ้ง (เหมือนเดิม) — เก็บแค่ leaf nodes
+     *
      * @param {Object} json
      * @returns {Object}
      */
     flattenLanguageJson(json) {
       const result = {};
-      const recur = (obj) => {
+      const stack = [json];
+      
+      while (stack.length) {
+        const obj = stack.pop();
         for (const [k, v] of Object.entries(obj)) {
-          if (typeof v === 'object' && v !== null) recur(v);
-          else result[k] = v;
+          if (v !== null && typeof v === 'object' && !Array.isArray(v)) {
+            stack.push(v); // ลงลึกต่อ
+          } else {
+            result[k] = v; // leaf node
+          }
         }
-      };
-      recur(json);
+      }
+      
       return result;
     },
     
@@ -143,10 +186,52 @@
      * @returns {'json'|'html'}
      */
     getEnSource() {
-      const { State } = M;
-      return State.languagesConfig?.en?.enSource === 'json' ? 'json' : 'html';
+      return M.State.languagesConfig?.en?.enSource === 'json' ? 'json' : 'html';
     },
   };
+  
+  // ── Private helpers ───────────────────────────────────────────────────────
+  
+  /**
+   * อ่าน config จาก localStorage หรือ sessionStorage
+   * @param {Object} CONFIG
+   * @returns {Object|null}
+   */
+  function _readConfigCache(CONFIG) {
+    try {
+      const raw = localStorage.getItem(CONFIG.CFG_CACHE_KEY) ||
+        sessionStorage.getItem(CONFIG.CFG_CACHE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+  
+  /**
+   * เขียน config ลง localStorage + sessionStorage
+   * @param {Object} CONFIG
+   * @param {Object} config
+   */
+  function _writeConfigCache(CONFIG, config) {
+    const json = JSON.stringify(config);
+    try { localStorage.setItem(CONFIG.CFG_CACHE_KEY, json); } catch (e) {}
+    try { sessionStorage.setItem(CONFIG.CFG_CACHE_KEY, json); } catch (e) {}
+  }
+  
+  /**
+   * ตรวจว่า IDB record ยังใช้งานได้:
+   *   - มี data อยู่
+   *   - version ตรงกับที่คาดหวัง (ถ้ามีการประกาศ version)
+   *
+   * @param {Object|null} record           — full record จาก getCacheBatch
+   * @param {string|null} expectedVersion  — จาก languagesConfig[lang].version
+   * @returns {boolean}
+   */
+  function _isCacheValid(record, expectedVersion) {
+    if (!record || !record.data) return false;
+    if (expectedVersion !== null && record.version !== expectedVersion) return false;
+    return true;
+  }
   
   M.LoaderService = LoaderService;
   
