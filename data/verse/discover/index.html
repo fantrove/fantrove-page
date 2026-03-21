@@ -16,25 +16,22 @@
   <link rel="dns-prefetch" href="https://pagead2.googlesyndication.com" />
 
   <!--
-    CSS LOADING ORDER (3 ไฟล์แยกชัดเจน):
-    1. loading.css   — overlay + notification (preload: ต้องพร้อมก่อน JS แสดง overlay)
-    2. header.css — header + nav เท่านั้น
-    3. styles.css — main content styles
-
-    loading.css ใช้ preload + onload pattern เหมือนกัน
-    แต่ priority สูงกว่าเพราะ overlay แสดงทันทีที่ JS โหลด
+    CSS LOADING ORDER (3 files):
+    1. loading.css   — overlay + notification (preload: must be ready before JS shows overlay)
+    2. header.css    — header + nav only
+    3. styles.css    — main content styles
   -->
 
-  <!-- loading.css: preload ก่อนเลย — overlay ต้องพร้อมทันที -->
+  <!-- loading.css: preload first — overlay must render immediately -->
   <link rel="preload" href="/assets/css/loading.css" as="style" onload="this.rel='stylesheet'" />
   <noscript><link rel="stylesheet" href="/assets/css/loading.css" /></noscript>
 
   <!-- header.css -->
-  <link rel="preload" href="/assets/css/header.css" as="style" onload="this.rel='stylesheet'" />
+  <link rel="preload" href="/assets/css/nav-core.css" as="style" onload="this.rel='stylesheet'" />
   <noscript><link rel="stylesheet" href="/assets/css/header.css" /></noscript>
 
   <!-- styles.css -->
-  <link rel="preload" href="/assets/css/styles.css" as="style" onload="this.rel='stylesheet'" />
+  <link rel="preload" href="/assets/css/nav-core-ext.css" as="style" onload="this.rel='stylesheet'" />
   <noscript><link rel="stylesheet" href="/assets/css/styles.css" /></noscript>
 
   <!-- Non-critical CSS -->
@@ -130,13 +127,21 @@
   <script src="/assets/js/lang-sync.js"></script>
   <script src="/assets/js/language.js"></script>
 
-  <!-- Render engine -->
-  <script src="/assets/js/render-engine.js"></script>
-  <script defer src="/assets/js/intelligent-system.js"></script>
-
   <!-- Deferred JS -->
   <script defer src="/assets/js/version.js"></script>
-  <script defer src="/assets/js/header.js"></script>
+
+  <!-- ConData Service: ES module data layer (must load before nav-core) -->
+  <!--
+    con-data-service.js uses `import` syntax so it MUST be type="module".
+    ES module scripts execute after HTML parsing in document order — placing
+    this tag before nav-core.js guarantees window.ConDataService is set first.
+    nav-core/data.js also polls for ConDataService as a safety net.
+  -->
+  <script type="module" src="/assets/js/con-data-service/con-data-service.js"></script>
+
+  <!-- NavCore: replaces header.js -->
+  <script defer src="/assets/js/nav-core.js"></script>
+
   <script defer src="/assets/js/modern-navigation.js"></script>
   <script defer src="/assets/js/back-to-top.js"></script>
   <script defer src="/assets/js/copyNotification.js"></script>
