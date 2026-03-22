@@ -1,24 +1,38 @@
 {
-  "version": "1.0.3",
-  "date": {
-    "en": "March 22, 2025",
-    "th": "22 มีนาคม 2568"
-  },
-  "title": {
-    "en": "Release history",
-    "th": "ประวัติการอัพเดท"
-  },
-  "subtitle": {
-    "en": "The What's New page now shows up to 7 past releases.",
-    "th": "หน้ามีอะไรใหม่ตอนนี้แสดงประวัติย้อนหลังได้ถึง 7 เวอร์ชัน"
-  },
+  "version": "1.0.5",
   "sections": [
+    {
+      "type": "new",
+      "items": [
+        {
+          "title": { "en": "Real-time update on What's New page", "th": "อัพเดทเรียลไทม์บนหน้ามีอะไรใหม่" },
+          "desc": { "en": "The page now auto-refreshes when a new version is detected, without reloading.", "th": "หน้านี้โหลดเนื้อหาใหม่อัตโนมัติเมื่อพบเวอร์ชันใหม่ โดยไม่ต้องรีโหลดหน้า" }
+        }
+      ]
+    },
     {
       "type": "improved",
       "items": [
         {
-          "title": { "en": "Release history on What's New page", "th": "ประวัติการอัพเดทบนหน้ามีอะไรใหม่" },
-          "desc": { "en": "Shows up to 7 past releases. Older ones are removed automatically.", "th": "แสดงประวัติย้อนหลังสูงสุด 7 เวอร์ชัน รายการเก่ากว่านั้นจะถูกลบอัตโนมัติ" }
+          "title": { "en": "Auto date and time on every release", "th": "ระบุวันเวลาอัตโนมัติทุก release" },
+          "desc": { "en": "Build date and time are now recorded automatically in UTC.", "th": "วันและเวลา build ถูกบันทึกอัตโนมัติตาม UTC ไม่ต้องเขียนเอง" }
+        },
+        {
+          "title": { "en": "Smarter auto changelog from git diff", "th": "สร้าง changelog อัตโนมัติจาก git diff" },
+          "desc": { "en": "If no content is written in whats-new.json, the system analyzes changed files and generates a changelog automatically.", "th": "ถ้าไม่ได้เขียนเนื้อหาใน whats-new.json ระบบจะวิเคราะห์ไฟล์ที่เปลี่ยนแปลงและสร้าง changelog เองอัตโนมัติ" }
+        },
+        {
+          "title": { "en": "Auto-increment patch only (+0.0.1)", "th": "เพิ่ม version อัตโนมัติแค่ +0.0.1" },
+          "desc": { "en": "The system only auto-increments patch. To bump minor or major, set APP_VERSION manually.", "th": "ระบบ auto เพิ่มแค่ patch เท่านั้น ถ้าต้องการเพิ่ม minor หรือ major ให้ตั้ง APP_VERSION เอง" }
+        }
+      ]
+    },
+    {
+      "type": "fixed",
+      "items": [
+        {
+          "title": { "en": "Update popup no longer appears on What's New page", "th": "Popup อัพเดทไม่แสดงในหน้ามีอะไรใหม่แล้ว" },
+          "desc": { "en": "Since the page already shows all update details, the popup is now suppressed when the user is already viewing it.", "th": "เนื่องจากหน้านี้มีข้อมูลครบอยู่แล้ว popup จะไม่แสดงขึ้นมาเมื่อผู้ใช้อยู่ในหน้านี้" }
         }
       ]
     }

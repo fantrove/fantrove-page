@@ -1,10 +1,11 @@
 {
-    "version": "1.0.3",
-    "build": "1.0.3-20250322",
-    "timestamp": 1742601600000,
+    "version": "1.0.5",
+    "build": "1.0.5-202503231430",
+    "buildDate": {
+        "en": "March 23, 2025 at 14:30",
+        "th": "23 มีนาคม 2568 เวลา 14:30 น."
+    },
+    "timestamp": 1742734200000,
     "notify": true,
-    "changelog": [
-        "Release history on What's New page (up to 7 releases)",
-        "Old releases auto-removed when exceeding limit"
-    ]
+    "changelog": []
 }

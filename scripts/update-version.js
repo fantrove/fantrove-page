@@ -4,6 +4,7 @@
 
 const fs   = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 const MAX_HISTORY = 7;
 
@@ -16,21 +17,34 @@ const CONFIG = {
   assetPattern: /((?:src|href)=["'][^"':]*?\.(?:js|css|json))\?v=[^"'\s&]*/g
 };
 
-// ── ข้อความ fallback เมื่อไม่ได้อัปเดต whats-new.json ─────────────────────
-// ใช้เมื่อ deploy โดยไม่เปลี่ยน version หรือไม่เปลี่ยนเนื้อหา
-const FALLBACK_CONTENT = {
-  title:    { en: 'System update',     th: 'อัปเดตระบบ' },
-  subtitle: { en: 'Minor improvements and stability fixes.',
-              th: 'ปรับปรุงเล็กน้อยและแก้ไขความเสถียรของระบบ' },
-  sections: [{
-    type: 'improved',
-    items: [{
-      title: { en: 'System improvements', th: 'ปรับปรุงระบบ' },
-      desc:  { en: 'Various under-the-hood improvements.',
-               th: 'ปรับปรุงการทำงานภายในระบบ' }
-    }]
-  }]
-};
+// ── Date/Time helpers (UTC+0 เสมอ) ───────────────────────────────────────────
+
+const EN_MONTHS = [
+  'January','February','March','April','May','June',
+  'July','August','September','October','November','December'
+];
+const TH_MONTHS = [
+  'มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+  'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'
+];
+
+function pad2(n) { return String(n).padStart(2, '0'); }
+
+// ✅ ใช้ getUTC* ทั้งหมด — ไม่ขึ้นกับ timezone ของ server/เครื่อง deploy
+function formatDateEN(d) {
+  return EN_MONTHS[d.getUTCMonth()] + ' ' + d.getUTCDate() + ', ' + d.getUTCFullYear()
+    + ' at ' + pad2(d.getUTCHours()) + ':' + pad2(d.getUTCMinutes()) + ' UTC';
+}
+
+function formatDateTH(d) {
+  const buddhistYear = d.getUTCFullYear() + 543;
+  return d.getUTCDate() + ' ' + TH_MONTHS[d.getUTCMonth()] + ' ' + buddhistYear
+    + ' เวลา ' + pad2(d.getUTCHours()) + ':' + pad2(d.getUTCMinutes()) + ' UTC';
+}
+
+function makeDateObj(d) {
+  return { en: formatDateEN(d), th: formatDateTH(d) };
+}
 
 // ── Semver helpers ────────────────────────────────────────────────────────────
 
@@ -40,18 +54,152 @@ function parseSemver(v) {
   return { major: +m[1], minor: +m[2], patch: +m[3] };
 }
 
-// บวก patch ทีละ 1: 1.0.3 → 1.0.4, 1.0.9 → 1.0.10 (ไม่ wrap ไป minor)
+// เพิ่มแค่ patch (0.0.1) เท่านั้น — ถ้าต้องการ minor/major ให้ตั้ง APP_VERSION เอง
 function incrementPatch(v) {
   var s = parseSemver(v);
   if (!s) return v;
   return s.major + '.' + s.minor + '.' + (s.patch + 1);
 }
 
+// ── Smart changelog จาก git diff ─────────────────────────────────────────────
+
+const FILE_TYPE_LABELS = {
+  '.js':   { en: 'JavaScript logic updated',        th: 'ปรับปรุงโค้ด JavaScript' },
+  '.css':  { en: 'UI styling updated',               th: 'ปรับปรุงหน้าตาและ UI' },
+  '.html': { en: 'Page content updated',             th: 'ปรับปรุงเนื้อหาหน้าเว็บ' },
+  '.json': { en: 'Data / configuration updated',    th: 'ปรับปรุงข้อมูล / การตั้งค่า' },
+  '.png':  { en: 'Images updated',                   th: 'อัปเดตรูปภาพ' },
+  '.jpg':  { en: 'Images updated',                   th: 'อัปเดตรูปภาพ' },
+  '.svg':  { en: 'Icons / graphics updated',         th: 'อัปเดตไอคอนและกราฟิก' }
+};
+
+function getGitChangedFiles() {
+  try {
+    // พยายาม diff กับ commit ก่อนหน้า
+    const out = execSync('git diff --name-only HEAD~1 HEAD 2>/dev/null', { encoding: 'utf8', stdio: ['pipe','pipe','pipe'] });
+    return out.trim().split('\n').filter(Boolean);
+  } catch(_) {
+    try {
+      // fallback: ดู staged files
+      const out = execSync('git diff --name-only --cached 2>/dev/null', { encoding: 'utf8', stdio: ['pipe','pipe','pipe'] });
+      return out.trim().split('\n').filter(Boolean);
+    } catch(_2) {
+      return [];
+    }
+  }
+}
+
+function buildSmartChangelog(changedFiles, newVersion, currentVersion) {
+  const sections = [];
+
+  if (!changedFiles.length) {
+    // ไม่สามารถดึง git diff ได้ → ใช้ข้อความทั่วไป
+    sections.push({
+      type: 'improved',
+      items: [{
+        title: { en: 'System improvements and stability fixes', th: 'ปรับปรุงระบบและความเสถียร' },
+        desc:  { en: 'Various internal improvements for better performance.', th: 'ปรับปรุงภายในเพื่อประสิทธิภาพที่ดีขึ้น' }
+      }]
+    });
+    return sections;
+  }
+
+  // จัดกลุ่มไฟล์ตามนามสกุล
+  const grouped = {};
+  const specificFiles = [];
+
+  changedFiles.forEach(function(f) {
+    // ข้ามไฟล์ที่ไม่เกี่ยวกับ user-facing
+    if (f.includes('node_modules') || f.includes('.git')) return;
+
+    const ext = path.extname(f).toLowerCase();
+    const label = FILE_TYPE_LABELS[ext];
+    if (label) {
+      if (!grouped[ext]) grouped[ext] = { label, count: 0, files: [] };
+      grouped[ext].count++;
+      grouped[ext].files.push(path.basename(f));
+    }
+
+    // ดึงชื่อไฟล์ที่น่าสนใจ (ไม่ใช่ config/version files)
+    const base = path.basename(f, path.extname(f));
+    const skip = new Set(['version','whats-new','release-history','package-lock','package']);
+    if (!skip.has(base) && ['.js','.css','.html'].includes(ext)) {
+      specificFiles.push(base);
+    }
+  });
+
+  // ── New / Improved / Fixed detection ──────────────────────────────────────
+  // ถ้า minor หรือ major เปลี่ยน → "New features"
+  const oldS = parseSemver(currentVersion);
+  const newS = parseSemver(newVersion);
+  const isMinorBump  = newS && oldS && (newS.minor > oldS.minor || newS.major > oldS.major);
+  const isPatchBump  = newS && oldS && (newS.patch > oldS.patch);
+
+  const improvedItems = [];
+  const fixedItems    = [];
+  const newItems      = [];
+
+  Object.entries(grouped).forEach(function([ext, info]) {
+    const item = {
+      title: { en: info.label.en, th: info.label.th },
+      desc:  {
+        en: info.count + ' file' + (info.count > 1 ? 's' : '') + ' updated',
+        th: 'อัปเดต ' + info.count + ' ไฟล์'
+      }
+    };
+    if (ext === '.js' && isMinorBump) newItems.push(item);
+    else if (ext === '.css') improvedItems.push(item);
+    else improvedItems.push(item);
+  });
+
+  // ถ้า patch bump ให้ assume เป็น bug fix ด้วย
+  if (isPatchBump && !isMinorBump) {
+    fixedItems.push({
+      title: { en: 'Bug fixes and minor corrections', th: 'แก้ไขข้อผิดพลาดเล็กน้อย' },
+      desc:  { en: 'Addressed issues from the previous version.', th: 'แก้ไขปัญหาจากเวอร์ชันก่อนหน้า' }
+    });
+  }
+
+  if (newItems.length)      sections.push({ type: 'new',      items: newItems });
+  if (improvedItems.length) sections.push({ type: 'improved', items: improvedItems });
+  if (fixedItems.length)    sections.push({ type: 'fixed',    items: fixedItems });
+
+  // ถ้าไม่มีอะไรเลย
+  if (!sections.length) {
+    sections.push({
+      type: 'improved',
+      items: [{ title: { en: 'System improvements', th: 'ปรับปรุงระบบ' }, desc: { en: 'Internal enhancements.', th: 'ปรับปรุงภายใน' } }]
+    });
+  }
+
+  return sections;
+}
+
+function buildSmartTitle(newVersion, currentVersion, isMinorBump) {
+  if (isMinorBump) {
+    return {
+      title:    { en: 'New features', th: 'ฟีเจอร์ใหม่' },
+      subtitle: {
+        en: 'Version ' + newVersion + ' brings new features and improvements.',
+        th: 'เวอร์ชัน ' + newVersion + ' มาพร้อมฟีเจอร์ใหม่และการปรับปรุง'
+      }
+    };
+  }
+  return {
+    title:    { en: 'System update', th: 'อัปเดตระบบ' },
+    subtitle: {
+      en: 'Version ' + newVersion + ' includes stability improvements and fixes.',
+      th: 'เวอร์ชัน ' + newVersion + ' มีการปรับปรุงความเสถียรและแก้ไขปัญหา'
+    }
+  };
+}
+
 // ── อ่าน APP_VERSION ──────────────────────────────────────────────────────────
 
-var envVersion = process.env.APP_VERSION || process.argv[2];
-const isSilent = process.env.DEPLOY_SILENT === '1' || process.argv.includes('--silent');
-const ROOT     = path.resolve(__dirname, '..');
+var envVersion  = process.env.APP_VERSION || process.argv[2];
+const isSilent  = process.env.DEPLOY_SILENT === '1' || process.argv.includes('--silent');
+const ROOT      = path.resolve(__dirname, '..');
+const NOW       = new Date();
 
 // อ่าน version.json ปัจจุบัน
 const versionPath = path.join(ROOT, CONFIG.versionFile);
@@ -65,67 +213,113 @@ let newVersion;
 let autoIncremented = false;
 
 if (!envVersion) {
-  console.error('\n  ❌  ไม่พบ APP_VERSION\n'); process.exit(1);
+  console.error('\n  ❌  ไม่พบ APP_VERSION\n     ใช้: APP_VERSION=1.0.4 node scripts/update-version.js\n');
+  process.exit(1);
 }
 
 if (!parseSemver(envVersion)) {
-  console.error(`\n  ❌  APP_VERSION "${envVersion}" ไม่ใช่ semver\n`); process.exit(1);
+  console.error(`\n  ❌  APP_VERSION "${envVersion}" ไม่ใช่ semver (ต้องการรูปแบบ X.Y.Z)\n`);
+  process.exit(1);
 }
 
 if (envVersion === currentVersion) {
-  // APP_VERSION ไม่ได้เปลี่ยน → auto-increment patch
+  // ผู้ใช้ไม่ได้เปลี่ยน version → auto-increment patch (+0.0.1) เท่านั้น
   newVersion = incrementPatch(currentVersion);
   autoIncremented = true;
   console.log(`\n⚡  APP_VERSION ไม่เปลี่ยน (${envVersion})`);
-  console.log(`    Auto-increment patch: ${currentVersion} → ${newVersion}`);
+  console.log(`    Auto-increment patch (+0.0.1): ${currentVersion} → ${newVersion}`);
+  console.log(`    💡 ถ้าต้องการ minor/major ให้เปลี่ยน APP_VERSION เอง เช่น APP_VERSION=1.1.0`);
 } else {
   newVersion = envVersion;
-  console.log(`\n📦  Version: ${currentVersion} → ${newVersion}`);
+  const oldS = parseSemver(currentVersion);
+  const newS = parseSemver(newVersion);
+  const bumpType = (newS.major > oldS.major) ? 'major'
+                 : (newS.minor > oldS.minor) ? 'minor' : 'patch';
+  console.log(`\n📦  Version: ${currentVersion} → ${newVersion} (${bumpType} bump)`);
 }
 
-const today   = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-const buildId = `${newVersion}-${today}`;
-console.log(`    Build ID: ${buildId} | Silent: ${isSilent}\n`);
+// ✅ buildId ใช้ UTC ทั้งหมด ไม่ขึ้นกับ timezone เครื่อง
+const dateStr  = NOW.toISOString().slice(0, 10).replace(/-/g, '');
+const timeStr  = pad2(NOW.getUTCHours()) + pad2(NOW.getUTCMinutes());
+const buildId  = `${newVersion}-${dateStr}${timeStr}`;
+const dateObj  = makeDateObj(NOW);
+
+console.log(`    Build ID:  ${buildId}`);
+console.log(`    Date:      ${dateObj.en}`);
+console.log(`    Silent:    ${isSilent}\n`);
 
 // ── อ่าน whats-new.json ───────────────────────────────────────────────────────
 
 const whatsNewPath = path.join(ROOT, CONFIG.whatsNewFile);
 let whatsNew = null;
 let whatsNewMatchesVersion = false;
+let whatsNewHasContent = false;
 
 try {
   whatsNew = JSON.parse(fs.readFileSync(whatsNewPath, 'utf8'));
   whatsNewMatchesVersion = (whatsNew.version === newVersion);
+
+  // ตรวจว่าผู้ใช้เขียนเนื้อหาจริงๆ (มี sections และไม่ใช่ fallback ว่างๆ)
+  const hasSections = Array.isArray(whatsNew.sections) && whatsNew.sections.length > 0;
+  const hasItems    = hasSections && whatsNew.sections.some(s => s.items && s.items.length > 0);
+  whatsNewHasContent = whatsNewMatchesVersion && hasSections && hasItems;
 } catch (e) {
-  console.log(`⚠️   ไม่พบ whats-new.json`);
+  console.log(`⚠️   ไม่พบ whats-new.json หรืออ่านไม่ได้`);
+}
+
+// ── ดึง git diff เพื่อ smart changelog ───────────────────────────────────────
+
+const changedFiles = getGitChangedFiles();
+if (changedFiles.length) {
+  console.log(`🔍  Git diff: พบ ${changedFiles.length} ไฟล์ที่เปลี่ยนแปลง`);
+} else {
+  console.log(`🔍  Git diff: ไม่พบข้อมูล (ใช้ข้อความทั่วไป)`);
 }
 
 // ── ตัดสินใจเนื้อหา ───────────────────────────────────────────────────────────
 
-let contentToUse;
-let usingFallback = false;
+const oldS = parseSemver(currentVersion);
+const newS = parseSemver(newVersion);
+const isMinorBump = newS && oldS && (newS.minor > oldS.minor || newS.major > oldS.major);
 
-if (whatsNewMatchesVersion) {
-  contentToUse = whatsNew;
-  console.log(`✅  whats-new.json: ตรงกับ v${newVersion}`);
+let contentToUse;
+let usingUserContent = false;
+
+if (whatsNewHasContent) {
+  // ✅ ผู้ใช้เขียน sections เอง → ใช้ sections + title + subtitle ของผู้ใช้
+  //    แต่ date บันทึก UTC อัตโนมัติเสมอ ไม่ต้องเขียนเอง
+  contentToUse = Object.assign({}, whatsNew, {
+    version: newVersion,
+    date:    dateObj       // ✅ force UTC เสมอ — ไม่ใช้ date จาก whats-new.json
+  });
+  usingUserContent = true;
+  console.log(`✅  ใช้เนื้อหาจาก whats-new.json (ผู้ใช้กำหนดเอง)`);
+  console.log(`    📅 วันเวลา UTC: ${dateObj.en}`);
 } else {
-  // whats-new.json ไม่ตรง (ไม่ได้อัปเดต หรือ auto-increment)
-  // → ใช้ fallback content + version ใหม่
-  contentToUse = Object.assign({}, FALLBACK_CONTENT, { version: newVersion });
-  usingFallback = true;
+  // ✅ ไม่มีเนื้อหาจากผู้ใช้ → auto-generate อัจฉริยะ
+  const smartTitle    = buildSmartTitle(newVersion, currentVersion, isMinorBump);
+  const smartSections = buildSmartChangelog(changedFiles, newVersion, currentVersion);
+
+  contentToUse = {
+    version:  newVersion,
+    date:     dateObj,     // ✅ UTC อัตโนมัติ
+    title:    smartTitle.title,
+    subtitle: smartTitle.subtitle,
+    sections: smartSections
+  };
 
   if (autoIncremented) {
-    console.log(`ℹ️   Auto-increment → ใช้ข้อความ fallback`);
+    console.log(`ℹ️   Auto-increment → สร้างเนื้อหาอัตโนมัติ`);
   } else {
-    console.log(`⚠️   whats-new.json version (${whatsNew && whatsNew.version}) ไม่ตรงกับ v${newVersion}`);
-    console.log(`    ใช้ข้อความ fallback แทน`);
+    console.log(`⚠️   whats-new.json ไม่มีเนื้อหาสำหรับ v${newVersion} → สร้างอัตโนมัติ`);
   }
-
-  // เขียน whats-new.json ให้ตรงกับ version ใหม่ (ใช้ fallback content)
-  const updatedWhatsNew = Object.assign({}, contentToUse);
-  fs.writeFileSync(whatsNewPath, JSON.stringify(updatedWhatsNew, null, 2) + '\n');
-  console.log(`✅  whats-new.json: เขียน fallback content สำหรับ v${newVersion}`);
+  console.log(`    📅 วันเวลา UTC: ${dateObj.en}`);
 }
+
+// ✅ เขียน whats-new.json ทุกกรณี (ทั้ง user content และ auto)
+//    เพื่อให้ date UTC ถูก sync เสมอ
+fs.writeFileSync(whatsNewPath, JSON.stringify(contentToUse, null, 2) + '\n');
+console.log(`✅  whats-new.json: บันทึกแล้ว (date = UTC อัตโนมัติ)`);
 
 // ── จัดการ release-history.json ──────────────────────────────────────────────
 
@@ -139,14 +333,12 @@ try {
 if (currentVersion !== newVersion) {
   const alreadyIn = history.releases.some(r => r.version === currentVersion);
   if (!alreadyIn && currentVersion !== '0.0.0') {
-    // เพิ่ม version เก่าเข้า history
     const oldEntry = {
       version:  currentVersion,
-      date:     { en: new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' }),
-                  th: new Date().toLocaleDateString('th-TH',  { year:'numeric', month:'long', day:'numeric' }) },
-      title:    (whatsNew && whatsNew.title)    || FALLBACK_CONTENT.title,
-      subtitle: (whatsNew && whatsNew.subtitle) || FALLBACK_CONTENT.subtitle,
-      sections: (whatsNew && whatsNew.sections) || FALLBACK_CONTENT.sections
+      date:     currentData.buildDate || { en: currentData.build || currentVersion, th: currentData.build || currentVersion },
+      title:    (whatsNew && whatsNew.title)    || { en: 'System update', th: 'อัปเดตระบบ' },
+      subtitle: (whatsNew && whatsNew.subtitle) || { en: 'Minor improvements.', th: 'ปรับปรุงเล็กน้อย' },
+      sections: (whatsNew && whatsNew.sections) || []
     };
     history.releases.unshift(oldEntry);
     console.log(`📋  เพิ่ม v${currentVersion} เข้า history`);
@@ -176,13 +368,14 @@ let changelog = [];
 const newData = {
   version:   newVersion,
   build:     buildId,
-  timestamp: Date.now(),
+  buildDate: dateObj,          // ✅ เก็บ date object สำหรับ history
+  timestamp: NOW.getTime(),
   notify:    !isSilent,
   changelog
 };
 fs.mkdirSync(path.dirname(versionPath), { recursive: true });
 fs.writeFileSync(versionPath, JSON.stringify(newData, null, 2) + '\n');
-console.log(`✅  version.json → ${buildId}`);
+console.log(`✅  version.json → ${buildId} (${dateObj.en})`);
 
 // ── Scan & rewrite HTML ───────────────────────────────────────────────────────
 
@@ -204,9 +397,13 @@ function walk(dir) {
 console.log('\nScanning HTML...');
 walk(ROOT);
 
-console.log(`\n${'─'.repeat(52)}`);
-console.log(`  Version:    ${currentVersion} → ${newVersion}${autoIncremented ? ' (auto)' : ''}`);
+// ── Summary ───────────────────────────────────────────────────────────────────
+
+console.log(`\n${'─'.repeat(56)}`);
+console.log(`  Version:    ${currentVersion} → ${newVersion}${autoIncremented ? ' (auto +0.0.1)' : ''}`);
 console.log(`  Build:      ${buildId}`);
-console.log(`  Content:    ${usingFallback ? 'fallback (generic)' : 'whats-new.json'}`);
+console.log(`  Date/Time:  ${dateObj.en}`);
+console.log(`  Content:    ${usingUserContent ? 'ผู้ใช้กำหนดเอง (whats-new.json)' : 'อัตโนมัติ (smart auto)'}`);
+console.log(`  Git files:  ${changedFiles.length} ไฟล์`);
 console.log(`  HTML:       ${updated}/${scanned} updated`);
-console.log(`${'─'.repeat(52)}\n🚀  Ready!\n`);
+console.log(`${'─'.repeat(56)}\n🚀  Ready!\n`);
