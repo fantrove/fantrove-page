@@ -1,5 +1,5 @@
 {
-  "version": "1.0.1",
+  "version": "1.0.2",
   "date": {
     "en": "March 22, 2025",
     "th": "22 มีนาคม 2568"
@@ -9,20 +9,24 @@
     "th": "ปรับปรุงระบบแจ้งเตือนอัพเดท"
   },
   "subtitle": {
-    "en": "The update popup now appears when you refresh the page, with a dismiss option that only applies to this update.",
-    "th": "ป๊อปอัพแจ้งเตือนจะปรากฏเมื่อคุณรีเฟรชหน้าเว็บ พร้อมตัวเลือกไม่แสดงอีกที่ใช้ได้เฉพาะการอัพเดทนี้"
+    "en": "Everyone now sees update notifications, with smarter session handling.",
+    "th": "ผู้ใช้ทุกคนได้รับการแจ้งเตือนอัพเดท พร้อมระบบ session ที่ฉลาดขึ้น"
   },
   "sections": [
     {
       "type": "improved",
       "items": [
         {
-          "title": { "en": "Smarter update notification", "th": "ระบบแจ้งเตือนอัพเดทที่ฉลาดขึ้น" },
-          "desc": { "en": "No longer interrupts while you're browsing. Shows only when you refresh.", "th": "ไม่รบกวนขณะใช้งาน แสดงเฉพาะตอนรีเฟรชหน้าเว็บ" }
+          "title": { "en": "All users see update notifications", "th": "ผู้ใช้ทุกคนเห็นการแจ้งเตือน" },
+          "desc": { "en": "Including first-time visitors — no one misses an update.", "th": "รวมถึงผู้ใช้ใหม่ที่เปิดครั้งแรก ไม่มีใครพลาดการอัพเดท" }
+        },
+        {
+          "title": { "en": "Session-based display", "th": "แสดงครั้งเดียวต่อ session" },
+          "desc": { "en": "Shows once per session. Returns after 90 minutes of inactivity.", "th": "แสดงครั้งเดียวต่อ session กลับมาแสดงอีกครั้งหลังไม่ได้ใช้งาน 90 นาที" }
         },
         {
           "title": { "en": "Dismiss per update", "th": "ปิดได้เฉพาะอัพเดทนี้" },
-          "desc": { "en": "Dismissing a popup only hides it for that specific update. Future updates will still notify you.", "th": "การกดไม่แสดงอีกมีผลเฉพาะการอัพเดทนี้ การอัพเดทครั้งต่อไปจะแจ้งเตือนตามปกติ" }
+          "desc": { "en": "Dismissing only applies to the current update. Future updates still notify you.", "th": "การปิดมีผลเฉพาะอัพเดทนี้ การอัพเดทครั้งต่อไปจะแจ้งเตือนตามปกติ" }
         }
       ]
     }

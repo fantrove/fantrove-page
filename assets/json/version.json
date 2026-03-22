@@ -1,9 +1,11 @@
 {
-    "version": "1.0.0",
-    "build": "1.0.0-20250322",
+    "version": "1.0.2",
+    "build": "1.0.2-20250322",
     "timestamp": 1742601600000,
     "notify": true,
     "changelog": [
-        "Website launch"
+        "Show update popup to all users including first-time visitors",
+        "Session-based display: shows once per session, resets after 90 min idle",
+        "Dismiss per update: hides only for current build, reappears on next update"
     ]
 }
