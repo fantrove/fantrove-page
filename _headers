@@ -10,6 +10,12 @@
   Pragma: no-cache
   Expires: 0
 
+# release-history.json: ห้าม cache
+/assets/json/release-history.json
+  Cache-Control: no-store, no-cache, max-age=0, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
 # current-stage.json: ห้าม cache
 /assets/json/current-stage.json
   Cache-Control: no-store, no-cache, max-age=0, must-revalidate
@@ -23,3 +29,9 @@
 # ทุก path อื่น (HTML ทุกไฟล์ ทุก folder): revalidate ทุกครั้ง
 /*
   Cache-Control: no-cache, must-revalidate
+
+# release-history.json: ห้าม cache
+/assets/json/release-history.json
+  Cache-Control: no-store, no-cache, max-age=0, must-revalidate
+  Pragma: no-cache
+  Expires: 0

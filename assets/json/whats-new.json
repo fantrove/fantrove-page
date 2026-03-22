@@ -1,32 +1,24 @@
 {
-  "version": "1.0.2",
+  "version": "1.0.3",
   "date": {
     "en": "March 22, 2025",
     "th": "22 มีนาคม 2568"
   },
   "title": {
-    "en": "Update notification improvements",
-    "th": "ปรับปรุงระบบแจ้งเตือนอัพเดท"
+    "en": "Release history",
+    "th": "ประวัติการอัพเดท"
   },
   "subtitle": {
-    "en": "Everyone now sees update notifications, with smarter session handling.",
-    "th": "ผู้ใช้ทุกคนได้รับการแจ้งเตือนอัพเดท พร้อมระบบ session ที่ฉลาดขึ้น"
+    "en": "The What's New page now shows up to 7 past releases.",
+    "th": "หน้ามีอะไรใหม่ตอนนี้แสดงประวัติย้อนหลังได้ถึง 7 เวอร์ชัน"
   },
   "sections": [
     {
       "type": "improved",
       "items": [
         {
-          "title": { "en": "All users see update notifications", "th": "ผู้ใช้ทุกคนเห็นการแจ้งเตือน" },
-          "desc": { "en": "Including first-time visitors — no one misses an update.", "th": "รวมถึงผู้ใช้ใหม่ที่เปิดครั้งแรก ไม่มีใครพลาดการอัพเดท" }
-        },
-        {
-          "title": { "en": "Session-based display", "th": "แสดงครั้งเดียวต่อ session" },
-          "desc": { "en": "Shows once per session. Returns after 90 minutes of inactivity.", "th": "แสดงครั้งเดียวต่อ session กลับมาแสดงอีกครั้งหลังไม่ได้ใช้งาน 90 นาที" }
-        },
-        {
-          "title": { "en": "Dismiss per update", "th": "ปิดได้เฉพาะอัพเดทนี้" },
-          "desc": { "en": "Dismissing only applies to the current update. Future updates still notify you.", "th": "การปิดมีผลเฉพาะอัพเดทนี้ การอัพเดทครั้งต่อไปจะแจ้งเตือนตามปกติ" }
+          "title": { "en": "Release history on What's New page", "th": "ประวัติการอัพเดทบนหน้ามีอะไรใหม่" },
+          "desc": { "en": "Shows up to 7 past releases. Older ones are removed automatically.", "th": "แสดงประวัติย้อนหลังสูงสุด 7 เวอร์ชัน รายการเก่ากว่านั้นจะถูกลบอัตโนมัติ" }
         }
       ]
     }

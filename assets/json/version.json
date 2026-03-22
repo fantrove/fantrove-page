@@ -1,11 +1,10 @@
 {
-    "version": "1.0.2",
-    "build": "1.0.2-20250322",
+    "version": "1.0.3",
+    "build": "1.0.3-20250322",
     "timestamp": 1742601600000,
     "notify": true,
     "changelog": [
-        "Show update popup to all users including first-time visitors",
-        "Session-based display: shows once per session, resets after 90 min idle",
-        "Dismiss per update: hides only for current build, reappears on next update"
+        "Release history on What's New page (up to 7 releases)",
+        "Old releases auto-removed when exceeding limit"
     ]
 }

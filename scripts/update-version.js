@@ -1,33 +1,29 @@
 #!/usr/bin/env node
 // scripts/update-version.js — Fantrove Verse Release Tool
-// รับ version จาก environment variable APP_VERSION
-// ตัวอย่าง build command ใน Cloudflare Pages:
-//   node scripts/update-version.js
+// whats-new.json  = current release เท่านั้น (เขียนเองก่อน deploy)
+// release-history.json = build script จัดการอัตโนมัติ ไม่ต้องแตะ
 'use strict';
 
 const fs   = require('fs');
 const path = require('path');
 
+const MAX_HISTORY = 7;
+
 const CONFIG = {
-  versionFile:  'assets/json/version.json',
-  whatsNewFile: 'assets/json/whats-new.json',
-  excludeDirs:  new Set(['node_modules', '.git', 'scripts', '.cloudflare', 'dist', 'build']),
-  htmlExts:     new Set(['.html', '.htm']),
-  assetPattern: /((?:src|href)=["'][^"':]*?\.(?:js|css|json))\?v=[^"'\s&]*/g
+  versionFile:   'assets/json/version.json',
+  whatsNewFile:  'assets/json/whats-new.json',
+  historyFile:   'assets/json/release-history.json',
+  excludeDirs:   new Set(['node_modules', '.git', 'scripts', '.cloudflare', 'dist', 'build']),
+  htmlExts:      new Set(['.html', '.htm']),
+  assetPattern:  /((?:src|href)=["'][^"':]*?\.(?:js|css|json))\?v=[^"'\s&]*/g
 };
 
-// อ่าน version จาก ENV ก่อน ถ้าไม่มีค่อยดูจาก arg
 const newVersion = process.env.APP_VERSION || process.argv[2];
-
 if (!newVersion) {
-  console.error('\n  ❌  ไม่พบ version');
-  console.error('  กรุณาตั้ง APP_VERSION ใน Cloudflare Pages environment variables\n');
-  process.exit(1);
+  console.error('\n  ❌  ไม่พบ APP_VERSION\n'); process.exit(1);
 }
-
 if (!/^\d+\.\d+\.\d+/.test(newVersion)) {
-  console.error(`\n  ❌  APP_VERSION "${newVersion}" ไม่ใช่รูปแบบ semver (1.2.3)\n`);
-  process.exit(1);
+  console.error(`\n  ❌  APP_VERSION "${newVersion}" ไม่ใช่ semver\n`); process.exit(1);
 }
 
 const isSilent = process.env.DEPLOY_SILENT === '1' || process.argv.includes('--silent');
@@ -36,51 +32,99 @@ const today    = new Date().toISOString().slice(0, 10).replace(/-/g, '');
 const buildId  = `${newVersion}-${today}`;
 
 console.log(`\n📦  Fantrove Release Tool`);
-console.log(`    Version:  ${newVersion}`);
-console.log(`    Build ID: ${buildId}`);
-console.log(`    Silent:   ${isSilent}\n`);
+console.log(`    Version:  ${newVersion} | Build: ${buildId} | Silent: ${isSilent}\n`);
 
-// Step 1: อ่าน whats-new.json ดึง changelog ของ version นี้
+// ── Step 1: อ่าน whats-new.json (current release) ────────────────────────────
 const whatsNewPath = path.join(ROOT, CONFIG.whatsNewFile);
-let changelog = [];
-
+let current = null;
 try {
-  const whatsNew = JSON.parse(fs.readFileSync(whatsNewPath, 'utf8'));
-  const release  = whatsNew;
-  if (release) {
-    (release.sections || []).forEach(function(section) {
-      (section.items || []).forEach(function(item) {
-        const title = item.title && (item.title.en || item.title.th);
-        if (title) changelog.push(title);
-      });
-    });
-    console.log(`✅  whats-new.json: พบ release "${newVersion}" — ${changelog.length} items`);
+  current = JSON.parse(fs.readFileSync(whatsNewPath, 'utf8'));
+  if (current.version !== newVersion) {
+    console.warn(`⚠️   whats-new.json version (${current.version}) ไม่ตรงกับ APP_VERSION (${newVersion})`);
+    console.warn(`    อัปเดต whats-new.json ให้ตรงกับ version ใหม่ก่อน deploy`);
   } else {
-    console.log(`⚠️   whats-new.json: ไม่พบ release "${newVersion}" — changelog จะว่างเปล่า`);
+    console.log(`✅  whats-new.json: v${current.version} ready`);
   }
 } catch (e) {
-  console.log(`⚠️   whats-new.json: ${e.message}`);
+  console.log(`⚠️   ไม่พบ whats-new.json: ${e.message}`);
 }
 
-// Step 2: อัปเดต version.json
-const versionPath = path.join(ROOT, CONFIG.versionFile);
-try { JSON.parse(fs.readFileSync(versionPath, 'utf8')); } catch (_) {}
+// ── Step 2: อ่าน release-history.json แล้วอัปเดต ────────────────────────────
+// ไฟล์นี้ build script จัดการเอง ไม่ต้องแตะด้วยมือ
+const historyPath = path.join(ROOT, CONFIG.historyFile);
+let history = { releases: [] };
+try {
+  history = JSON.parse(fs.readFileSync(historyPath, 'utf8'));
+  if (!Array.isArray(history.releases)) history.releases = [];
+} catch (e) {
+  console.log(`ℹ️   สร้าง release-history.json ใหม่`);
+}
 
-const newData = {
-  version:   newVersion,
-  build:     buildId,
-  timestamp: Date.now(),
-  notify:    !isSilent,
-  changelog
-};
+// หา version ก่อนหน้าใน history เพื่อเอาไปเพิ่ม
+// (ดึงจาก version.json เดิมก่อนที่จะ overwrite)
+const oldVersionPath = path.join(ROOT, CONFIG.versionFile);
+let oldVersion = null;
+try {
+  const oldData = JSON.parse(fs.readFileSync(oldVersionPath, 'utf8'));
+  oldVersion = oldData.version;
+} catch (e) {}
 
+// ถ้า version ใหม่ต่างจากเดิม และ current มีข้อมูล → เพิ่มเข้า history
+if (current && oldVersion && oldVersion !== newVersion) {
+  // ตรวจว่ายังไม่มีใน history
+  const alreadyIn = history.releases.some(r => r.version === oldVersion);
+  if (!alreadyIn) {
+    // ดึง release เก่าจาก history หรือ whats-new เพื่อเพิ่ม
+    // อ่าน whats-new ของ version ก่อนหน้าจาก history ที่มีอยู่แล้ว
+    // ถ้าไม่มี → ใช้ข้อมูลจาก version.json เดิม
+    let oldRelease = null;
+    try {
+      const oldVerData = JSON.parse(fs.readFileSync(oldVersionPath, 'utf8'));
+      // สร้าง minimal release record จาก version.json เดิม
+      oldRelease = {
+        version:  oldVerData.version,
+        date:     { en: new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' }),
+                    th: new Date().toLocaleDateString('th-TH',  { year:'numeric', month:'long', day:'numeric' }) },
+        changelog: oldVerData.changelog || []
+      };
+    } catch (e) {}
+
+    if (oldRelease) {
+      history.releases.unshift(oldRelease);
+      console.log(`📋  เพิ่ม v${oldRelease.version} เข้า history`);
+    }
+  }
+
+  // ตัดเกิน MAX_HISTORY
+  if (history.releases.length > MAX_HISTORY) {
+    const removed = history.releases.splice(MAX_HISTORY);
+    console.log(`🗑️   ลบประวัติเก่า ${removed.map(r=>r.version).join(', ')} (เก็บแค่ ${MAX_HISTORY})`);
+  }
+
+  fs.writeFileSync(historyPath, JSON.stringify(history, null, 2) + '\n');
+  console.log(`✅  release-history.json: ${history.releases.length} releases`);
+}
+
+// ── Step 3: ดึง changelog จาก whats-new.json ────────────────────────────────
+let changelog = [];
+if (current) {
+  (current.sections || []).forEach(s => {
+    (s.items || []).forEach(item => {
+      const title = item.title && (item.title.en || item.title.th);
+      if (title) changelog.push(title);
+    });
+  });
+}
+
+// ── Step 4: อัปเดต version.json ─────────────────────────────────────────────
+const versionPath = oldVersionPath;
+const newData = { version: newVersion, build: buildId, timestamp: Date.now(), notify: !isSilent, changelog };
 fs.mkdirSync(path.dirname(versionPath), { recursive: true });
 fs.writeFileSync(versionPath, JSON.stringify(newData, null, 2) + '\n');
-console.log(`✅  version.json updated`);
+console.log(`✅  version.json → ${buildId}`);
 
-// Step 3: Scan & rewrite HTML
+// ── Step 5: Scan & rewrite HTML ──────────────────────────────────────────────
 let scanned = 0, updated = 0;
-
 function walk(dir) {
   let entries;
   try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch (_) { return; }
@@ -90,17 +134,11 @@ function walk(dir) {
     if (e.isDirectory()) { walk(full); continue; }
     if (!CONFIG.htmlExts.has(path.extname(e.name).toLowerCase())) continue;
     scanned++;
-    const orig      = fs.readFileSync(full, 'utf8');
+    const orig = fs.readFileSync(full, 'utf8');
     const rewritten = orig.replace(CONFIG.assetPattern, `$1?v=${buildId}`);
-    if (rewritten !== orig) {
-      fs.writeFileSync(full, rewritten, 'utf8');
-      updated++;
-      console.log(`  ✅  ${path.relative(ROOT, full)}`);
-    }
+    if (rewritten !== orig) { fs.writeFileSync(full, rewritten, 'utf8'); updated++; console.log(`  ✅  ${path.relative(ROOT, full)}`); }
   }
 }
-
-console.log('\nScanning HTML files...');
+console.log('\nScanning HTML...');
 walk(ROOT);
-console.log(`\n✅  ${updated}/${scanned} HTML files updated`);
-console.log(`\n🚀  Build complete: ${buildId}\n`);
+console.log(`\n✅  ${updated}/${scanned} HTML updated | 🚀  ${buildId}\n`);
