@@ -1,7 +1,15 @@
 #!/usr/bin/env node
 // scripts/update-version.js — Fantrove Verse Release Tool
-// whats-new.json  = current release เท่านั้น (เขียนเองก่อน deploy)
-// release-history.json = build script จัดการอัตโนมัติ ไม่ต้องแตะ
+//
+// ══════════════════════════════════════════════════════════════
+//  3 โหมด (ตัดสินโดย APP_VERSION + เนื้อหา whats-new.json)
+// ──────────────────────────────────────────────────────────────
+//  EXPLICIT      : APP_VERSION=x.x.x ตั้งมาเอง → ใช้ตามนั้น
+//  AUTO-INCREMENT: ไม่ตั้ง APP_VERSION แต่ whats-new.json เปลี่ยน
+//                  → patch +1 (1.0.9 → 1.0.10, ไม่ใช่ 1.1.0)
+//  SILENT REBUILD: ไม่ตั้ง APP_VERSION + ไม่มีอะไรเปลี่ยนเลย
+//                  → build date ใหม่, notify=false, ไม่ pop-up ซ้ำ
+// ══════════════════════════════════════════════════════════════
 'use strict';
 
 const fs   = require('fs');
@@ -10,102 +18,190 @@ const path = require('path');
 const MAX_HISTORY = 7;
 
 const CONFIG = {
-  versionFile:   'assets/json/version.json',
-  whatsNewFile:  'assets/json/whats-new.json',
-  historyFile:   'assets/json/release-history.json',
-  excludeDirs:   new Set(['node_modules', '.git', 'scripts', '.cloudflare', 'dist', 'build']),
-  htmlExts:      new Set(['.html', '.htm']),
-  assetPattern:  /((?:src|href)=["'][^"':]*?\.(?:js|css|json))\?v=[^"'\s&]*/g
+  versionFile:  'assets/json/version.json',
+  whatsNewFile: 'assets/json/whats-new.json',
+  historyFile:  'assets/json/release-history.json',
+  excludeDirs:  new Set(['node_modules', '.git', 'scripts', '.cloudflare', 'dist', 'build']),
+  htmlExts:     new Set(['.html', '.htm']),
+  assetPattern: /((?:src|href)=["'][^"':]*?\.(?:js|css|json))\?v=[^"'\s&]*/g
 };
 
-const newVersion = process.env.APP_VERSION || process.argv[2];
-if (!newVersion) {
-  console.error('\n  ❌  ไม่พบ APP_VERSION\n'); process.exit(1);
+const ROOT = path.resolve(__dirname, '..');
+
+// ── Utility: เพิ่ม patch ทีละ 1 แบบ integer ─────────────────────────────────
+// ทำให้ 1.0.9 → 1.0.10  (ไม่ใช่ 1.1.0 จากการบวกทศนิยม)
+function incrementPatch(version) {
+  const parts = String(version || '0.0.0').split('.');
+  const major = parseInt(parts[0], 10) || 0;
+  const minor = parseInt(parts[1], 10) || 0;
+  const patch = parseInt(parts[2], 10) || 0;
+  return `${major}.${minor}.${patch + 1}`;
 }
-if (!/^\d+\.\d+\.\d+/.test(newVersion)) {
-  console.error(`\n  ❌  APP_VERSION "${newVersion}" ไม่ใช่ semver\n`); process.exit(1);
-}
 
-const isSilent = process.env.DEPLOY_SILENT === '1' || process.argv.includes('--silent');
-const ROOT     = path.resolve(__dirname, '..');
-const today    = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-const buildId  = `${newVersion}-${today}`;
-
-console.log(`\n📦  Fantrove Release Tool`);
-console.log(`    Version:  ${newVersion} | Build: ${buildId} | Silent: ${isSilent}\n`);
-
-// ── Step 1: อ่าน whats-new.json (current release) ────────────────────────────
-const whatsNewPath = path.join(ROOT, CONFIG.whatsNewFile);
-let current = null;
-try {
-  current = JSON.parse(fs.readFileSync(whatsNewPath, 'utf8'));
-  if (current.version !== newVersion) {
-    console.warn(`⚠️   whats-new.json version (${current.version}) ไม่ตรงกับ APP_VERSION (${newVersion})`);
-    console.warn(`    อัปเดต whats-new.json ให้ตรงกับ version ใหม่ก่อน deploy`);
-  } else {
-    console.log(`✅  whats-new.json: v${current.version} ready`);
+// ── Utility: hash เนื้อหา whats-new.json เพื่อตรวจว่า "เปลี่ยนจริงไหม" ──────
+// ใช้ djb2 — เร็ว เพียงพอสำหรับ content fingerprint
+function hashContent(obj) {
+  const str = JSON.stringify(obj, null, 0);
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) {
+    h = ((h << 5) + h) ^ str.charCodeAt(i);
+    h = h >>> 0; // unsigned 32-bit
   }
-} catch (e) {
-  console.log(`⚠️   ไม่พบ whats-new.json: ${e.message}`);
+  return h.toString(16).padStart(8, '0');
 }
 
-// ── Step 2: อ่าน release-history.json แล้วอัปเดต ────────────────────────────
-// ไฟล์นี้ build script จัดการเอง ไม่ต้องแตะด้วยมือ
-const historyPath = path.join(ROOT, CONFIG.historyFile);
-let history = { releases: [] };
-try {
-  history = JSON.parse(fs.readFileSync(historyPath, 'utf8'));
-  if (!Array.isArray(history.releases)) history.releases = [];
-} catch (e) {
-  console.log(`ℹ️   สร้าง release-history.json ใหม่`);
+// ── อ่านไฟล์ JSON อย่างปลอดภัย ──────────────────────────────────────────────
+function readJSON(filePath, fallback) {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch (_) {
+    return fallback;
+  }
 }
 
-// หา version ก่อนหน้าใน history เพื่อเอาไปเพิ่ม
-// (ดึงจาก version.json เดิมก่อนที่จะ overwrite)
-const oldVersionPath = path.join(ROOT, CONFIG.versionFile);
-let oldVersion = null;
-try {
-  const oldData = JSON.parse(fs.readFileSync(oldVersionPath, 'utf8'));
-  oldVersion = oldData.version;
-} catch (e) {}
+// ════════════════════════════════════════════════════════════════
+//  ขั้นตอนที่ 0: ตรวจสอบโหมดและหา version ที่จะใช้
+// ════════════════════════════════════════════════════════════════
 
-// ถ้า version ใหม่ต่างจากเดิม และ current มีข้อมูล → เพิ่มเข้า history
-if (current && oldVersion && oldVersion !== newVersion) {
-  // ตรวจว่ายังไม่มีใน history
+const explicitVersion = process.env.APP_VERSION || process.argv[2];
+const isForceSilent   = process.env.DEPLOY_SILENT === '1' || process.argv.includes('--silent');
+
+const versionPath  = path.join(ROOT, CONFIG.versionFile);
+const whatsNewPath = path.join(ROOT, CONFIG.whatsNewFile);
+const historyPath  = path.join(ROOT, CONFIG.historyFile);
+
+// อ่านสถานะปัจจุบัน
+const oldVerData  = readJSON(versionPath, { version: '1.0.0', build: '', contentHash: '' });
+const oldVersion  = oldVerData.version || '1.0.0';
+const oldHash     = oldVerData.contentHash || '';
+
+// อ่าน whats-new.json (current release)
+const current = readJSON(whatsNewPath, null);
+const newHash = current ? hashContent(current) : '';
+
+// ─── ตัดสินโหมด ─────────────────────────────────────────────────────────────
+let MODE, newVersion, isSilent;
+
+if (explicitVersion) {
+  // ── EXPLICIT MODE ─────────────────────────────────────────────
+  if (!/^\d+\.\d+\.\d+/.test(explicitVersion)) {
+    console.error(`\n  ❌  APP_VERSION "${explicitVersion}" ไม่ใช่ semver (ต้องเป็น x.y.z)\n`);
+    process.exit(1);
+  }
+  MODE       = 'EXPLICIT';
+  newVersion = explicitVersion;
+  isSilent   = isForceSilent;
+
+} else if (newHash && newHash !== oldHash) {
+  // ── AUTO-INCREMENT MODE ──────────────────────────────────────
+  // whats-new.json เปลี่ยน → บวก patch +1
+  MODE       = 'AUTO-INCREMENT';
+  newVersion = incrementPatch(oldVersion);
+  isSilent   = isForceSilent;
+
+} else {
+  // ── SILENT REBUILD MODE ──────────────────────────────────────
+  // ไม่มีอะไรเปลี่ยน → build ใหม่วันนี้ แต่ไม่ pop-up
+  MODE       = 'SILENT-REBUILD';
+  newVersion = oldVersion;  // version เดิม
+  isSilent   = true;        // บังคับ silent เสมอ
+}
+
+// build ID ใช้วันที่ปัจจุบันเสมอ
+const today   = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+const buildId = `${newVersion}-${today}`;
+
+// ─── แสดงผลสรุป ──────────────────────────────────────────────────────────────
+const modeLabel = {
+  'EXPLICIT':       '📌 EXPLICIT       (version จากผู้ใช้)',
+  'AUTO-INCREMENT': '🔢 AUTO-INCREMENT (patch +1 จาก content เปลี่ยน)',
+  'SILENT-REBUILD': '♻️  SILENT-REBUILD (ไม่มีอะไรเปลี่ยน, ไม่ pop-up)',
+};
+console.log(`\n📦  Fantrove Release Tool`);
+console.log(`    Mode:    ${modeLabel[MODE]}`);
+console.log(`    Old:     v${oldVersion}  (hash: ${oldHash || 'none'})`);
+console.log(`    New:     v${newVersion}  (hash: ${newHash})`);
+console.log(`    Build:   ${buildId}`);
+console.log(`    Silent:  ${isSilent}\n`);
+
+// ════════════════════════════════════════════════════════════════
+//  ขั้นตอนที่ 1: ตรวจ whats-new.json
+// ════════════════════════════════════════════════════════════════
+
+if (!current) {
+  console.warn(`⚠️   ไม่พบ whats-new.json`);
+} else {
+  // ใน AUTO-INCREMENT ต้องอัปเดต version field ใน whats-new.json ด้วย
+  if (MODE === 'AUTO-INCREMENT') {
+    current.version = newVersion;
+    fs.writeFileSync(whatsNewPath, JSON.stringify(current, null, 2) + '\n');
+    console.log(`✅  whats-new.json: version อัปเดตเป็น ${newVersion}`);
+  } else if (current.version !== newVersion && MODE === 'EXPLICIT') {
+    console.warn(`⚠️   whats-new.json version (${current.version}) ≠ APP_VERSION (${newVersion})`);
+    console.warn(`    ควรอัปเดต whats-new.json ให้ตรงก่อน deploy`);
+  } else {
+    console.log(`✅  whats-new.json: v${current.version} (${MODE === 'SILENT-REBUILD' ? 'unchanged' : 'ready'})`);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  ขั้นตอนที่ 2: อัปเดต release-history.json
+// ════════════════════════════════════════════════════════════════
+
+let history = readJSON(historyPath, { releases: [] });
+if (!Array.isArray(history.releases)) history.releases = [];
+
+// เพิ่ม version เก่าเข้า history เฉพาะเมื่อ version เปลี่ยนจริง
+const versionChanged = (newVersion !== oldVersion);
+
+if (versionChanged && current) {
   const alreadyIn = history.releases.some(r => r.version === oldVersion);
-  if (!alreadyIn) {
-    // ดึง release เก่าจาก history หรือ whats-new เพื่อเพิ่ม
-    // อ่าน whats-new ของ version ก่อนหน้าจาก history ที่มีอยู่แล้ว
-    // ถ้าไม่มี → ใช้ข้อมูลจาก version.json เดิม
-    let oldRelease = null;
-    try {
-      const oldVerData = JSON.parse(fs.readFileSync(oldVersionPath, 'utf8'));
-      // สร้าง minimal release record จาก version.json เดิม
+  if (!alreadyIn && oldVersion) {
+    // สร้าง record สำหรับ version เก่า
+    // พยายามอ่าน whats-new เก่าจาก content ที่มีอยู่ (ก่อนถูก overwrite)
+    // ถ้าเป็น AUTO-INCREMENT current ก็คือ content ของ version เก่า (เพิ่งอ่านมา)
+    const dateStr   = new Date();
+    const dateEn    = dateStr.toLocaleDateString('en-US',  { year:'numeric', month:'long', day:'numeric' });
+    const dateTh    = dateStr.toLocaleDateString('th-TH',  { year:'numeric', month:'long', day:'numeric' });
+
+    let oldRelease;
+    if (MODE === 'AUTO-INCREMENT' && current) {
+      // ใช้ content จาก whats-new.json ก่อน increment (current ยังมี title/sections เดิม)
       oldRelease = {
-        version:  oldVerData.version,
-        date:     { en: new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' }),
-                    th: new Date().toLocaleDateString('th-TH',  { year:'numeric', month:'long', day:'numeric' }) },
+        version:  oldVersion,
+        date:     current.date || { en: dateEn, th: dateTh },
+        title:    current.title,
+        subtitle: current.subtitle,
+        sections: current.sections || []
+      };
+    } else {
+      oldRelease = {
+        version:  oldVersion,
+        date:     { en: dateEn, th: dateTh },
         changelog: oldVerData.changelog || []
       };
-    } catch (e) {}
-
-    if (oldRelease) {
-      history.releases.unshift(oldRelease);
-      console.log(`📋  เพิ่ม v${oldRelease.version} เข้า history`);
     }
+
+    history.releases.unshift(oldRelease);
+    console.log(`📋  เพิ่ม v${oldVersion} เข้า history`);
   }
 
   // ตัดเกิน MAX_HISTORY
   if (history.releases.length > MAX_HISTORY) {
     const removed = history.releases.splice(MAX_HISTORY);
-    console.log(`🗑️   ลบประวัติเก่า ${removed.map(r=>r.version).join(', ')} (เก็บแค่ ${MAX_HISTORY})`);
+    console.log(`🗑️   ลบประวัติเก่า: ${removed.map(r => r.version).join(', ')} (เก็บแค่ ${MAX_HISTORY})`);
   }
 
   fs.writeFileSync(historyPath, JSON.stringify(history, null, 2) + '\n');
   console.log(`✅  release-history.json: ${history.releases.length} releases`);
+} else {
+  console.log(`ℹ️   release-history.json: ไม่มีการเปลี่ยนแปลง (version เดิม)`);
 }
 
-// ── Step 3: ดึง changelog จาก whats-new.json ────────────────────────────────
+// ════════════════════════════════════════════════════════════════
+//  ขั้นตอนที่ 3: ดึง changelog จาก whats-new.json
+// ════════════════════════════════════════════════════════════════
+
 let changelog = [];
 if (current) {
   (current.sections || []).forEach(s => {
@@ -116,15 +212,29 @@ if (current) {
   });
 }
 
-// ── Step 4: อัปเดต version.json ─────────────────────────────────────────────
-const versionPath = oldVersionPath;
-const newData = { version: newVersion, build: buildId, timestamp: Date.now(), notify: !isSilent, changelog };
+// ════════════════════════════════════════════════════════════════
+//  ขั้นตอนที่ 4: เขียน version.json ใหม่
+// ════════════════════════════════════════════════════════════════
+
+const newData = {
+  version:     newVersion,
+  build:       buildId,
+  timestamp:   Date.now(),
+  notify:      !isSilent,
+  changelog,
+  contentHash: newHash   // เก็บ hash ไว้ตรวจครั้งถัดไป
+};
+
 fs.mkdirSync(path.dirname(versionPath), { recursive: true });
 fs.writeFileSync(versionPath, JSON.stringify(newData, null, 2) + '\n');
-console.log(`✅  version.json → ${buildId}`);
+console.log(`✅  version.json → ${buildId} | notify=${!isSilent}`);
 
-// ── Step 5: Scan & rewrite HTML ──────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════
+//  ขั้นตอนที่ 5: Scan & rewrite HTML (bust cache ด้วย ?v=buildId)
+// ════════════════════════════════════════════════════════════════
+
 let scanned = 0, updated = 0;
+
 function walk(dir) {
   let entries;
   try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch (_) { return; }
@@ -134,11 +244,24 @@ function walk(dir) {
     if (e.isDirectory()) { walk(full); continue; }
     if (!CONFIG.htmlExts.has(path.extname(e.name).toLowerCase())) continue;
     scanned++;
-    const orig = fs.readFileSync(full, 'utf8');
+    const orig      = fs.readFileSync(full, 'utf8');
     const rewritten = orig.replace(CONFIG.assetPattern, `$1?v=${buildId}`);
-    if (rewritten !== orig) { fs.writeFileSync(full, rewritten, 'utf8'); updated++; console.log(`  ✅  ${path.relative(ROOT, full)}`); }
+    if (rewritten !== orig) {
+      fs.writeFileSync(full, rewritten, 'utf8');
+      updated++;
+      console.log(`  ✅  ${path.relative(ROOT, full)}`);
+    }
   }
 }
+
 console.log('\nScanning HTML...');
 walk(ROOT);
-console.log(`\n✅  ${updated}/${scanned} HTML updated | 🚀  ${buildId}\n`);
+
+// ── สรุปผล ────────────────────────────────────────────────────────────────────
+console.log(`\n${'─'.repeat(56)}`);
+console.log(`  Mode:    ${MODE}`);
+console.log(`  Version: v${oldVersion} → v${newVersion}`);
+console.log(`  Build:   ${buildId}`);
+console.log(`  Notify:  ${!isSilent}`);
+console.log(`  HTML:    ${updated}/${scanned} files updated`);
+console.log(`${'─'.repeat(56)}\n`);
