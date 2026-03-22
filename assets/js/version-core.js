@@ -1,6 +1,4 @@
 // version-core.js — Fantrove Verse
-// แสดง popup ทุกครั้งที่มี build ใหม่ รวมถึงเปิดครั้งแรก
-// session: แสดงครั้งเดียวต่อ session, reset หลัง idle 90 นาที
 
 (function () {
   'use strict';
@@ -12,9 +10,9 @@
     KEY_BUILD:     'fv_build',
     KEY_DISMISSED: 'fv_dismissed_',
     KEY_DISABLE:   'fv_noupdate',
-    SS_SHOWN:      'fv_shown_',
+    SS_SHOWN:      'fv_shown_',       // sessionStorage key per build
     SS_LAST_ACTIVE:'fv_last_active',
-    IDLE_MS:       90 * 60 * 1000,
+    IDLE_MS:       90 * 60 * 1000,   // 90 นาที
     POPUP_ID:      'fv-update-popup',
     TOGGLE_ID:     'auto-update-toggle-btn',
     SWITCH_ID:     'auto-update-switch'
@@ -32,18 +30,27 @@
   function isDismissed(b)  { return ls(CFG.KEY_DISMISSED + b) === '1'; }
   function setDismissed(b) { lsSet(CFG.KEY_DISMISSED + b, '1'); }
 
-  // ── Session idle ─────────────────────────────────────────────────────────
-  // fresh = ยังไม่เคยแสดงใน session นี้ หรือ idle นานเกิน 90 นาที
+  // ── Session logic ────────────────────────────────────────────────────────
+  // fresh = ยังไม่เคยแสดง build นี้ใน session หรือ idle เกิน 90 นาที
+  // build ID ต่างกัน → session ของ build ใหม่นั้นจะ fresh เสมอ (SS key ต่างกัน)
 
-  function isSessionFresh(b) {
-    if (ss(CFG.SS_SHOWN + b) !== '1') return true;
+  function isSessionFresh(buildId) {
+    if (ss(CFG.SS_SHOWN + buildId) !== '1') return true;
     var last = parseInt(ss(CFG.SS_LAST_ACTIVE) || '0', 10);
     return !last || (Date.now() - last) >= CFG.IDLE_MS;
   }
 
-  function updateLastActive() { ssSet(CFG.SS_LAST_ACTIVE, String(Date.now())); }
+  function markSession(buildId) {
+    ssSet(CFG.SS_SHOWN + buildId, '1');
+    ssSet(CFG.SS_LAST_ACTIVE, String(Date.now()));
+  }
+
+  function updateLastActive() {
+    ssSet(CFG.SS_LAST_ACTIVE, String(Date.now()));
+  }
 
   // ── Fetch ────────────────────────────────────────────────────────────────
+  // ทั้งสองไฟล์ใช้ no-store เพื่อให้ได้ข้อมูลสดเสมอ
 
   function fetchVersion() {
     return fetch(CFG.VERSION_URL + '?_=' + Date.now(), { cache: 'no-store' })
@@ -71,6 +78,7 @@
 
   function buildPopup(versionData, wn) {
     var isTh  = (localStorage.getItem('selectedLang') || 'en') === 'th';
+    // ✅ ใช้ version จาก versionData (ที่เพิ่ง fetch มาสด) เสมอ
     var ver   = esc(versionData.version || '');
     var title = wn ? t(wn.title) : '';
     var sub   = wn ? t(wn.subtitle) : '';
@@ -86,10 +94,10 @@
     }
 
     var L = {
-      badge:   isTh ? 'อัพเดทใหม่' : 'New update',
-      ver:     isTh ? 'เวอร์ชัน '  : 'Version ',
-      more:    isTh ? 'ดูรายละเอียด' : "See what's new",
-      dismiss: isTh ? 'ไม่แสดงอีกสำหรับการอัพเดทนี้' : "Don't show again for this update"
+      badge:   isTh ? 'อัพเดทใหม่'                        : 'New update',
+      ver:     isTh ? 'เวอร์ชัน '                          : 'Version ',
+      more:    isTh ? 'ดูรายละเอียด'                       : "See what's new",
+      dismiss: isTh ? 'ไม่แสดงอีกสำหรับการอัพเดทนี้'      : "Don't show again for this update"
     };
 
     var itemsHTML = '';
@@ -111,7 +119,9 @@
           + '</div>'
           + '<div>'
             + '<div style="font-size:.95em;font-weight:600;color:var(--fv-t1,#111)">' + L.badge + '</div>'
-            + '<div style="font-size:.78em;color:#13b47f;font-weight:500;margin-top:1px">' + L.ver + ver + (title ? ' \u2014 ' + title : '') + '</div>'
+            + '<div style="font-size:.78em;color:#13b47f;font-weight:500;margin-top:1px">'
+              + L.ver + ver + (title ? ' \u2014 ' + title : '')
+            + '</div>'
           + '</div>'
         + '</div>'
         + (sub ? '<p style="font-size:.85em;color:var(--fv-t2,#666);margin:0 0 14px;line-height:1.55">' + sub + '</p>' : '')
@@ -123,11 +133,11 @@
   }
 
   function showPopup(versionData, whatsNewData, buildId) {
-    if (document.getElementById(CFG.POPUP_ID)) return;
+    // ✅ ถ้ามี popup เก่าอยู่ (build เก่า) → เอาออกก่อนแสดงอันใหม่
+    var existing = document.getElementById(CFG.POPUP_ID);
+    if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
 
-    // บันทึก session
-    ssSet(CFG.SS_SHOWN + buildId, '1');
-    updateLastActive();
+    markSession(buildId);
 
     var wrap = document.createElement('div');
     wrap.id  = CFG.POPUP_ID;
@@ -165,35 +175,41 @@
     else setTimeout(trySetupToggle, 50);
   }
 
-  // ── Init ──────────────────────────────────────────────────────────────────
+  // ── Init ─────────────────────────────────────────────────────────────────
 
   function init() {
     updateLastActive();
     if (isDisabled()) return;
 
+    // ✅ fetch version.json สดทุกครั้ง ไม่อ่านจาก localStorage ก่อน
     fetchVersion().then(function(versionData) {
       if (!versionData) return;
 
       var newBuild = versionData.build || versionData.version;
 
-      // อัปเดต build ที่รู้จัก
+      // บันทึก build ใหม่ลง localStorage
+      var knownBuild = ls(CFG.KEY_BUILD);
       lsSet(CFG.KEY_BUILD, newBuild);
-
-      // dismiss ถาวร → ข้าม
-      if (isDismissed(newBuild)) return;
 
       // silent deploy → ข้าม
       if (versionData.notify === false) return;
 
-      // session: แสดงไปแล้วและยังไม่ idle → ข้าม
+      // dismiss ถาวรสำหรับ build นี้ → ข้าม
+      if (isDismissed(newBuild)) return;
+
+      // ✅ build ใหม่กว่าที่รู้จัก → session ของ build นี้จะ fresh เสมอ
+      // (SS key ต่างกัน → isSessionFresh คืน true อัตโนมัติ)
+      // ✅ build เดิม + session ยังไม่ fresh → ข้าม
       if (!isSessionFresh(newBuild)) return;
 
-      // ✅ แสดง popup (ทั้งผู้ใช้ใหม่และเก่า ทุก build)
+      // ✅ fetch whats-new.json สดทุกครั้ง เพื่อให้ได้เนื้อหาของ version ใหม่เสมอ
       fetchWhatsNew().then(function(whatsNewData) {
         showPopup(versionData, whatsNewData, newBuild);
       });
     });
   }
+
+  // ── Kickoff ───────────────────────────────────────────────────────────────
 
   trySetupToggle();
 
