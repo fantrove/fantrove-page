@@ -4,6 +4,12 @@
   Pragma: no-cache
   Expires: 0
 
+# whats-new.json: ห้าม cache เด็ดขาด
+/assets/json/whats-new.json
+  Cache-Control: no-store, no-cache, max-age=0, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
 # current-stage.json: ห้าม cache
 /assets/json/current-stage.json
   Cache-Control: no-store, no-cache, max-age=0, must-revalidate

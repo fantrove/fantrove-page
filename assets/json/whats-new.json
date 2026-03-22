@@ -1,0 +1,26 @@
+{
+  "version": "1.0.0",
+  "date": {
+    "en": "March 22, 2025",
+    "th": "22 มีนาคม 2568"
+  },
+  "title": {
+    "en": "Welcome to Fantrove Verse",
+    "th": "ยินดีต้อนรับสู่ Fantrove Verse"
+  },
+  "subtitle": {
+    "en": "The first official release.",
+    "th": "เวอร์ชันแรกอย่างเป็นทางการ"
+  },
+  "sections": [
+    {
+      "type": "new",
+      "items": [
+        {
+          "title": { "en": "Website launch", "th": "เปิดตัวเว็บไซต์" },
+          "desc": { "en": "Fantrove is now live.", "th": "Fantrove เปิดให้บริการแล้ว" }
+        }
+      ]
+    }
+  ]
+}
