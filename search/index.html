@@ -110,12 +110,12 @@
     var spacer = document.getElementById('cat-spacer');
     var OVERLAP = 0;
 
-    var _visible  = true;
-    var _touching = false;
-    var _lastY    = 0;
-    var _catOpen  = false;
-    var _rafPending = false;  /* rAF gate — max 1 pending frame at a time */
-    var _raf      = null;   /* rAF guard — prevents >1 DOM write per frame */
+    var _visible       = true;
+    var _touching      = false;
+    var _lastY         = 0;
+    var _catOpen       = false;
+    var _raf           = null;
+    var _touchStartY   = 0;   /* scrollY ตอน touchstart — ทั้งซ่อนและแสดงวัดจากนี่ */
 
     function _hide() {
       sticky.style.transform     = 'translateZ(0) translateY(-100%)';
@@ -140,14 +140,16 @@
     document.addEventListener('visibilitychange', function() {
       if (document.visibilityState === 'visible' && sticky) {
         requestAnimationFrame(function() {
-          _lastY = window.scrollY;
+          _lastY       = window.scrollY;
+          _touchStartY = window.scrollY;
         });
       }
     }, { passive: true });
 
     window.addEventListener('touchstart', function() {
-      _touching = true;
-      _lastY    = window.scrollY;
+      _touching    = true;
+      _lastY       = window.scrollY;
+      _touchStartY = window.scrollY; /* บันทึกจุดเริ่มต้นของ gesture นี้ */
     }, { passive: true });
 
     window.addEventListener('touchend', function() {
@@ -155,19 +157,25 @@
     }, { passive: true });
 
     window.addEventListener('scroll', function() {
-      /* Coalesce all scroll events into one rAF callback per frame.
-         Scroll can fire 4-8× per frame on high-refresh displays.
-         The rAF guard ensures style.transform is written at most
-         once per frame (≤60/s), keeping the main thread light.    */
       if (_raf) return;
       _raf = requestAnimationFrame(function() {
         _raf = null;
-        var y = window.scrollY, delta = y - _lastY;
+        var y     = window.scrollY;
+        var delta = y - _lastY;
         _lastY = y;
+        if (delta === 0) return;
+
         if (y <= 40) { if (!_visible) _show(); return; }
+
         if (_touching) {
-          if (delta > 5  && _visible)  _hide();
-          else if (delta < -12 && !_visible) _show();
+          /* ซ่อน: ปัดลง + เลื่อนจากจุด touchstart ลงมา > 30px */
+          if (delta > 5 && _visible && (y - _touchStartY) > 30) {
+            _hide();
+          }
+          /* แสดง: ปัดขึ้น + เลื่อนจากจุด touchstart ขึ้นมา > 30px (สมมาตรกับซ่อน) */
+          else if (delta < -15 && !_visible && (_touchStartY - y) > 30) {
+            _show();
+          }
         }
       });
     }, { passive: true });

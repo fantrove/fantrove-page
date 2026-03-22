@@ -740,8 +740,9 @@
         if (this._navEl) {
           this._navEl.style.transition = 'transform 0.22s cubic-bezier(0.33,1,0.68,1)';
           this._navEl.style.transform = 'translateZ(0) translateY(0%)';
-          this._navVisible = true;
-          this._externalHidden = false;
+          this._navVisible      = true;
+          this._externalHidden  = false;
+          this._touchStartY     = 0;
         }
         this._mobileSyncEnabled = true;
       } catch (e) {}
@@ -759,28 +760,53 @@
       } catch (e) {}
     }
 
-    _onTouchStart() { this._touching = true; this._lastScrollY = window.scrollY; }
+    _onTouchStart() {
+      this._touching     = true;
+      this._lastScrollY  = window.scrollY;
+      this._touchStartY  = window.scrollY; /* จุดเริ่มต้น gesture นี้ */
+    }
     _onTouchEnd() { this._touching = false; }
 
     _onMobileScroll() {
-      // rAF guard: coalesce scroll events → at most 1 DOM write per frame
       if (this._mobileScrollRaf) return;
       this._mobileScrollRaf = requestAnimationFrame(() => {
         this._mobileScrollRaf = null;
         try {
           if (this._externalHidden) return;
-          const y = window.scrollY; const delta = y - (this._lastScrollY || 0); this._lastScrollY = y;
+          const y     = window.scrollY;
+          const delta = y - (this._lastScrollY || 0);
+          this._lastScrollY = y;
+          if (delta === 0) return;
+
           if (y <= 40) { if (!this._navVisible) this._showNav(); return; }
+
           if (this._touching) {
-            if (delta > 5 && this._navVisible) this._hideNav();
-            else if (delta < -12 && !this._navVisible) this._showNav();
+            /* ซ่อน: ปัดลง + เลื่อนจากจุด touchstart ลงมา > 30px */
+            if (delta > 5 && this._navVisible &&
+                (y - (this._touchStartY || 0)) > 30) {
+              this._hideNav();
+            }
+            /* แสดง: ปัดขึ้น + เลื่อนจากจุด touchstart ขึ้นมา > 30px */
+            else if (delta < -15 && !this._navVisible &&
+                     ((this._touchStartY || 0) - y) > 30) {
+              this._showNav();
+            }
           }
         } catch (e) {}
       });
     }
 
-    _hideNav() { if (!this._navEl) return; this._navEl.style.transform = 'translateZ(0) translateY(100%)'; this._navVisible = false; }
-    _showNav() { if (!this._navEl) return; this._navEl.style.transform = 'translateZ(0) translateY(0%)'; this._navVisible = true; }
+    _hideNav() {
+      if (!this._navEl) return;
+      this._navEl.style.transform = 'translateZ(0) translateY(100%)';
+      this._navVisible = false;
+    }
+
+    _showNav() {
+      if (!this._navEl) return;
+      this._navEl.style.transform = 'translateZ(0) translateY(0%)';
+      this._navVisible = true;
+    }
 
     forceResync() { this.syncAllToStoredLang(); }
 
