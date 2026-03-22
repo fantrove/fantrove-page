@@ -1,407 +1,241 @@
 // version-core.js — Fantrove Verse
-// ─────────────────────────────────────────────────────────────────────────────
-// ระบบตรวจสอบ version และแจ้งเตือน update แบบ real-time
-//
-// Features:
-//   • Instant detection via visibilitychange, focus, pageshow events
-//   • BroadcastChannel — tab หนึ่งเจอ update ทุก tab รู้ทันที
-//   • Dual-interval polling: 15s (active) / 60s (hidden)
-//   • notify field — admin ควบคุมว่าจะแสดง popup หรือไม่
-//   • Changelog popup พร้อม UI ที่สะอาดและ accessible
-//   • Toggle button support
-//   • ตรวจสอบด้วย build ID (version + date) เพื่อความแม่นยำ
-// ─────────────────────────────────────────────────────────────────────────────
+// แสดง popup เฉพาะ:
+//   1. ครั้งแรกของ session ที่มี build ใหม่
+//   2. ถ้าผ่านไป 1-2 ชั่วโมงนับจากใช้งานล่าสุด (session หมดอายุ)
+// ยกเว้น: กด "ไม่แสดงอีก" → dismiss ถาวรเฉพาะ build นี้
 
 (function () {
   'use strict';
 
-  // ── Config ─────────────────────────────────────────────────────────────────
-
   var CFG = {
-    URL:           '/assets/json/version.json',
-    T_ACTIVE:      15000,   // interval เมื่อ tab active (ms)
-    T_IDLE:        60000,   // interval เมื่อ tab hidden (ms)
+    VERSION_URL:   '/assets/json/version.json',
+    WHATS_NEW_URL: '/assets/json/whats-new.json',
+    WHATS_NEW_PAGE:'/info/whats_new/',
     KEY_BUILD:     'fv_build',
+    KEY_DISMISSED: 'fv_dismissed_',  // localStorage: dismiss ถาวรเฉพาะ build นี้
     KEY_DISABLE:   'fv_noupdate',
+    SS_SHOWN:      'fv_shown_',      // sessionStorage: แสดงไปแล้วใน session นี้
+    SS_LAST_ACTIVE:'fv_last_active', // sessionStorage: เวลาใช้งานล่าสุด
+    IDLE_MS:       90 * 60 * 1000,  // 90 นาที = session หมดอายุ
     POPUP_ID:      'fv-update-popup',
     TOGGLE_ID:     'auto-update-toggle-btn',
-    SWITCH_ID:     'auto-update-switch',
-    BC_NAME:       'fv_version_sync'
+    SWITCH_ID:     'auto-update-switch'
   };
 
-  // ── State ──────────────────────────────────────────────────────────────────
+  // ── Storage helpers ──────────────────────────────────────────────────────
 
-  var state = {
-    currentBuild:  null,   // build ID ที่ user กำลัง run อยู่ (baseline)
-    timer:         null,
-    checking:      false,
-    channel:       null    // BroadcastChannel instance
-  };
+  function ls(k)       { try { return localStorage.getItem(k);     } catch(e) { return null; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, v);         } catch(e) {} }
+  function ss(k)       { try { return sessionStorage.getItem(k);   } catch(e) { return null; } }
+  function ssSet(k, v) { try { sessionStorage.setItem(k, v);       } catch(e) {} }
 
-  // ── Storage helpers ────────────────────────────────────────────────────────
+  function isDisabled()    { return ls(CFG.KEY_DISABLE) === '1'; }
+  function setDisabled(v)  { lsSet(CFG.KEY_DISABLE, v ? '1' : '0'); }
 
-  function ls(k)    { try { return localStorage.getItem(k);    } catch(e) { return null; } }
-  function lsSet(k, v) { try { localStorage.setItem(k, v);     } catch(e) {} }
+  // dismiss ถาวร (localStorage) — ใช้ได้เฉพาะ build นี้
+  function isDismissed(b)  { return ls(CFG.KEY_DISMISSED + b) === '1'; }
+  function setDismissed(b) { lsSet(CFG.KEY_DISMISSED + b, '1'); }
 
-  function isDisabled() { return ls(CFG.KEY_DISABLE) === '1'; }
-  function setDisabled(v) { lsSet(CFG.KEY_DISABLE, v ? '1' : '0'); }
+  // แสดงไปแล้วใน session นี้ (sessionStorage)
+  function isShownInSession(b) { return ss(CFG.SS_SHOWN + b) === '1'; }
+  function markShownInSession(b) { ssSet(CFG.SS_SHOWN + b, '1'); }
 
-  // ── Fetch version.json ─────────────────────────────────────────────────────
-  // ใช้ cache: 'no-store' เสมอ — Cloudflare จะส่งข้อมูลสดทุกครั้ง (ตาม _headers)
+  // ── Session idle check ───────────────────────────────────────────────────
+  // ถ้า user ไม่ได้ใช้งานนานเกิน IDLE_MS → ถือว่า session ใหม่ → แสดงใหม่ได้
 
-  function fetchVer() {
-    return fetch(CFG.URL + '?_=' + Date.now(), { cache: 'no-store' })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .catch(function () { return null; });
+  function isSessionFresh(buildId) {
+    // ถ้ายังไม่เคยแสดงใน session นี้เลย → fresh
+    if (!isShownInSession(buildId)) return true;
+
+    var lastActive = parseInt(ss(CFG.SS_LAST_ACTIVE) || '0', 10);
+    if (!lastActive) return true;
+
+    // ถ้าผ่านมานานเกิน IDLE_MS → session หมดอายุ → fresh
+    return (Date.now() - lastActive) >= CFG.IDLE_MS;
   }
 
-  // ── HTML escape ────────────────────────────────────────────────────────────
+  function updateLastActive() {
+    ssSet(CFG.SS_LAST_ACTIVE, String(Date.now()));
+  }
+
+  // ── Fetch ────────────────────────────────────────────────────────────────
+
+  function fetchVersion() {
+    return fetch(CFG.VERSION_URL + '?_=' + Date.now(), { cache: 'no-store' })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .catch(function() { return null; });
+  }
+
+  function fetchWhatsNew() {
+    return fetch(CFG.WHATS_NEW_URL + '?_=' + Date.now(), { cache: 'no-store' })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .catch(function() { return null; });
+  }
+
+  // ── Popup ────────────────────────────────────────────────────────────────
 
   function esc(s) {
-    return String(s || '')
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
-  // ── Popup ──────────────────────────────────────────────────────────────────
+  function t(obj) {
+    if (!obj) return '';
+    var lang = localStorage.getItem('selectedLang') || 'en';
+    return esc(obj[lang] || obj['en'] || '');
+  }
 
-  function buildPopupHTML(data) {
-    var ver       = esc(data.version || '');
-    var changelog = Array.isArray(data.changelog) ? data.changelog : [];
+  function buildPopup(versionData, wn) {
+    var isTh     = (localStorage.getItem('selectedLang') || 'en') === 'th';
+    var ver      = esc(versionData.version || '');
+    var title    = wn ? t(wn.title) : '';
+    var subtitle = wn ? t(wn.subtitle) : '';
 
-    var listHTML = '';
-    if (changelog.length) {
-      listHTML = '<ul style="'
-        + 'list-style:none;margin:0 0 20px;padding:0'
-        + '">';
-      for (var i = 0; i < changelog.length; i++) {
-        listHTML += '<li style="'
-          + 'display:flex;align-items:flex-start;gap:9px;'
-          + 'padding:5px 0;font-size:.86em;line-height:1.55;'
-          + 'color:var(--fv-text2,#555)'
-          + '">'
-          + '<span style="'
-            + 'flex-shrink:0;margin-top:4px;width:7px;height:7px;'
-            + 'border-radius:50%;background:#13b47f;display:inline-block'
-          + '"></span>'
-          + esc(changelog[i])
-          + '</li>';
-      }
-      listHTML += '</ul>';
+    var items = [];
+    if (wn) {
+      (wn.sections || []).forEach(function(s) {
+        (s.items || []).slice(0, 4).forEach(function(item) {
+          var txt = t(item.title);
+          if (txt) items.push(txt);
+        });
+      });
     }
 
-    return ''
-      // ── Overlay backdrop ──
-      + '<div id="fv-backdrop" style="'
-        + 'position:fixed;inset:0;'
-        + 'background:rgba(0,0,0,0.42);'
-        + 'backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);'
-        + 'z-index:99998;animation:fv-fade-in .18s ease'
-      + '"></div>'
+    var L = {
+      badge:   isTh ? 'อัพเดทใหม่' : 'New update',
+      version: isTh ? 'เวอร์ชัน ' : 'Version ',
+      more:    isTh ? 'ดูรายละเอียด' : 'See what\'s new',
+      dismiss: isTh ? 'ไม่แสดงอีกสำหรับการอัพเดทนี้' : 'Don\'t show again for this update'
+    };
 
-      // ── Card ──
-      + '<div id="fv-card" role="dialog" aria-modal="true" aria-label="Update available" style="'
-        + 'position:fixed;'
-        + 'left:50%;top:50%;transform:translate(-50%,-50%);'
-        + 'z-index:99999;'
-        + 'background:var(--fv-bg,#fff);'
-        + 'border-radius:18px;'
-        + 'padding:26px 24px 22px;'
-        + 'width:min(340px,calc(100vw - 32px));'
-        + 'box-shadow:0 8px 48px rgba(0,0,0,.22);'
-        + 'font-family:inherit;'
-        + 'animation:fv-slide-in .22s cubic-bezier(.22,1,.36,1)'
-      + '">'
+    var itemsHTML = '';
+    if (items.length) {
+      itemsHTML = '<ul style="list-style:none;margin:0 0 16px;padding:0">';
+      items.forEach(function(item) {
+        itemsHTML += '<li style="display:flex;align-items:flex-start;gap:8px;padding:4px 0;font-size:.85em;color:var(--fv-t2,#555);line-height:1.5">'
+          + '<span style="flex-shrink:0;margin-top:5px;width:6px;height:6px;border-radius:50%;background:#13b47f;display:inline-block"></span>'
+          + item + '</li>';
+      });
+      itemsHTML += '</ul>';
+    }
 
-        // close button
-        + '<button id="fv-close" aria-label="Close" style="'
-          + 'position:absolute;top:13px;right:14px;'
-          + 'border:none;background:none;cursor:pointer;'
-          + 'color:var(--fv-text3,#aaa);font-size:22px;'
-          + 'line-height:1;padding:4px 6px;border-radius:6px;'
-          + 'transition:color .15s,background .15s'
-        + '" onmouseover="this.style.background=\'var(--fv-hover,#f0f0f0)\'"'
-        + ' onmouseout="this.style.background=\'none\'"'
-        + '>&times;</button>'
+    return '<div id="fv-bd" style="position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(2px);z-index:99998;animation:fv-fi .18s ease"></div>'
+      + '<div id="fv-card" role="dialog" aria-modal="true" style="position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:99999;background:var(--fv-bg,#fff);border-radius:18px;padding:26px 24px 20px;width:min(360px,calc(100vw - 32px));box-shadow:0 8px 48px rgba(0,0,0,.22);font-family:inherit;animation:fv-si .22s cubic-bezier(.22,1,.36,1)">'
 
-        // header: icon + title
         + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">'
-          + '<div style="'
-            + 'width:40px;height:40px;border-radius:12px;flex-shrink:0;'
-            + 'background:linear-gradient(135deg,#13b47f,#0d8f65);'
-            + 'display:flex;align-items:center;justify-content:center'
-          + '">'
-            + '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"'
-            + ' stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'
-            + '<polyline points="23 4 23 10 17 10"/>'
-            + '<path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>'
-            + '</svg>'
+          + '<div style="width:40px;height:40px;border-radius:12px;flex-shrink:0;background:linear-gradient(135deg,#13b47f,#0d8f65);display:flex;align-items:center;justify-content:center">'
+            + '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>'
           + '</div>'
           + '<div>'
-            + '<div style="'
-              + 'font-size:.97em;font-weight:600;'
-              + 'color:var(--fv-text1,#111);line-height:1.3'
-            + '">New update available</div>'
-            + '<div style="'
-              + 'font-size:.78em;color:#13b47f;font-weight:500;margin-top:1px'
-            + '">v' + ver + ' is ready</div>'
+            + '<div style="font-size:.95em;font-weight:600;color:var(--fv-t1,#111)">' + L.badge + '</div>'
+            + '<div style="font-size:.78em;color:#13b47f;font-weight:500;margin-top:1px">' + L.version + ver + (title ? ' — ' + title : '') + '</div>'
           + '</div>'
         + '</div>'
 
-        // changelog list (ถ้ามี)
-        + listHTML
+        + (subtitle ? '<p style="font-size:.85em;color:var(--fv-t2,#666);margin:0 0 14px;line-height:1.55">' + subtitle + '</p>' : '')
+        + itemsHTML
 
-        // Refresh button
-        + '<button id="fv-reload" style="'
-          + 'width:100%;padding:12px 0;'
-          + 'background:linear-gradient(135deg,#13b47f,#0d8f65);'
-          + 'color:#fff;border:none;border-radius:11px;'
-          + 'font-size:.95em;font-weight:600;cursor:pointer;'
-          + 'font-family:inherit;letter-spacing:.01em;'
-          + 'transition:opacity .15s,transform .1s;'
-          + 'box-shadow:0 2px 12px rgba(19,180,127,.35)'
-        + '"'
-        + ' onmouseover="this.style.opacity=\'.88\'"'
-        + ' onmouseout="this.style.opacity=\'1\'"'
-        + ' onmousedown="this.style.transform=\'scale(.98)\'"'
-        + ' onmouseup="this.style.transform=\'scale(1)\'"'
-        + '>Refresh now</button>'
+        + '<a id="fv-more" href="' + CFG.WHATS_NEW_PAGE + '" style="display:block;width:100%;padding:11px 0;background:linear-gradient(135deg,#13b47f,#0d8f65);color:#fff;border-radius:11px;font-size:.95em;font-weight:600;text-align:center;text-decoration:none;box-sizing:border-box;box-shadow:0 2px 12px rgba(19,180,127,.35);margin-bottom:10px">'
+          + L.more
+        + '</a>'
 
-        // dismiss link
-        + '<div style="text-align:center;margin-top:11px">'
-          + '<button id="fv-dismiss" style="'
-            + 'border:none;background:none;cursor:pointer;'
-            + 'font-size:.8em;color:var(--fv-text3,#aaa);'
-            + 'font-family:inherit;padding:4px 8px;border-radius:5px;'
-            + 'transition:color .15s'
-          + '" onmouseover="this.style.color=\'var(--fv-text2,#777)\'"'
-          + ' onmouseout="this.style.color=\'var(--fv-text3,#aaa)\'"'
-          + '>Remind me later</button>'
+        + '<div style="text-align:center">'
+          + '<button id="fv-dismiss" style="border:none;background:none;cursor:pointer;font-size:.78em;color:var(--fv-t3,#aaa);font-family:inherit;padding:4px 8px;border-radius:5px">'
+            + L.dismiss
+          + '</button>'
         + '</div>'
 
       + '</div>'
-
-      // Animations
       + '<style>'
-        + '@keyframes fv-fade-in{from{opacity:0}to{opacity:1}}'
-        + '@keyframes fv-slide-in{from{opacity:0;transform:translate(-50%,-44%)}to{opacity:1;transform:translate(-50%,-50%)}}'
-        // Dark mode vars
-        + '@media(prefers-color-scheme:dark){'
-          + '#fv-card{--fv-bg:#1c1c1e;--fv-text1:#f5f5f7;--fv-text2:#aeaeb2;--fv-text3:#636366;--fv-hover:#2c2c2e}'
-        + '}'
+        + '@keyframes fv-fi{from{opacity:0}to{opacity:1}}'
+        + '@keyframes fv-si{from{opacity:0;transform:translate(-50%,-44%)}to{opacity:1;transform:translate(-50%,-50%)}}'
+        + '@media(prefers-color-scheme:dark){#fv-card{--fv-bg:#1c1c1e;--fv-t1:#f5f5f7;--fv-t2:#aeaeb2;--fv-t3:#636366}}'
       + '</style>';
   }
 
-  function showPopup(data) {
-    // ถ้า popup กำลังแสดงอยู่ → อัปเดต content (กรณีมี deploy ใหม่ซ้อนกัน)
-    var existing = document.getElementById(CFG.POPUP_ID);
-    if (existing) {
-      var badge = existing.querySelector && existing.querySelector('[id="fv-card"] div div + div div');
-      if (badge) badge.textContent = 'v' + esc(data.version || '') + ' is ready';
-      return;
-    }
+  function showPopup(versionData, whatsNewData, buildId) {
+    if (document.getElementById(CFG.POPUP_ID)) return;
+
+    // บันทึกว่าแสดงใน session นี้แล้ว + อัปเดต last active
+    markShownInSession(buildId);
+    updateLastActive();
 
     var wrap = document.createElement('div');
-    wrap.id = CFG.POPUP_ID;
-    wrap.innerHTML = buildPopupHTML(data);
+    wrap.id  = CFG.POPUP_ID;
+    wrap.innerHTML = buildPopup(versionData, whatsNewData);
     document.body.appendChild(wrap);
 
-    // Wire buttons
-    function dismiss() {
+    function dismiss(permanent) {
+      if (permanent) setDismissed(buildId);
       wrap.parentNode && wrap.parentNode.removeChild(wrap);
     }
 
-    document.getElementById('fv-reload').onclick = function () {
-      // Hard-reload: เพิ่ม timestamp เพื่อ bypass ทุก HTTP cache layer
-      var u = location.pathname + '?reload=' + Date.now() + location.hash;
-      location.replace(u);
-    };
+    document.getElementById('fv-dismiss').onclick = function() { dismiss(true); };
+    document.getElementById('fv-bd').onclick      = function() { dismiss(false); };
 
-    var closeBtn    = document.getElementById('fv-close');
-    var dismissBtn  = document.getElementById('fv-dismiss');
-    var backdrop    = document.getElementById('fv-backdrop');
-
-    if (closeBtn)   closeBtn.onclick   = dismiss;
-    if (dismissBtn) dismissBtn.onclick = dismiss;
-    if (backdrop)   backdrop.onclick   = dismiss;
-
-    // Keyboard: Escape closes
-    function onKey(e) {
-      if (e.key === 'Escape') { dismiss(); document.removeEventListener('keydown', onKey); }
-    }
-    document.addEventListener('keydown', onKey);
-
-    // Focus trap: ให้ focus อยู่ที่ปุ่ม refresh
-    setTimeout(function () {
-      var btn = document.getElementById('fv-reload');
-      if (btn) btn.focus();
-    }, 50);
-  }
-
-  // ── BroadcastChannel — cross-tab instant sync ──────────────────────────────
-
-  function setupChannel() {
-    if (!window.BroadcastChannel) return;
-    try {
-      state.channel = new BroadcastChannel(CFG.BC_NAME);
-      state.channel.onmessage = function (e) {
-        var msg = e.data;
-        if (!msg || msg.type !== 'fv_update') return;
-        var d = msg.data;
-        if (!d || !d.build || d.build === state.currentBuild) return;
-
-        // Tab อื่นพบ update → update baseline ในตัวเอง
-        state.currentBuild = d.build;
-        lsSet(CFG.KEY_BUILD, d.build);
-
-        if (d.notify !== false) showPopup(d);
-      };
-    } catch (e) {}
-  }
-
-  function broadcast(data) {
-    if (!state.channel) return;
-    try {
-      state.channel.postMessage({ type: 'fv_update', data: data });
-    } catch (e) {}
-  }
-
-  // ── Core check ─────────────────────────────────────────────────────────────
-
-  function check() {
-    if (state.checking || isDisabled()) return;
-    state.checking = true;
-
-    fetchVer().then(function (data) {
-      state.checking = false;
-      if (!data) return;
-
-      var newBuild = data.build || data.version;
-
-      // ครั้งแรก (init ยังไม่เสร็จ) → เซ็ต baseline เฉยๆ
-      if (!state.currentBuild) {
-        state.currentBuild = newBuild;
-        lsSet(CFG.KEY_BUILD, newBuild);
-        return;
-      }
-
-      // พบ build ใหม่
-      if (newBuild !== state.currentBuild) {
-        state.currentBuild = newBuild;
-        lsSet(CFG.KEY_BUILD, newBuild);
-
-        if (data.notify !== false) {
-          showPopup(data);
-          broadcast(data);      // แจ้ง tabs อื่น
-        }
-        // notify=false → silent update; user จะได้ version ใหม่ตอน reload ครั้งถัดไป
-      }
-    }).catch(function () {
-      state.checking = false;
+    document.addEventListener('keydown', function onKey(e) {
+      if (e.key === 'Escape') { dismiss(false); document.removeEventListener('keydown', onKey); }
     });
   }
 
-  // ── Polling (dynamic interval) ─────────────────────────────────────────────
-  // ใช้ setTimeout แทน setInterval เพื่อให้ interval เปลี่ยนได้ตาม visibility
-
-  function clearTimer() {
-    if (state.timer) { clearTimeout(state.timer); state.timer = null; }
-  }
-
-  function scheduleNext() {
-    clearTimer();
-    if (isDisabled()) return;
-    var delay = document.hidden ? CFG.T_IDLE : CFG.T_ACTIVE;
-    state.timer = setTimeout(function () {
-      check();
-      scheduleNext();
-    }, delay);
-  }
-
-  function startPolling() { clearTimer(); scheduleNext(); }
-  function stopPolling()  { clearTimer(); }
-
-  // ── Event listeners — ทำให้ detect ทันที ──────────────────────────────────
-
-  // Tab กลับมา active → ตรวจทันที (สำคัญมาก: ทำให้ user ได้รับแจ้งทันทีที่กลับมา)
-  document.addEventListener('visibilitychange', function () {
-    if (!document.hidden && !isDisabled()) {
-      clearTimer();
-      check();
-      scheduleNext();
-    }
-  });
-
-  // Window focus (switch application แล้วกลับมา)
-  window.addEventListener('focus', function () {
-    if (!isDisabled()) {
-      clearTimer();
-      check();
-      scheduleNext();
-    }
-  });
-
-  // Back-forward cache restore (user กด Back แล้ว page โหลดจาก bfcache)
-  window.addEventListener('pageshow', function (e) {
-    if (e.persisted && !isDisabled()) {
-      check();
-    }
-  });
-
-  // ── Toggle button ──────────────────────────────────────────────────────────
+  // ── Toggle ────────────────────────────────────────────────────────────────
 
   function setupToggle() {
     var btn = document.getElementById(CFG.TOGGLE_ID);
     var sw  = document.getElementById(CFG.SWITCH_ID);
     if (!btn || !sw) return;
-
     sw.checked = !isDisabled();
-
-    function apply() {
-      var enabled = sw.checked;
-      setDisabled(!enabled);
-      if (enabled) { startPolling(); check(); }
-      else { stopPolling(); }
-    }
-
+    function apply() { setDisabled(!sw.checked); }
     sw.addEventListener('change', apply);
-    btn.addEventListener('click', function (e) {
+    btn.addEventListener('click', function(e) {
       if (e.target !== sw) { sw.checked = !sw.checked; apply(); }
     });
   }
 
   function trySetupToggle() {
-    if (document.getElementById(CFG.TOGGLE_ID)) { setupToggle(); }
-    else { setTimeout(trySetupToggle, 50); }
+    if (document.getElementById(CFG.TOGGLE_ID)) setupToggle();
+    else setTimeout(trySetupToggle, 50);
   }
 
-  // ── Init ───────────────────────────────────────────────────────────────────
+  // ── Init ─────────────────────────────────────────────────────────────────
 
   function init() {
-    var stored = ls(CFG.KEY_BUILD);
+    // อัปเดต last active ทุกครั้งที่เปิดหน้า
+    updateLastActive();
 
-    fetchVer().then(function (data) {
-      if (!data) return;
+    if (isDisabled()) return;
 
-      var newBuild = data.build || data.version;
+    var storedBuild = ls(CFG.KEY_BUILD);
 
-      // Defense-in-depth: ถ้า HTML เก่าหลุดมาทั้งที่ตั้ง no-cache ไว้
-      // stored คือ build ที่ user เพิ่ง reload มาหรือ session ก่อน
-      // ถ้า stored !== newBuild และ notify → แสดง popup ทันทีตอน page load
-      if (stored && stored !== newBuild && data.notify !== false) {
-        showPopup(data);
-      }
+    fetchVersion().then(function(versionData) {
+      if (!versionData) return;
 
-      state.currentBuild = newBuild;
+      var newBuild = versionData.build || versionData.version;
       lsSet(CFG.KEY_BUILD, newBuild);
 
-      if (!isDisabled()) startPolling();
+      // เปิดครั้งแรก → บันทึก baseline ไม่แสดง popup
+      if (!storedBuild) return;
+
+      // build ไม่เปลี่ยน → ไม่มีอะไรใหม่
+      if (storedBuild === newBuild) return;
+
+      // user dismiss ถาวรสำหรับ build นี้ → ข้าม
+      if (isDismissed(newBuild)) return;
+
+      // silent deploy → ข้าม
+      if (versionData.notify === false) return;
+
+      // ตรวจว่าควรแสดงใน session นี้ไหม
+      // (ยังไม่เคยแสดง หรือ idle นานเกิน 90 นาที)
+      if (!isSessionFresh(newBuild)) return;
+
+      fetchWhatsNew().then(function(whatsNewData) {
+        showPopup(versionData, whatsNewData, newBuild);
+      });
     });
   }
 
-  // ── Kickoff ────────────────────────────────────────────────────────────────
+  // ── Kickoff ───────────────────────────────────────────────────────────────
 
-  setupChannel();
   trySetupToggle();
 
   if (document.readyState === 'loading') {

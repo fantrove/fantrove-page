@@ -1,24 +1,28 @@
 {
-  "version": "1.0.0",
+  "version": "1.0.1",
   "date": {
     "en": "March 22, 2025",
     "th": "22 มีนาคม 2568"
   },
   "title": {
-    "en": "Welcome to Fantrove Verse",
-    "th": "ยินดีต้อนรับสู่ Fantrove Verse"
+    "en": "Update notification improvements",
+    "th": "ปรับปรุงระบบแจ้งเตือนอัพเดท"
   },
   "subtitle": {
-    "en": "The first official release.",
-    "th": "เวอร์ชันแรกอย่างเป็นทางการ"
+    "en": "The update popup now appears when you refresh the page, with a dismiss option that only applies to this update.",
+    "th": "ป๊อปอัพแจ้งเตือนจะปรากฏเมื่อคุณรีเฟรชหน้าเว็บ พร้อมตัวเลือกไม่แสดงอีกที่ใช้ได้เฉพาะการอัพเดทนี้"
   },
   "sections": [
     {
-      "type": "new",
+      "type": "improved",
       "items": [
         {
-          "title": { "en": "Website launch", "th": "เปิดตัวเว็บไซต์" },
-          "desc": { "en": "Fantrove is now live.", "th": "Fantrove เปิดให้บริการแล้ว" }
+          "title": { "en": "Smarter update notification", "th": "ระบบแจ้งเตือนอัพเดทที่ฉลาดขึ้น" },
+          "desc": { "en": "No longer interrupts while you're browsing. Shows only when you refresh.", "th": "ไม่รบกวนขณะใช้งาน แสดงเฉพาะตอนรีเฟรชหน้าเว็บ" }
+        },
+        {
+          "title": { "en": "Dismiss per update", "th": "ปิดได้เฉพาะอัพเดทนี้" },
+          "desc": { "en": "Dismissing a popup only hides it for that specific update. Future updates will still notify you.", "th": "การกดไม่แสดงอีกมีผลเฉพาะการอัพเดทนี้ การอัพเดทครั้งต่อไปจะแจ้งเตือนตามปกติ" }
         }
       ]
     }
