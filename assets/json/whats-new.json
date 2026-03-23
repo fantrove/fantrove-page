@@ -1,17 +1,17 @@
 {
-  "version": "1.0.5.10",
+  "version": "1.0.5.11",
   "sections": [
     {
-      "type": "fixed",
+      "type": "improved",
       "items": [
         {
           "title": {
-            "en": "🔧 whats-new.json is now the single source of truth for versioning",
-            "th": "🔧 whats-new.json เป็น single source of truth สำหรับเวอร์ชันแล้ว"
+            "en": "🧪 Version system test — v1.0.5.11",
+            "th": "🧪 ทดสอบระบบเวอร์ชัน — v1.0.5.11"
           },
           "desc": {
-            "en": "The version system now reads the version number directly from whats-new.json — no need to update version.json or set APP_VERSION separately. Edit one file and deploy.",
-            "th": "ระบบเวอร์ชันตอนนี้อ่านหมายเลขเวอร์ชันจาก whats-new.json โดยตรง ไม่ต้องแก้ version.json หรือตั้ง APP_VERSION แยกต่างหากอีกต่อไป แก้ไฟล์เดียวแล้ว deploy ได้เลย"
+            "en": "This release verifies that the updated version logic correctly increments sub-patch numbers and records every version in history without skipping.",
+            "th": "การ release นี้ตรวจสอบว่า logic ระบบเวอร์ชันที่อัปเดตแล้วสามารถนับ sub-patch ได้ถูกต้องและบันทึกทุกเวอร์ชันลงประวัติโดยไม่ข้าม"
           }
         }
       ]
