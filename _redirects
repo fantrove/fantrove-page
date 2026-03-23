@@ -1,27 +1,18 @@
-# _redirects (DEV / SOURCE VERSION)
-# ─────────────────────────────────────────────────────────────────────────────
-# ไฟล์นี้ใช้สำหรับ Cloudflare Pages ในระหว่าง DEVELOPMENT
-# (deploy ตรงจาก repo โดยไม่ผ่าน build)
-#
-# เมื่อ run `npm run build` สคริปต์จะสร้าง dist/_redirects ให้อัตโนมัติ
-# ที่มีเนื้อหาเหมาะสำหรับ production แทน
-# ─────────────────────────────────────────────────────────────────────────────
+# Root → home (ใช้ redirect แทน rewrite)
+/ /home/ 302
+/index.html /home/ 302
 
-# Root → home
-/ /home/index.html 200
-/index.html /home/index.html 200
-
-# Language prefix rewrite (dev: same file, JS handles translation)
-/en  /home/index.html 200
-/en/ /home/index.html 200
+# Language prefix (dev: ยังใช้ JS อยู่)
+/en /home/ 302
+/en/ /home/ 302
 /en/* /:splat 200
 
-/th  /home/index.html 200
-/th/ /home/index.html 200
+/th /home/ 302
+/th/ /home/ 302
 /th/* /:splat 200
 
 # Static files
-/robots.txt  /robots.txt  200
+/robots.txt /robots.txt 200
 /sitemap.xml /sitemap.xml 200
 /favicon.ico /assets/images/fantrove-hub360.ico 200
 

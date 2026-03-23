@@ -297,17 +297,24 @@ function _generateRedirects(langs, defaultLang) {
     '',
     '# ── Root: redirect to default language ──────────────────────────────',
     `/ /${defaultLang}/home/ 302`,
+    `/index.html /${defaultLang}/home/ 302`,
     '',
-    '# ── Language-specific pages ─────────────────────────────────────────',
+    '# ── Language root → home (no .html to avoid loop) ───────────────────',
   ];
-
+  
   for (const lang of langs) {
-    lines.push(`/${lang}     /${lang}/home/index.html 200`);
-    lines.push(`/${lang}/    /${lang}/home/index.html 200`);
-    lines.push(`/${lang}/*   /${lang}/:splat           200`);
+    lines.push(`/${lang}     /${lang}/home/ 302`);
+    lines.push(`/${lang}/    /${lang}/home/ 302`);
     lines.push('');
   }
-
+  
+  lines.push('# ── Language-specific pages ─────────────────────────────────────────');
+  
+  for (const lang of langs) {
+    lines.push(`/${lang}/*   /${lang}/:splat 200`);
+    lines.push('');
+  }
+  
   lines.push(
     '# ── Static assets (served directly) ─────────────────────────────────',
     '/assets/*    /assets/:splat    200',
@@ -315,11 +322,11 @@ function _generateRedirects(langs, defaultLang) {
     '/sitemap.xml /sitemap.xml      200',
     '/favicon.ico /assets/images/fantrove-hub360.ico 200',
     '',
-    '# ── Fallback: unknown routes → default 404 ──────────────────────────',
-    `/*  /${defaultLang}/home/index.html 404`,
+    '# ── Fallback: unknown routes → default language home ────────────────',
+    `/*  /${defaultLang}/home/ 404`,
     '',
   );
-
+  
   return lines.join('\n');
 }
 
