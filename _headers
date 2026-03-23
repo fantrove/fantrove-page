@@ -16,6 +16,12 @@
   Pragma: no-cache
   Expires: 0
 
+/th/*
+Content-Language: th
+
+/en/*
+Content-Language: en
+
 # assets ทั้งหมด: cache 7 วัน (bust ด้วย ?v= ทุก deploy)
 /assets/*
   Cache-Control: public, max-age=604800, stale-while-revalidate=86400
