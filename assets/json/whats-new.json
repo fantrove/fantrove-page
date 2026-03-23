@@ -1,21 +1,85 @@
 {
-  "version": "1.0.6.1",
+  "version": "1.0.7",
   "title": {
-    "en": "Bug fix",
-    "th": "แก้ไขข้อผิดพลาด"
+    "en": "SEO & Performance Overhaul",
+    "th": "ปรับปรุง SEO และประสิทธิภาพครั้งใหญ่"
   },
   "subtitle": {
-    "en": "A quick fix for an issue introduced in 1.0.6 that caused the language system to stop working.",
-    "th": "แก้ไขปัญหาที่เกิดขึ้นใน 1.0.6 ซึ่งทำให้ระบบภาษาหยุดทำงาน"
+    "en": "Major under-the-hood improvements to how Fantrove handles languages — making the site faster, more search-engine-friendly, and more stable.",
+    "th": "ปรับปรุงระบบภายในครั้งใหญ่ในส่วนของการจัดการภาษา ทำให้เว็บไซต์เร็วขึ้น ค้นหาได้ง่ายขึ้น และมีเสถียรภาพมากขึ้น"
   },
   "sections": [
+    {
+      "type": "new",
+      "items": [
+        {
+          "title": {
+            "en": "Static HTML build system",
+            "th": "ระบบสร้าง HTML แบบ Static"
+          },
+          "description": {
+            "en": "We now pre-generate a separate HTML file for each language at build time. Instead of using JavaScript to translate the page after it loads, the correct language is already baked into the page before it reaches your browser. This means content appears instantly with no delay.",
+            "th": "ตอนนี้เราสร้างไฟล์ HTML แยกต่างหากสำหรับแต่ละภาษาในขั้นตอน build ก่อนที่จะเผยแพร่เว็บไซต์ แทนที่จะใช้ JavaScript แปลภาษาหลังจากหน้าเว็บโหลดแล้ว เนื้อหาภาษาที่ถูกต้องถูกฝังอยู่ในหน้าเลยตั้งแต่ต้น ทำให้เนื้อหาแสดงผลทันทีโดยไม่มีการรอ"
+          }
+        },
+        {
+          "title": {
+            "en": "Improved SEO with hreflang & canonical tags",
+            "th": "ปรับปรุง SEO ด้วย hreflang และ canonical tags"
+          },
+          "description": {
+            "en": "Each built page now includes proper hreflang tags telling search engines which language version corresponds to which URL, plus a canonical tag to avoid duplicate content issues. Google and other search engines can now correctly index Fantrove in both English and Thai.",
+            "th": "แต่ละหน้าที่สร้างแล้วจะมี hreflang tags ที่บอก search engine ว่าแต่ละ URL สอดคล้องกับภาษาอะไร รวมถึง canonical tag เพื่อป้องกันปัญหา content ซ้ำซ้อน Google และ search engine อื่นๆ สามารถ index Fantrove ทั้งภาษาอังกฤษและภาษาไทยได้อย่างถูกต้องแล้ว"
+          }
+        }
+      ]
+    },
+    {
+      "type": "improved",
+      "items": [
+        {
+          "title": {
+            "en": "Language system now runs lighter on production",
+            "th": "ระบบภาษาทำงานเบาลงบน production"
+          },
+          "description": {
+            "en": "On the live site, the language system now operates in \"static mode\" — it skips fetching translation files, skips running the translation engine, and skips background workers entirely. It only handles what's still needed: the language switcher dropdown. This reduces unnecessary network requests and CPU usage.",
+            "th": "บนเว็บไซต์จริง ระบบภาษาทำงานในโหมด \"static\" — ข้ามการโหลดไฟล์แปลภาษา ข้ามการรัน translation engine และข้าม background workers ทั้งหมด โดยจะจัดการเฉพาะสิ่งที่ยังจำเป็น ได้แก่ dropdown เลือกภาษา ช่วยลด network request และการใช้ CPU ที่ไม่จำเป็น"
+          }
+        },
+        {
+          "title": {
+            "en": "Pages load without waiting for JavaScript",
+            "th": "หน้าเว็บโหลดได้โดยไม่ต้องรอ JavaScript"
+          },
+          "description": {
+            "en": "Previously, pages started invisible (opacity 0) and faded in only after the language system finished loading. Now that content is pre-rendered, pages appear immediately — no more flash of blank content or layout shift while the language loads.",
+            "th": "ก่อนหน้านี้หน้าเว็บจะเริ่มต้นแบบมองไม่เห็น (opacity 0) แล้วค่อย fade in หลังจากระบบภาษาโหลดเสร็จ ตอนนี้เนื้อหาถูก render ไว้ล่วงหน้าแล้ว หน้าเว็บจึงแสดงผลทันที ไม่มีหน้าว่างหรือ layout เด้งอีกต่อไประหว่างที่รอภาษาโหลด"
+          }
+        },
+        {
+          "title": {
+            "en": "All internal links pre-prefixed with language",
+            "th": "ลิงก์ภายในถูก prefix ด้วยภาษาล่วงหน้าแล้ว"
+          },
+          "description": {
+            "en": "Links within the site (e.g. to Settings, About, Search) now have the correct language prefix built into the HTML itself — /en/setting, /th/setting, etc. Search engine crawlers that don't run JavaScript will now correctly follow these links.",
+            "th": "ลิงก์ภายในเว็บไซต์ (เช่น ไปยัง Settings, About, Search) ตอนนี้มี language prefix ที่ถูกต้องฝังอยู่ใน HTML เลย เช่น /en/setting, /th/setting เป็นต้น Search engine crawlers ที่ไม่รัน JavaScript จะสามารถติดตามลิงก์เหล่านี้ได้อย่างถูกต้องแล้ว"
+          }
+        }
+      ]
+    },
     {
       "type": "fixed",
       "items": [
         {
           "title": {
-            "en": "Fixed language system not working after the 1.0.6 update",
-            "th": "แก้ไขระบบภาษาที่หยุดทำงานหลังอัปเดต 1.0.6"
+            "en": "Language switcher works correctly on all pre-built pages",
+            "th": "ตัวเลือกภาษาทำงานถูกต้องบนทุกหน้าที่ build แล้ว"
+          },
+          "description": {
+            "en": "Switching languages on the live site now navigates to the pre-built version of that page in the selected language, rather than trying to translate the current page with JavaScript. This is more reliable and works even if JavaScript is slow to load.",
+            "th": "การสลับภาษาบนเว็บจริงตอนนี้จะนำทางไปยังหน้าที่ build ไว้แล้วของภาษานั้นๆ แทนที่จะพยายามแปลหน้าปัจจุบันด้วย JavaScript ทำให้เสถียรกว่าและทำงานได้แม้ JavaScript โหลดช้า"
           }
         }
       ]
