@@ -1,19 +1,28 @@
 /**
  * @file functions/_middleware.js
- * Cloudflare Pages Function — ตั้งค่า lang attribute และ Content-Language header
- * ก่อน HTML ถูกส่งออก (server-side)
+ * Cloudflare Pages Function — จัดการ language signal ครบทุกชั้น (v3.1, 1.0.9)
  *
- * v2 (1.0.8):
- *   - เพิ่ม Content-Language HTTP header
- *     ทำให้ Chrome เห็น signal ภาษาจาก 2 แหล่งพร้อมกัน:
- *       1. <html lang="th">     ← attribute ใน HTML
- *       2. Content-Language: th ← HTTP response header
- *     เมื่อทั้งสองตรงกัน Chrome จะเชื่อว่าหน้านี้เป็นภาษา th
- *     แม้ว่า CLD3 (content-based detection) จะ detect ต่างออกไปก็ตาม
+ * เพิ่มความแข็งแกร่งจาก v3:
+ *   - เพิ่ม class="notranslate" บน <html> และ <body>
+ *     Chrome เก่า (pre-2019) และ Edge บางเวอร์ชันดู class นี้แทน attribute
+ *   - เพิ่ม X-Robots-Tag: notranslate header
+ *     ป้องกัน Google crawler แปล snippet ใน search results
+ *   - เพิ่ม <meta http-equiv="Content-Language"> ใน head
+ *     signal เพิ่มเติมสำหรับ browser และ proxy เก่าที่อ่าน meta แทน header
  *
- * การ deploy:
- *   วางไฟล์นี้ที่ functions/_middleware.js (root ของโปรเจกต์)
- *   Cloudflare Pages จะ pick up อัตโนมัติ
+ * สิ่งที่ middleware ทำต่อ HTML response ทุกชิ้น:
+ *   HTML:
+ *     1. <html lang="th">
+ *     2. <html translate="no">
+ *     3. <html class="... notranslate">         ← ใหม่: Chrome เก่า
+ *     4. <body class="... notranslate">         ← ใหม่: Chrome เก่า + Edge
+ *     5. <meta name="google" content="notranslate">
+ *     6. <meta name="googlebot" content="notranslate">
+ *     7. <meta http-equiv="Content-Language" content="th">  ← ใหม่
+ *
+ *   HTTP Headers:
+ *     8.  Content-Language: th
+ *     9.  X-Robots-Tag: notranslate              ← ใหม่: Google crawler
  */
 
 const SUPPORTED_LANGS = ['en', 'th'];
@@ -23,28 +32,53 @@ const LANG_RE = /^\/(en|th)(\/|$)/;
 export async function onRequest({ request, next }) {
   const response = await next();
   
-  // แก้เฉพาะ HTML responses
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('text/html')) return response;
   
-  // ดึง lang จาก URL path
   const url = new URL(request.url);
   const m = url.pathname.match(LANG_RE);
   const lang = (m && SUPPORTED_LANGS.includes(m[1])) ? m[1] : DEFAULT_LANG;
   
-  // HTMLRewriter: แก้ lang attribute ใน <html> tag
+  const metaTags = [
+    `<meta name="google" content="notranslate">`,
+    `<meta name="googlebot" content="notranslate">`,
+    `<meta http-equiv="Content-Language" content="${lang}">`,
+  ].join('');
+  
   const rewritten = new HTMLRewriter()
+    // ── <html> tag ───────────────────────────────────────────────────────────
     .on('html', {
       element(el) {
         el.setAttribute('lang', lang);
+        el.setAttribute('translate', 'no');
+        
+        // เพิ่ม notranslate เข้า class list โดยไม่ลบ class เดิม
+        const existing = el.getAttribute('class') || '';
+        if (!existing.includes('notranslate')) {
+          el.setAttribute('class', (existing ? existing + ' ' : '') + 'notranslate');
+        }
+      },
+    })
+    // ── <head> — inject meta tags ──────────────────────────────────────────
+    .on('head', {
+      element(el) {
+        el.prepend(metaTags, { html: true });
+      },
+    })
+    // ── <body> — เพิ่ม notranslate class ──────────────────────────────────
+    .on('body', {
+      element(el) {
+        const existing = el.getAttribute('class') || '';
+        if (!existing.includes('notranslate')) {
+          el.setAttribute('class', (existing ? existing + ' ' : '') + 'notranslate');
+        }
       },
     })
     .transform(response);
   
-  // เพิ่ม Content-Language header บน response ใหม่
-  // (HTMLRewriter คืน Response ที่ headers เป็น immutable ต้อง wrap ใหม่)
   const headers = new Headers(rewritten.headers);
   headers.set('Content-Language', lang);
+  headers.set('X-Robots-Tag', 'notranslate');
   
   return new Response(rewritten.body, {
     status: rewritten.status,

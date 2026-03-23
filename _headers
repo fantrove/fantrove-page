@@ -20,13 +20,14 @@
 /assets/*
   Cache-Control: public, max-age=604800, stale-while-revalidate=86400
 
-# Content-Language ตาม URL prefix — ช่วยให้ browser และ search engine
-# ตรวจจับภาษาของหน้าได้ถูกต้อง (เพิ่มใน 1.0.8)
+# Content-Language + X-Robots-Tag ตาม URL prefix (1.0.8, เพิ่ม X-Robots-Tag ใน 1.0.9)
 /en/*
   Content-Language: en
+  X-Robots-Tag: notranslate
 
 /th/*
   Content-Language: th
+  X-Robots-Tag: notranslate
 
 # ทุก path อื่น (HTML ทุกไฟล์ ทุก folder): revalidate ทุกครั้ง
 /*
