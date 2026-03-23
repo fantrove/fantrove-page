@@ -48,17 +48,21 @@ function makeDateObj(d) {
 
 // ── Semver helpers ────────────────────────────────────────────────────────────
 
+// รองรับทั้ง 3 ส่วน (X.Y.Z) และ 4 ส่วน (X.Y.Z.P)
 function parseSemver(v) {
-  var m = String(v || '').match(/^(\d+)\.(\d+)\.(\d+)/);
+  var m = String(v || '').match(/^(\d+)\.(\d+)\.(\d+)(?:\.(\d+))?/);
   if (!m) return null;
-  return { major: +m[1], minor: +m[2], patch: +m[3] };
+  return { major: +m[1], minor: +m[2], patch: +m[3], sub: m[4] !== undefined ? +m[4] : null };
 }
 
-// เพิ่มแค่ patch (0.0.1) เท่านั้น — ถ้าต้องการ minor/major ให้ตั้ง APP_VERSION เอง
-function incrementPatch(v) {
+// ✅ auto-increment บวกแค่ส่วนที่ 4 (+0.0.0.1) เท่านั้น
+// 1.0.5   → 1.0.5.1  |  1.0.5.3 → 1.0.5.4
+// ถ้าต้องการเปลี่ยน X.Y.Z ให้ตั้ง APP_VERSION เอง
+function incrementSubPatch(v) {
   var s = parseSemver(v);
   if (!s) return v;
-  return s.major + '.' + s.minor + '.' + (s.patch + 1);
+  var sub = (s.sub !== null) ? s.sub : 0;
+  return s.major + '.' + s.minor + '.' + s.patch + '.' + (sub + 1);
 }
 
 // ── Smart changelog จาก git diff ─────────────────────────────────────────────
@@ -213,29 +217,37 @@ let newVersion;
 let autoIncremented = false;
 
 if (!envVersion) {
-  console.error('\n  ❌  ไม่พบ APP_VERSION\n     ใช้: APP_VERSION=1.0.4 node scripts/update-version.js\n');
+  console.error('\n  ❌  ไม่พบ APP_VERSION\n     ใช้: APP_VERSION=1.0.5 node scripts/update-version.js\n');
   process.exit(1);
 }
 
 if (!parseSemver(envVersion)) {
-  console.error(`\n  ❌  APP_VERSION "${envVersion}" ไม่ใช่ semver (ต้องการรูปแบบ X.Y.Z)\n`);
+  console.error(`\n  ❌  APP_VERSION "${envVersion}" ไม่ใช่รูปแบบที่รองรับ (X.Y.Z หรือ X.Y.Z.P)\n`);
   process.exit(1);
 }
 
+// ✅ เปรียบเทียบ full version string (รวมส่วนที่ 4)
+// - ตรงกันทุกส่วน       → auto-increment ส่วนที่ 4
+// - ต่างกันไม่ว่าส่วนไหน → ใช้ค่าที่ตั้งมาเลย (ผู้ใช้ควบคุมเอง)
+
 if (envVersion === currentVersion) {
-  // ผู้ใช้ไม่ได้เปลี่ยน version → auto-increment patch (+0.0.1) เท่านั้น
-  newVersion = incrementPatch(currentVersion);
+  // version ตรงกันทุกส่วน → auto-increment +0.0.0.1
+  newVersion = incrementSubPatch(currentVersion);
   autoIncremented = true;
-  console.log(`\n⚡  APP_VERSION ไม่เปลี่ยน (${envVersion})`);
-  console.log(`    Auto-increment patch (+0.0.1): ${currentVersion} → ${newVersion}`);
-  console.log(`    💡 ถ้าต้องการ minor/major ให้เปลี่ยน APP_VERSION เอง เช่น APP_VERSION=1.1.0`);
+  console.log(`\n⚡  APP_VERSION ตรงกับปัจจุบัน (${envVersion})`);
+  console.log(`    Auto sub-patch (+0.0.0.1): ${currentVersion} → ${newVersion}`);
+  console.log(`    💡 ถ้าต้องการระบุ version เองให้เปลี่ยน APP_VERSION เช่น APP_VERSION=1.0.5.3`);
 } else {
+  // version ต่างกัน → ใช้ที่ผู้ใช้ตั้งมาเลย ไม่ auto
   newVersion = envVersion;
   const oldS = parseSemver(currentVersion);
   const newS = parseSemver(newVersion);
-  const bumpType = (newS.major > oldS.major) ? 'major'
-                 : (newS.minor > oldS.minor) ? 'minor' : 'patch';
-  console.log(`\n📦  Version: ${currentVersion} → ${newVersion} (${bumpType} bump)`);
+  const bumpType = (newS.major > oldS.major)   ? 'major'
+                 : (newS.minor > oldS.minor)   ? 'minor'
+                 : (newS.patch > oldS.patch)   ? 'patch'
+                 : (newS.sub   > (oldS.sub||0))? 'sub-patch'
+                 : 'custom';
+  console.log(`\n📦  Version: ${currentVersion} → ${newVersion} (${bumpType})`);
 }
 
 // ✅ buildId ใช้ UTC ทั้งหมด ไม่ขึ้นกับ timezone เครื่อง
@@ -400,7 +412,7 @@ walk(ROOT);
 // ── Summary ───────────────────────────────────────────────────────────────────
 
 console.log(`\n${'─'.repeat(56)}`);
-console.log(`  Version:    ${currentVersion} → ${newVersion}${autoIncremented ? ' (auto +0.0.1)' : ''}`);
+console.log(`  Version:    ${currentVersion} → ${newVersion}${autoIncremented ? ' (auto +0.0.0.1)' : ''}`);
 console.log(`  Build:      ${buildId}`);
 console.log(`  Date/Time:  ${dateObj.en}`);
 console.log(`  Content:    ${usingUserContent ? 'ผู้ใช้กำหนดเอง (whats-new.json)' : 'อัตโนมัติ (smart auto)'}`);
