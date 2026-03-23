@@ -1,17 +1,17 @@
 {
-  "version": "1.0.5.8",
+  "version": "1.0.5.9",
   "sections": [
     {
-      "type": "fixed",
+      "type": "improved",
       "items": [
         {
           "title": {
-            "en": "🔧 Version tracking now records every sub-patch correctly",
-            "th": "🔧 ระบบติดตามเวอร์ชันบันทึกทุก sub-patch ได้ถูกต้องแล้ว"
+            "en": "🧪 Version system test — v1.0.5.9",
+            "th": "🧪 ทดสอบระบบเวอร์ชัน — v1.0.5.9"
           },
           "desc": {
-            "en": "Fixed a logic bug where setting APP_VERSION=1.0.5 caused the version to cycle between 1.0.5 and 1.0.5.1 forever, skipping .2, .3, .4 and beyond. Every release is now recorded in history without exception.",
-            "th": "แก้ไขข้อผิดพลาดในตรรกะที่ทำให้การตั้ง APP_VERSION=1.0.5 ทำให้เวอร์ชันวนซ้ำระหว่าง 1.0.5 และ 1.0.5.1 โดยข้าม .2, .3, .4 ไปเรื่อยๆ ตอนนี้ทุก release จะถูกบันทึกในประวัติโดยไม่มีข้อยกเว้น"
+            "en": "This release verifies that the updated version logic correctly increments sub-patch numbers and records every version in history without skipping.",
+            "th": "การ release นี้ตรวจสอบว่า logic ระบบเวอร์ชันที่อัปเดตแล้วสามารถนับ sub-patch ได้ถูกต้องและบันทึกทุกเวอร์ชันลงประวัติโดยไม่ข้าม"
           }
         }
       ]
