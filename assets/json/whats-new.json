@@ -1,27 +1,37 @@
 {
-  "version": "1.0.5.4",
+  "version": "1.0.5.5",
   "sections": [
     {
-      "type": "new",
+      "type": "fixed",
       "items": [
         {
           "title": {
-            "en": "✨ Relative time — platform-grade logic",
-            "th": "✨ ระบบเวลา relative แบบ platform จริงๆ"
+            "en": "🐛 JS no longer blocks other scripts on Cloudflare Pages",
+            "th": "🐛 JS ไม่บล็อก script อื่นบน Cloudflare Pages อีกแล้ว"
           },
           "desc": {
-            "en": "Each release now shows how long ago it was updated — using the same threshold logic as GitHub and Twitter. \"Just now\" → \"Yesterday\" → \"9 days ago\", all live and auto-updating.",
-            "th": "ทุก release แสดงว่าผ่านมานานแค่ไหน โดยใช้ logic เดียวกับ GitHub และ Twitter ตั้งแต่ \"เมื่อกี้\" ไปจนถึง \"เมื่อวาน\" และ \"9 วันที่แล้ว\" — live และอัพเดทอัตโนมัติ"
+            "en": "An unhandled error in the What's New script was causing the entire JS execution to halt — breaking other scripts on the page. Every operation is now wrapped in try/catch so a failure stays isolated.",
+            "th": "Error ที่ไม่ได้ handle ใน script หน้ามีอะไรใหม่ทำให้ JS หยุดทำงานทั้งหน้า ทำให้ script อื่นๆ พังไปด้วย ตอนนี้ทุก operation ถูกครอบด้วย try/catch เพื่อให้ error อยู่แค่ในส่วนของตัวเอง"
           }
         },
         {
           "title": {
-            "en": "✨ Switches to full date and time after 10 days",
-            "th": "✨ เปลี่ยนเป็นวันที่และเวลาจริงหลัง 10 วัน"
+            "en": "🐛 Removed dead code causing parse issues",
+            "th": "🐛 ลบ dead code ที่ทำให้เกิดปัญหาการ parse"
           },
           "desc": {
-            "en": "After 10 days, relative time is replaced with the actual date and time — e.g. \"Mar 18, 2026 07:30 UTC\" — because \"13 days ago\" gives less context than the exact date.",
-            "th": "หลัง 10 วัน ระบบเปลี่ยนจาก relative time เป็นวันที่และเวลาจริง เช่น \"18 มี.ค. 2569 07:30 UTC\" เพราะ \"13 วันที่แล้ว\" ให้ข้อมูลน้อยกว่าวันที่จริง"
+            "en": "The scheduleTick function was leftover code that conflicted with startPolling, creating edge cases on Cloudflare's V8 environment. Both are now unified into a single clean polling loop.",
+            "th": "ฟังก์ชัน scheduleTick เป็นโค้ดเก่าที่ขัดแย้งกับ startPolling ทำให้เกิด edge case ใน V8 environment ของ Cloudflare ตอนนี้รวมเป็น polling loop เดียวที่สะอาดขึ้น"
+          }
+        },
+        {
+          "title": {
+            "en": "🐛 Used getAttribute instead of .dataset for broader compatibility",
+            "th": "🐛 เปลี่ยนไปใช้ getAttribute แทน .dataset เพื่อ compatibility"
+          },
+          "desc": {
+            "en": "Some environments on Cloudflare Pages preview don't fully support the .dataset API. Switched to getAttribute('data-ts') which works everywhere.",
+            "th": "บาง environment ใน Cloudflare Pages preview รองรับ .dataset API ไม่ครบ เปลี่ยนไปใช้ getAttribute('data-ts') ซึ่งทำงานได้ในทุกที่"
           }
         }
       ]
@@ -31,57 +41,12 @@
       "items": [
         {
           "title": {
-            "en": "⚡ Adaptive tick interval",
-            "th": "⚡ ปรับ tick interval อัตโนมัติตามอายุ"
+            "en": "⚡ Polling loop now recovers from errors automatically",
+            "th": "⚡ Polling loop ฟื้นตัวจาก error อัตโนมัติ"
           },
           "desc": {
-            "en": "The live timer adjusts how often it updates: every 10s for fresh releases, 30s up to an hour, 60s up to a day, 5 min after that — and stops completely after 10 days to save resources.",
-            "th": "ระบบ live timer ปรับความถี่อัตโนมัติ: ทุก 10 วินาทีสำหรับ release ใหม่, 30 วินาทีจนถึง 1 ชั่วโมง, 60 วินาทีจนถึง 1 วัน, 5 นาทีหลังจากนั้น — และหยุดสนิทหลัง 10 วัน"
-          }
-        },
-        {
-          "title": {
-            "en": "⚡ Font sizes now match the app's type scale",
-            "th": "⚡ ขนาดฟอนต์ตรงกับมาตรฐานของแอปแล้ว"
-          },
-          "desc": {
-            "en": "Item titles, descriptions, and subtitles now use the same font sizes as the rest of the app — no more text that feels too small compared to other pages.",
-            "th": "ชื่อรายการ, คำอธิบาย และ subtitle ตอนนี้ใช้ขนาดฟอนต์เดียวกับส่วนอื่นๆ ของแอป ไม่มีข้อความที่เล็กผิดปกติเมื่อเทียบกับหน้าอื่นอีกแล้ว"
-          }
-        },
-        {
-          "title": {
-            "en": "⚡ Redesigned cards — rounder and more modern",
-            "th": "⚡ ออกแบบการ์ดใหม่ — มนโค้งและทันสมัยขึ้น"
-          },
-          "desc": {
-            "en": "Release cards now use 30px radius, gradient version badge, accent bar per item, and full dark mode — consistent with the rest of the app's design.",
-            "th": "การ์ด release ตอนนี้ใช้ radius 30px, badge gradient, accent bar แต่ละรายการ และรองรับ dark mode — สอดคล้องกับดีไซน์ส่วนที่เหลือของแอป"
-          }
-        }
-      ]
-    },
-    {
-      "type": "fixed",
-      "items": [
-        {
-          "title": {
-            "en": "🐛 Update popup no longer appears on What's New page",
-            "th": "🐛 Popup อัพเดทไม่แสดงในหน้ามีอะไรใหม่อีกต่อไป"
-          },
-          "desc": {
-            "en": "The page now identifies itself via a meta tag. When you're already on this page, the update popup is suppressed — since you can see all the details here already.",
-            "th": "หน้านี้ยืนยันตัวตนผ่าน meta tag แล้ว เมื่อผู้ใช้อยู่ในหน้านี้อยู่แล้ว popup อัพเดทจะไม่แสดงขึ้นมา เพราะข้อมูลครบอยู่ที่นี่แล้ว"
-          }
-        },
-        {
-          "title": {
-            "en": "🐛 Page refreshes automatically when a new version drops",
-            "th": "🐛 หน้าโหลดเนื้อหาใหม่อัตโนมัติเมื่อมีเวอร์ชันใหม่"
-          },
-          "desc": {
-            "en": "If a new version is released while you have this page open, the content updates on its own — no manual refresh needed.",
-            "th": "ถ้ามีเวอร์ชันใหม่ออกมาในขณะที่หน้านี้เปิดอยู่ เนื้อหาจะอัพเดทเองอัตโนมัติ ไม่ต้องรีโหลดหน้าเอง"
+            "en": "If an error occurs during a tick, the loop retries after 60 seconds instead of stopping completely. The page stays live even if something goes wrong.",
+            "th": "ถ้าเกิด error ระหว่าง tick ระบบจะ retry หลัง 60 วินาทีแทนที่จะหยุดทำงาน หน้าจะยัง live อยู่แม้มีบางอย่างผิดพลาด"
           }
         }
       ]
