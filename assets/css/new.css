@@ -1,136 +1,311 @@
+/* ============================================================
+   new.css — What's New page  v1.0.5.8
+   ─ สีหลัก #13b47f / #0eb0d5 ไม่เปลี่ยน
+   ─ bg เกือบขาวบริสุทธิ์ โทน blue อ่อนมาก สะอาดตา สดใส
+   ─ ไม่มี box-shadow / hover
+   ─ 30px radius ทุกจุด
+   ============================================================ */
+
+/* ── Design tokens ─────────────────────────────────────────── */
+:root {
+  --wn-brand-1:      #13b47f;
+  --wn-brand-2:      #0eb0d5;
+  --wn-text-hi:      #1a2e32;
+  --wn-text-body:    #3a5560;
+  --wn-text-muted:   #7a9298;
+  --wn-text-faint:   #b0bec4;
+
+  /* เกือบขาว โทน blue เย็นอ่อนมาก */
+  --wn-bg-page:      #f8faff;
+  --wn-bg-card:      #ffffff;
+  --wn-bg-item:      #fbfcff;
+
+  --wn-border-card:  rgba(0, 0, 0, 0.07);
+  --wn-border-item:  rgba(0, 0, 0, 0.06);
+
+  --wn-radius:       30px;
+  --wn-radius-pill:  30px;
+}
+
+/* ── Base ──────────────────────────────────────────────────── */
 body {
- margin: 0;
- padding: 0;
- margin-top: 90px;
+  margin: 0;
+  padding: 0;
+  margin-top: 90px;
+  background: var(--wn-bg-page);
+  font-family: 'Segoe UI', 'Noto Sans Thai', 'Noto Sans',
+               -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--wn-text-body);
+  font-size: 15px;
+  line-height: 1.72;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.container {
- margin: 0 20px 50px 20px;
- text-align: left;
- padding: 10px;
- max-width: 600px;
- background: #FFFFFF;
- color: #131313;
- border-radius: 30px;
- border: 1px solid rgba(19, 180, 127, 0.16);
+/* ── Legacy selectors ──────────────────────────────────────── */
+h1 {
+  color: var(--wn-brand-1);
+  font-size: 13px;
+  margin: 90px 0 5px 20px;
+  display: flex;
+  align-items: center;
 }
-
-h1 {  
-    color: #33BE90;  
-    font-size: 14px;  
-    margin: 90px 0 5px 20px;  
-    display: flex;  
-    align-items: center;  /* จัดให้อยู่กลางทั้งในแนวนอนและแนวตั้ง */  
-}
-
 h1 span {
-    display: inline-block;  /* ให้องค์ประกอบภายในอยู่ในแถวเดียวกัน */
-    vertical-align: middle; /* ทำให้ทั้งสองข้อความอยู่ในระดับเดียวกัน */
-    line-height: 1;          /* ช่วยให้ข้อความไม่ยืดสูงเกินไป */
-    margin: 0 0 3px 18px;
+  display: inline-block;
+  vertical-align: middle;
+  line-height: 1;
+  margin: 0 0 3px 18px;
 }
-
 ul {
- list-style-type: none;
- padding: 0;
+  list-style-type: none;
+  padding: 0;
 }
-
 ul li {
- margin: 10px 0;
- font-size: 0.9em;
+  margin: 10px 0;
+  font-size: 0.9em;
 }
 
-/* Mobile-First (ค่าเริ่มต้นใช้ได้กับมือถือ) */
-body {
-    font-size: 14px; /* ขนาดตัวอักษรสำหรับมือถือ */
+/* ── Container ─────────────────────────────────────────────── */
+#whats-new-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 8px 20px 84px;
+  font-size: 1rem;
 }
 
-/* แท็บเล็ตแนวตั้ง */
+/* ── Release card ──────────────────────────────────────────── */
+.wn-release {
+  background: var(--wn-bg-card);
+  border-radius: var(--wn-radius);
+  border: 1px solid var(--wn-border-card);
+  padding: 28px 26px 24px;
+  margin-bottom: 10px;
+}
+
+.wn-release--current {
+  border-color: rgba(19, 180, 127, 0.18);
+}
+
+.wn-release--past {
+  opacity: 0.7;
+}
+
+/* ── History divider ───────────────────────────────────────── */
+.wn-history-label {
+  font-size: 0.67rem;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--wn-text-faint);
+  padding: 26px 6px 12px;
+}
+
+/* ── Card header ───────────────────────────────────────────── */
+.wn-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+/* ── Version badge ─────────────────────────────────────────── */
+.wn-version-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, var(--wn-brand-1), var(--wn-brand-2));
+  color: #fff;
+  font-size: 0.69rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: var(--wn-radius-pill);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.wn-version-badge--past {
+  background: #c8d3d8;
+}
+
+/* ── Time chip ─────────────────────────────────────────────── */
+.wn-time-chip {
+  font-size: 0.69rem;
+  font-weight: 500;
+  color: var(--wn-brand-1);
+  background: rgba(19, 180, 127, 0.07);
+  border: 1px solid rgba(19, 180, 127, 0.16);
+  padding: 4px 11px;
+  border-radius: var(--wn-radius-pill);
+  white-space: nowrap;
+}
+
+.wn-release--past .wn-time-chip {
+  color: var(--wn-text-faint);
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+/* ── Full date ─────────────────────────────────────────────── */
+.wn-date-full {
+  font-size: 0.67rem;
+  color: var(--wn-text-faint);
+  white-space: nowrap;
+  font-weight: 400;
+}
+
+/* ── Release title ─────────────────────────────────────────── */
+.wn-title {
+  font-size: 1.02rem;
+  font-weight: 700;
+  margin: 0 0 5px;
+  line-height: 1.35;
+  color: var(--wn-text-hi);
+  letter-spacing: 0.005em;
+}
+
+h3.wn-title {
+  font-size: 0.94rem;
+  font-weight: 600;
+  color: var(--wn-text-body);
+}
+
+/* ── Subtitle ──────────────────────────────────────────────── */
+.wn-subtitle {
+  font-size: 0.89rem;
+  color: var(--wn-text-muted);
+  margin: 0 0 20px;
+  line-height: 1.68;
+  font-weight: 400;
+}
+
+/* ── Section block ─────────────────────────────────────────── */
+.wn-section {
+  margin-bottom: 16px;
+}
+.wn-section:last-child {
+  margin-bottom: 0;
+}
+
+.wn-section-head {
+  margin-bottom: 9px;
+}
+
+/* ── Section pill ──────────────────────────────────────────── */
+.wn-section-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: var(--wn-radius-pill);
+  border: 1px solid transparent;
+}
+
+/* ── Items list ────────────────────────────────────────────── */
+.wn-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+/* ── Item card ─────────────────────────────────────────────── */
+.wn-item {
+  display: flex;
+  align-items: stretch;
+  border-radius: var(--wn-radius);
+  border: 1px solid var(--wn-border-item);
+  background: var(--wn-bg-item);
+  overflow: hidden;
+}
+
+/* ── Accent bar ────────────────────────────────────────────── */
+.wn-item-bar {
+  width: 3px;
+  flex-shrink: 0;
+  border-radius: 30px 0 0 30px;
+}
+
+/* ── Item body ─────────────────────────────────────────────── */
+.wn-item-body {
+  padding: 14px 18px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Item title ────────────────────────────────────────────── */
+.wn-item-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+  line-height: 1.45;
+  color: var(--wn-text-hi);
+}
+
+/* ── Item desc ─────────────────────────────────────────────── */
+.wn-item-desc {
+  font-size: 0.84rem;
+  color: var(--wn-text-muted);
+  line-height: 1.7;
+  font-weight: 400;
+}
+
+/* ── Responsive ────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  #whats-new-container {
+    padding: 6px 14px 68px;
+  }
+  .wn-release {
+    padding: 22px 18px 20px;
+    margin-bottom: 8px;
+  }
+  .wn-title      { font-size: 0.96rem; }
+  h3.wn-title    { font-size: 0.88rem; }
+  .wn-subtitle   { font-size: 0.85rem; }
+  .wn-item-title { font-size: 0.91rem; }
+  .wn-item-desc  { font-size: 0.82rem; }
+}
+
+@media (max-width: 450px) {
+  body { font-size: 14px; }
+  #whats-new-container { padding: 4px 12px 64px; }
+}
+
 @media (min-width: 600px) {
-    body {
-        font-size: 16px; /* ขนาดตัวอักษรสำหรับแท็บเล็ตแนวตั้ง */
-    }
-
-    .container {
-        max-width: 550px; /* ปรับขนาด container สำหรับแท็บเล็ต */
-    }
-
-    h1 {
-        font-size: 18px; /* ขนาดตัวอักษรหัวเรื่องสำหรับแท็บเล็ต */
-    }
+  body { font-size: 16px; }
 }
 
-/* แท็บเล็ตแนวนอน */
-@media (min-width: 768px) {
-    body {
-        font-size: 18px; /* ขนาดตัวอักษรสำหรับแท็บเล็ตแนวนอน */
-    }
+/* ── Dark mode ─────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --wn-text-hi:     #d8eaed;
+    --wn-text-body:   #9abec6;
+    --wn-text-muted:  #6e9098;
+    --wn-text-faint:  #405860;
 
-    .container {
-        max-width: 700px; /* ปรับขนาด container สำหรับแท็บเล็ตแนวนอน */
-    }
+    --wn-bg-page:     #0e1618;
+    --wn-bg-card:     #172022;
+    --wn-bg-item:     #1c2a2d;
 
-    h1 {
-        font-size: 20px; /* ขนาดตัวอักษรหัวเรื่องสำหรับแท็บเล็ตแนวนอน */
-    }
+    --wn-border-card: rgba(255, 255, 255, 0.06);
+    --wn-border-item: rgba(255, 255, 255, 0.05);
+  }
+
+  .wn-release--current {
+    border-color: rgba(19, 180, 127, 0.28);
+  }
+
+  .wn-time-chip {
+    color: #18c490;
+    background: rgba(24, 196, 144, 0.09);
+    border-color: rgba(24, 196, 144, 0.18);
+  }
 }
 
-/* เดสก์ท็อปเล็ก */
-@media (min-width: 1024px) {
-    body {
-        font-size: 20px; /* ขนาดตัวอักษรสำหรับเดสก์ท็อปเล็ก */
-    }
-
-    .container {
-        max-width: 900px; /* ปรับขนาด container สำหรับเดสก์ท็อปเล็ก */
-    }
-
-    h1 {
-        font-size: 22px; /* ขนาดตัวอักษรหัวเรื่องสำหรับเดสก์ท็อปเล็ก */
-    }
-}
-
-/* เดสก์ท็อปกลาง */
-@media (min-width: 1280px) {
-    body {
-        font-size: 22px; /* ขนาดตัวอักษรสำหรับเดสก์ท็อปกลาง */
-    }
-
-    .container {
-        max-width: 1100px; /* ปรับขนาด container สำหรับเดสก์ท็อปกลาง */
-    }
-
-    h1 {
-        font-size: 24px; /* ขนาดตัวอักษรหัวเรื่องสำหรับเดสก์ท็อปกลาง */
-    }
-}
-
-/* เดสก์ท็อปใหญ่ */
-@media (min-width: 1440px) {
-    body {
-        font-size: 24px; /* ขนาดตัวอักษรสำหรับเดสก์ท็อปใหญ่ */
-    }
-
-    .container {
-        max-width: 1200px; /* ปรับขนาด container สำหรับเดสก์ท็อปใหญ่ */
-    }
-
-    h1 {
-        font-size: 26px; /* ขนาดตัวอักษรหัวเรื่องสำหรับเดสก์ท็อปใหญ่ */
-    }
-}
-
-/* หน้าจอ 4K+ */
-@media (min-width: 1920px) {
-    body {
-        font-size: 26px; /* ขนาดตัวอักษรสำหรับหน้าจอ 4K+ */
-    }
-
-    .container {
-        max-width: 1400px; /* ปรับขนาด container สำหรับหน้าจอ 4K+ */
-    }
-
-    h1 {
-        font-size: 28px; /* ขนาดตัวอักษรหัวเรื่องสำหรับหน้าจอ 4K+ */
-    }
+/* ── Reduced motion ────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none; }
 }

@@ -1,52 +1,52 @@
 {
-  "version": "1.0.5.6",
+  "version": "1.0.5.7",
   "sections": [
-    {
-      "type": "fixed",
-      "items": [
-        {
-          "title": {
-            "en": "🔥 History recording now works correctly for all versions",
-            "th": "🔥 บันทึกประวัติทำงานถูกต้องสำหรับทุก version แล้ว"
-          },
-          "desc": {
-            "en": "Previous sub-patch versions (1.0.5.1–1.0.5.5) were not being recorded in history because the archive step ran after whats-new.json was already overwritten. The archive now runs first, before any file is modified.",
-            "th": "version ย่อยก่อนหน้า (1.0.5.1–1.0.5.5) ไม่ถูกบันทึกในประวัติ เพราะขั้นตอน archive ทำงานหลัง whats-new.json ถูก overwrite ไปแล้ว ตอนนี้ archive เกิดก่อนการแก้ไขไฟล์ใดๆ"
-          }
-        },
-        {
-          "title": {
-            "en": "🐛 Content source priority redesigned",
-            "th": "🐛 ลำดับความสำคัญของ content source ออกแบบใหม่"
-          },
-          "desc": {
-            "en": "Archive now reads whats-new.json first (if version matches) before falling back to version.json's content field. This ensures correct content is captured even if version.json was deployed with the old format that had no content field.",
-            "th": "Archive ตอนนี้อ่าน whats-new.json ก่อน (ถ้า version ตรงกัน) แล้วค่อย fallback ไปยัง content field ใน version.json ทำให้บันทึกเนื้อหาถูกต้องแม้ version.json จะเป็นรูปแบบเก่าที่ไม่มี content field"
-          }
-        },
-        {
-          "title": {
-            "en": "🐛 release-history.json written before whats-new.json",
-            "th": "🐛 release-history.json ถูกเขียนก่อน whats-new.json"
-          },
-          "desc": {
-            "en": "History is now committed to disk immediately after archiving — guaranteeing it's never lost even if the script fails partway through the remaining steps.",
-            "th": "ประวัติถูกเขียนลงดิสก์ทันทีหลัง archive — รับประกันว่าจะไม่สูญหายแม้สคริปต์จะหยุดกลางคันในขั้นตอนถัดไป"
-          }
-        }
-      ]
-    },
     {
       "type": "improved",
       "items": [
         {
           "title": {
-            "en": "⚡ Archive logs which content source was used",
-            "th": "⚡ Archive บันทึกว่าใช้ content จากไหน"
+            "en": "🎨 What's New page redesigned — app-style layout",
+            "th": "🎨 หน้า What's New ออกแบบใหม่ — สไตล์ application"
           },
           "desc": {
-            "en": "The deploy log now shows [source: whats-new.json] or [source: version.json (content field)] so you can verify the archive captured the right content.",
-            "th": "log ตอน deploy ตอนนี้แสดง [source: whats-new.json] หรือ [source: version.json (content field)] เพื่อให้ตรวจสอบได้ว่า archive บันทึกเนื้อหาที่ถูกต้อง"
+            "en": "Cards are more spacious with refined typography, softer borders, and a visual language closer to native app conventions.",
+            "th": "การ์ดมีพื้นที่โล่งมากขึ้น ตัวอักษรอ่านง่ายขึ้น ขอบการ์ดบางลง และสไตล์โดยรวมเป็นแบบ native application มากขึ้น"
+          }
+        },
+        {
+          "title": {
+            "en": "🖌️ Background and item colors refreshed",
+            "th": "🖌️ ปรับสีพื้นหลังและการ์ดรายการใหม่"
+          },
+          "desc": {
+            "en": "Page background and item cards now use a near-pure white with a subtle cool-blue tint — cleaner and easier on the eyes.",
+            "th": "พื้นหลังและการ์ดรายการเปลี่ยนเป็นขาวเกือบบริสุทธิ์โทนน้ำเงินเย็นอ่อนมาก ดูสะอาดตาและสบายตากว่าเดิม"
+          }
+        },
+        {
+          "title": {
+            "en": "📐 Font sizes adjusted — less aggressive, more readable",
+            "th": "📐 ปรับขนาดตัวอักษร — เล็กลงนิดหน่อย อ่านง่ายขึ้น"
+          },
+          "desc": {
+            "en": "Item titles and release headings are slightly smaller to reduce visual weight and improve scan-ability.",
+            "th": "ชื่อรายการและหัวข้อ release เล็กลงเล็กน้อยเพื่อลดความหนักของสายตาและอ่านสแกนผ่านได้ง่ายขึ้น"
+          }
+        }
+      ]
+    },
+    {
+      "type": "fixed",
+      "items": [
+        {
+          "title": {
+            "en": "🧹 CSS moved from JS to new.css",
+            "th": "🧹 ย้าย CSS ออกจาก JS ไปอยู่ใน new.css"
+          },
+          "desc": {
+            "en": "All What's New styles previously injected at runtime via new.js are now static CSS in /assets/css/new.css — faster parse, no flash of unstyled content.",
+            "th": "CSS ทั้งหมดที่เคย inject ตอน runtime ผ่าน new.js ถูกย้ายเป็น static CSS ใน /assets/css/new.css ทำให้ parse เร็วขึ้นและไม่มี flash of unstyled content"
           }
         }
       ]
