@@ -1,37 +1,37 @@
 {
-  "version": "1.0.5.5",
+  "version": "1.0.5.6",
   "sections": [
     {
       "type": "fixed",
       "items": [
         {
           "title": {
-            "en": "🐛 JS no longer blocks other scripts on Cloudflare Pages",
-            "th": "🐛 JS ไม่บล็อก script อื่นบน Cloudflare Pages อีกแล้ว"
+            "en": "🔥 History recording now works correctly for all versions",
+            "th": "🔥 บันทึกประวัติทำงานถูกต้องสำหรับทุก version แล้ว"
           },
           "desc": {
-            "en": "An unhandled error in the What's New script was causing the entire JS execution to halt — breaking other scripts on the page. Every operation is now wrapped in try/catch so a failure stays isolated.",
-            "th": "Error ที่ไม่ได้ handle ใน script หน้ามีอะไรใหม่ทำให้ JS หยุดทำงานทั้งหน้า ทำให้ script อื่นๆ พังไปด้วย ตอนนี้ทุก operation ถูกครอบด้วย try/catch เพื่อให้ error อยู่แค่ในส่วนของตัวเอง"
+            "en": "Previous sub-patch versions (1.0.5.1–1.0.5.5) were not being recorded in history because the archive step ran after whats-new.json was already overwritten. The archive now runs first, before any file is modified.",
+            "th": "version ย่อยก่อนหน้า (1.0.5.1–1.0.5.5) ไม่ถูกบันทึกในประวัติ เพราะขั้นตอน archive ทำงานหลัง whats-new.json ถูก overwrite ไปแล้ว ตอนนี้ archive เกิดก่อนการแก้ไขไฟล์ใดๆ"
           }
         },
         {
           "title": {
-            "en": "🐛 Removed dead code causing parse issues",
-            "th": "🐛 ลบ dead code ที่ทำให้เกิดปัญหาการ parse"
+            "en": "🐛 Content source priority redesigned",
+            "th": "🐛 ลำดับความสำคัญของ content source ออกแบบใหม่"
           },
           "desc": {
-            "en": "The scheduleTick function was leftover code that conflicted with startPolling, creating edge cases on Cloudflare's V8 environment. Both are now unified into a single clean polling loop.",
-            "th": "ฟังก์ชัน scheduleTick เป็นโค้ดเก่าที่ขัดแย้งกับ startPolling ทำให้เกิด edge case ใน V8 environment ของ Cloudflare ตอนนี้รวมเป็น polling loop เดียวที่สะอาดขึ้น"
+            "en": "Archive now reads whats-new.json first (if version matches) before falling back to version.json's content field. This ensures correct content is captured even if version.json was deployed with the old format that had no content field.",
+            "th": "Archive ตอนนี้อ่าน whats-new.json ก่อน (ถ้า version ตรงกัน) แล้วค่อย fallback ไปยัง content field ใน version.json ทำให้บันทึกเนื้อหาถูกต้องแม้ version.json จะเป็นรูปแบบเก่าที่ไม่มี content field"
           }
         },
         {
           "title": {
-            "en": "🐛 Used getAttribute instead of .dataset for broader compatibility",
-            "th": "🐛 เปลี่ยนไปใช้ getAttribute แทน .dataset เพื่อ compatibility"
+            "en": "🐛 release-history.json written before whats-new.json",
+            "th": "🐛 release-history.json ถูกเขียนก่อน whats-new.json"
           },
           "desc": {
-            "en": "Some environments on Cloudflare Pages preview don't fully support the .dataset API. Switched to getAttribute('data-ts') which works everywhere.",
-            "th": "บาง environment ใน Cloudflare Pages preview รองรับ .dataset API ไม่ครบ เปลี่ยนไปใช้ getAttribute('data-ts') ซึ่งทำงานได้ในทุกที่"
+            "en": "History is now committed to disk immediately after archiving — guaranteeing it's never lost even if the script fails partway through the remaining steps.",
+            "th": "ประวัติถูกเขียนลงดิสก์ทันทีหลัง archive — รับประกันว่าจะไม่สูญหายแม้สคริปต์จะหยุดกลางคันในขั้นตอนถัดไป"
           }
         }
       ]
@@ -41,12 +41,12 @@
       "items": [
         {
           "title": {
-            "en": "⚡ Polling loop now recovers from errors automatically",
-            "th": "⚡ Polling loop ฟื้นตัวจาก error อัตโนมัติ"
+            "en": "⚡ Archive logs which content source was used",
+            "th": "⚡ Archive บันทึกว่าใช้ content จากไหน"
           },
           "desc": {
-            "en": "If an error occurs during a tick, the loop retries after 60 seconds instead of stopping completely. The page stays live even if something goes wrong.",
-            "th": "ถ้าเกิด error ระหว่าง tick ระบบจะ retry หลัง 60 วินาทีแทนที่จะหยุดทำงาน หน้าจะยัง live อยู่แม้มีบางอย่างผิดพลาด"
+            "en": "The deploy log now shows [source: whats-new.json] or [source: version.json (content field)] so you can verify the archive captured the right content.",
+            "th": "log ตอน deploy ตอนนี้แสดง [source: whats-new.json] หรือ [source: version.json (content field)] เพื่อให้ตรวจสอบได้ว่า archive บันทึกเนื้อหาที่ถูกต้อง"
           }
         }
       ]

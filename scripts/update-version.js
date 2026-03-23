@@ -264,22 +264,83 @@ console.log(`    Silent:    ${isSilent}\n`);
 
 const whatsNewPath = path.join(ROOT, CONFIG.whatsNewFile);
 let whatsNew = null;
-let whatsNewMatchesVersion = false;
-let whatsNewHasContent = false;
 
 try {
   whatsNew = JSON.parse(fs.readFileSync(whatsNewPath, 'utf8'));
-  whatsNewMatchesVersion = (whatsNew.version === newVersion);
-
-  // ตรวจว่าผู้ใช้เขียนเนื้อหาจริงๆ (มี sections และไม่ใช่ fallback ว่างๆ)
-  const hasSections = Array.isArray(whatsNew.sections) && whatsNew.sections.length > 0;
-  const hasItems    = hasSections && whatsNew.sections.some(s => s.items && s.items.length > 0);
-  whatsNewHasContent = whatsNewMatchesVersion && hasSections && hasItems;
 } catch (e) {
   console.log(`⚠️   ไม่พบ whats-new.json หรืออ่านไม่ได้`);
 }
 
-// ── ดึง git diff เพื่อ smart changelog ───────────────────────────────────────
+// ── อ่าน release-history.json ────────────────────────────────────────────────
+
+const historyPath = path.join(ROOT, CONFIG.historyFile);
+let history = { releases: [] };
+try {
+  history = JSON.parse(fs.readFileSync(historyPath, 'utf8'));
+  if (!Array.isArray(history.releases)) history.releases = [];
+} catch (_) {}
+
+// ── STEP 1: ARCHIVE current version → history ─────────────────────────────────
+//
+// ❗ ต้องเกิดก่อน whats-new.json ถูก overwrite เสมอ
+//
+// ลำดับความน่าเชื่อถือของ content source:
+//   1. whats-new.json (ถ้า version ตรงกับ currentVersion) ← อ่านได้ก่อน overwrite
+//   2. version.json content field (จาก deploy ก่อนหน้า)   ← fallback ที่เพิ่มมาใหม่
+//   3. Generic fallback                                      ← กรณีไม่มีทั้งสองอย่าง
+
+function hasRealContent(obj) {
+  return obj && Array.isArray(obj.sections) && obj.sections.length > 0 &&
+         obj.sections.some(s => s.items && s.items.length > 0);
+}
+
+if (currentVersion !== newVersion && currentVersion !== '0.0.0') {
+  const alreadyIn = history.releases.some(r => r.version === currentVersion);
+
+  if (!alreadyIn) {
+    // หา content source ที่ดีที่สุดสำหรับ currentVersion
+    let archiveContent = null;
+    let archiveSource  = 'fallback (generic)';
+
+    // Priority 1: whats-new.json version === currentVersion
+    // (ยังไม่ถูก overwrite เพราะเราอ่านก่อนในขั้นนี้)
+    if (whatsNew && whatsNew.version === currentVersion && hasRealContent(whatsNew)) {
+      archiveContent = whatsNew;
+      archiveSource  = 'whats-new.json (ตรงกับ currentVersion)';
+    }
+    // Priority 2: content field ใน version.json (เก็บไว้ตอน deploy ครั้งก่อน)
+    else if (hasRealContent(currentData.content)) {
+      archiveContent = currentData.content;
+      archiveSource  = 'version.json (content field)';
+    }
+
+    const archiveEntry = {
+      version:  currentVersion,
+      date:     currentData.buildDate || makeDateObj(new Date()),
+      title:    (archiveContent && archiveContent.title)    || { en: 'System update',       th: 'อัปเดตระบบ' },
+      subtitle: (archiveContent && archiveContent.subtitle) || { en: 'Minor improvements.', th: 'ปรับปรุงเล็กน้อย' },
+      sections: (archiveContent && archiveContent.sections) || []
+    };
+
+    history.releases.unshift(archiveEntry);
+    console.log(`📋  Archive v${currentVersion} → history  [source: ${archiveSource}]`);
+  } else {
+    console.log(`ℹ️   v${currentVersion} อยู่ใน history แล้ว ข้าม`);
+  }
+
+  // เก็บแค่ MAX_HISTORY อันล่าสุด
+  if (history.releases.length > MAX_HISTORY) {
+    const removed = history.releases.splice(MAX_HISTORY);
+    console.log(`🗑️   ลบประวัติเกิน ${MAX_HISTORY}: ${removed.map(r => r.version).join(', ')}`);
+  }
+
+  // ✅ เขียน history ทันทีก่อนทำอย่างอื่น
+  fs.mkdirSync(path.dirname(historyPath), { recursive: true });
+  fs.writeFileSync(historyPath, JSON.stringify(history, null, 2) + '\n');
+  console.log(`✅  release-history.json: ${history.releases.length}/${MAX_HISTORY} versions`);
+}
+
+// ── STEP 2: ดึง git diff เพื่อ smart changelog ───────────────────────────────
 
 const changedFiles = getGitChangedFiles();
 if (changedFiles.length) {
@@ -288,33 +349,36 @@ if (changedFiles.length) {
   console.log(`🔍  Git diff: ไม่พบข้อมูล (ใช้ข้อความทั่วไป)`);
 }
 
-// ── ตัดสินใจเนื้อหา ───────────────────────────────────────────────────────────
+// ── STEP 3: ตัดสินใจเนื้อหาสำหรับ newVersion ─────────────────────────────────
 
 const oldS = parseSemver(currentVersion);
 const newS = parseSemver(newVersion);
 const isMinorBump = newS && oldS && (newS.minor > oldS.minor || newS.major > oldS.major);
 
+// ตรวจว่า whats-new.json มีเนื้อหาที่เขียนเองสำหรับ newVersion
+const wnMatchesNew   = whatsNew && (whatsNew.version === newVersion);
+const wnHasNewContent = wnMatchesNew && hasRealContent(whatsNew);
+
 let contentToUse;
 let usingUserContent = false;
 
-if (whatsNewHasContent) {
-  // ✅ ผู้ใช้เขียน sections เอง → ใช้ sections + title + subtitle ของผู้ใช้
-  //    แต่ date บันทึก UTC อัตโนมัติเสมอ ไม่ต้องเขียนเอง
+if (wnHasNewContent) {
+  // ✅ ผู้ใช้เขียน sections เองสำหรับ newVersion → ใช้ทั้งหมด, เติม date อัตโนมัติ
   contentToUse = Object.assign({}, whatsNew, {
     version: newVersion,
-    date:    dateObj       // ✅ force UTC เสมอ — ไม่ใช้ date จาก whats-new.json
+    date:    dateObj
   });
   usingUserContent = true;
   console.log(`✅  ใช้เนื้อหาจาก whats-new.json (ผู้ใช้กำหนดเอง)`);
   console.log(`    📅 วันเวลา UTC: ${dateObj.en}`);
 } else {
-  // ✅ ไม่มีเนื้อหาจากผู้ใช้ → auto-generate อัจฉริยะ
+  // ✅ ไม่มีเนื้อหาจากผู้ใช้ → auto-generate จาก git diff
   const smartTitle    = buildSmartTitle(newVersion, currentVersion, isMinorBump);
   const smartSections = buildSmartChangelog(changedFiles, newVersion, currentVersion);
 
   contentToUse = {
     version:  newVersion,
-    date:     dateObj,     // ✅ UTC อัตโนมัติ
+    date:     dateObj,
     title:    smartTitle.title,
     subtitle: smartTitle.subtitle,
     sections: smartSections
@@ -328,52 +392,9 @@ if (whatsNewHasContent) {
   console.log(`    📅 วันเวลา UTC: ${dateObj.en}`);
 }
 
-// ✅ เขียน whats-new.json ทุกกรณี (ทั้ง user content และ auto)
-//    เพื่อให้ date UTC ถูก sync เสมอ
+// ✅ เขียน whats-new.json (เกิดหลัง archive เสมอ)
 fs.writeFileSync(whatsNewPath, JSON.stringify(contentToUse, null, 2) + '\n');
-console.log(`✅  whats-new.json: บันทึกแล้ว (date = UTC อัตโนมัติ)`);
-
-// ── จัดการ release-history.json ──────────────────────────────────────────────
-
-const historyPath = path.join(ROOT, CONFIG.historyFile);
-let history = { releases: [] };
-try {
-  history = JSON.parse(fs.readFileSync(historyPath, 'utf8'));
-  if (!Array.isArray(history.releases)) history.releases = [];
-} catch (_) {}
-
-// ✅ บันทึก history ทุกครั้งที่ version เปลี่ยน — รวม sub-patch (1.0.5.1→1.0.5.2)
-// ดึงเนื้อหาจาก currentData.content ที่เก็บไว้ใน version.json
-// เพื่อให้ได้เนื้อหาของ version เก่าจริงๆ ไม่ใช่เนื้อหาของ version ใหม่
-if (currentVersion !== newVersion) {
-  const alreadyIn = history.releases.some(r => r.version === currentVersion);
-  const skipVersions = new Set(['0.0.0']);
-
-  if (!alreadyIn && !skipVersions.has(currentVersion)) {
-    // ✅ ใช้ content จาก version.json (เก็บตอน deploy ครั้งก่อน) ไม่ใช่จาก whats-new.json ใหม่
-    const savedContent = currentData.content || {};
-    const oldEntry = {
-      version:  currentVersion,
-      date:     currentData.buildDate || { en: currentVersion, th: currentVersion },
-      title:    savedContent.title    || { en: 'System update', th: 'อัปเดตระบบ' },
-      subtitle: savedContent.subtitle || { en: 'Minor improvements.', th: 'ปรับปรุงเล็กน้อย' },
-      sections: savedContent.sections || []
-    };
-    history.releases.unshift(oldEntry);
-    console.log(`📋  เพิ่ม v${currentVersion} เข้า history`);
-  } else if (alreadyIn) {
-    console.log(`ℹ️   v${currentVersion} อยู่ใน history แล้ว ข้าม`);
-  }
-
-  // เก็บแค่ 7 อันล่าสุด (นับจากใหม่สุดย้อนไป)
-  if (history.releases.length > MAX_HISTORY) {
-    const removed = history.releases.splice(MAX_HISTORY);
-    console.log(`🗑️   ลบประวัติเกิน 7: ${removed.map(r => r.version).join(', ')}`);
-  }
-
-  fs.writeFileSync(historyPath, JSON.stringify(history, null, 2) + '\n');
-  console.log(`✅  release-history.json: ${history.releases.length}/${MAX_HISTORY} versions`);
-}
+console.log(`✅  whats-new.json: บันทึกแล้ว`);
 
 // ── ดึง changelog ─────────────────────────────────────────────────────────────
 
