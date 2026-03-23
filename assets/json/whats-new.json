@@ -1,52 +1,17 @@
 {
-  "version": "1.0.5.7",
+  "version": "1.0.5.8",
   "sections": [
-    {
-      "type": "improved",
-      "items": [
-        {
-          "title": {
-            "en": "🎨 What's New page redesigned — app-style layout",
-            "th": "🎨 หน้า What's New ออกแบบใหม่ — สไตล์ application"
-          },
-          "desc": {
-            "en": "Cards are more spacious with refined typography, softer borders, and a visual language closer to native app conventions.",
-            "th": "การ์ดมีพื้นที่โล่งมากขึ้น ตัวอักษรอ่านง่ายขึ้น ขอบการ์ดบางลง และสไตล์โดยรวมเป็นแบบ native application มากขึ้น"
-          }
-        },
-        {
-          "title": {
-            "en": "🖌️ Background and item colors refreshed",
-            "th": "🖌️ ปรับสีพื้นหลังและการ์ดรายการใหม่"
-          },
-          "desc": {
-            "en": "Page background and item cards now use a near-pure white with a subtle cool-blue tint — cleaner and easier on the eyes.",
-            "th": "พื้นหลังและการ์ดรายการเปลี่ยนเป็นขาวเกือบบริสุทธิ์โทนน้ำเงินเย็นอ่อนมาก ดูสะอาดตาและสบายตากว่าเดิม"
-          }
-        },
-        {
-          "title": {
-            "en": "📐 Font sizes adjusted — less aggressive, more readable",
-            "th": "📐 ปรับขนาดตัวอักษร — เล็กลงนิดหน่อย อ่านง่ายขึ้น"
-          },
-          "desc": {
-            "en": "Item titles and release headings are slightly smaller to reduce visual weight and improve scan-ability.",
-            "th": "ชื่อรายการและหัวข้อ release เล็กลงเล็กน้อยเพื่อลดความหนักของสายตาและอ่านสแกนผ่านได้ง่ายขึ้น"
-          }
-        }
-      ]
-    },
     {
       "type": "fixed",
       "items": [
         {
           "title": {
-            "en": "🧹 CSS moved from JS to new.css",
-            "th": "🧹 ย้าย CSS ออกจาก JS ไปอยู่ใน new.css"
+            "en": "🔧 Version tracking now records every sub-patch correctly",
+            "th": "🔧 ระบบติดตามเวอร์ชันบันทึกทุก sub-patch ได้ถูกต้องแล้ว"
           },
           "desc": {
-            "en": "All What's New styles previously injected at runtime via new.js are now static CSS in /assets/css/new.css — faster parse, no flash of unstyled content.",
-            "th": "CSS ทั้งหมดที่เคย inject ตอน runtime ผ่าน new.js ถูกย้ายเป็น static CSS ใน /assets/css/new.css ทำให้ parse เร็วขึ้นและไม่มี flash of unstyled content"
+            "en": "Fixed a logic bug where setting APP_VERSION=1.0.5 caused the version to cycle between 1.0.5 and 1.0.5.1 forever, skipping .2, .3, .4 and beyond. Every release is now recorded in history without exception.",
+            "th": "แก้ไขข้อผิดพลาดในตรรกะที่ทำให้การตั้ง APP_VERSION=1.0.5 ทำให้เวอร์ชันวนซ้ำระหว่าง 1.0.5 และ 1.0.5.1 โดยข้าม .2, .3, .4 ไปเรื่อยๆ ตอนนี้ทุก release จะถูกบันทึกในประวัติโดยไม่มีข้อยกเว้น"
           }
         }
       ]
