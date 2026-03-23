@@ -1,16 +1,33 @@
 {
-  "version": "1.0.5.1",
+  "version": "1.0.5.2",
   "sections": [
     {
-      "type": "new",
+      "type": "fixed",
       "items": [
         {
-          "title": { "en": "✨ Changelog level system", "th": "✨ ระบบแยกระดับ changelog" },
-          "desc": { "en": "Each update item is now tagged with ✨ Feature, ⚡ Improvement, or 🐛 Fix — making it easier to see what kind of change each item is at a glance.", "th": "ทุกรายการอัพเดทตอนนี้มีป้ายกำกับ ✨ ฟีเจอร์ใหม่, ⚡ ปรับปรุง หรือ 🐛 แก้บัก — เพื่อให้เข้าใจง่ายขึ้นว่าแต่ละรายการคืออะไร" }
-        },
+          "title": {
+            "en": "🔥 Update popup no longer appears on What's New page",
+            "th": "🔥 Popup อัพเดทไม่แสดงในหน้ามีอะไรใหม่อีกต่อไป"
+          },
+          "desc": {
+            "en": "Previously the update popup could appear even when the user was already on the What's New page. This is now fixed — the page identifies itself using a meta tag, and the popup is suppressed automatically.",
+            "th": "ก่อนหน้านี้ popup อัพเดทอาจแสดงขึ้นมาแม้ผู้ใช้จะอยู่ในหน้ามีอะไรใหม่อยู่แล้ว ตอนนี้แก้ไขแล้ว โดยหน้านี้จะยืนยันตัวตนผ่าน meta tag และระบบจะไม่แสดง popup โดยอัตโนมัติ"
+          }
+        }
+      ]
+    },
+    {
+      "type": "improved",
+      "items": [
         {
-          "title": { "en": "🔥 Highlight for important items", "th": "🔥 ไฮไลท์รายการสำคัญ" },
-          "desc": { "en": "Major changes can now be highlighted with 🔥 so users notice the most important updates first.", "th": "การเปลี่ยนแปลงสำคัญสามารถติดป้าย 🔥 เพื่อให้ผู้ใช้เห็นรายการที่โดดเด่นที่สุดก่อน" }
+          "title": {
+            "en": "⚡ Page identity via meta tag",
+            "th": "⚡ ยืนยันตัวตนหน้าเว็บผ่าน meta tag"
+          },
+          "desc": {
+            "en": "Instead of checking the URL path, the system now reads a meta tag in the page's HTML to identify which page it's on. This means the popup suppression works correctly even if the URL changes in the future.",
+            "th": "แทนที่จะตรวจสอบ URL path ระบบตอนนี้อ่าน meta tag จาก HTML ของหน้านั้นๆ เพื่อระบุว่าเป็นหน้าไหน ทำให้การซ่อน popup ยังทำงานได้ถูกต้องแม้ URL จะเปลี่ยนในอนาคต"
+          }
         }
       ]
     }

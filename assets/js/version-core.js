@@ -22,14 +22,12 @@
   };
 
   // ── ตรวจว่าอยู่หน้า What's New หรือไม่ ──────────────────────────────────────
-  // ถ้าใช่ → ไม่แสดง popup เลย (หน้านี้มีข้อมูลอยู่แล้ว)
+  // ใช้ <meta name="fv-page" content="whats-new"> ในหน้านั้น
+  // วิธีนี้ไม่ขึ้นกับ URL path — เปลี่ยน path ได้โดยไม่ต้องแก้ script
 
   function isOnWhatsNewPage() {
-    var p = window.location.pathname;
-    // รองรับทั้ง /info/whats_new/ และ /info/whats_new (ไม่มี trailing slash)
-    return p === CFG.WHATS_NEW_PAGE
-      || p === CFG.WHATS_NEW_PAGE.replace(/\/$/, '')
-      || p.indexOf(CFG.WHATS_NEW_PAGE) === 0;
+    var meta = document.querySelector('meta[name="fv-page"]');
+    return meta && meta.getAttribute('content') === 'whats-new';
   }
 
   // ── Storage ──────────────────────────────────────────────────────────────────
