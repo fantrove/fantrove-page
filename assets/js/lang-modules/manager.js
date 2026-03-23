@@ -3,18 +3,15 @@
  * @file manager.js
  * LanguageManager — orchestrator หลักของระบบภาษา
  *
- * เป็น thin coordinator ที่เรียก services ตามลำดับที่ถูกต้อง
- * Logic จริงอยู่ใน services แต่ละตัว
- *
- * Public API (เข้าถึงผ่าน window.languageManager):
- *  selectLanguage(lang)              — user กดเลือกภาษา
- *  updatePageLanguage(lang, updateURL) — อัพเดท content + URL
- *  initialize()                      — init ระบบ (เรียกจาก language.js)
- *  destroy()                         — cleanup ทั้งหมด
+ * เปลี่ยนแปลงใน v4.1:
+ *  - เรียก LangGate.resolve() เมื่อ initialize() เสร็จสมบูรณ์
+ *    → เปิด gate ให้ script อื่นๆ ทำงานได้
+ *  - เรียก LangGate.reject() เมื่อ initialize() fail
+ *    → ปลดล็อก script queue (ไม่ให้หน้าค้าง)
  *
  * @module manager
  * @depends {config.js, state.js, detector.js, loader.js, url.js,
- *           translator.js, ui.js, navigation.js}
+ *           translator.js, ui.js, navigation.js, gate.js}
  */
 (function(M) {
   'use strict';
@@ -34,9 +31,10 @@
      *  5. observeMutations สำหรับ dynamic content
      *  6. setup navigation event handlers
      *  7. fade in body
+     *  8. [NEW v4.1] resolve LangGate → เปิดให้ script อื่นทำงาน
      */
     async initialize() {
-      const { State, LoaderService, TranslatorService, UIService, NavigationService } = M;
+      const { State, LoaderService, TranslatorService, UIService, NavigationService, LangGate } = M;
       
       // ── Coordinated reload marker cleanup ──────────────────────────────────
       try {
@@ -57,7 +55,14 @@
         }
       } catch (e) {}
       
-      if (State.isInitialized) return;
+      if (State.isInitialized) {
+        // หาก init ซ้ำ (ไม่ควรเกิด) ให้ resolve gate ทันทีด้วยค่าปัจจุบัน
+        LangGate?.resolve({
+          lang: State.selectedLang,
+          translations: State.languageCache[State.selectedLang] || null,
+        });
+        return;
+      }
       
       try {
         // โหลดและ validate config (รอ prefetch ที่เริ่มไว้ตอน boot)
@@ -82,13 +87,28 @@
           }
         }, 0);
         
+        // ── [v4.1] Resolve LangGate ─────────────────────────────────────────
+        // เปิดให้ JS ที่รอ gate ทำงานได้
+        // ส่ง translations ของภาษาปัจจุบันไปด้วยเผื่อมีคนต้องการ
+        if (LangGate) {
+          LangGate.resolve({
+            lang: State.selectedLang,
+            translations: State.languageCache[State.selectedLang] || null,
+          });
+        }
+        
       } catch (error) {
         console.error('[LanguageManager] Error during initialization:', error);
         UIService.showError('ไม่สามารถเริ่มต้นระบบได้');
+        
         setTimeout(() => {
           if (document.body && document.body.style.opacity === '0')
             document.body.style.opacity = '1';
         }, 0);
+        
+        // ── [v4.1] Reject LangGate ──────────────────────────────────────────
+        // reject Promise + ปลดล็อก script queue (ไม่ให้หน้าค้างถาวร)
+        if (LangGate) LangGate.reject(error);
       }
     },
     
@@ -128,27 +148,21 @@
     
     /**
      * User กดเลือกภาษา — entry point จาก UIService
-     *
-     * บันทึก _userExplicitLang เพื่อให้ popstate/pageshow ยึดภาษานี้เสมอ
-     *
      * @param {string} language
      */
     async selectLanguage(language) {
       const { CONFIG, State, URLService, UIService } = M;
       
-      // Validate
       if (!State.languagesConfig[language]) {
         console.warn(`[LanguageManager] ไม่รองรับภาษา: ${language}`);
         language = CONFIG.DEFAULT_LANG;
       }
       
-      // ถ้าเป็นภาษาเดิม ไม่ต้องทำอะไร
       if (State.selectedLang === language) {
         await UIService.closeLanguageDropdown();
         return;
       }
       
-      // บันทึก explicit choice
       State._userExplicitLang = language;
       State.lastSelectedLang = State.selectedLang;
       
@@ -161,18 +175,6 @@
     
     /**
      * อัพเดทภาษาของทั้งหน้า
-     *
-     * ลำดับ:
-     *  1. อัพเดท URL (ถ้า shouldUpdateURL)
-     *  2. sync localStorage
-     *  3. set document.lang attribute
-     *  4. จัดการ Google Translate meta
-     *  5. โหลด translation data
-     *  6. แปล DOM
-     *  7. อัพเดท button text
-     *  8. broadcast ให้ tabs อื่น
-     *  9. dispatch languageChange event
-     *
      * @param {string}  language
      * @param {boolean} [shouldUpdateURL=true]
      */
@@ -185,18 +187,15 @@
         State.isUpdatingLanguage = true;
         State.lastSelectedLang = State.selectedLang;
         
-        // URL update
         if (shouldUpdateURL && !DetectorService.isLocalDev()) {
           URLService.updateURLForLanguage(language);
         }
         
-        // Sync localStorage
         try { localStorage.setItem(M.CONFIG.LS_KEY, language); } catch (e) {}
         
-        // Document lang attribute
         document.documentElement.setAttribute('lang', language);
         
-        // Google Translate meta — ป้องกัน double-translate
+        // Google Translate meta
         const browserLang = DetectorService.detectBrowserLanguage();
         if (language === browserLang) {
           document.documentElement.setAttribute('translate', 'no');
@@ -227,7 +226,6 @@
           else await TranslatorService.resetToEnglishContent();
         }
         
-        // Update state + UI
         State.selectedLang = language;
         UIService.showButtonTextForLang(language);
         
@@ -238,7 +236,7 @@
           } catch (e) {}
         }
         
-        // Dispatch event สำหรับโค้ดอื่นที่ฟัง
+        // Dispatch event
         try {
           window.dispatchEvent(new CustomEvent('languageChange', {
             detail: { language, previousLanguage: State.lastSelectedLang }
@@ -256,9 +254,6 @@
     
     // ── Cleanup ───────────────────────────────────────────────────────────────
     
-    /**
-     * Cleanup ทั้งหมด — เรียกตอน unmount หรือ destroy
-     */
     destroy() {
       const { State } = M;
       
