@@ -4,7 +4,7 @@
   'use strict';
 
   var CFG = {
-    VERSION_URL:    '/assets/json/version.json',
+    // ✅ อ่านจาก whats-new.json แทน version.json
     WHATS_NEW_URL:  '/assets/json/whats-new.json',
     WHATS_NEW_PAGE: '/info/whats_new/',
 
@@ -21,13 +21,11 @@
     SWITCH_ID:  'auto-update-switch'
   };
 
-  // ── ตรวจว่าอยู่หน้า What's New หรือไม่ ──────────────────────────────────────
-  // ใช้ <meta name="fv-page" content="whats-new"> ในหน้านั้น
-  // วิธีนี้ไม่ขึ้นกับ URL path — เปลี่ยน path ได้โดยไม่ต้องแก้ script
-
   function isOnWhatsNewPage() {
-    var meta = document.querySelector('meta[name="fv-page"]');
-    return meta && meta.getAttribute('content') === 'whats-new';
+    var p = window.location.pathname;
+    return p === CFG.WHATS_NEW_PAGE
+      || p === CFG.WHATS_NEW_PAGE.replace(/\/$/, '')
+      || p.indexOf(CFG.WHATS_NEW_PAGE) === 0;
   }
 
   // ── Storage ──────────────────────────────────────────────────────────────────
@@ -41,8 +39,6 @@
   function setDisabled(v)    { lsSet(CFG.KEY_DISABLE, v ? '1' : '0'); }
   function isDismissed(ver)  { return ls(CFG.KEY_DISMISSED + ver) === '1'; }
   function setDismissed(ver) { lsSet(CFG.KEY_DISMISSED + ver, '1'); }
-
-  // ── Session idle ─────────────────────────────────────────────────────────────
 
   function isSessionFresh(buildId) {
     if (ss(CFG.SS_SHOWN + buildId) !== '1') return true;
@@ -79,27 +75,21 @@
     return esc(obj[lang] || obj['en'] || '');
   }
 
-  function buildPopup(versionData, wn) {
-    var isTh = (ls('selectedLang') || 'en') === 'th';
-    var ver  = esc(versionData.version || '');
-    var wnSynced = wn && (wn.version === versionData.version);
-
-    // แสดง date/time ถ้ามี
-    var buildDate = versionData.buildDate;
+  function buildPopup(wn) {
+    var isTh    = (ls('selectedLang') || 'en') === 'th';
+    var ver     = esc(wn.version || '');
+    var buildDate = wn.buildDate;
     var dateStr   = buildDate ? (isTh ? esc(buildDate.th) : esc(buildDate.en)) : '';
-
-    var title = wnSynced ? t(wn.title)    : '';
-    var sub   = wnSynced ? t(wn.subtitle) : (isTh ? 'มีการปรับปรุงและอัปเดตระบบ' : 'System improvements and updates.');
+    var title     = t(wn.title);
+    var sub       = t(wn.subtitle) || (isTh ? 'มีการปรับปรุงและอัปเดตระบบ' : 'System improvements and updates.');
 
     var items = [];
-    if (wnSynced) {
-      (wn.sections || []).forEach(function(s) {
-        (s.items || []).slice(0, 4).forEach(function(item) {
-          var txt = t(item.title);
-          if (txt) items.push(txt);
-        });
+    (wn.sections || []).forEach(function(s) {
+      (s.items || []).slice(0, 4).forEach(function(item) {
+        var txt = t(item.title);
+        if (txt) items.push(txt);
       });
-    }
+    });
 
     var L = {
       badge:   isTh ? 'อัพเดทใหม่'                   : 'New update',
@@ -141,21 +131,20 @@
       + '<style>@keyframes fv-fi{from{opacity:0}to{opacity:1}}@keyframes fv-si{from{opacity:0;transform:translate(-50%,-44%)}to{opacity:1;transform:translate(-50%,-50%)}}@media(prefers-color-scheme:dark){#fv-card{--fv-bg:#1c1c1e;--fv-t1:#f5f5f7;--fv-t2:#aeaeb2;--fv-t3:#636366}}</style>';
   }
 
-  function showPopup(versionData, whatsNewData, buildId) {
+  function showPopup(wn, buildId) {
     var existing = document.getElementById(CFG.POPUP_ID);
     if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
 
     lsSet(CFG.KEY_SHOWN_BUILD, buildId);
     markSession(buildId);
 
-    var version = versionData.version;
-    var wrap    = document.createElement('div');
-    wrap.id     = CFG.POPUP_ID;
-    wrap.innerHTML = buildPopup(versionData, whatsNewData);
+    var wrap = document.createElement('div');
+    wrap.id  = CFG.POPUP_ID;
+    wrap.innerHTML = buildPopup(wn);
     document.body.appendChild(wrap);
 
     function dismiss(permanent) {
-      if (permanent) setDismissed(version);
+      if (permanent) setDismissed(wn.version);
       wrap.parentNode && wrap.parentNode.removeChild(wrap);
     }
 
@@ -190,28 +179,24 @@
   function init() {
     updateLastActive();
 
-    // ✅ ถ้าอยู่หน้า What's New → ไม่แสดง popup เลย
-    // (หน้านี้มีข้อมูลครบอยู่แล้ว และ popup ก็ลิงก์มาที่หน้านี้อยู่แล้ว)
     if (isOnWhatsNewPage()) return;
-
     if (isDisabled()) return;
 
-    fetchJSON(CFG.VERSION_URL).then(function(versionData) {
-      if (!versionData) return;
+    // ✅ อ่านจาก whats-new.json แทน version.json
+    fetchJSON(CFG.WHATS_NEW_URL).then(function(wn) {
+      if (!wn) return;
 
-      var newBuild   = versionData.build || versionData.version;
-      var newVersion = versionData.version;
+      var buildId    = wn.build || wn.version;
+      var newVersion = wn.version;
       var shownBuild = ls(CFG.KEY_SHOWN_BUILD);
 
-      if (versionData.notify === false) return;
+      if (wn.notify === false) return;
       if (isDismissed(newVersion)) return;
 
-      var isBrandNew = (shownBuild !== newBuild);
-      if (!isBrandNew && !isSessionFresh(newBuild)) return;
+      var isBrandNew = (shownBuild !== buildId);
+      if (!isBrandNew && !isSessionFresh(buildId)) return;
 
-      fetchJSON(CFG.WHATS_NEW_URL).then(function(whatsNewData) {
-        showPopup(versionData, whatsNewData, newBuild);
-      });
+      showPopup(wn, buildId);
     });
   }
 
