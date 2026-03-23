@@ -1,12 +1,12 @@
 {
-  "version": "1.0.7.1",
+  "version": "1.0.8",
   "title": {
-    "en": "Bug fix",
-    "th": "แก้ไขข้อผิดพลาด"
+    "en": "Improved language detection accuracy",
+    "th": "ปรับปรุงความแม่นยำในการตรวจจับภาษา"
   },
   "subtitle": {
-    "en": "Fixed browser language detection not working correctly after the 1.0.7 update.",
-    "th": "แก้ไขการตรวจจับภาษาของเบราว์เซอร์ที่ยังทำงานไม่ถูกต้องหลังอัปเดต 1.0.7"
+    "en": "Fixed an issue where Chrome continued to identify the page as English despite displaying Thai content.",
+    "th": "แก้ไขปัญหาที่ Chrome ยังคงระบุว่าหน้าเป็นภาษาอังกฤษแม้จะแสดงเนื้อหาภาษาไทยอยู่"
   },
   "sections": [
     {
@@ -14,8 +14,19 @@
       "items": [
         {
           "title": {
-            "en": "Browser no longer incorrectly prompts to translate the page",
-            "th": "เบราว์เซอร์ไม่แจ้งเตือนให้แปลหน้าเว็บผิดพลาดอีกต่อไป"
+            "en": "Browser now correctly identifies the page language — no more incorrect translate prompts",
+            "th": "เบราว์เซอร์ระบุภาษาของหน้าได้ถูกต้องแล้ว ไม่มีการแจ้งเตือนให้แปลผิดภาษาอีกต่อไป"
+          }
+        }
+      ]
+    },
+    {
+      "type": "improved",
+      "items": [
+        {
+          "title": {
+            "en": "Page language is now signaled through multiple channels — HTTP header, HTML attribute, and meta tag — so all browsers and search engines detect it correctly",
+            "th": "ภาษาของหน้าถูกส่งสัญญาณผ่านหลายช่องทาง ทั้ง HTTP header, HTML attribute และ meta tag เพื่อให้ทุกเบราว์เซอร์และ Search Engine ตรวจจับได้ถูกต้อง"
           }
         }
       ]
