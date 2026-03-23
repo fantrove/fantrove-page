@@ -342,27 +342,37 @@ try {
   if (!Array.isArray(history.releases)) history.releases = [];
 } catch (_) {}
 
+// ✅ บันทึก history ทุกครั้งที่ version เปลี่ยน — รวม sub-patch (1.0.5.1→1.0.5.2)
+// ดึงเนื้อหาจาก currentData.content ที่เก็บไว้ใน version.json
+// เพื่อให้ได้เนื้อหาของ version เก่าจริงๆ ไม่ใช่เนื้อหาของ version ใหม่
 if (currentVersion !== newVersion) {
   const alreadyIn = history.releases.some(r => r.version === currentVersion);
-  if (!alreadyIn && currentVersion !== '0.0.0') {
+  const skipVersions = new Set(['0.0.0']);
+
+  if (!alreadyIn && !skipVersions.has(currentVersion)) {
+    // ✅ ใช้ content จาก version.json (เก็บตอน deploy ครั้งก่อน) ไม่ใช่จาก whats-new.json ใหม่
+    const savedContent = currentData.content || {};
     const oldEntry = {
       version:  currentVersion,
-      date:     currentData.buildDate || { en: currentData.build || currentVersion, th: currentData.build || currentVersion },
-      title:    (whatsNew && whatsNew.title)    || { en: 'System update', th: 'อัปเดตระบบ' },
-      subtitle: (whatsNew && whatsNew.subtitle) || { en: 'Minor improvements.', th: 'ปรับปรุงเล็กน้อย' },
-      sections: (whatsNew && whatsNew.sections) || []
+      date:     currentData.buildDate || { en: currentVersion, th: currentVersion },
+      title:    savedContent.title    || { en: 'System update', th: 'อัปเดตระบบ' },
+      subtitle: savedContent.subtitle || { en: 'Minor improvements.', th: 'ปรับปรุงเล็กน้อย' },
+      sections: savedContent.sections || []
     };
     history.releases.unshift(oldEntry);
     console.log(`📋  เพิ่ม v${currentVersion} เข้า history`);
+  } else if (alreadyIn) {
+    console.log(`ℹ️   v${currentVersion} อยู่ใน history แล้ว ข้าม`);
   }
 
+  // เก็บแค่ 7 อันล่าสุด (นับจากใหม่สุดย้อนไป)
   if (history.releases.length > MAX_HISTORY) {
     const removed = history.releases.splice(MAX_HISTORY);
-    console.log(`🗑️   ลบประวัติเก่า: ${removed.map(r => r.version).join(', ')}`);
+    console.log(`🗑️   ลบประวัติเกิน 7: ${removed.map(r => r.version).join(', ')}`);
   }
 
   fs.writeFileSync(historyPath, JSON.stringify(history, null, 2) + '\n');
-  console.log(`✅  release-history.json: ${history.releases.length}/${MAX_HISTORY}`);
+  console.log(`✅  release-history.json: ${history.releases.length}/${MAX_HISTORY} versions`);
 }
 
 // ── ดึง changelog ─────────────────────────────────────────────────────────────
@@ -377,13 +387,20 @@ let changelog = [];
 
 // ── อัปเดต version.json ───────────────────────────────────────────────────────
 
+// ✅ เก็บ content (title/subtitle/sections) ไว้ใน version.json
+// เพื่อให้ deploy ครั้งถัดไปดึง archive ได้ถูกต้อง
 const newData = {
   version:   newVersion,
   build:     buildId,
-  buildDate: dateObj,          // ✅ เก็บ date object สำหรับ history
+  buildDate: dateObj,
   timestamp: NOW.getTime(),
   notify:    !isSilent,
-  changelog
+  changelog,
+  content: {
+    title:    contentToUse.title    || null,
+    subtitle: contentToUse.subtitle || null,
+    sections: contentToUse.sections || []
+  }
 };
 fs.mkdirSync(path.dirname(versionPath), { recursive: true });
 fs.writeFileSync(versionPath, JSON.stringify(newData, null, 2) + '\n');

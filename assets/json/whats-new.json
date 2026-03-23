@@ -1,32 +1,52 @@
 {
-  "version": "1.0.5.2",
+  "version": "1.0.5.3",
   "sections": [
-    {
-      "type": "fixed",
-      "items": [
-        {
-          "title": {
-            "en": "🔥 Update popup no longer appears on What's New page",
-            "th": "🔥 Popup อัพเดทไม่แสดงในหน้ามีอะไรใหม่อีกต่อไป"
-          },
-          "desc": {
-            "en": "Previously the update popup could appear even when the user was already on the What's New page. This is now fixed — the page identifies itself using a meta tag, and the popup is suppressed automatically.",
-            "th": "ก่อนหน้านี้ popup อัพเดทอาจแสดงขึ้นมาแม้ผู้ใช้จะอยู่ในหน้ามีอะไรใหม่อยู่แล้ว ตอนนี้แก้ไขแล้ว โดยหน้านี้จะยืนยันตัวตนผ่าน meta tag และระบบจะไม่แสดง popup โดยอัตโนมัติ"
-          }
-        }
-      ]
-    },
     {
       "type": "improved",
       "items": [
         {
           "title": {
-            "en": "⚡ Page identity via meta tag",
-            "th": "⚡ ยืนยันตัวตนหน้าเว็บผ่าน meta tag"
+            "en": "🔥 Every sub-patch version stored separately in history",
+            "th": "🔥 บันทึกประวัติแยกกันทุก sub-patch version"
           },
           "desc": {
-            "en": "Instead of checking the URL path, the system now reads a meta tag in the page's HTML to identify which page it's on. This means the popup suppression works correctly even if the URL changes in the future.",
-            "th": "แทนที่จะตรวจสอบ URL path ระบบตอนนี้อ่าน meta tag จาก HTML ของหน้านั้นๆ เพื่อระบุว่าเป็นหน้าไหน ทำให้การซ่อน popup ยังทำงานได้ถูกต้องแม้ URL จะเปลี่ยนในอนาคต"
+            "en": "Previously only major/minor/patch changes were recorded. Now every version — including 0.0.0.1 increments — is stored as its own entry in release history.",
+            "th": "ก่อนหน้านี้บันทึกเฉพาะการเปลี่ยน major/minor/patch เท่านั้น ตอนนี้ทุก version รวมถึงการบวก 0.0.0.1 จะถูกบันทึกแยกเป็นรายการของตัวเองในประวัติ"
+          }
+        },
+        {
+          "title": {
+            "en": "⚡ History content archived from previous deploy",
+            "th": "⚡ เนื้อหาประวัติดึงมาจาก deploy ก่อนหน้า"
+          },
+          "desc": {
+            "en": "Each version's content is saved inside version.json at deploy time, so the next deploy can correctly archive it into history — never mixing up content between versions.",
+            "th": "เนื้อหาของแต่ละ version จะถูกบันทึกไว้ใน version.json ณ เวลา deploy เพื่อให้ deploy ถัดไปสามารถดึงไปเก็บประวัติได้ถูกต้อง ไม่สับสนเนื้อหาระหว่าง version"
+          }
+        },
+        {
+          "title": {
+            "en": "⚡ Keeps 7 most recent releases in history",
+            "th": "⚡ เก็บประวัติ 7 version ล่าสุดเท่านั้น"
+          },
+          "desc": {
+            "en": "Release history stores the 7 most recent versions. Older ones are removed automatically on each deploy.",
+            "th": "ประวัติการอัพเดทเก็บ 7 version ล่าสุดเท่านั้น version ที่เก่ากว่านั้นจะถูกลบออกอัตโนมัติทุก deploy"
+          }
+        }
+      ]
+    },
+    {
+      "type": "fixed",
+      "items": [
+        {
+          "title": {
+            "en": "✨ No need to edit version.json manually",
+            "th": "✨ ไม่ต้องแก้ version.json เองอีกต่อไป"
+          },
+          "desc": {
+            "en": "The release script handles version.json entirely. The only file you need to edit is whats-new.json.",
+            "th": "สคริปต์จัดการ version.json ทั้งหมดให้อัตโนมัติ ไฟล์เดียวที่ต้องแก้คือ whats-new.json เท่านั้น"
           }
         }
       ]
