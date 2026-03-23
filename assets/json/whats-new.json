@@ -1,12 +1,12 @@
 {
-  "version": "1.0.9",
+  "version": "1.0.6.1",
   "title": {
-    "en": "Definitive fix for browser translate prompts",
-    "th": "แก้ไขปัญหาการแจ้งเตือนแปลของเบราว์เซอร์อย่างเด็ดขาด"
+    "en": "Bug fix",
+    "th": "แก้ไขข้อผิดพลาด"
   },
   "subtitle": {
-    "en": "Reworked how the app communicates language to browsers — Chrome and Edge will no longer incorrectly offer to translate pages that are already in the right language.",
-    "th": "ปรับปรุงวิธีที่แอปสื่อสารภาษากับเบราว์เซอร์ใหม่ทั้งหมด Chrome และ Edge จะไม่แจ้งเตือนให้แปลหน้าที่อยู่ในภาษาที่ถูกต้องอยู่แล้วอีกต่อไป"
+    "en": "A quick fix for an issue introduced in 1.0.6 that caused the language system to stop working.",
+    "th": "แก้ไขปัญหาที่เกิดขึ้นใน 1.0.6 ซึ่งทำให้ระบบภาษาหยุดทำงาน"
   },
   "sections": [
     {
@@ -14,31 +14,8 @@
       "items": [
         {
           "title": {
-            "en": "Chrome and Edge no longer prompt to translate pages that the app already handles",
-            "th": "Chrome และ Edge ไม่แจ้งเตือนให้แปลหน้าที่แอปจัดการภาษาอยู่แล้วอีกต่อไป"
-          }
-        },
-        {
-          "title": {
-            "en": "Fixed inconsistent behavior where the issue only appeared on some pages but not others",
-            "th": "แก้ไขพฤติกรรมไม่สม่ำเสมอที่ปัญหาเกิดขึ้นเฉพาะบางหน้าแต่ไม่ใช่ทุกหน้า"
-          }
-        }
-      ]
-    },
-    {
-      "type": "improved",
-      "items": [
-        {
-          "title": {
-            "en": "Language signals are now sent through every available channel simultaneously — HTTP headers, HTML attributes, meta tags, and element classes — for maximum compatibility across all browsers",
-            "th": "สัญญาณภาษาถูกส่งผ่านทุกช่องทางพร้อมกัน ทั้ง HTTP header, HTML attribute, meta tag และ class — รองรับเบราว์เซอร์ทุกเวอร์ชันได้อย่างครอบคลุม"
-          }
-        },
-        {
-          "title": {
-            "en": "Search engines will no longer attempt to translate page content in search results",
-            "th": "Search Engine จะไม่แปลเนื้อหาหน้าเว็บใน search results อีกต่อไป"
+            "en": "Fixed language system not working after the 1.0.6 update",
+            "th": "แก้ไขระบบภาษาที่หยุดทำงานหลังอัปเดต 1.0.6"
           }
         }
       ]
