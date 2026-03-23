@@ -1,33 +1,91 @@
 {
-  "version": "1.0.5.7",
+  "version": "1.0.6",
   "title": {
-    "en": "Performance & stability improvements",
-    "th": "ปรับปรุงประสิทธิภาพและความเสถียร"
+    "en": "Language system overhaul",
+    "th": "ปรับปรุงระบบภาษาครั้งใหญ่"
   },
   "subtitle": {
-    "en": "Under-the-hood improvements to make the app faster and more reliable.",
-    "th": "ปรับปรุงภายในให้แอปทำงานได้เร็วและเสถียรยิ่งขึ้น"
+    "en": "Major improvements to how the app handles language switching — faster, smarter, and more reliable across all scenarios.",
+    "th": "ปรับปรุงระบบเปลี่ยนภาษาครั้งใหญ่ ให้เร็วขึ้น ฉลาดขึ้น และเชื่อถือได้มากขึ้นในทุกสถานการณ์"
   },
   "sections": [
+    {
+      "type": "new",
+      "items": [
+        {
+          "title": {
+            "en": "Language-aware loading — other scripts now wait until the language is ready before running",
+            "th": "การโหลดที่รับรู้ภาษา — สคริปต์อื่นๆ จะรอให้ระบบภาษาพร้อมก่อนเริ่มทำงาน"
+          }
+        },
+        {
+          "title": {
+            "en": "New event system — developers can listen for when the language is fully initialized",
+            "th": "ระบบ event ใหม่ — นักพัฒนาสามารถรับรู้ได้ว่าระบบภาษาพร้อมใช้งานแล้ว"
+          }
+        }
+      ]
+    },
     {
       "type": "improved",
       "items": [
         {
           "title": {
-            "en": "Faster update checks — reduced background requests",
-            "th": "ตรวจสอบอัปเดตเร็วขึ้น ลดการดึงข้อมูลในเบื้องหลัง"
+            "en": "Faster language startup — config is now fetched and cached smarter, reducing delays on repeat visits",
+            "th": "เริ่มต้นภาษาเร็วขึ้น — ดึงข้อมูลและ cache ฉลาดขึ้น ลดความหน่วงเมื่อเปิดซ้ำ"
           }
         },
         {
           "title": {
-            "en": "Streamlined release system for more reliable updates",
-            "th": "ระบบอัปเดตกระชับขึ้น ส่งการอัปเดตได้น่าเชื่อถือกว่าเดิม"
+            "en": "Smoother language switching — translations now load in parallel instead of one by one",
+            "th": "เปลี่ยนภาษาลื่นขึ้น — โหลดคำแปลแบบขนานแทนการโหลดทีละชิ้น"
           }
         },
         {
           "title": {
-            "en": "Minor optimizations to caching behavior",
-            "th": "ปรับปรุง cache เล็กน้อยให้โหลดเร็วขึ้น"
+            "en": "Better multi-tab sync — changing language in one tab now reliably updates all open tabs",
+            "th": "ซิงค์หลาย tab ดีขึ้น — เปลี่ยนภาษาใน tab เดียวอัปเดตทุก tab ที่เปิดอยู่ได้แม่นยำขึ้น"
+          }
+        },
+        {
+          "title": {
+            "en": "Back/forward navigation now correctly restores the last chosen language instead of reverting to the URL language",
+            "th": "การกดย้อนกลับ/ไปข้างหน้าคืนค่าภาษาที่เลือกล่าสุดได้ถูกต้อง แทนที่จะเปลี่ยนกลับตาม URL"
+          }
+        },
+        {
+          "title": {
+            "en": "Translation cache is now stored persistently — content loads instantly on repeat visits even after closing the app",
+            "th": "Cache คำแปลถูกเก็บไว้ถาวรแล้ว — เนื้อหาโหลดทันทีเมื่อกลับมาเปิด แม้ปิดแอปไปแล้ว"
+          }
+        },
+        {
+          "title": {
+            "en": "Stale translations are now automatically refreshed when a new version is released",
+            "th": "คำแปลที่ล้าสมัยถูกรีเฟรชอัตโนมัติเมื่อมีเวอร์ชันใหม่"
+          }
+        }
+      ]
+    },
+    {
+      "type": "fixed",
+      "items": [
+        {
+          "title": {
+            "en": "Fixed language not restoring correctly after returning to a page via browser back button",
+            "th": "แก้ไขปัญหาภาษาไม่คืนค่าถูกต้องเมื่อกดปุ่มย้อนกลับของเบราว์เซอร์"
+          }
+        },
+        {
+          "title": {
+            "en": "Fixed briefly visible untranslated content (flash of untranslated text) during page load",
+            "th": "แก้ไขปัญหาเนื้อหาที่ยังไม่ถูกแปลแสดงขึ้นมาชั่วครู่ระหว่างโหลดหน้า"
+          }
+        },
+        {
+          "title": {
+            "en": "Fixed dynamically added content not being translated when the page language is not English",
+            "th": "แก้ไขเนื้อหาที่เพิ่มแบบ dynamic ไม่ถูกแปลเมื่อภาษาของหน้าไม่ใช่ภาษาอังกฤษ"
           }
         }
       ]

@@ -1,230 +1,285 @@
 // @ts-check
 /**
- * @file navigation.js
- * NavigationService — จัดการ navigation events ทั้งหมด
+ * @file manager.js
+ * LanguageManager — orchestrator หลักของระบบภาษา
  *
- * ├── initBroadcastChannel()  — สร้าง BroadcastChannel สำหรับ cross-tab sync
- * ├── setupHandlers()         — attach event listeners ทั้งหมด
- * │   ├── pageshow            ← FIX: BFCache restoration
- * │   ├── popstate            ← SPA back/forward
- * │   ├── storage             ← cross-tab sync
- * │   └── visibilitychange    ← กลับมาที่ tab
- * └── _onBroadcastLang()      — รับ message จาก tab อื่น
+ * เปลี่ยนแปลงใน v4.1:
+ *  - เรียก LangGate.resolve() เมื่อ initialize() เสร็จสมบูรณ์
+ *    → เปิด gate ให้ script อื่นๆ ทำงานได้
+ *  - เรียก LangGate.reject() เมื่อ initialize() fail
+ *    → ปลดล็อก script queue (ไม่ให้หน้าค้าง)
  *
- * @module navigation
- * @depends {config.js, state.js, detector.js, url.js, translator.js, ui.js}
+ * @module manager
+ * @depends {config.js, state.js, detector.js, loader.js, url.js,
+ *           translator.js, ui.js, navigation.js, gate.js}
  */
 (function(M) {
   'use strict';
   
-  const NavigationService = {
+  const LanguageManager = {
     
-    // ── BroadcastChannel ──────────────────────────────────────────────────────
+    // ── Initialization ────────────────────────────────────────────────────────
     
     /**
-     * สร้าง BroadcastChannel สำหรับ sync ภาษาระหว่าง tabs
-     * เรียกครั้งเดียวตอน boot
+     * เริ่มต้นระบบภาษา — เรียกเมื่อ DOM ready
+     *
+     * ลำดับ:
+     *  1. จัดการ coordinated reload marker (sessionStorage)
+     *  2. โหลดและ validate config
+     *  3. setup button texts + initial language
+     *  4. init dropdown UI
+     *  5. observeMutations สำหรับ dynamic content
+     *  6. setup navigation event handlers
+     *  7. fade in body
+     *  8. [NEW v4.1] resolve LangGate → เปิดให้ script อื่นทำงาน
      */
-    initBroadcastChannel() {
-      const { State } = M;
+    async initialize() {
+      const { State, LoaderService, TranslatorService, UIService, NavigationService, LangGate } = M;
+      
+      // ── Coordinated reload marker cleanup ──────────────────────────────────
       try {
-        State._bc = (typeof BroadcastChannel !== 'undefined') ?
-          new BroadcastChannel('fv-lang-v3') :
-          null;
-      } catch (e) {
-        State._bc = null;
+        const markerRaw = sessionStorage.getItem('fv-forcereload');
+        if (markerRaw) {
+          try {
+            const marker = JSON.parse(markerRaw);
+            const inflight = sessionStorage.getItem('fv-reload-inflight');
+            const ack = sessionStorage.getItem('fv-reload-ack');
+            
+            if (ack === marker.id) {
+              sessionStorage.removeItem('fv-forcereload');
+              sessionStorage.removeItem('fv-reload-inflight');
+            } else if (inflight === marker.id) {
+              sessionStorage.setItem('fv-reload-ack', marker.id);
+            }
+          } catch (e) {}
+        }
+      } catch (e) {}
+      
+      if (State.isInitialized) {
+        // หาก init ซ้ำ (ไม่ควรเกิด) ให้ resolve gate ทันทีด้วยค่าปัจจุบัน
+        LangGate?.resolve({
+          lang: State.selectedLang,
+          translations: State.languageCache[State.selectedLang] || null,
+        });
+        return;
+      }
+      
+      try {
+        // โหลดและ validate config (รอ prefetch ที่เริ่มไว้ตอน boot)
+        await LoaderService.loadLanguagesConfig();
+        
+        // UI setup
+        await UIService.prepareAllButtonTexts();
+        await this._handleInitialLanguage();
+        UIService.updateLanguageSelectorUI();
+        
+        // Observer + Navigation
+        TranslatorService.observeMutations();
+        NavigationService.setupHandlers();
+        
+        State.isInitialized = true;
+        
+        // Fade in body
+        setTimeout(() => {
+          if (document.body && document.body.style.opacity === '0') {
+            document.body.style.transition = 'opacity 0.28s cubic-bezier(.47,1.64,.41,.8)';
+            document.body.style.opacity = '1';
+          }
+        }, 0);
+        
+        // ── [v4.1] Resolve LangGate ─────────────────────────────────────────
+        // เปิดให้ JS ที่รอ gate ทำงานได้
+        // ส่ง translations ของภาษาปัจจุบันไปด้วยเผื่อมีคนต้องการ
+        if (LangGate) {
+          LangGate.resolve({
+            lang: State.selectedLang,
+            translations: State.languageCache[State.selectedLang] || null,
+          });
+        }
+        
+      } catch (error) {
+        console.error('[LanguageManager] Error during initialization:', error);
+        UIService.showError('ไม่สามารถเริ่มต้นระบบได้');
+        
+        setTimeout(() => {
+          if (document.body && document.body.style.opacity === '0')
+            document.body.style.opacity = '1';
+        }, 0);
+        
+        // ── [v4.1] Reject LangGate ──────────────────────────────────────────
+        // reject Promise + ปลดล็อก script queue (ไม่ให้หน้าค้างถาวร)
+        if (LangGate) LangGate.reject(error);
+      }
+    },
+    
+    /**
+     * ตั้งค่าภาษาเริ่มต้น: detect → set selectedLang → update URL → load content
+     * @private
+     */
+    async _handleInitialLanguage() {
+      const { State, DetectorService, URLService, UIService, LoaderService, TranslatorService } = M;
+      
+      TranslatorService.storeOriginalContent();
+      
+      const decision = DetectorService.resolveCurrentLang();
+      State.selectedLang = decision.lang;
+      
+      // Fix URL ถ้า source ไม่ใช่ URL (production only)
+      if (!DetectorService.isLocalDev()) {
+        if (decision.source === 'storage' || decision.source === 'browser') {
+          URLService.updateURLForLanguage(State.selectedLang);
+        }
+      }
+      
+      // Sync localStorage ถ้า source มาจาก URL
+      if (decision.source === 'url') {
+        try { localStorage.setItem(M.CONFIG.LS_KEY, State.selectedLang); } catch (e) {}
+      }
+      
+      UIService.showButtonTextForLang(State.selectedLang);
+      
+      // โหลด content ถ้าไม่ใช่ English หรือ English ใช้ JSON
+      if (State.selectedLang !== 'en' || LoaderService.getEnSource() === 'json') {
+        await this.updatePageLanguage(State.selectedLang, false);
+      }
+    },
+    
+    // ── Language selection ────────────────────────────────────────────────────
+    
+    /**
+     * User กดเลือกภาษา — entry point จาก UIService
+     * @param {string} language
+     */
+    async selectLanguage(language) {
+      const { CONFIG, State, URLService, UIService } = M;
+      
+      if (!State.languagesConfig[language]) {
+        console.warn(`[LanguageManager] ไม่รองรับภาษา: ${language}`);
+        language = CONFIG.DEFAULT_LANG;
+      }
+      
+      if (State.selectedLang === language) {
+        await UIService.closeLanguageDropdown();
+        return;
+      }
+      
+      State._userExplicitLang = language;
+      State.lastSelectedLang = State.selectedLang;
+      
+      URLService.updateURLForLanguage(language);
+      await this.updatePageLanguage(language, false);
+      await UIService.closeLanguageDropdown();
+    },
+    
+    // ── Page language update ──────────────────────────────────────────────────
+    
+    /**
+     * อัพเดทภาษาของทั้งหน้า
+     * @param {string}  language
+     * @param {boolean} [shouldUpdateURL=true]
+     */
+    async updatePageLanguage(language, shouldUpdateURL = true) {
+      const { State, DetectorService, URLService, LoaderService, TranslatorService, UIService } = M;
+      
+      if (State.isUpdatingLanguage) return;
+      
+      try {
+        State.isUpdatingLanguage = true;
+        State.lastSelectedLang = State.selectedLang;
+        
+        if (shouldUpdateURL && !DetectorService.isLocalDev()) {
+          URLService.updateURLForLanguage(language);
+        }
+        
+        try { localStorage.setItem(M.CONFIG.LS_KEY, language); } catch (e) {}
+        
+        document.documentElement.setAttribute('lang', language);
+        
+        // Google Translate meta
+        const browserLang = DetectorService.detectBrowserLanguage();
+        if (language === browserLang) {
+          document.documentElement.setAttribute('translate', 'no');
+          if (!document.querySelector('meta[name="google"][content="notranslate"]')) {
+            const meta = document.createElement('meta');
+            meta.name = 'google';
+            meta.content = 'notranslate';
+            document.head.appendChild(meta);
+          }
+        } else {
+          document.documentElement.removeAttribute('translate');
+          const meta = document.querySelector('meta[name="google"][content="notranslate"]');
+          if (meta) meta.remove();
+        }
+        
+        // Load + translate
+        if (language === 'en') {
+          if (LoaderService.getEnSource() === 'json') {
+            const data = await LoaderService.loadLanguageData('en');
+            if (data) await TranslatorService.parallelStreamingTranslate(data);
+            else await TranslatorService.resetToEnglishContent();
+          } else {
+            await TranslatorService.resetToEnglishContent();
+          }
+        } else {
+          const data = await LoaderService.loadLanguageData(language);
+          if (data) await TranslatorService.parallelStreamingTranslate(data);
+          else await TranslatorService.resetToEnglishContent();
+        }
+        
+        State.selectedLang = language;
+        UIService.showButtonTextForLang(language);
+        
+        // Broadcast ให้ tabs อื่น
+        if (State._bc) {
+          try {
+            State._bc.postMessage({ lang: language, url: location.href, ts: Date.now() });
+          } catch (e) {}
+        }
+        
+        // Dispatch event
+        try {
+          window.dispatchEvent(new CustomEvent('languageChange', {
+            detail: { language, previousLanguage: State.lastSelectedLang }
+          }));
+        } catch (e) {}
+        
+      } catch (error) {
+        console.error('[LanguageManager] Error updating page language:', error);
+        UIService.showError('เกิดข้อผิดพลาดในการเปลี่ยนภาษา');
+        await TranslatorService.resetToEnglishContent();
+      } finally {
+        State.isUpdatingLanguage = false;
+      }
+    },
+    
+    // ── Cleanup ───────────────────────────────────────────────────────────────
+    
+    destroy() {
+      const { State } = M;
+      
+      if (State.languageOverlay?.parentElement) State.languageOverlay.remove();
+      if (State.languageDropdown?.parentElement) State.languageDropdown.remove();
+      
+      if (State.mutationObserver) {
+        State.mutationObserver.disconnect();
+        State.mutationObserver = null;
+      }
+      
+      if (State.workerPool) {
+        State.workerPool.destroy();
+        State.workerPool = null;
       }
       
       if (State._bc) {
-        State._bc.onmessage = (ev) => this._onBroadcastLang(ev.data);
+        try { State._bc.close(); } catch (e) {}
+        State._bc = null;
       }
-    },
-    
-    // ── Event handlers setup ──────────────────────────────────────────────────
-    
-    /**
-     * Attach event listeners ทั้งหมดหลัง initialize เสร็จ
-     * เรียกจาก LanguageManager.initialize()
-     */
-    setupHandlers() {
-      this._setupPageshow();
-      this._setupPopstate();
-      this._setupStorage();
-      this._setupVisibilityChange();
-    },
-    
-    // ── pageshow (BFCache fix — v3.2) ─────────────────────────────────────────
-    
-    /**
-     * จัดการ BFCache Restoration
-     *
-     * ปัญหา: modern browser เก็บหน้าไว้ใน bfcache เมื่อ user กด Back/Forward
-     *        → browser restore JS state เดิมของหน้านั้นทั้งหมด
-     *        → lang-proxy.js ไม่รัน (ไม่มี page reload)
-     *        → selectedLang อาจเป็นค่าเก่า แต่ localStorage อาจถูกเปลี่ยนไปแล้ว
-     *          โดยหน้าอื่นที่ user ไปเปลี่ยนภาษา
-     *
-     * การแก้: event.persisted=true บอกว่าหน้านี้มาจาก bfcache
-     *         → อ่าน localStorage ใหม่ แล้ว reconcile กับ state ปัจจุบัน
-     *
-     * @private
-     */
-    _setupPageshow() {
-      window.addEventListener('pageshow', (event) => {
-        // event.persisted=false → โหลดหน้าใหม่ปกติ, initialize() จัดการอยู่แล้ว
-        if (!event.persisted) return;
-        if (M.DetectorService.isLocalDev()) return;
-        
-        try {
-          const { State, DetectorService, URLService } = M;
-          const storedLang = DetectorService.getLangFromStorage();
-          if (!storedLang) return;
-          
-          if (storedLang !== State.selectedLang) {
-            // localStorage บอกภาษาต่างจาก JS state ที่ restore กลับมา
-            // → user เปลี่ยนภาษาในหน้าอื่นระหว่างที่ออกจากหน้านี้
-            State._userExplicitLang = storedLang;
-            M.LanguageManager.updatePageLanguage(storedLang, true).catch(e => {
-              console.error('[NavigationService/pageshow] language sync error:', e);
-            });
-          } else {
-            // ภาษาตรงกันแล้ว แต่ URL อาจมี prefix เก่า → fix URL เฉยๆ
-            URLService.updateURLForLanguage(storedLang);
-          }
-        } catch (e) {
-          console.error('[NavigationService/pageshow] handler error:', e);
-        }
-      });
-    },
-    
-    // ── popstate (SPA navigation) ─────────────────────────────────────────────
-    
-    /**
-     * จัดการ popstate จาก SPA navigation (pushState/popstate)
-     * กรณีนี้เกิดเฉพาะ SPA ที่ใช้ pushState (lang-links.js)
-     * ถ้าเป็น full page navigation → lang-proxy.js จัดการก่อนแล้ว
-     *
-     * Core logic:
-     *   ถ้า user เคยเลือกภาษาแล้ว (_userExplicitLang หรือ localStorage)
-     *   → ยึดภาษานั้นเสมอ ไม่ยึดตาม URL prefix ของหน้าเก่า
-     *
-     * @private
-     */
-    _setupPopstate() {
-      window.addEventListener('popstate', async (event) => {
-        try {
-          const { State, DetectorService, URLService } = M;
-          
-          if (DetectorService.isLocalDev()) return;
-          
-          const preferredLang = State._userExplicitLang || DetectorService.getLangFromStorage();
-          
-          if (preferredLang) {
-            if (preferredLang !== State.selectedLang) {
-              await M.LanguageManager.updatePageLanguage(preferredLang, true);
-            } else {
-              URLService.updateURLForLanguage(preferredLang);
-            }
-            return;
-          }
-          
-          // Fallback: ไม่มี user preference → ดูจาก history state หรือ URL
-          if (event.state && event.state.lang && event.state.lang !== State.selectedLang) {
-            await M.LanguageManager.updatePageLanguage(event.state.lang, false);
-            return;
-          }
-          
-          const urlLang = DetectorService.getLangFromURL();
-          if (urlLang && urlLang !== State.selectedLang) {
-            await M.LanguageManager.updatePageLanguage(urlLang, false);
-            try { localStorage.setItem(M.CONFIG.LS_KEY, urlLang); } catch (e) {}
-          }
-          
-        } catch (e) {
-          console.error('[NavigationService/popstate] handler error:', e);
-        }
-      });
-    },
-    
-    // ── storage (cross-tab sync) ──────────────────────────────────────────────
-    
-    /**
-     * sync ภาษาเมื่อ tab อื่นเปลี่ยน localStorage
-     * @private
-     */
-    _setupStorage() {
-      window.addEventListener('storage', (e) => {
-        if (e.key !== M.CONFIG.LS_KEY) return;
-        
-        const { State, DetectorService, URLService } = M;
-        const newLang = e.newValue;
-        const urlLang = DetectorService.getLangFromURL();
-        
-        // ถ้า URL ไม่ตรงกับภาษาใหม่ ให้ fix URL (production only)
-        if (!DetectorService.isLocalDev() && urlLang && urlLang !== newLang) {
-          URLService.updateURLForLanguage(newLang);
-        }
-        
-        if (newLang && newLang !== State.selectedLang) {
-          M.LanguageManager.updatePageLanguage(newLang, false).catch(() => {});
-        }
-      });
-    },
-    
-    // ── visibilitychange (กลับมาที่ tab) ─────────────────────────────────────
-    
-    /**
-     * ตรวจสอบและ sync ภาษาเมื่อ user กลับมาที่ tab นี้
-     * @private
-     */
-    _setupVisibilityChange() {
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState !== 'visible') return;
-        
-        const { State, DetectorService, URLService } = M;
-        if (DetectorService.isLocalDev()) return;
-        
-        const preferredLang = State._userExplicitLang || DetectorService.getLangFromStorage();
-        if (preferredLang && preferredLang !== State.selectedLang) {
-          M.LanguageManager.updatePageLanguage(preferredLang, true).catch(() => {});
-          return;
-        }
-        
-        const urlLang = DetectorService.getLangFromURL();
-        if (urlLang && urlLang !== State.selectedLang) {
-          M.LanguageManager.updatePageLanguage(urlLang, false).catch(() => {});
-        }
-      });
-    },
-    
-    // ── BroadcastChannel message ──────────────────────────────────────────────
-    
-    /**
-     * รับ message ภาษาจาก tab อื่น แล้ว sync
-     * @param {Object} msg  — { lang, url, ts }
-     */
-    _onBroadcastLang(msg) {
-      try {
-        if (!msg || typeof msg !== 'object') return;
-        const { lang, url } = msg;
-        if (!lang || lang === M.State.selectedLang) return;
-        if (url && url === location.href) return; // ตัวเองส่งมา ไม่ต้องทำ
-        
-        const { DetectorService, URLService } = M;
-        
-        if (!DetectorService.isLocalDev()) {
-          const currentUrlLang = DetectorService.getLangFromURL();
-          if (currentUrlLang && currentUrlLang !== lang) {
-            URLService.updateURLForLanguage(lang);
-          }
-        }
-        
-        M.LanguageManager.updatePageLanguage(lang, DetectorService.isLocalDev() ? false : true)
-          .catch(() => {});
-      } catch (e) {}
+      
+      State.languageCache = {};
+      State.isInitialized = false;
     },
   };
   
-  M.NavigationService = NavigationService;
+  M.LanguageManager = LanguageManager;
   
 })(window.LangModules = window.LangModules || {});
