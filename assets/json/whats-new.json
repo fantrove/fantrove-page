@@ -1,12 +1,12 @@
 {
-  "version": "1.0.7",
+  "version": "1.0.7.1",
   "title": {
-    "en": "More accurate language detection",
-    "th": "การตรวจจับภาษาที่แม่นยำขึ้น"
+    "en": "Bug fix",
+    "th": "แก้ไขข้อผิดพลาด"
   },
   "subtitle": {
-    "en": "Fixed an issue where the page would report the wrong language to browsers and search engines, even after switching to Thai.",
-    "th": "แก้ไขปัญหาที่หน้าเว็บรายงานภาษาผิดต่อเบราว์เซอร์และ Search Engine แม้จะเปลี่ยนเป็นภาษาไทยแล้ว"
+    "en": "Fixed browser language detection not working correctly after the 1.0.7 update.",
+    "th": "แก้ไขการตรวจจับภาษาของเบราว์เซอร์ที่ยังทำงานไม่ถูกต้องหลังอัปเดต 1.0.7"
   },
   "sections": [
     {
@@ -14,14 +14,8 @@
       "items": [
         {
           "title": {
-            "en": "Page language is now set correctly from the moment it loads — no longer briefly reported as English while Thai content is already visible",
-            "th": "ภาษาของหน้าถูกตั้งค่าถูกต้องตั้งแต่เริ่มโหลด ไม่มีช่วงที่รายงานเป็นภาษาอังกฤษขณะที่เนื้อหาเป็นภาษาไทยอีกต่อไป"
-          }
-        },
-        {
-          "title": {
-            "en": "Search engines and browsers now reliably detect the correct page language",
-            "th": "Search Engine และเบราว์เซอร์ตรวจจับภาษาของหน้าได้ถูกต้องและเชื่อถือได้มากขึ้น"
+            "en": "Browser no longer incorrectly prompts to translate the page",
+            "th": "เบราว์เซอร์ไม่แจ้งเตือนให้แปลหน้าเว็บผิดพลาดอีกต่อไป"
           }
         }
       ]
