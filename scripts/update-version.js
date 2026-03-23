@@ -2,7 +2,6 @@
 // scripts/update-version.js — Fantrove Verse Release Tool
 // whats-new.json  = current release เท่านั้น (เขียนเองก่อน deploy)
 // release-history.json = build script จัดการอัตโนมัติ ไม่ต้องแตะ
-// version.json = build script สร้างเองอัตโนมัติ ไม่ต้องแตะ
 //
 // Build command: git fetch --unshallow && node scripts/update-version.js
 'use strict';
@@ -14,7 +13,6 @@ const { spawnSync } = require('child_process');
 const MAX_HISTORY = 7;
 
 const CONFIG = {
-  versionFile:  'assets/json/version.json',
   whatsNewFile: 'assets/json/whats-new.json',
   historyFile:  'assets/json/release-history.json',
   excludeDirs:  new Set(['node_modules', '.git', 'scripts', '.cloudflare', 'dist', 'build']),
@@ -30,9 +28,8 @@ if (!/^\d+\.\d+\.\d+/.test(APP_VERSION)) {
   console.error(`\n  ❌  APP_VERSION "${APP_VERSION}" ไม่ใช่ semver\n`); process.exit(1);
 }
 
-const isSilent = process.env.DEPLOY_SILENT === '1' || process.argv.includes('--silent');
-const ROOT     = path.resolve(__dirname, '..');
-const NOW      = new Date();
+const ROOT = path.resolve(__dirname, '..');
+const NOW  = new Date();
 
 // ── Date helpers (UTC) ────────────────────────────────────────────────────────
 
@@ -60,39 +57,24 @@ function git(args) {
 // ── อ่านไฟล์ ──────────────────────────────────────────────────────────────────
 
 const whatsNewPath = path.join(ROOT, CONFIG.whatsNewFile);
-const versionPath  = path.join(ROOT, CONFIG.versionFile);
 const historyPath  = path.join(ROOT, CONFIG.historyFile);
 
 let whatsNew;
 try { whatsNew = JSON.parse(fs.readFileSync(whatsNewPath, 'utf8')); }
 catch (_) { console.error('\n  ❌  ไม่พบ whats-new.json\n'); process.exit(1); }
 
-// ✅ version จาก whats-new.json เป็น source of truth
-//    APP_VERSION ใช้แค่ validate format เท่านั้น
 const newVersion = (whatsNew.version || APP_VERSION).trim();
-
-let currentData = {};
-try { currentData = JSON.parse(fs.readFileSync(versionPath, 'utf8')); } catch (_) {}
-const currentVersion = currentData.version || '0.0.0';
-
-const dateObj = makeDateObj(NOW);
-const dateStr = NOW.toISOString().slice(0, 10).replace(/-/g, '');
-const timeStr = pad2(NOW.getUTCHours()) + pad2(NOW.getUTCMinutes());
-const buildId = `${newVersion}-${dateStr}${timeStr}`;
+const dateObj    = makeDateObj(NOW);
+const dateStr    = NOW.toISOString().slice(0, 10).replace(/-/g, '');
+const timeStr    = pad2(NOW.getUTCHours()) + pad2(NOW.getUTCMinutes());
+const buildId    = `${newVersion}-${dateStr}${timeStr}`;
 
 console.log(`\n📦  Fantrove Release Tool`);
-console.log(`    Version:  ${currentVersion} → ${newVersion}`);
-console.log(`    Build:    ${buildId}`);
+console.log(`    Version:  ${newVersion}`);
+console.log(`    Build ID: ${buildId}`);
 console.log(`    Date:     ${dateObj.en}\n`);
 
 // ── STEP 1: สร้าง history จาก git log (7 ล่าสุดเท่านั้น) ─────────────────────
-//
-//  อ่าน whats-new.json ทุก commit ที่ผ่านมา
-//  ✅ exclude ด้วย newVersion จาก whats-new.json (ไม่ใช่ APP_VERSION)
-//     เพื่อป้องกัน current version ซ้ำใน history
-//  ✅ เก็บแค่ 7 version ล่าสุด — version เก่ากว่านั้นไม่บันทึก
-//
-//  ต้องใช้: git fetch --unshallow ก่อน เพราะ Cloudflare clone แบบ --depth 1
 
 console.log('📚  Building history from git log...');
 
@@ -101,18 +83,15 @@ const commits   = commitLog
   ? commitLog.split('\n').filter(Boolean).map(line => {
       const [hash, ts] = line.split(' ');
       return { hash, ts: parseInt(ts, 10) * 1000 };
-    }).reverse()  // เก่าสุดก่อน
+    }).reverse()
   : [];
 
 console.log(`    พบ ${commits.length} commit(s) ของ whats-new.json`);
 
-// ✅ seenVersions เริ่มจาก newVersion (version ปัจจุบัน)
-//    เพื่อกัน current ซ้ำลงใน history
 const seenVersions = new Set([newVersion]);
 const releases     = [];
 
 for (let i = commits.length - 1; i >= 0; i--) {
-  // วนจากใหม่→เก่า เพื่อได้ 7 ล่าสุดก่อน
   const { hash, ts } = commits[i];
 
   const raw = git(['show', `${hash}:${CONFIG.whatsNewFile}`]);
@@ -146,11 +125,9 @@ for (let i = commits.length - 1; i >= 0; i--) {
     changelog
   });
 
-  // ✅ เก็บแค่ 7 ล่าสุด หยุดทันที
   if (releases.length >= MAX_HISTORY) break;
 }
 
-// releases อยู่ในลำดับใหม่→เก่าแล้ว (วนจากใหม่→เก่า + push)
 const history = { releases };
 fs.mkdirSync(path.dirname(historyPath), { recursive: true });
 fs.writeFileSync(historyPath, JSON.stringify(history, null, 2) + '\n');
@@ -165,29 +142,7 @@ const contentToSave = Object.assign({}, whatsNew, {
 fs.writeFileSync(whatsNewPath, JSON.stringify(contentToSave, null, 2) + '\n');
 console.log(`✅  whats-new.json → v${newVersion}`);
 
-// ── STEP 3: เขียน version.json ───────────────────────────────────────────────
-
-let changelog = [];
-(whatsNew.sections || []).forEach(s =>
-  (s.items || []).forEach(item => {
-    const t = item.title && (item.title.en || item.title.th);
-    if (t) changelog.push(t);
-  })
-);
-
-const newData = {
-  version:   newVersion,
-  build:     buildId,
-  buildDate: dateObj,
-  timestamp: NOW.getTime(),
-  notify:    !isSilent,
-  changelog
-};
-fs.mkdirSync(path.dirname(versionPath), { recursive: true });
-fs.writeFileSync(versionPath, JSON.stringify(newData, null, 2) + '\n');
-console.log(`✅  version.json → ${buildId} (${dateObj.en})`);
-
-// ── STEP 4: Scan & rewrite HTML ───────────────────────────────────────────────
+// ── STEP 3: Scan & rewrite HTML ───────────────────────────────────────────────
 
 let scanned = 0, updated = 0;
 function walk(dir) {
@@ -214,8 +169,8 @@ walk(ROOT);
 // ── Summary ───────────────────────────────────────────────────────────────────
 
 console.log(`\n${'─'.repeat(56)}`);
-console.log(`  Version:  ${currentVersion} → ${newVersion}`);
-console.log(`  Build:    ${buildId}`);
+console.log(`  Version:  ${newVersion}`);
+console.log(`  Build ID: ${buildId}`);
 console.log(`  Date:     ${dateObj.en}`);
 console.log(`  History:  ${releases.length}/${MAX_HISTORY} (7 ล่าสุด)`);
 console.log(`  HTML:     ${updated}/${scanned} updated`);

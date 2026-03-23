@@ -1,9 +1,3 @@
-# version.json: ห้าม cache เด็ดขาด
-/assets/json/version.json
-  Cache-Control: no-store, no-cache, max-age=0, must-revalidate
-  Pragma: no-cache
-  Expires: 0
-
 # whats-new.json: ห้าม cache เด็ดขาด
 /assets/json/whats-new.json
   Cache-Control: no-store, no-cache, max-age=0, must-revalidate
@@ -29,9 +23,3 @@
 # ทุก path อื่น (HTML ทุกไฟล์ ทุก folder): revalidate ทุกครั้ง
 /*
   Cache-Control: no-cache, must-revalidate
-
-# release-history.json: ห้าม cache
-/assets/json/release-history.json
-  Cache-Control: no-store, no-cache, max-age=0, must-revalidate
-  Pragma: no-cache
-  Expires: 0

@@ -1,17 +1,33 @@
 {
-  "version": "1.0.5.19",
+  "version": "1.0.5.7",
+  "title": {
+    "en": "Performance & stability improvements",
+    "th": "ปรับปรุงประสิทธิภาพและความเสถียร"
+  },
+  "subtitle": {
+    "en": "Under-the-hood improvements to make the app faster and more reliable.",
+    "th": "ปรับปรุงภายในให้แอปทำงานได้เร็วและเสถียรยิ่งขึ้น"
+  },
   "sections": [
     {
       "type": "improved",
       "items": [
         {
           "title": {
-            "en": "🧪 Version system test — v1.0.5.11",
-            "th": "🧪 ทดสอบระบบเวอร์ชัน — v1.0.5.11"
-          },
-          "desc": {
-            "en": "This release verifies that the updated version logic correctly increments sub-patch numbers and records every version in history without skipping.",
-            "th": "การ release นี้ตรวจสอบว่า logic ระบบเวอร์ชันที่อัปเดตแล้วสามารถนับ sub-patch ได้ถูกต้องและบันทึกทุกเวอร์ชันลงประวัติโดยไม่ข้าม"
+            "en": "Faster update checks — reduced background requests",
+            "th": "ตรวจสอบอัปเดตเร็วขึ้น ลดการดึงข้อมูลในเบื้องหลัง"
+          }
+        },
+        {
+          "title": {
+            "en": "Streamlined release system for more reliable updates",
+            "th": "ระบบอัปเดตกระชับขึ้น ส่งการอัปเดตได้น่าเชื่อถือกว่าเดิม"
+          }
+        },
+        {
+          "title": {
+            "en": "Minor optimizations to caching behavior",
+            "th": "ปรับปรุง cache เล็กน้อยให้โหลดเร็วขึ้น"
           }
         }
       ]

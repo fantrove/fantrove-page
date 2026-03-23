@@ -1,10 +1,10 @@
 // version-core.js — Fantrove Verse
+// v2: ใช้ whats-new.json เป็น single source of truth แทน version.json
 
 (function () {
   'use strict';
 
   var CFG = {
-    VERSION_URL:    '/assets/json/version.json',
     WHATS_NEW_URL:  '/assets/json/whats-new.json',
     WHATS_NEW_PAGE: '/info/whats_new/',
 
@@ -22,8 +22,6 @@
   };
 
   // ── ตรวจว่าอยู่หน้า What's New หรือไม่ ──────────────────────────────────────
-  // ใช้ <meta name="fv-page" content="whats-new"> ในหน้านั้น
-  // วิธีนี้ไม่ขึ้นกับ URL path — เปลี่ยน path ได้โดยไม่ต้องแก้ script
 
   function isOnWhatsNewPage() {
     var meta = document.querySelector('meta[name="fv-page"]');
@@ -79,27 +77,23 @@
     return esc(obj[lang] || obj['en'] || '');
   }
 
-  function buildPopup(versionData, wn) {
+  function buildPopup(wn) {
     var isTh = (ls('selectedLang') || 'en') === 'th';
-    var ver  = esc(versionData.version || '');
-    var wnSynced = wn && (wn.version === versionData.version);
+    var ver  = esc(wn.version || '');
 
-    // แสดง date/time ถ้ามี
-    var buildDate = versionData.buildDate;
-    var dateStr   = buildDate ? (isTh ? esc(buildDate.th) : esc(buildDate.en)) : '';
+    // ใช้ wn.date ที่ build script เขียนไว้ (มี en/th)
+    var dateStr = wn.date ? (isTh ? esc(wn.date.th) : esc(wn.date.en)) : '';
 
-    var title = wnSynced ? t(wn.title)    : '';
-    var sub   = wnSynced ? t(wn.subtitle) : (isTh ? 'มีการปรับปรุงและอัปเดตระบบ' : 'System improvements and updates.');
+    var title = t(wn.title);
+    var sub   = t(wn.subtitle) || (isTh ? 'มีการปรับปรุงและอัปเดตระบบ' : 'System improvements and updates.');
 
     var items = [];
-    if (wnSynced) {
-      (wn.sections || []).forEach(function(s) {
-        (s.items || []).slice(0, 4).forEach(function(item) {
-          var txt = t(item.title);
-          if (txt) items.push(txt);
-        });
+    (wn.sections || []).forEach(function(s) {
+      (s.items || []).slice(0, 4).forEach(function(item) {
+        var txt = t(item.title);
+        if (txt) items.push(txt);
       });
-    }
+    });
 
     var L = {
       badge:   isTh ? 'อัพเดทใหม่'                   : 'New update',
@@ -141,17 +135,17 @@
       + '<style>@keyframes fv-fi{from{opacity:0}to{opacity:1}}@keyframes fv-si{from{opacity:0;transform:translate(-50%,-44%)}to{opacity:1;transform:translate(-50%,-50%)}}@media(prefers-color-scheme:dark){#fv-card{--fv-bg:#1c1c1e;--fv-t1:#f5f5f7;--fv-t2:#aeaeb2;--fv-t3:#636366}}</style>';
   }
 
-  function showPopup(versionData, whatsNewData, buildId) {
+  function showPopup(wn, buildId) {
     var existing = document.getElementById(CFG.POPUP_ID);
     if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
 
     lsSet(CFG.KEY_SHOWN_BUILD, buildId);
     markSession(buildId);
 
-    var version = versionData.version;
+    var version = wn.version;
     var wrap    = document.createElement('div');
     wrap.id     = CFG.POPUP_ID;
-    wrap.innerHTML = buildPopup(versionData, whatsNewData);
+    wrap.innerHTML = buildPopup(wn);
     document.body.appendChild(wrap);
 
     function dismiss(permanent) {
@@ -190,28 +184,24 @@
   function init() {
     updateLastActive();
 
-    // ✅ ถ้าอยู่หน้า What's New → ไม่แสดง popup เลย
-    // (หน้านี้มีข้อมูลครบอยู่แล้ว และ popup ก็ลิงก์มาที่หน้านี้อยู่แล้ว)
     if (isOnWhatsNewPage()) return;
-
     if (isDisabled()) return;
 
-    fetchJSON(CFG.VERSION_URL).then(function(versionData) {
-      if (!versionData) return;
+    // fetch ครั้งเดียว — whats-new.json มีทุกอย่างที่ต้องการ
+    fetchJSON(CFG.WHATS_NEW_URL).then(function(wn) {
+      if (!wn || !wn.version) return;
 
-      var newBuild   = versionData.build || versionData.version;
-      var newVersion = versionData.version;
+      var buildId    = wn.version;
       var shownBuild = ls(CFG.KEY_SHOWN_BUILD);
 
-      if (versionData.notify === false) return;
-      if (isDismissed(newVersion)) return;
+      // ถ้า whats-new.json มี notify: false → ไม่แสดง popup
+      if (wn.notify === false) return;
+      if (isDismissed(buildId)) return;
 
-      var isBrandNew = (shownBuild !== newBuild);
-      if (!isBrandNew && !isSessionFresh(newBuild)) return;
+      var isBrandNew = (shownBuild !== buildId);
+      if (!isBrandNew && !isSessionFresh(buildId)) return;
 
-      fetchJSON(CFG.WHATS_NEW_URL).then(function(whatsNewData) {
-        showPopup(versionData, whatsNewData, newBuild);
-      });
+      showPopup(wn, buildId);
     });
   }
 
