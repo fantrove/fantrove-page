@@ -53,17 +53,14 @@ function parseSemver(v) {
   return { major: +m[1], minor: +m[2], patch: +m[3], sub: m[4] !== undefined ? +m[4] : null };
 }
 
-// ✅ เพิ่ม helper: เปรียบเทียบเฉพาะ 3 ส่วนแรก (major.minor.patch)
-function sameBase(a, b) {
-  if (!a || !b) return false;
-  return a.major === b.major && a.minor === b.minor && a.patch === b.patch;
-}
-
-function incrementSubPatch(v) {
-  var s = parseSemver(v);
-  if (!s) return v;
-  var sub = (s.sub !== null) ? s.sub : 0;
-  return s.major + '.' + s.minor + '.' + s.patch + '.' + (sub + 1);
+function versionGt(a, b) {
+  // returns true ถ้า a > b
+  const pa = parseSemver(a), pb = parseSemver(b);
+  if (!pa || !pb) return false;
+  if (pa.major !== pb.major) return pa.major > pb.major;
+  if (pa.minor !== pb.minor) return pa.minor > pb.minor;
+  if (pa.patch !== pb.patch) return pa.patch > pb.patch;
+  return (pa.sub || 0) > (pb.sub || 0);
 }
 
 // ── Smart changelog จาก git diff ─────────────────────────────────────────────
@@ -86,79 +83,64 @@ function getGitChangedFiles() {
     try {
       const out = execSync('git diff --name-only --cached 2>/dev/null', { encoding: 'utf8', stdio: ['pipe','pipe','pipe'] });
       return out.trim().split('\n').filter(Boolean);
-    } catch(_2) {
-      return [];
-    }
+    } catch(_2) { return []; }
   }
 }
 
 function buildSmartChangelog(changedFiles, newVersion, currentVersion) {
   const sections = [];
-
   if (!changedFiles.length) {
-    sections.push({
-      type: 'improved',
-      items: [{
-        title: { en: 'System improvements and stability fixes', th: 'ปรับปรุงระบบและความเสถียร' },
-        desc:  { en: 'Various internal improvements for better performance.', th: 'ปรับปรุงภายในเพื่อประสิทธิภาพที่ดีขึ้น' }
-      }]
-    });
+    sections.push({ type: 'improved', items: [{
+      title: { en: 'System improvements and stability fixes', th: 'ปรับปรุงระบบและความเสถียร' },
+      desc:  { en: 'Various internal improvements for better performance.', th: 'ปรับปรุงภายในเพื่อประสิทธิภาพที่ดีขึ้น' }
+    }]});
     return sections;
   }
-
   const grouped = {};
   changedFiles.forEach(function(f) {
     if (f.includes('node_modules') || f.includes('.git')) return;
     const ext = path.extname(f).toLowerCase();
     const label = FILE_TYPE_LABELS[ext];
     if (label) {
-      if (!grouped[ext]) grouped[ext] = { label, count: 0, files: [] };
+      if (!grouped[ext]) grouped[ext] = { label, count: 0 };
       grouped[ext].count++;
-      grouped[ext].files.push(path.basename(f));
     }
   });
-
   const oldS = parseSemver(currentVersion);
   const newS = parseSemver(newVersion);
   const isMinorBump = newS && oldS && (newS.minor > oldS.minor || newS.major > oldS.major);
   const isPatchBump = newS && oldS && (newS.patch > oldS.patch);
-
-  const improvedItems = [];
-  const fixedItems    = [];
-  const newItems      = [];
-
+  const improvedItems = [], fixedItems = [], newItems = [];
   Object.entries(grouped).forEach(function([ext, info]) {
     const item = {
       title: { en: info.label.en, th: info.label.th },
       desc:  { en: info.count + ' file' + (info.count > 1 ? 's' : '') + ' updated', th: 'อัปเดต ' + info.count + ' ไฟล์' }
     };
     if (ext === '.js' && isMinorBump) newItems.push(item);
-    else if (ext === '.css') improvedItems.push(item);
     else improvedItems.push(item);
   });
-
   if (isPatchBump && !isMinorBump) {
     fixedItems.push({
       title: { en: 'Bug fixes and minor corrections', th: 'แก้ไขข้อผิดพลาดเล็กน้อย' },
       desc:  { en: 'Addressed issues from the previous version.', th: 'แก้ไขปัญหาจากเวอร์ชันก่อนหน้า' }
     });
   }
-
   if (newItems.length)      sections.push({ type: 'new',      items: newItems });
   if (improvedItems.length) sections.push({ type: 'improved', items: improvedItems });
   if (fixedItems.length)    sections.push({ type: 'fixed',    items: fixedItems });
-
   if (!sections.length) {
-    sections.push({
-      type: 'improved',
-      items: [{ title: { en: 'System improvements', th: 'ปรับปรุงระบบ' }, desc: { en: 'Internal enhancements.', th: 'ปรับปรุงภายใน' } }]
-    });
+    sections.push({ type: 'improved', items: [{
+      title: { en: 'System improvements', th: 'ปรับปรุงระบบ' },
+      desc:  { en: 'Internal enhancements.', th: 'ปรับปรุงภายใน' }
+    }]});
   }
-
   return sections;
 }
 
-function buildSmartTitle(newVersion, currentVersion, isMinorBump) {
+function buildSmartTitle(newVersion, currentVersion) {
+  const oldS = parseSemver(currentVersion);
+  const newS = parseSemver(newVersion);
+  const isMinorBump = newS && oldS && (newS.minor > oldS.minor || newS.major > oldS.major);
   if (isMinorBump) {
     return {
       title:    { en: 'New features', th: 'ฟีเจอร์ใหม่' },
@@ -171,135 +153,84 @@ function buildSmartTitle(newVersion, currentVersion, isMinorBump) {
   };
 }
 
-// ── อ่าน APP_VERSION ──────────────────────────────────────────────────────────
+// ── INIT ──────────────────────────────────────────────────────────────────────
 
-var envVersion  = process.env.APP_VERSION || process.argv[2];
-const isSilent  = process.env.DEPLOY_SILENT === '1' || process.argv.includes('--silent');
-const ROOT      = path.resolve(__dirname, '..');
-const NOW       = new Date();
+const isSilent = process.env.DEPLOY_SILENT === '1' || process.argv.includes('--silent');
+const ROOT     = path.resolve(__dirname, '..');
+const NOW      = new Date();
 
-const versionPath = path.join(ROOT, CONFIG.versionFile);
+// ── อ่านไฟล์ทั้งสาม ───────────────────────────────────────────────────────────
+
+const versionPath  = path.join(ROOT, CONFIG.versionFile);
+const whatsNewPath = path.join(ROOT, CONFIG.whatsNewFile);
+const historyPath  = path.join(ROOT, CONFIG.historyFile);
+
 let currentData = {};
 try { currentData = JSON.parse(fs.readFileSync(versionPath, 'utf8')); } catch (_) {}
-const currentVersion = currentData.version || '0.0.0';
 
-// ── ตัดสินใจ version ใหม่ ─────────────────────────────────────────────────────
-
-let newVersion;
-let autoIncremented = false;
-
-if (!envVersion) {
-  console.error('\n  ❌  ไม่พบ APP_VERSION\n     ใช้: APP_VERSION=1.0.5 node scripts/update-version.js\n');
-  process.exit(1);
-}
-
-const envParsed = parseSemver(envVersion);
-const curParsed = parseSemver(currentVersion);
-
-if (!envParsed) {
-  console.error(`\n  ❌  APP_VERSION "${envVersion}" ไม่ใช่รูปแบบที่รองรับ (X.Y.Z หรือ X.Y.Z.P)\n`);
-  process.exit(1);
-}
-
-// ✅ ตรรกะใหม่ — แก้ bug ที่ทำให้ version วนซ้ำและประวัติหาย
-//
-// กฎ: auto-increment sub-patch เมื่อ:
-//   1. env ตรงกับ current ทุกส่วน (1.0.5.6 === 1.0.5.6)
-//   2. env เป็น 3 ส่วน (1.0.5) และ base ตรงกับ current (1.0.5.X)
-//      → หมาย ความว่า user ตั้ง APP_VERSION=1.0.5 ตลอด ให้ระบบนับ .1 .2 .3 เอง
-//
-// กรณีอื่น: ใช้ envVersion ที่ user กำหนด (เช่น ต้องการขึ้น minor/major จริงๆ)
-//
-// BUG เดิม: env=1.0.5 / current=1.0.5.1 → ไม่ match → newVersion=1.0.5 (ถอยหลัง!)
-//           ทำให้ประวัติวนซ้ำ 1.0.5 → 1.0.5.1 → 1.0.5 → 1.0.5.1 ไม่มีสิ้นสุด
-
-const envIsShort  = (envParsed.sub === null);    // env มีแค่ 3 ส่วน (X.Y.Z)
-const baseMatches = sameBase(envParsed, curParsed); // 3 ส่วนแรกตรงกัน
-
-if (envVersion === currentVersion) {
-  // กรณี 1: ตรงกันทุกส่วน → auto-increment
-  newVersion = incrementSubPatch(currentVersion);
-  autoIncremented = true;
-  console.log(`\n⚡  APP_VERSION ตรงกับปัจจุบัน (${envVersion})`);
-  console.log(`    Auto sub-patch: ${currentVersion} → ${newVersion}`);
-
-} else if (envIsShort && baseMatches) {
-  // กรณี 2: env เป็น X.Y.Z / current เป็น X.Y.Z.P (base เดียวกัน)
-  // → ผู้ใช้ตั้ง APP_VERSION=X.Y.Z ตลอด ให้นับ .sub ต่อจาก current
-  newVersion = incrementSubPatch(currentVersion);
-  autoIncremented = true;
-  console.log(`\n⚡  Base match (env=${envVersion}, current=${currentVersion})`);
-  console.log(`    Auto sub-patch: ${currentVersion} → ${newVersion}`);
-  console.log(`    💡 ตั้ง APP_VERSION=${newVersion} เพื่อระบุ version เองแทน auto`);
-
-} else {
-  // กรณี 3: version ต่างกันจริงๆ (เช่น ขึ้น minor/major)
-  newVersion = envVersion;
-  const oldS = parseSemver(currentVersion);
-  const newS = parseSemver(newVersion);
-  const bumpType = (newS.major > oldS.major)    ? 'major'
-                 : (newS.minor > oldS.minor)    ? 'minor'
-                 : (newS.patch > oldS.patch)    ? 'patch'
-                 : (newS.sub   > (oldS.sub||0)) ? 'sub-patch'
-                 : 'custom';
-  console.log(`\n📦  Version: ${currentVersion} → ${newVersion} (${bumpType})`);
-}
-
-const dateStr  = NOW.toISOString().slice(0, 10).replace(/-/g, '');
-const timeStr  = pad2(NOW.getUTCHours()) + pad2(NOW.getUTCMinutes());
-const buildId  = `${newVersion}-${dateStr}${timeStr}`;
-const dateObj  = makeDateObj(NOW);
-
-console.log(`    Build ID:  ${buildId}`);
-console.log(`    Date:      ${dateObj.en}`);
-console.log(`    Silent:    ${isSilent}\n`);
-
-// ── อ่าน whats-new.json ───────────────────────────────────────────────────────
-
-const whatsNewPath = path.join(ROOT, CONFIG.whatsNewFile);
 let whatsNew = null;
-
-try {
-  whatsNew = JSON.parse(fs.readFileSync(whatsNewPath, 'utf8'));
-} catch (e) {
-  console.log(`⚠️   ไม่พบ whats-new.json หรืออ่านไม่ได้`);
+try { whatsNew = JSON.parse(fs.readFileSync(whatsNewPath, 'utf8')); } catch (e) {
+  console.error('\n  ❌  ไม่พบ whats-new.json หรืออ่านไม่ได้\n');
+  process.exit(1);
 }
 
-// ── อ่าน release-history.json ────────────────────────────────────────────────
-
-const historyPath = path.join(ROOT, CONFIG.historyFile);
 let history = { releases: [] };
 try {
   history = JSON.parse(fs.readFileSync(historyPath, 'utf8'));
   if (!Array.isArray(history.releases)) history.releases = [];
 } catch (_) {}
 
-// ── STEP 1: ARCHIVE current version → history ─────────────────────────────────
+// ── ✅ อ่าน version จาก whats-new.json เป็น source of truth ─────────────────
 //
-// ✅ archive ทุกครั้ง ไม่ว่า currentVersion จะเป็น X.Y.Z หรือ X.Y.Z.P
-// ✅ เกิดก่อน whats-new.json ถูก overwrite เสมอ
-//
-// Source priority:
-//   1. whats-new.json (version ตรงกับ currentVersion)
-//   2. version.json content field
-//   3. Generic fallback
+//   ผู้ใช้แก้แค่ whats-new.json ไฟล์เดียว ระบบจะรู้เองว่า version ใหม่คืออะไร
+//   ไม่ต้องแก้ version.json หรือตั้ง APP_VERSION เลย
+
+const currentVersion = currentData.version || '0.0.0';
+const newVersion     = whatsNew.version;
+
+if (!newVersion || !parseSemver(newVersion)) {
+  console.error(`\n  ❌  whats-new.json ไม่มี "version" หรือรูปแบบไม่ถูกต้อง\n`);
+  process.exit(1);
+}
+
+// ── ตรวจว่า version ใหม่ > เดิม ──────────────────────────────────────────────
+
+if (newVersion === currentVersion) {
+  console.log(`\n⚠️   whats-new.json version (${newVersion}) ตรงกับ version ปัจจุบันอยู่แล้ว`);
+  console.log(`    ไม่มีการเปลี่ยนแปลง version — deploy ต่อโดยไม่ archive\n`);
+} else if (!versionGt(newVersion, currentVersion)) {
+  console.error(`\n  ❌  whats-new.json version (${newVersion}) น้อยกว่าหรือเท่ากับปัจจุบัน (${currentVersion})`);
+  console.error(`      กรุณาเพิ่ม version ใน whats-new.json ให้มากกว่าเดิม\n`);
+  process.exit(1);
+}
+
+const dateStr = NOW.toISOString().slice(0, 10).replace(/-/g, '');
+const timeStr = pad2(NOW.getUTCHours()) + pad2(NOW.getUTCMinutes());
+const buildId = `${newVersion}-${dateStr}${timeStr}`;
+const dateObj = makeDateObj(NOW);
+
+console.log(`\n📦  Version: ${currentVersion} → ${newVersion}`);
+console.log(`    Build ID:  ${buildId}`);
+console.log(`    Date:      ${dateObj.en}`);
+console.log(`    Silent:    ${isSilent}\n`);
+
+// ── STEP 1: ARCHIVE current → history ────────────────────────────────────────
 
 function hasRealContent(obj) {
   return obj && Array.isArray(obj.sections) && obj.sections.length > 0 &&
          obj.sections.some(s => s.items && s.items.length > 0);
 }
 
-if (currentVersion !== newVersion && currentVersion !== '0.0.0') {
+if (newVersion !== currentVersion && currentVersion !== '0.0.0') {
   const alreadyIn = history.releases.some(r => r.version === currentVersion);
 
   if (!alreadyIn) {
+    // source priority: version.json content field → generic fallback
+    // (whats-new.json ตอนนี้มีเนื้อหาของ newVersion แล้ว ไม่ใช่ currentVersion)
     let archiveContent = null;
     let archiveSource  = 'fallback (generic)';
 
-    if (whatsNew && whatsNew.version === currentVersion && hasRealContent(whatsNew)) {
-      archiveContent = whatsNew;
-      archiveSource  = 'whats-new.json';
-    } else if (hasRealContent(currentData.content)) {
+    if (hasRealContent(currentData.content)) {
       archiveContent = currentData.content;
       archiveSource  = 'version.json (content field)';
     }
@@ -323,40 +254,34 @@ if (currentVersion !== newVersion && currentVersion !== '0.0.0') {
     console.log(`🗑️   ลบประวัติเกิน ${MAX_HISTORY}: ${removed.map(r => r.version).join(', ')}`);
   }
 
-  // ✅ เขียน history ทันทีก่อนทำอย่างอื่น — รับประกันไม่สูญหาย
+  // เขียน history ก่อนทุกอย่าง
   fs.mkdirSync(path.dirname(historyPath), { recursive: true });
   fs.writeFileSync(historyPath, JSON.stringify(history, null, 2) + '\n');
   console.log(`✅  release-history.json: ${history.releases.length}/${MAX_HISTORY} versions`);
 }
 
-// ── STEP 2: ดึง git diff ─────────────────────────────────────────────────────
+// ── STEP 2: git diff ──────────────────────────────────────────────────────────
 
 const changedFiles = getGitChangedFiles();
-if (changedFiles.length) {
-  console.log(`🔍  Git diff: พบ ${changedFiles.length} ไฟล์ที่เปลี่ยนแปลง`);
-} else {
-  console.log(`🔍  Git diff: ไม่พบข้อมูล (ใช้ข้อความทั่วไป)`);
-}
+console.log(changedFiles.length
+  ? `🔍  Git diff: พบ ${changedFiles.length} ไฟล์ที่เปลี่ยนแปลง`
+  : `🔍  Git diff: ไม่พบข้อมูล (ใช้ข้อความทั่วไป)`
+);
 
 // ── STEP 3: เนื้อหาสำหรับ newVersion ─────────────────────────────────────────
-
-const oldS = parseSemver(currentVersion);
-const newS = parseSemver(newVersion);
-const isMinorBump = newS && oldS && (newS.minor > oldS.minor || newS.major > oldS.major);
-
-const wnMatchesNew    = whatsNew && (whatsNew.version === newVersion);
-const wnHasNewContent = wnMatchesNew && hasRealContent(whatsNew);
 
 let contentToUse;
 let usingUserContent = false;
 
-if (wnHasNewContent) {
+if (hasRealContent(whatsNew)) {
+  // ✅ ผู้ใช้เขียน sections ไว้ใน whats-new.json → ใช้เลย เติมแค่ date
   contentToUse = Object.assign({}, whatsNew, { version: newVersion, date: dateObj });
   usingUserContent = true;
   console.log(`✅  ใช้เนื้อหาจาก whats-new.json (ผู้ใช้กำหนดเอง)`);
   console.log(`    📅 วันเวลา UTC: ${dateObj.en}`);
 } else {
-  const smartTitle    = buildSmartTitle(newVersion, currentVersion, isMinorBump);
+  // ไม่มี sections → auto-generate จาก git diff
+  const smartTitle    = buildSmartTitle(newVersion, currentVersion);
   const smartSections = buildSmartChangelog(changedFiles, newVersion, currentVersion);
   contentToUse = {
     version:  newVersion,
@@ -365,18 +290,15 @@ if (wnHasNewContent) {
     subtitle: smartTitle.subtitle,
     sections: smartSections
   };
-  console.log(autoIncremented
-    ? `ℹ️   Auto-increment → สร้างเนื้อหาอัตโนมัติ`
-    : `⚠️   whats-new.json ไม่มีเนื้อหาสำหรับ v${newVersion} → สร้างอัตโนมัติ`
-  );
+  console.log(`⚠️   whats-new.json ไม่มี sections → สร้างเนื้อหาอัตโนมัติ`);
   console.log(`    📅 วันเวลา UTC: ${dateObj.en}`);
 }
 
-// ✅ เขียน whats-new.json (หลัง archive เสมอ)
+// เขียน whats-new.json (หลัง archive เสมอ)
 fs.writeFileSync(whatsNewPath, JSON.stringify(contentToUse, null, 2) + '\n');
 console.log(`✅  whats-new.json: บันทึกแล้ว`);
 
-// ── อัปเดต version.json ───────────────────────────────────────────────────────
+// ── STEP 4: อัปเดต version.json ──────────────────────────────────────────────
 
 let changelog = [];
 (contentToUse.sections || []).forEach(function(s) {
@@ -403,7 +325,7 @@ fs.mkdirSync(path.dirname(versionPath), { recursive: true });
 fs.writeFileSync(versionPath, JSON.stringify(newData, null, 2) + '\n');
 console.log(`✅  version.json → ${buildId} (${dateObj.en})`);
 
-// ── Scan & rewrite HTML ───────────────────────────────────────────────────────
+// ── STEP 5: Scan & rewrite HTML ───────────────────────────────────────────────
 
 let scanned = 0, updated = 0;
 function walk(dir) {
@@ -426,10 +348,11 @@ walk(ROOT);
 // ── Summary ───────────────────────────────────────────────────────────────────
 
 console.log(`\n${'─'.repeat(56)}`);
-console.log(`  Version:    ${currentVersion} → ${newVersion}${autoIncremented ? ' (auto +0.0.0.1)' : ''}`);
+console.log(`  Version:    ${currentVersion} → ${newVersion}`);
 console.log(`  Build:      ${buildId}`);
 console.log(`  Date/Time:  ${dateObj.en}`);
-console.log(`  Content:    ${usingUserContent ? 'ผู้ใช้กำหนดเอง (whats-new.json)' : 'อัตโนมัติ (smart auto)'}`);
+console.log(`  Source:     whats-new.json → version.json (อัตโนมัติ)`);
+console.log(`  Content:    ${usingUserContent ? 'ผู้ใช้กำหนดเอง' : 'อัตโนมัติ (smart auto)'}`);
 console.log(`  Git files:  ${changedFiles.length} ไฟล์`);
 console.log(`  HTML:       ${updated}/${scanned} updated`);
 console.log(`${'─'.repeat(56)}\n🚀  Ready!\n`);
