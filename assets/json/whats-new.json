@@ -1,37 +1,62 @@
 {
-  "version": "1.0.5.3",
+  "version": "1.0.5.4",
   "sections": [
+    {
+      "type": "new",
+      "items": [
+        {
+          "title": {
+            "en": "✨ Relative time — platform-grade logic",
+            "th": "✨ ระบบเวลา relative แบบ platform จริงๆ"
+          },
+          "desc": {
+            "en": "Each release now shows how long ago it was updated — using the same threshold logic as GitHub and Twitter. \"Just now\" → \"Yesterday\" → \"9 days ago\", all live and auto-updating.",
+            "th": "ทุก release แสดงว่าผ่านมานานแค่ไหน โดยใช้ logic เดียวกับ GitHub และ Twitter ตั้งแต่ \"เมื่อกี้\" ไปจนถึง \"เมื่อวาน\" และ \"9 วันที่แล้ว\" — live และอัพเดทอัตโนมัติ"
+          }
+        },
+        {
+          "title": {
+            "en": "✨ Switches to full date and time after 10 days",
+            "th": "✨ เปลี่ยนเป็นวันที่และเวลาจริงหลัง 10 วัน"
+          },
+          "desc": {
+            "en": "After 10 days, relative time is replaced with the actual date and time — e.g. \"Mar 18, 2026 07:30 UTC\" — because \"13 days ago\" gives less context than the exact date.",
+            "th": "หลัง 10 วัน ระบบเปลี่ยนจาก relative time เป็นวันที่และเวลาจริง เช่น \"18 มี.ค. 2569 07:30 UTC\" เพราะ \"13 วันที่แล้ว\" ให้ข้อมูลน้อยกว่าวันที่จริง"
+          }
+        }
+      ]
+    },
     {
       "type": "improved",
       "items": [
         {
           "title": {
-            "en": "🔥 Every sub-patch version stored separately in history",
-            "th": "🔥 บันทึกประวัติแยกกันทุก sub-patch version"
+            "en": "⚡ Adaptive tick interval",
+            "th": "⚡ ปรับ tick interval อัตโนมัติตามอายุ"
           },
           "desc": {
-            "en": "Previously only major/minor/patch changes were recorded. Now every version — including 0.0.0.1 increments — is stored as its own entry in release history.",
-            "th": "ก่อนหน้านี้บันทึกเฉพาะการเปลี่ยน major/minor/patch เท่านั้น ตอนนี้ทุก version รวมถึงการบวก 0.0.0.1 จะถูกบันทึกแยกเป็นรายการของตัวเองในประวัติ"
+            "en": "The live timer adjusts how often it updates: every 10s for fresh releases, 30s up to an hour, 60s up to a day, 5 min after that — and stops completely after 10 days to save resources.",
+            "th": "ระบบ live timer ปรับความถี่อัตโนมัติ: ทุก 10 วินาทีสำหรับ release ใหม่, 30 วินาทีจนถึง 1 ชั่วโมง, 60 วินาทีจนถึง 1 วัน, 5 นาทีหลังจากนั้น — และหยุดสนิทหลัง 10 วัน"
           }
         },
         {
           "title": {
-            "en": "⚡ History content archived from previous deploy",
-            "th": "⚡ เนื้อหาประวัติดึงมาจาก deploy ก่อนหน้า"
+            "en": "⚡ Font sizes now match the app's type scale",
+            "th": "⚡ ขนาดฟอนต์ตรงกับมาตรฐานของแอปแล้ว"
           },
           "desc": {
-            "en": "Each version's content is saved inside version.json at deploy time, so the next deploy can correctly archive it into history — never mixing up content between versions.",
-            "th": "เนื้อหาของแต่ละ version จะถูกบันทึกไว้ใน version.json ณ เวลา deploy เพื่อให้ deploy ถัดไปสามารถดึงไปเก็บประวัติได้ถูกต้อง ไม่สับสนเนื้อหาระหว่าง version"
+            "en": "Item titles, descriptions, and subtitles now use the same font sizes as the rest of the app — no more text that feels too small compared to other pages.",
+            "th": "ชื่อรายการ, คำอธิบาย และ subtitle ตอนนี้ใช้ขนาดฟอนต์เดียวกับส่วนอื่นๆ ของแอป ไม่มีข้อความที่เล็กผิดปกติเมื่อเทียบกับหน้าอื่นอีกแล้ว"
           }
         },
         {
           "title": {
-            "en": "⚡ Keeps 7 most recent releases in history",
-            "th": "⚡ เก็บประวัติ 7 version ล่าสุดเท่านั้น"
+            "en": "⚡ Redesigned cards — rounder and more modern",
+            "th": "⚡ ออกแบบการ์ดใหม่ — มนโค้งและทันสมัยขึ้น"
           },
           "desc": {
-            "en": "Release history stores the 7 most recent versions. Older ones are removed automatically on each deploy.",
-            "th": "ประวัติการอัพเดทเก็บ 7 version ล่าสุดเท่านั้น version ที่เก่ากว่านั้นจะถูกลบออกอัตโนมัติทุก deploy"
+            "en": "Release cards now use 30px radius, gradient version badge, accent bar per item, and full dark mode — consistent with the rest of the app's design.",
+            "th": "การ์ด release ตอนนี้ใช้ radius 30px, badge gradient, accent bar แต่ละรายการ และรองรับ dark mode — สอดคล้องกับดีไซน์ส่วนที่เหลือของแอป"
           }
         }
       ]
@@ -41,12 +66,22 @@
       "items": [
         {
           "title": {
-            "en": "✨ No need to edit version.json manually",
-            "th": "✨ ไม่ต้องแก้ version.json เองอีกต่อไป"
+            "en": "🐛 Update popup no longer appears on What's New page",
+            "th": "🐛 Popup อัพเดทไม่แสดงในหน้ามีอะไรใหม่อีกต่อไป"
           },
           "desc": {
-            "en": "The release script handles version.json entirely. The only file you need to edit is whats-new.json.",
-            "th": "สคริปต์จัดการ version.json ทั้งหมดให้อัตโนมัติ ไฟล์เดียวที่ต้องแก้คือ whats-new.json เท่านั้น"
+            "en": "The page now identifies itself via a meta tag. When you're already on this page, the update popup is suppressed — since you can see all the details here already.",
+            "th": "หน้านี้ยืนยันตัวตนผ่าน meta tag แล้ว เมื่อผู้ใช้อยู่ในหน้านี้อยู่แล้ว popup อัพเดทจะไม่แสดงขึ้นมา เพราะข้อมูลครบอยู่ที่นี่แล้ว"
+          }
+        },
+        {
+          "title": {
+            "en": "🐛 Page refreshes automatically when a new version drops",
+            "th": "🐛 หน้าโหลดเนื้อหาใหม่อัตโนมัติเมื่อมีเวอร์ชันใหม่"
+          },
+          "desc": {
+            "en": "If a new version is released while you have this page open, the content updates on its own — no manual refresh needed.",
+            "th": "ถ้ามีเวอร์ชันใหม่ออกมาในขณะที่หน้านี้เปิดอยู่ เนื้อหาจะอัพเดทเองอัตโนมัติ ไม่ต้องรีโหลดหน้าเอง"
           }
         }
       ]
