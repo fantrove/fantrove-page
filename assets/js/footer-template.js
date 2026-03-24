@@ -58,8 +58,6 @@
   /* -------------------------
      Build / Wrap content (non-body touching)
      ------------------------- */
-  // Select nodes that we consider "page content" and safe to move:
-  // - Move element children of body except script/link/style/meta/template/noscript and footer.footer-minimal.
   function gatherContentCandidates() {
     return Array.from(document.body.children).filter(el => {
       const tag = el.tagName.toLowerCase();
@@ -69,7 +67,6 @@
     });
   }
 
-  // Create a site-root and content wrapper if needed, and move content nodes inside
   function ensureSiteRoot() {
     try {
       if (document.querySelector('.site-root')) return document.querySelector('.site-root');
@@ -77,16 +74,13 @@
       const candidates = gatherContentCandidates();
       if (!candidates.length) return null;
 
-      // create site-root and content-wrapper
       const siteRoot = document.createElement('div');
       siteRoot.className = 'site-root';
-      // we mark layout mode via data attribute (JS will set on desktop)
       siteRoot.setAttribute('data-fantrove-layout', 'auto');
 
       const contentWrapper = document.createElement('div');
       contentWrapper.className = 'site-content-wrapper';
 
-      // insert siteRoot before first candidate, and move candidates into contentWrapper
       const first = candidates[0];
       document.body.insertBefore(siteRoot, first);
       siteRoot.appendChild(contentWrapper);
@@ -99,11 +93,9 @@
     }
   }
 
-  // When desktop conditions met, enable column layout on site-root and ensure footer placement
   function enableDesktopRootLayout(siteRoot) {
     if (!siteRoot) return;
     try {
-      // set attribute used by CSS: data-fantrove-layout="column"
       siteRoot.setAttribute('data-fantrove-layout', 'column');
     } catch (e) {}
   }
@@ -111,41 +103,33 @@
   /* -------------------------
      Inject / place footer
      ------------------------- */
-  // Place footer inside siteRoot (after content-wrapper) OR, if there is existing footer,
-  // move it under siteRoot so it becomes last child.
   function placeFooterNode(footerNode, siteRoot) {
     try {
       if (!siteRoot) {
-        // fallback: append to body (still non-invasive)
         if (!footerNode.parentNode || footerNode.parentNode !== document.body) {
           document.body.appendChild(footerNode);
         }
         return footerNode;
       }
-      // ensure siteRoot has content-wrapper; if not, create simple wrapper
       let contentWrapper = siteRoot.querySelector('.site-content-wrapper');
       if (!contentWrapper) {
         contentWrapper = document.createElement('div');
         contentWrapper.className = 'site-content-wrapper';
-        // move existing children into wrapper
         Array.from(siteRoot.childNodes).forEach(c => contentWrapper.appendChild(c));
         siteRoot.appendChild(contentWrapper);
       }
 
-      // append footerNode as last child of siteRoot (after contentWrapper)
       if (footerNode.parentNode !== siteRoot) {
         siteRoot.appendChild(footerNode);
       }
       return footerNode;
     } catch (e) {
       console.warn('[FANTROVE] placeFooterNode failed', e);
-      // best-effort fallback
       if (footerNode && footerNode.parentNode !== document.body) document.body.appendChild(footerNode);
       return footerNode;
     }
   }
 
-  // Inject footer HTML into a created element (no body modification)
   function injectFooterHTML(footerHTML) {
     const existing = document.querySelector('footer.footer-minimal');
     let footerEl = existing;
@@ -154,7 +138,6 @@
       container.innerHTML = footerHTML.trim();
       footerEl = container.querySelector('footer') || container.firstElementChild;
       if (!footerEl) {
-        // fallback minimal footer element
         footerEl = document.createElement('footer');
         footerEl.className = 'footer-minimal';
         footerEl.setAttribute('role', 'contentinfo');
@@ -166,31 +149,24 @@
     }
 
     const siteRoot = document.querySelector('.site-root') || ensureSiteRoot();
-    // place footer within siteRoot (preferred) or body (fallback)
     placeFooterNode(footerEl, siteRoot);
 
-    // If desktop layout should be enabled, do so
     if (window.matchMedia && window.matchMedia(DESKTOP_QUERY).matches) {
       enableDesktopRootLayout(siteRoot);
     }
 
-    // IMPORTANT: per user request, REMOVE automatic spacing adjustments.
-    // Clear any previously-set paddingBottom so the script doesn't add extra gap.
     const contentWrapper = (siteRoot && siteRoot.querySelector('.site-content-wrapper')) || null;
     if (contentWrapper) {
       try { contentWrapper.style.paddingBottom = ''; } catch (e) {}
-      // do NOT call trackFooterSpacing anymore (disabled).
-    } else { /* fallback: do nothing */ }
+    }
 
     return footerEl;
   }
 
   /* -------------------------
-     Spacing: DISABLED (no-op) to avoid inserting extra gap
+     Spacing: DISABLED (no-op)
      ------------------------- */
-  function trackFooterSpacing(/* footer, contentWrapper */) {
-    // Intentionally disabled per request: do not compute or set padding-bottom.
-    // However, if any previous paddingBottom exists, clear it as a safety measure.
+  function trackFooterSpacing() {
     try {
       const siteRoot = document.querySelector('.site-root');
       const contentWrapper = siteRoot && siteRoot.querySelector('.site-content-wrapper');
@@ -223,11 +199,31 @@
     try {
       ensureFooterCSS();
 
+      // ── Static mode (pre-built pages) ────────────────────────────────────
+      // เมื่อหน้าถูก build ล่วงหน้า footer ถูก bake ไว้ใน HTML แล้ว
+      // (html-transformer.js ฝัง <footer.footer-minimal> ก่อน </body>)
+      //
+      // ในกรณีนี้เราข้าม fetch และ inject — แค่จัด layout (site-root wrapper)
+      // เหมือนที่ทำปกติ แต่ไม่สร้าง footer ใหม่
+      if (
+        document.documentElement.dataset &&
+        document.documentElement.dataset.fvBuilt &&
+        document.querySelector('footer.footer-minimal')
+      ) {
+        // Footer อยู่แล้ว — จัด layout เท่านั้น
+        if (window.matchMedia && window.matchMedia(DESKTOP_QUERY).matches) {
+          const siteRoot = ensureSiteRoot();
+          enableDesktopRootLayout(siteRoot);
+          const existingFooter = document.querySelector('footer.footer-minimal');
+          if (existingFooter && siteRoot) placeFooterNode(existingFooter, siteRoot);
+        }
+        return; // ← ออกจาก ready() ทันที ไม่ fetch ไม่ inject
+      }
+      // ─────────────────────────────────────────────────────────────────────
+
       // On desktop, try to organize content into site-root before injecting footer
       if (window.matchMedia && window.matchMedia(DESKTOP_QUERY).matches) {
         ensureSiteRoot();
-      } else {
-        // create site-root even on smaller screens? keep non-invasive: create only when needed later
       }
 
       fetchFooterTemplate()
@@ -242,17 +238,12 @@
         const mq = window.matchMedia(DESKTOP_QUERY);
         const onChange = (e) => {
           if (e.matches) {
-            // create and enable layout
             const siteRoot = ensureSiteRoot();
             enableDesktopRootLayout(siteRoot);
-            // attempt to ensure existing footer is relocated under siteRoot
             const footerEl = document.querySelector('footer.footer-minimal');
             if (footerEl && siteRoot) placeFooterNode(footerEl, siteRoot);
-            // ensure no padding is added
             const cw = siteRoot && siteRoot.querySelector('.site-content-wrapper');
             if (cw) try { cw.style.paddingBottom = ''; } catch(e) {}
-          } else {
-            // When shrinking, we keep structure intact (no unwrap) to avoid moving nodes repeatedly.
           }
         };
         if (mq.addEventListener) mq.addEventListener('change', onChange);
@@ -263,7 +254,6 @@
     }
   });
 
-  // Debug hook (optional)
   try { window.__fantroveFooterDebug = { ensureSiteRoot, injectFallbackStyle, removeFallbackStyle }; } catch (e) {}
 
 })();

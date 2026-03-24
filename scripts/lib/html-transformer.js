@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * html-transformer.js  v2.0
+ * html-transformer.js  v2.1
  * Applies translations to a parsed HTML document using cheerio.
  *
  * ความแตกต่างจาก v1:
@@ -120,7 +120,68 @@ function transformHtml(html, lang, translations, srcFilePath, dbJson = {}) {
     }
   });
 
+  // ── 9. Inject translated footer ───────────────────────────────────────
+  // footer-template.html ถูกโหลดโดย footer-template.js ตอน runtime ปกติ
+  // แต่บน built pages ต้องการ footer ที่แปลแล้วฝังอยู่ใน HTML เลย เพราะ:
+  //  - static mode ไม่รัน translation engine
+  //  - footer มี data-translate จำนวนมาก
+  //
+  // footer-template.js จะเจอ <footer.footer-minimal> อยู่แล้ว → skip fetch
+  // แค่จัด layout (site-root, site-content-wrapper) ตามปกติ
+  if (_config.footerHtml) {
+    _injectFooter($, lang, translations);
+  }
+
   return $.html();
+}
+
+// ── Footer injection ─────────────────────────────────────────────────────────
+
+/**
+ * Parse footer-template.html, translate its [data-translate] elements,
+ * prefix its internal links, then append to <body>.
+ *
+ * footer-template.js detects the existing <footer.footer-minimal> at runtime
+ * and skips the fetch — it only handles the site-root layout wrapper.
+ *
+ * @param {CheerioStatic} $
+ * @param {string}        lang
+ * @param {Object}        translations
+ */
+function _injectFooter($, lang, translations) {
+  // Skip if footer already exists in source HTML (shouldn't happen, but safe)
+  if ($('footer.footer-minimal').length) return;
+
+  const $footer = cheerio.load(_config.footerHtml, { decodeEntities: false, xmlMode: false });
+
+  // Translate data-translate elements inside the footer
+  $footer('[data-translate]').each((_, el) => {
+    const $el  = $footer(el);
+    const key  = $el.attr('data-translate');
+
+    if (key && translations[key]) {
+      const parts = normalizeParts(parseTranslation(translations[key]));
+      // Footer elements are typically simple text/html — use lightweight converter
+      $el.html(_partsToHtml($footer, $el, parts));
+    }
+
+    $el.removeAttr('data-translate')
+       .removeAttr('data-original-text')
+       .removeAttr('data-original-style');
+  });
+
+  // Prefix footer internal links (e.g. /info/about → /en/info/about)
+  $footer('a[href]').each((_, el) => {
+    const $el  = $footer(el);
+    const href = $el.attr('href') || '';
+    if (_isInternalPath(href) && !_hasLangPrefix(href) && _shouldPrefix(href)) {
+      $el.attr('href', `/${lang}${href.startsWith('/') ? href : '/' + href}`);
+    }
+  });
+
+  // Append translated footer HTML to <body>
+  const footerHtml = $footer.html();
+  $('body').append("\n" + footerHtml + "\n");
 }
 
 // ── Static config ─────────────────────────────────────────────────────────

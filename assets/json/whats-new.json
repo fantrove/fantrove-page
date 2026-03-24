@@ -1,85 +1,35 @@
 {
-  "version": "1.0.7",
+  "version": "1.0.7.1",
   "title": {
-    "en": "SEO & Performance Overhaul",
-    "th": "ปรับปรุง SEO และประสิทธิภาพครั้งใหญ่"
+    "en": "Footer fix for static pages",
+    "th": "แก้ไข footer บนหน้าเว็บแบบ static"
   },
   "subtitle": {
-    "en": "Major under-the-hood improvements to how Fantrove handles languages — making the site faster, more search-engine-friendly, and more stable.",
-    "th": "ปรับปรุงระบบภายในครั้งใหญ่ในส่วนของการจัดการภาษา ทำให้เว็บไซต์เร็วขึ้น ค้นหาได้ง่ายขึ้น และมีเสถียรภาพมากขึ้น"
+    "en": "A targeted fix for the footer not displaying correctly after the 1.0.7 static build system was introduced.",
+    "th": "แก้ไขปัญหา footer แสดงผลไม่ถูกต้องหลังจากนำระบบ static build มาใช้ใน 1.0.7"
   },
   "sections": [
-    {
-      "type": "new",
-      "items": [
-        {
-          "title": {
-            "en": "Static HTML build system",
-            "th": "ระบบสร้าง HTML แบบ Static"
-          },
-          "description": {
-            "en": "We now pre-generate a separate HTML file for each language at build time. Instead of using JavaScript to translate the page after it loads, the correct language is already baked into the page before it reaches your browser. This means content appears instantly with no delay.",
-            "th": "ตอนนี้เราสร้างไฟล์ HTML แยกต่างหากสำหรับแต่ละภาษาในขั้นตอน build ก่อนที่จะเผยแพร่เว็บไซต์ แทนที่จะใช้ JavaScript แปลภาษาหลังจากหน้าเว็บโหลดแล้ว เนื้อหาภาษาที่ถูกต้องถูกฝังอยู่ในหน้าเลยตั้งแต่ต้น ทำให้เนื้อหาแสดงผลทันทีโดยไม่มีการรอ"
-          }
-        },
-        {
-          "title": {
-            "en": "Improved SEO with hreflang & canonical tags",
-            "th": "ปรับปรุง SEO ด้วย hreflang และ canonical tags"
-          },
-          "description": {
-            "en": "Each built page now includes proper hreflang tags telling search engines which language version corresponds to which URL, plus a canonical tag to avoid duplicate content issues. Google and other search engines can now correctly index Fantrove in both English and Thai.",
-            "th": "แต่ละหน้าที่สร้างแล้วจะมี hreflang tags ที่บอก search engine ว่าแต่ละ URL สอดคล้องกับภาษาอะไร รวมถึง canonical tag เพื่อป้องกันปัญหา content ซ้ำซ้อน Google และ search engine อื่นๆ สามารถ index Fantrove ทั้งภาษาอังกฤษและภาษาไทยได้อย่างถูกต้องแล้ว"
-          }
-        }
-      ]
-    },
-    {
-      "type": "improved",
-      "items": [
-        {
-          "title": {
-            "en": "Language system now runs lighter on production",
-            "th": "ระบบภาษาทำงานเบาลงบน production"
-          },
-          "description": {
-            "en": "On the live site, the language system now operates in \"static mode\" — it skips fetching translation files, skips running the translation engine, and skips background workers entirely. It only handles what's still needed: the language switcher dropdown. This reduces unnecessary network requests and CPU usage.",
-            "th": "บนเว็บไซต์จริง ระบบภาษาทำงานในโหมด \"static\" — ข้ามการโหลดไฟล์แปลภาษา ข้ามการรัน translation engine และข้าม background workers ทั้งหมด โดยจะจัดการเฉพาะสิ่งที่ยังจำเป็น ได้แก่ dropdown เลือกภาษา ช่วยลด network request และการใช้ CPU ที่ไม่จำเป็น"
-          }
-        },
-        {
-          "title": {
-            "en": "Pages load without waiting for JavaScript",
-            "th": "หน้าเว็บโหลดได้โดยไม่ต้องรอ JavaScript"
-          },
-          "description": {
-            "en": "Previously, pages started invisible (opacity 0) and faded in only after the language system finished loading. Now that content is pre-rendered, pages appear immediately — no more flash of blank content or layout shift while the language loads.",
-            "th": "ก่อนหน้านี้หน้าเว็บจะเริ่มต้นแบบมองไม่เห็น (opacity 0) แล้วค่อย fade in หลังจากระบบภาษาโหลดเสร็จ ตอนนี้เนื้อหาถูก render ไว้ล่วงหน้าแล้ว หน้าเว็บจึงแสดงผลทันที ไม่มีหน้าว่างหรือ layout เด้งอีกต่อไประหว่างที่รอภาษาโหลด"
-          }
-        },
-        {
-          "title": {
-            "en": "All internal links pre-prefixed with language",
-            "th": "ลิงก์ภายในถูก prefix ด้วยภาษาล่วงหน้าแล้ว"
-          },
-          "description": {
-            "en": "Links within the site (e.g. to Settings, About, Search) now have the correct language prefix built into the HTML itself — /en/setting, /th/setting, etc. Search engine crawlers that don't run JavaScript will now correctly follow these links.",
-            "th": "ลิงก์ภายในเว็บไซต์ (เช่น ไปยัง Settings, About, Search) ตอนนี้มี language prefix ที่ถูกต้องฝังอยู่ใน HTML เลย เช่น /en/setting, /th/setting เป็นต้น Search engine crawlers ที่ไม่รัน JavaScript จะสามารถติดตามลิงก์เหล่านี้ได้อย่างถูกต้องแล้ว"
-          }
-        }
-      ]
-    },
     {
       "type": "fixed",
       "items": [
         {
           "title": {
-            "en": "Language switcher works correctly on all pre-built pages",
-            "th": "ตัวเลือกภาษาทำงานถูกต้องบนทุกหน้าที่ build แล้ว"
+            "en": "Footer content now displays correctly in all languages",
+            "th": "เนื้อหา footer แสดงผลถูกต้องทุกภาษาแล้ว"
           },
           "description": {
-            "en": "Switching languages on the live site now navigates to the pre-built version of that page in the selected language, rather than trying to translate the current page with JavaScript. This is more reliable and works even if JavaScript is slow to load.",
-            "th": "การสลับภาษาบนเว็บจริงตอนนี้จะนำทางไปยังหน้าที่ build ไว้แล้วของภาษานั้นๆ แทนที่จะพยายามแปลหน้าปัจจุบันด้วย JavaScript ทำให้เสถียรกว่าและทำงานได้แม้ JavaScript โหลดช้า"
+            "en": "In 1.0.7, the footer is loaded by a separate script that fetches its template at runtime and translates it with JavaScript. This conflicted with the new static build system, which no longer runs the translation engine on live pages — causing the footer to appear blank or untranslated. The fix bakes a translated copy of the footer directly into each built HTML page, so the correct language appears immediately without any JavaScript translation.",
+            "th": "ใน 1.0.7 footer ถูกโหลดด้วย script แยกต่างหากที่ดึง template มาตอน runtime แล้วแปลด้วย JavaScript ซึ่งขัดแย้งกับระบบ static build ใหม่ที่ไม่รัน translation engine บนหน้าจริงอีกต่อไป ส่งผลให้ footer แสดงผลว่างเปล่าหรือไม่ถูกแปล การแก้ไขคือการฝัง footer ที่แปลแล้วลงในแต่ละหน้า HTML โดยตรงในขั้นตอน build เพื่อให้ภาษาที่ถูกต้องแสดงผลทันทีโดยไม่ต้องรอ JavaScript"
+          }
+        },
+        {
+          "title": {
+            "en": "Footer script no longer makes unnecessary network requests on static pages",
+            "th": "script ของ footer ไม่ส่ง network request ที่ไม่จำเป็นบนหน้า static อีกต่อไป"
+          },
+          "description": {
+            "en": "Previously, the footer script would always fetch the footer template file even when the footer was already present on the page. It now detects when a page has been pre-built and skips the fetch entirely, only handling the page layout as needed.",
+            "th": "ก่อนหน้านี้ script ของ footer จะดึงไฟล์ template เสมอ แม้ footer จะมีอยู่บนหน้าแล้วก็ตาม ตอนนี้ระบบจะตรวจจับว่าหน้าถูก build ล่วงหน้าหรือไม่ และข้ามการดึงไฟล์ทั้งหมด โดยจัดการแค่ layout ของหน้าตามที่จำเป็น"
           }
         }
       ]

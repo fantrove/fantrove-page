@@ -118,6 +118,13 @@ const CONFIG = {
     '_headers',
     'fantrove-console-bridge.js',
   ],
+
+  /**
+   * Path to the footer template HTML file.
+   * Build script reads this once and injects a translated copy
+   * into every built page — so footer-template.js can skip the fetch.
+   */
+  footerTemplatePath: 'assets/template-html/footer-template.html',
 };
 
 // ── CLI flags ─────────────────────────────────────────────────────────────
@@ -158,7 +165,15 @@ async function build() {
 
   // Inject config into html-transformer
   // [PATCH v2] ส่ง langs array ไปด้วย (html-transformer v2 ต้องการสำหรับ hreflang)
-  setConfig({ ...CONFIG, langs });
+  // [PATCH v2.1] อ่าน footer template และส่งไปด้วย เพื่อให้ transformer bake footer ลง HTML
+  let footerHtml = '';
+  if (CONFIG.footerTemplatePath && fs.existsSync(CONFIG.footerTemplatePath)) {
+    footerHtml = fs.readFileSync(CONFIG.footerTemplatePath, 'utf8');
+    console.log(`[footer]  Loaded footer template (${footerHtml.length} chars)`);
+  } else {
+    console.warn('[footer]  ⚠  footer-template.html not found — footer will not be baked in');
+  }
+  setConfig({ ...CONFIG, langs, footerHtml });
 
   // ── 2. Load translations ────────────────────────────────────────────────
   const translations = {};
