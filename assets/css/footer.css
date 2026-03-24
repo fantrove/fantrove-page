@@ -1,177 +1,232 @@
-/* -----------------------------------------------------------------------------
-   Fantrove — Footer stylesheet (comprehensive, non-invasive)
-   - Works with JS that creates .site-root and .site-content-wrapper
-   - Does NOT require modifying <body>
-   - Ensures footer remains in flow (not fixed) and won't overlap main content
-   -----------------------------------------------------------------------------
-*/
-
 @import url("https://fonts.googleapis.com/css2?family=Sofia&display=swap");
 
-/* Theme variables */
-:root{
-  --site-footer-bg: #ffffff;
-  --site-footer-ink: #0f1720;
-  --site-footer-muted: #64748b;
-  --site-footer-border: #e6edf1;
-  --site-footer-accent: #13b47f;
-  --site-footer-max-width: 1100px;
-  --site-footer-padding-vertical: 12px; /* reduced to avoid excessive spacing */
-  --site-footer-padding-horizontal: 12px;
-  --site-footer-font-size: 14px;
-  --footer-transition: 180ms ease;
-}
+/* =============================================================
+   FOOTER – Fantrove  |  ออกแบบให้ตรงกับ design system ของเว็บ
+   ✓ ไม่แตะ body / parent / layout ใดๆ
+   ✓ position: relative — ตามหน้าไปเองตามธรรมชาติ
+   ============================================================= */
 
-/* -------------------------
-   Site root & content wrapper
-   ------------------------- */
-/* site-root is created by JS; it becomes the flex column container */
-.site-root {
+/* ── Scoped reset ─────────────────────────────────────────── */
+.footer-minimal,
+.footer-minimal * {
   box-sizing: border-box;
-  display: block; /* default for small screens; JS may set as flex via inline style on desktop */
-  width: 100%;
-  min-height: 0;
 }
 
-/* Inside site-root we keep a content wrapper that will grow to push footer down */
-.site-root .site-content-wrapper {
-  box-sizing: border-box;
-  width: 100%;
-  display: block;
-  min-height: 1px;
-}
-
-/* When JS enables desktop layout it will set inline style on .site-root
-   to: display:flex; flex-direction:column; min-height:100vh
-   and the content wrapper will be styled with flex: 1 1 auto (via CSS below).
-*/
-.site-root[data-fantrove-layout="column"] {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
-.site-root[data-fantrove-layout="column"] > .site-content-wrapper {
-  flex: 1 1 auto;
-  min-height: 0; /* important to prevent overflow */
-}
-
-/* -------------------------
-   Footer base layout
-   ------------------------- */
+/* ── Container ────────────────────────────────────────────── */
 .footer-minimal {
-  box-sizing: border-box;
   width: 100%;
-  background: var(--site-footer-bg);
-  color: var(--site-footer-ink);
-  border-top: 1px solid var(--site-footer-border);
-  padding: var(--site-footer-padding-vertical) var(--site-footer-padding-horizontal);
-  font-size: var(--site-footer-font-size);
-  line-height: 1.45;
-  z-index: 1;
-  position: relative; /* keep in document flow */
-  clear: both;
-  flex-shrink: 0;
+  position: relative;
+  background: #ffffff;
+  color: #52638A;
+  font-family: 'Segoe UI', 'Noto Sans Thai', 'Noto Sans', sans-serif;
+  font-size: 0.92rem;
+  line-height: 1.72;
+  border-top: 1.5px solid rgba(14, 176, 213, 0.08);
+  letter-spacing: 0.01em;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* center & constrain width */
-.footer-minimal .footer-inner {
-  max-width: var(--site-footer-max-width);
+/* ── Inner wrapper ────────────────────────────────────────── */
+.footer-inner {
+  max-width: 1110px;
   margin: 0 auto;
-  padding: 0 12px;
+  padding: 2.8rem 1.6rem 1.8rem;
 }
 
-/* grid layout */
-.footer-minimal .footer-grid {
+/* ── Grid layout ──────────────────────────────────────────── */
+.footer-grid {
   display: grid;
-  gap: 18px;
-  grid-template-columns: 1fr 1fr;
-  align-items: start;
+  grid-template-columns: 2fr 1fr 1fr 1.3fr;
+  gap: 2rem 2.1rem;
+  padding-bottom: 2rem;
+  border-bottom: 1.5px solid rgba(14, 176, 213, 0.07);
 }
-@media (min-width: 880px) {
-  .footer-minimal .footer-grid {
-    grid-template-columns: 1.5fr 1fr 1fr 1fr;
-    gap: 28px;
+
+@media (max-width: 860px) {
+  .footer-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 1.8rem 1.6rem;
+  }
+  .footer-brand {
+    grid-column: 1 / -1;
   }
 }
 
-/* Brand */
-.footer-minimal .footer-brand .footer-logo {
+@media (max-width: 560px) {
+  .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 1.4rem;
+  }
+  .footer-inner {
+    padding: 2rem 0.9rem 1.4rem;
+  }
+}
+
+/* ── Brand ────────────────────────────────────────────────── */
+.footer-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.footer-logo {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  font-weight: 700;
-  color: inherit;
   text-decoration: none;
+  width: fit-content;
 }
-.footer-minimal .logo-text {
-  font-family: "Sofia", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+
+/* Sofia font — ตรงกับ logo ของเว็บ */
+.logo-text {
+  font-family: 'Sofia', cursive;
+  font-size: 1.5rem;
   font-weight: 700;
-  font-size: 1.05rem;
+  color: #00CEB0;         /* teal หลักของเว็บ */
+  letter-spacing: 0.01em;
+  line-height: 1;
 }
 
-/* lists & links */
-.footer-minimal .footer-list { list-style:none; margin:0; padding:0; }
-.footer-minimal .footer-list li { margin-bottom:8px; }
-.footer-minimal .footer-link {
-  color: var(--site-footer-ink);
+.footer-desc {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #6d8590;
+  max-width: 240px;
+  line-height: 1.7;
+  font-weight: 400;
+}
+
+/* ── Heading ──────────────────────────────────────────────── */
+.footer-heading {
+  margin: 0 0 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #8ea1b8;         /* muted — ตรงกับ --muted ของ home.css */
+}
+
+/* ── List ─────────────────────────────────────────────────── */
+.footer-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+/* ── Links — pill style เหมือน nav button ─────────────────── */
+.footer-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4em 0.75em;
+  border-radius: 25px;          /* ตรงกับ --r-pill ของ nav-core-ext.css */
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #52638A;
   text-decoration: none;
-  transition: color var(--footer-transition);
-}
-.footer-minimal .footer-link:hover,
-.footer-minimal .footer-link:focus { color: var(--site-footer-accent); text-decoration: underline; outline: none; }
-
-/* social */
-.footer-minimal .footer-socials { display:flex; gap:10px; flex-wrap:wrap; margin-top:6px; }
-.footer-minimal .footer-social {
-  display:inline-flex; align-items:center; gap:8px;
-  padding:8px 10px; border-radius:8px; text-decoration:none;
-  color:var(--site-footer-ink); background:transparent; border:1px solid transparent;
-  transition: background var(--footer-transition), transform var(--footer-transition);
-}
-.footer-minimal .footer-social:hover,
-.footer-minimal .footer-social:focus {
-  background: rgba(19,180,127,0.06);
-  color: var(--site-footer-accent);
-  transform: translateY(-2px);
+  margin-left: -0.75em;         /* optical alignment */
+  border: 1px solid transparent;
+  transition: background 0.1s ease-out, color 0.1s ease-out, border-color 0.1s ease-out;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* footer bottom */
-.footer-minimal .footer-bottom {
-  margin-top:8px; /* reduced to tighten vertical spacing */
-  display:flex; justify-content:space-between; gap:12px; align-items:center;
-  color:var(--site-footer-muted); font-size:0.92rem;
-}
-@media (max-width:560px) {
-  .footer-minimal .footer-bottom { flex-direction: column; align-items:flex-start; }
+.footer-link:hover {
+  background: rgba(0, 206, 176, 0.06);   /* ตรงกับ .button-sub.active ของ nav */
+  border-color: rgba(0, 206, 176, 0.25);
+  color: #00CEB0;
 }
 
-/* buttons */
-.footer-btn { display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:8px; background:var(--site-footer-accent); color:#fff; text-decoration:none; box-shadow:0 6px 18px rgba(0,0,0,0.06); }
-.footer-btn.secondary { background:transparent; color:var(--site-footer-ink); border:1px solid var(--site-footer-border); box-shadow:none; }
-
-/* small & accessibility helpers */
-.footer-minimal .muted { color:var(--site-footer-muted); }
-.visually-hidden { position:absolute !important; height:1px; width:1px; overflow:hidden; clip:rect(1px,1px,1px,1px); white-space:nowrap; border:0; padding:0; margin:-1px; }
-
-/* edge-case: prevent hostile inline styles from putting footer off-canvas */
-.footer-minimal[style] {
-  position: relative !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: auto !important;
-  transform: none !important;
+.footer-license-note {
+  margin-top: 0.9rem;
+  font-size: 0.8rem;
+  color: #8ea1b8;
+  line-height: 1.65;
 }
 
-/* responsive tweaks */
-@media (max-width:880px) {
-  .footer-minimal .footer-grid { grid-template-columns: 1fr 1fr; }
-}
-@media (max-width:560px) {
-  .footer-minimal .footer-grid { grid-template-columns: 1fr; gap:12px; }
-  .footer-minimal { padding:12px 12px; font-size:13px; }
+/* ── Social buttons — เหมือน card ของเว็บ ─────────────────── */
+.footer-socials {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-/* compact variant */
-.footer-minimal.compact { padding:10px; font-size:13px; }
+.footer-social {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.55em 1em;
+  border-radius: 30px;          /* ตรงกับ border-radius section ของ home.css */
+  border: 1.5px solid rgba(14, 176, 213, 0.09);
+  background: #ffffff;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #52638A;
+  text-decoration: none;
+  width: fit-content;
+  box-shadow: 0 2px 8px rgba(6, 20, 24, 0.04);
+  transition: border-color 0.1s ease-out, color 0.1s ease-out, background 0.1s ease-out, box-shadow 0.1s ease-out;
+  -webkit-tap-highlight-color: transparent;
+}
 
-/* end */
+.footer-social svg {
+  width: 15px;
+  height: 15px;
+  stroke: currentColor;
+  flex-shrink: 0;
+  stroke-width: 1.6;
+}
+
+.footer-social:hover {
+  border-color: rgba(0, 206, 176, 0.45);  /* ตรงกับ .button-sub.active */
+  color: #00CEB0;
+  background: rgba(248, 255, 253, 1);     /* ตรงกับ .button-sub.active bg */
+  box-shadow: 0 4px 14px rgba(0, 206, 176, 0.08);
+}
+
+/* ── Bottom bar ───────────────────────────────────────────── */
+.footer-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  padding-top: 1.2rem;
+}
+
+.footer-bottom small,
+.footer-bottom .text-muted {
+  font-size: 0.82rem;
+  color: #8ea1b8;
+  font-weight: 400;
+}
+
+.footer-bottom a {
+  color: #8ea1b8;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: color 0.1s ease-out, border-color 0.1s ease-out;
+}
+
+.footer-bottom a:hover {
+  color: #13b47f;
+  border-bottom-color: rgba(19, 180, 127, 0.3);
+}
+
+/* ── Reduced motion ───────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .footer-minimal *,
+  .footer-minimal *::before {
+    transition: none !important;
+  }
+}
+
+/* ── Mobile small ─────────────────────────────────────────── */
+@media (max-width: 450px) {
+  .footer-inner {
+    padding: 1.8rem 0.7rem 1.2rem;
+  }
+  .footer-minimal {
+    font-size: 0.88rem;
+  }
+}
