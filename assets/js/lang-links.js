@@ -1,5 +1,5 @@
 /**
- * lang-links.js v2.1 - Smart Link Language Prefix Manager
+ * lang-links.js v2.2 - Smart Link Language Prefix Manager
  * 
  * หน้าที่:
  * 1. อัพเดทลิงก์ทั้งหมดในหน้าให้มี prefix ภาษาตามที่เลือก
@@ -9,8 +9,15 @@
  * การทำงาน:
  * - localhost → ปิดตัวเองทันที ไม่ทำอะไรเลย
  * - ตอน DOM ready: อัพเดทลิงก์ทั้งหมดให้มี prefix ตาม localStorage
- * - ตอนคลิก: ถ้าเป็น internal link ไม่มี prefix → เติม prefix → navigate
+ * - ตอนคลิก: ถ้าเป็น internal link มี prefix ผิดภาษา → แก้ prefix → replace navigate
  * - ตอน languageChange: อัพเดทลิงก์ทั้งหมดใหม่ตามภาษาใหม่
+ * 
+ * [FIX v2.2] interceptor ใช้ location.replace() แทน pushState()
+ *   เหตุผล: interceptor ทำงานเฉพาะเมื่อ link มี prefix ภาษาผิด
+ *           ถือเป็น "correction" ไม่ใช่ "navigation ใหม่"
+ *           → ไม่ควรเพิ่ม history entry
+ *           → กด Back จะออกจากหน้าปัจจุบันจริงๆ
+ *             ไม่วนกลับมาหน้าเดิมภาษาเดิม
  * 
  * ไม่รองรับ: URL parameters (?lang=th) - ใช้ path prefix เท่านั้น
  */
@@ -140,7 +147,22 @@
   }
   
   /**
-   * Intercept การคลิกลิงก์ - เติม/แก้ prefix ก่อน navigate
+   * Intercept การคลิกลิงก์ — แก้ prefix ก่อน navigate
+   *
+   * [FIX v2.2] ใช้ location.replace() แทน pushState()
+   *
+   * interceptor นี้ทำงานเฉพาะเมื่อ:
+   *   link มี prefix ภาษาผิด (urlLang !== currentLang)
+   *
+   * กรณีนี้ถือเป็น "correction" ไม่ใช่ "navigation ใหม่"
+   * จึงใช้ replace() เพื่อ:
+   *   - ไม่เพิ่ม history entry ใหม่
+   *   - กด Back จะออกจากหน้าปัจจุบันจริงๆ
+   *     ไม่วนกลับมาหน้าเดิมภาษาเดิม
+   *
+   * กรณีที่ prefix ถูกต้องอยู่แล้ว (urlLang === currentLang):
+   *   → return ออกก่อน ไม่ intercepted → browser จัดการ navigation ตามปกติ
+   *     ซึ่งจะ push history ตามที่ต้องการ (navigation ระหว่างหน้าปกติ)
    */
   function interceptLinkClicks() {
     document.addEventListener('click', function(e) {
@@ -159,18 +181,13 @@
         const urlLang = (url.pathname.match(/^\/(en|th)(\/|$)/) || [])[1];
         
         // ถ้า prefix ตรงกับภาษาปัจจุบันแล้ว ไม่ต้องทำอะไร
+        // → ปล่อยให้ browser จัดการ navigation ตามปกติ (push history)
         if (urlLang === currentLang) return;
         
-        // เติม/แก้ prefix แล้ว navigate
+        // prefix ผิดภาษา → แก้แล้ว replace navigate (ไม่เพิ่ม history)
         e.preventDefault();
         const newHref = setLangPrefix(href, currentLang);
-        
-        try {
-          history.pushState({ lang: currentLang, ts: Date.now() }, '', newHref);
-          window.dispatchEvent(new PopStateEvent('popstate', { state: { lang: currentLang } }));
-        } catch (err) {
-          window.location.href = newHref;
-        }
+        window.location.replace(newHref);
         
       } catch (e) {
         // Ignore errors

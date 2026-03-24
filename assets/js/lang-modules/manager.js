@@ -19,6 +19,8 @@
  *
  *  การเลือกภาษาใน static mode:
  *   → redirect ไปยัง /{lang}/{current-path} แทนการแปลด้วย JS
+ *   → ใช้ location.replace() เพื่อไม่เพิ่ม history entry
+ *     (กด Back จะออกจากหน้าปัจจุบันจริงๆ ไม่วนกลับมาภาษาเดิม)
  *   → บันทึกใน localStorage เหมือนเดิม
  *
  * @module manager
@@ -230,6 +232,11 @@
      * v4.2: ถ้าอยู่ใน static mode → redirect ไปยัง /{lang}/path
      *       ถ้าอยู่ใน full mode  → JS translation เหมือนเดิม
      *
+     * [FIX] Static mode ใช้ location.replace() แทน location.href
+     *       เพื่อไม่เพิ่ม history entry ใหม่
+     *       → กด Back จะออกจากหน้าปัจจุบันจริงๆ
+     *         ไม่วนกลับมาภาษาเดิม (สำคัญมากสำหรับ app-style navigation)
+     *
      * @param {string} language
      */
     async selectLanguage(language) {
@@ -255,8 +262,11 @@
         // สร้าง URL ใหม่ด้วย language prefix ที่ต้องการ
         const newUrl = _buildStaticLangUrl(language);
         
-        // Navigate — เป็น full page load (เพราะ HTML คนละไฟล์กัน)
-        window.location.href = newUrl;
+        // ใช้ replace() แทน href เพื่อไม่เพิ่ม history entry
+        // เหตุผล: การเปลี่ยนภาษาไม่ใช่ "navigation ใหม่" แต่เป็น
+        //         "การ replace หน้าปัจจุบันด้วยภาษาอื่น"
+        //         กด Back ควรออกไปหน้าก่อนหน้า ไม่ใช่วนกลับมาภาษาเดิม
+        window.location.replace(newUrl);
         return;
       }
       
