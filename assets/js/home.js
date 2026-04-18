@@ -1,222 +1,225 @@
-// home.js  v3.0.0
+// home.js  v3.1.0
 // =========================================================
-// Home page renderer — ใช้ ConDataService แทน db.min.json
+// Home page renderer — ใช้ ConDataService
 //
-// สิ่งที่เปลี่ยนจาก v2:
-//  - ดึงข้อมูลผ่าน ConDataService.getAssembled() แทน fetch ตรง
-//  - จำกัดแต่ละ category แสดงสูงสุด MAX_ITEMS_PER_CATEGORY รายการ
-//  - เพิ่ม "View All" card ท้าย carousel แต่ละ category
-//  - inject CSS สำหรับ component ใหม่ในไฟล์เดียว
-//  - ยังรองรับหลายภาษาเหมือนเดิม
+// v3.1 — แก้ไข:
+//  - View All card: สะอาดตากว่าเดิม, blend กับ item card ปกติ
+//  - Ordering: sort type/category ตาม index.json หลัง assemble
+//    (workaround สำหรับ Promise.all push-race ใน con-data-service)
 // =========================================================
 
 // =========================================================
 // CONFIG
 // =========================================================
 const HOME_CONFIG = {
-  /** จำนวนรายการสูงสุดต่อ category ที่แสดงใน carousel */
-  MAX_ITEMS_PER_CATEGORY: 20,
-  /** จำนวน category สูงสุดต่อ type ที่แสดง */
+  MAX_ITEMS_PER_CATEGORY : 20,
   MAX_CATEGORIES_PER_TYPE: 4,
-  /** path ของ ConDataService module */
   SERVICE_PATH: '/assets/js/con-data-service/con-data-service.js',
+  INDEX_PATH  : '/assets/db/con-data/index.json',
 };
 
 // =========================================================
-// VIEW ALL — URL & LABEL CONFIG
+// VIEW ALL CONFIG
 // =========================================================
 const VIEW_ALL_CONFIGS = {
   emoji: {
-    url: '/data/verse/discover/?type=emojis&page=1',
-    labels: { th: 'ดูอีโมจิทั้งหมด', en: 'View All Emojis' }
+    url   : '/data/verse/discover/?type=emojis&page=1',
+    labels: { th: 'ดูอีโมจิทั้งหมด', en: 'View All Emojis' },
   },
   symbol: {
-    url: '/data/verse/discover/?type=special-characters__&page=1',
-    labels: { th: 'ดูสัญลักษณ์ทั้งหมด', en: 'View All Symbols' }
+    url   : '/data/verse/discover/?type=special-characters__&page=1',
+    labels: { th: 'ดูสัญลักษณ์ทั้งหมด', en: 'View All Symbols' },
   },
-  // fallback สำหรับ type อื่นๆ ที่อาจเพิ่มในอนาคต
   _default: {
-    url: '/data/verse/discover/',
-    labels: { th: 'ดูทั้งหมด', en: 'View All' }
-  }
+    url   : '/data/verse/discover/',
+    labels: { th: 'ดูทั้งหมด', en: 'View All' },
+  },
 };
 
 // =========================================================
-// LANGUAGE HELPERS
+// LANGUAGE
 // =========================================================
-
-function getLang() {
-  return localStorage.getItem('selectedLang') || 'en';
-}
+const getLang = () => localStorage.getItem('selectedLang') || 'en';
 
 function pickLang(obj, lang) {
   if (!obj || typeof obj !== 'object') return String(obj || '');
   return obj[lang] || obj.en || obj.th || Object.values(obj)[0] || '';
 }
 
-function getViewAllConfig(typeId) {
-  return VIEW_ALL_CONFIGS[typeId] || VIEW_ALL_CONFIGS._default;
-}
-
-function getViewAllLabel(typeId) {
-  const lang = getLang();
-  const cfg = getViewAllConfig(typeId);
-  return cfg.labels[lang] || cfg.labels.en || 'View All';
-}
-
-function getViewAllUrl(typeId) {
-  return getViewAllConfig(typeId).url;
-}
+function getViewAllCfg(typeId)   { return VIEW_ALL_CONFIGS[typeId] || VIEW_ALL_CONFIGS._default; }
+function getViewAllLabel(typeId) { const lang = getLang(); return getViewAllCfg(typeId).labels[lang] || getViewAllCfg(typeId).labels.en; }
+function getViewAllUrl(typeId)   { return getViewAllCfg(typeId).url; }
 
 // =========================================================
 // CLIPBOARD
 // =========================================================
-
 async function copyToClipboard(text) {
   try {
     await navigator.clipboard.writeText(text);
     return true;
   } catch {
-    // fallback สำหรับ browser เก่า
     try {
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0';
+      const ta = Object.assign(document.createElement('textarea'), {
+        value: text, style: 'position:fixed;opacity:0',
+      });
       document.body.appendChild(ta);
-      ta.focus();
-      ta.select();
+      ta.focus(); ta.select();
       const ok = document.execCommand('copy');
       document.body.removeChild(ta);
       return ok;
-    } catch {
-      return false;
-    }
+    } catch { return false; }
   }
 }
 
 // =========================================================
-// CSS INJECTION — View All Card Styles
-// inject เพียงครั้งเดียว
+// CSS INJECTION
 // =========================================================
-
-function injectViewAllStyles() {
-  if (document.getElementById('home-view-all-styles')) return;
+function injectStyles() {
+  if (document.getElementById('home-extra-styles')) return;
 
   const style = document.createElement('style');
-  style.id = 'home-view-all-styles';
+  style.id = 'home-extra-styles';
   style.textContent = `
-    /* ── View All Card ── */
+    /* ── View All card ─────────────────────────────────────
+       กลืนกับ item card ปกติ ต่างกันแค่ icon + ชื่อ
+       ไม่มี gimmick, hover เบาๆ เหมือน card ทั่วไป
+    ──────────────────────────────────────────────────────── */
     .item-card--view-all {
       text-decoration: none;
-      background: linear-gradient(145deg, #f0fdf9 0%, #eef4ff 100%);
-      border: 1.5px dashed #a8ddd0;
+      background: #fafcff;
       color: var(--brand-1);
-      justify-content: center;
-      gap: 0.55rem;
-      flex-shrink: 0;
-      transition: border-color 0.15s, background 0.15s, transform 0.15s;
     }
-
     .item-card--view-all:hover {
-      border-color: var(--brand-1);
-      background: linear-gradient(145deg, #e4fbf5 0%, #e8f0ff 100%);
-      transform: translateY(-2px) translateZ(0);
+      border-color: #00CEB0;
+      background: #F6FFFD;
     }
 
-    /* วงกลม + ลูกศร */
+    /* วงกลมเส้นบาง + ลูกศร */
     .view-all-icon {
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 44px;
-      height: 44px;
+      width: 38px;
+      height: 38px;
       border-radius: 50%;
-      background: linear-gradient(135deg, #13b47f22 0%, #11c3ec22 100%);
-      border: 1.5px solid #13b47f44;
-      color: var(--brand-1);
-      transition: background 0.15s, transform 0.2s ease;
-      margin-bottom: 0.05rem;
+      border: 1.4px solid currentColor;
+      opacity: 0.5;
+      transition: opacity 0.15s, transform 0.15s;
+      margin-bottom: 0.08rem;
     }
-
     .item-card--view-all:hover .view-all-icon {
-      background: linear-gradient(135deg, #13b47f33 0%, #11c3ec33 100%);
+      opacity: 0.85;
       transform: translateX(2px);
     }
+    .view-all-icon svg { display: block; }
 
-    .view-all-icon svg {
-      display: block;
-      flex-shrink: 0;
-    }
-
-    /* ข้อความ View All */
+    /* ป้ายชื่อ */
     .view-all-label {
-      font-size: 0.8em !important;
-      font-weight: 700 !important;
-      color: var(--brand-1) !important;
-      background: transparent !important;
-      padding: 0.2em 0.4em !important;
-      border-radius: 25px !important;
+      white-space: normal  !important;
       text-align: center;
-      white-space: normal !important;
       line-height: 1.25;
-      letter-spacing: 0.015em;
+      color: var(--brand-1) !important;
+      background: #eef8f4   !important;
     }
 
-    /* ── Loading placeholder ── */
+    /* ── Loading dots ─────────────────────────────────────── */
     .home-loading {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 0.8rem;
+      gap: 0.6rem;
       padding: 3rem 1rem;
-      color: #8ea1b8;
-      font-size: 0.95rem;
     }
-
     .home-loading-dot {
-      width: 8px;
-      height: 8px;
+      width: 7px; height: 7px;
       border-radius: 50%;
       background: #13b47f;
-      animation: home-bounce 1.2s infinite ease-in-out;
+      animation: hldot 1.1s infinite ease-in-out;
     }
-    .home-loading-dot:nth-child(2) { animation-delay: 0.2s; }
-    .home-loading-dot:nth-child(3) { animation-delay: 0.4s; }
-
-    @keyframes home-bounce {
-      0%, 80%, 100% { transform: scale(0.7); opacity: 0.5; }
-      40%            { transform: scale(1.1); opacity: 1;   }
+    .home-loading-dot:nth-child(2) { animation-delay: .18s; }
+    .home-loading-dot:nth-child(3) { animation-delay: .36s; }
+    @keyframes hldot {
+      0%,80%,100% { transform: scale(.7); opacity: .4; }
+      40%          { transform: scale(1.1); opacity: 1;  }
     }
 
-    /* ── Error state ── */
+    /* ── Error state ──────────────────────────────────────── */
     .home-error {
       padding: 2rem 1rem;
       border-radius: 20px;
       background: #fff5f5;
       border: 1.5px solid #ffd0d0;
       color: #c0392b;
-      font-size: 0.95rem;
+      font-size: .95rem;
       text-align: center;
     }
     .home-error small {
       display: block;
-      margin-top: 0.4rem;
+      margin-top: .4rem;
       color: #ff8a8a;
       font-family: monospace;
-      font-size: 0.82em;
+      font-size: .82em;
     }
   `;
-
   document.head.appendChild(style);
+}
+
+// =========================================================
+// ORDERING FIX
+// =========================================================
+// root cause: con-data-service.js ใช้ typeObjs.push() ใน Promise.all
+// callback → type ที่ fetch เสร็จเร็วกว่า push ก่อน → เรียงแบบ race
+// วิธีแก้ใน home.js: ดึง index.json + typeId.json (ถูก cache แล้ว)
+// แล้ว sort assembled.type และ category ให้ตรงกับ index
+
+async function fetchOrder(url) {
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) return null;
+    const json = await resp.json();
+    // รองรับทั้ง { categories: [] } และ { category: [] }
+    return (json.categories || json.category || []).map(c => c.id);
+  } catch { return null; }
+}
+
+async function reorderAssembled(assembled) {
+  if (!assembled?.type?.length) return assembled;
+
+  const typeIds = assembled.type.map(t => t.id);
+
+  // ดึง type order และ category order ของแต่ละ type พร้อมกัน
+  const [typeOrder, ...catOrders] = await Promise.all([
+    fetchOrder(HOME_CONFIG.INDEX_PATH),
+    ...typeIds.map(id => fetchOrder(`/assets/db/con-data/${id}.json`)),
+  ]);
+
+  // เรียง type
+  if (typeOrder?.length) {
+    assembled.type.sort((a, b) => {
+      const ai = typeOrder.indexOf(a.id);
+      const bi = typeOrder.indexOf(b.id);
+      return (ai < 0 ? 9999 : ai) - (bi < 0 ? 9999 : bi);
+    });
+  }
+
+  // เรียง category ภายในแต่ละ type
+  assembled.type.forEach((typeObj) => {
+    const catOrder = catOrders[typeIds.indexOf(typeObj.id)];
+    if (!catOrder?.length || !typeObj.category?.length) return;
+    typeObj.category.sort((a, b) => {
+      const ai = catOrder.indexOf(a.id);
+      const bi = catOrder.indexOf(b.id);
+      return (ai < 0 ? 9999 : ai) - (bi < 0 ? 9999 : bi);
+    });
+  });
+
+  return assembled;
 }
 
 // =========================================================
 // DOM BUILDERS
 // =========================================================
 
-/**
- * สร้าง item card ปกติ
- */
 function buildItemCard(item, typeId, lang) {
   const itemName = pickLang(item.name, lang);
 
@@ -239,8 +242,7 @@ function buildItemCard(item, typeId, lang) {
   card.appendChild(nameEl);
 
   const handleCopy = async () => {
-    const copied = await copyToClipboard(item.text || '');
-    if (copied && typeof window.showCopyNotification === 'function') {
+    if (await copyToClipboard(item.text || '') && typeof window.showCopyNotification === 'function') {
       window.showCopyNotification({ text: item.text, name: itemName, typeId, lang });
     }
   };
@@ -254,55 +256,48 @@ function buildItemCard(item, typeId, lang) {
 }
 
 /**
- * สร้าง "View All" card ท้าย carousel
- * — วงกลมลูกศร + ข้อความด้านล่าง
+ * View All card — เรียบง่าย กลืนกับ item card
+ * structure: วงกลมลูกศร (บน) + ป้ายชื่อ (ล่าง)
  */
 function buildViewAllCard(typeId) {
-  const url   = getViewAllUrl(typeId);
   const label = getViewAllLabel(typeId);
+  const url   = getViewAllUrl(typeId);
 
   const card = document.createElement('a');
   card.className = 'item-card item-card--view-all';
-  card.href = url;
+  card.href  = url;
   card.title = label;
   card.setAttribute('aria-label', label);
 
-  // วงกลม + SVG ลูกศร
-  const iconWrap = document.createElement('span');
-  iconWrap.className = 'view-all-icon';
-  iconWrap.setAttribute('aria-hidden', 'true');
-  iconWrap.innerHTML = `
-    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M8.5 11h6m-2.8-2.8L14 11l-2.3 2.8"
-            stroke="currentColor" stroke-width="1.7"
+  const iconEl = document.createElement('span');
+  iconEl.className = 'view-all-icon';
+  iconEl.setAttribute('aria-hidden', 'true');
+  iconEl.innerHTML = `
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M6 9h7M9.5 6 13 9l-3.5 3"
+            stroke="currentColor" stroke-width="1.5"
             stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
   `;
 
-  // ป้ายชื่อ (ใช้ class .name เพื่อให้ inherit style เดิม + override)
   const labelEl = document.createElement('span');
   labelEl.className = 'name view-all-label';
   labelEl.textContent = label;
 
-  card.appendChild(iconWrap);
+  card.appendChild(iconEl);
   card.appendChild(labelEl);
 
   return card;
 }
 
-/**
- * สร้าง section ของ category เดียว (heading + carousel)
- */
 function buildCategorySection(category, typeId, lang) {
   const section = document.createElement('div');
   section.className = 'category-section';
 
-  // heading
   const heading = document.createElement('h2');
   heading.textContent = pickLang(category.name, lang);
   section.appendChild(heading);
 
-  // carousel wrapper
   const container = document.createElement('div');
   container.className = 'carousel-container';
 
@@ -311,23 +306,18 @@ function buildCategorySection(category, typeId, lang) {
   container.appendChild(track);
   section.appendChild(container);
 
-  // items (จำกัด MAX_ITEMS_PER_CATEGORY)
-  const items = (category.data || []).slice(0, HOME_CONFIG.MAX_ITEMS_PER_CATEGORY);
-  items.forEach(item => track.appendChild(buildItemCard(item, typeId, lang)));
+  (category.data || [])
+    .slice(0, HOME_CONFIG.MAX_ITEMS_PER_CATEGORY)
+    .forEach(item => track.appendChild(buildItemCard(item, typeId, lang)));
 
-  // View All card ท้าย track
   track.appendChild(buildViewAllCard(typeId));
 
   return section;
 }
 
-/**
- * สร้าง section ของ type (header + categories)
- */
 function buildTypeSection(typeObj, lang) {
   const wrapper = document.createElement('div');
 
-  // ── Header ──
   const header = document.createElement('div');
   header.className = 'text-h';
 
@@ -336,7 +326,7 @@ function buildTypeSection(typeObj, lang) {
   header.appendChild(title);
 
   const viewAllBtn = document.createElement('a');
-  viewAllBtn.href = getViewAllUrl(typeObj.id);
+  viewAllBtn.href      = getViewAllUrl(typeObj.id);
   viewAllBtn.className = 'button button-secondary';
   viewAllBtn.setAttribute('aria-label', getViewAllLabel(typeObj.id));
   viewAllBtn.innerHTML = `<span class="btn-content">${getViewAllLabel(typeObj.id)}</span>`;
@@ -344,87 +334,62 @@ function buildTypeSection(typeObj, lang) {
 
   wrapper.appendChild(header);
 
-  // ── Categories ──
-  const categories = (typeObj.category || []).slice(0, HOME_CONFIG.MAX_CATEGORIES_PER_TYPE);
-  categories.forEach(cat => {
-    wrapper.appendChild(buildCategorySection(cat, typeObj.id, lang));
-  });
+  (typeObj.category || [])
+    .slice(0, HOME_CONFIG.MAX_CATEGORIES_PER_TYPE)
+    .forEach(cat => wrapper.appendChild(buildCategorySection(cat, typeObj.id, lang)));
 
   return wrapper;
 }
 
-/**
- * สร้าง loading state
- */
-function buildLoadingState() {
+// =========================================================
+// STATE HELPERS
+// =========================================================
+const buildLoading = () => {
   const el = document.createElement('div');
   el.className = 'home-loading';
-  el.innerHTML = `
-    <span class="home-loading-dot"></span>
-    <span class="home-loading-dot"></span>
-    <span class="home-loading-dot"></span>
-  `;
+  el.innerHTML = '<span class="home-loading-dot"></span>'.repeat(3);
   return el;
-}
+};
 
-/**
- * สร้าง error state
- */
-function buildErrorState(message, detail = '') {
+const buildError = (msg, detail = '') => {
   const el = document.createElement('div');
   el.className = 'home-error';
-  el.innerHTML = `
-    <strong>${message}</strong>
-    ${detail ? `<small>${detail}</small>` : ''}
-  `;
+  el.innerHTML = `<strong>${msg}</strong>${detail ? `<small>${detail}</small>` : ''}`;
   return el;
-}
+};
 
 // =========================================================
-// MAIN — initializeHomepage
+// INIT
 // =========================================================
-
 async function initializeHomepage() {
   const app = document.getElementById('app');
   if (!app) return;
 
-  // inject styles ก่อน render
-  injectViewAllStyles();
-
-  // แสดง loading state
+  injectStyles();
   app.innerHTML = '';
-  app.appendChild(buildLoadingState());
+  app.appendChild(buildLoading());
 
   const lang = getLang();
 
   try {
-    // ── โหลด ConDataService ผ่าน dynamic import ──
     const { default: ConDataService } = await import(HOME_CONFIG.SERVICE_PATH);
 
-    // ── ดึงข้อมูล assembled ──
-    const assembled = await ConDataService.getAssembled();
+    // assemble + reorder ตาม index
+    const assembled = await reorderAssembled(await ConDataService.getAssembled());
 
-    if (!assembled || !Array.isArray(assembled.type) || assembled.type.length === 0) {
-      throw new Error(lang === 'th' ? 'ไม่พบข้อมูล' : 'No data found');
-    }
-
-    // ── render ──
-    app.innerHTML = '';
-    assembled.type.forEach(typeObj => {
-      app.appendChild(buildTypeSection(typeObj, lang));
-    });
-
-  } catch (error) {
-    console.error('[home.js] initializeHomepage error:', error);
-
-    const msg = lang === 'th'
-      ? 'เกิดข้อผิดพลาด: ไม่สามารถโหลดข้อมูลได้'
-      : 'Error: Unable to load data';
+    if (!assembled?.type?.length) throw new Error(lang === 'th' ? 'ไม่พบข้อมูล' : 'No data found');
 
     app.innerHTML = '';
-    app.appendChild(buildErrorState(msg, error.message));
+    assembled.type.forEach(typeObj => app.appendChild(buildTypeSection(typeObj, lang)));
+
+  } catch (err) {
+    console.error('[home.js] init error:', err);
+    app.innerHTML = '';
+    app.appendChild(buildError(
+      lang === 'th' ? 'เกิดข้อผิดพลาด: ไม่สามารถโหลดข้อมูลได้' : 'Error: Unable to load data',
+      err.message
+    ));
   }
 }
 
-// ── kick off ──
 initializeHomepage();
