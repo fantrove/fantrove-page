@@ -149,7 +149,14 @@
        เพื่อโหลดพร้อม DOM แต่รันหลัง DOM โหลดเสร็จ
        ให้เว็บเร็วและเสถียร -->
   <script defer src="/assets/js/version-core.js?v=1.0.0-20250322"></script>
-  <script defer src="/assets/js/home.js?v=1.0.0-20250322"></script>
+
+  <!--
+    home.js ใช้ ES Module (import/export)
+    จึงต้องใส่ type="module" — browser จะ defer ให้อัตโนมัติ
+    ไม่ต้องใส่ defer ซ้ำ (type="module" implies defer)
+  -->
+  <script type="module" src="/assets/js/home.js?v=1.0.0-20250322"></script>
+
   <script defer src="/assets/js/copyNotification.js?v=1.0.0-20250322"></script>
   <script defer src="/assets/js/modern-navigation.js?v=1.0.0-20250322"></script>
   <script defer src="/assets/js/back-to-top.js?v=1.0.0-20250322"></script>
