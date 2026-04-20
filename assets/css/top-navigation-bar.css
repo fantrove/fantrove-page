@@ -11,7 +11,7 @@ nav {
   padding:0;
   background: rgba(253,254,255,0.85);
   box-shadow: 0 0 8px rgba(0,0,0,0.08);
-  z-index: var(--fv-z-fixed);
+  z-index: var(--fv-z-nav);
   touch-action: none;
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
