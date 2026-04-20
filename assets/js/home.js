@@ -1,26 +1,30 @@
-// home.js  v3.1.0
+// home.js  v3.3.0
 // =========================================================
-// Home page renderer — ใช้ ConDataService
+// Home page renderer — fast-path + carousel arrows
 //
-// v3.1 — แก้ไข:
-//  - View All card: สะอาดตากว่าเดิม, blend กับ item card ปกติ
-//  - Ordering: sort type/category ตาม index.json หลัง assemble
-//    (workaround สำหรับ Promise.all push-race ใน con-data-service)
+// v3.3:
+//  - View All card: สวยงาม แตกต่างชัดเจน แต่ยังกลมกลืน
+//  - Carousel: scroll arrows ซ้าย/ขวา overlay บน track
+//    · แสดง/ซ่อนอัตโนมัติตามตำแหน่ง scroll
+//    · คำนวณ scroll distance อัจฉริยะ (≈ 2.5 card widths)
+//    · smooth scroll + debounced visibility update
 // =========================================================
 
-// =========================================================
+// ─────────────────────────────────────────────────────────
 // CONFIG
-// =========================================================
+// ─────────────────────────────────────────────────────────
 const HOME_CONFIG = {
   MAX_ITEMS_PER_CATEGORY : 20,
   MAX_CATEGORIES_PER_TYPE: 4,
   SERVICE_PATH: '/assets/js/con-data-service/con-data-service.js',
   INDEX_PATH  : '/assets/db/con-data/index.json',
+  /** จำนวนการ์ดที่เลื่อนต่อครั้งกดลูกศร */
+  SCROLL_CARDS: 2.5,
 };
 
-// =========================================================
+// ─────────────────────────────────────────────────────────
 // VIEW ALL CONFIG
-// =========================================================
+// ─────────────────────────────────────────────────────────
 const VIEW_ALL_CONFIGS = {
   emoji: {
     url   : '/data/verse/discover/?type=emojis&page=1',
@@ -36,193 +40,349 @@ const VIEW_ALL_CONFIGS = {
   },
 };
 
-// =========================================================
+// ─────────────────────────────────────────────────────────
 // LANGUAGE
-// =========================================================
-const getLang = () => localStorage.getItem('selectedLang') || 'en';
+// ─────────────────────────────────────────────────────────
+const getLang = () => (typeof localStorage !== 'undefined' && localStorage.getItem('selectedLang')) || 'en';
 
 function pickLang(obj, lang) {
   if (!obj || typeof obj !== 'object') return String(obj || '');
   return obj[lang] || obj.en || obj.th || Object.values(obj)[0] || '';
 }
 
-function getViewAllCfg(typeId)   { return VIEW_ALL_CONFIGS[typeId] || VIEW_ALL_CONFIGS._default; }
-function getViewAllLabel(typeId) { const lang = getLang(); return getViewAllCfg(typeId).labels[lang] || getViewAllCfg(typeId).labels.en; }
-function getViewAllUrl(typeId)   { return getViewAllCfg(typeId).url; }
+const getViewAllCfg   = id => VIEW_ALL_CONFIGS[id] || VIEW_ALL_CONFIGS._default;
+const getViewAllLabel = id => { const l = getLang(); return getViewAllCfg(id).labels[l] || getViewAllCfg(id).labels.en; };
+const getViewAllUrl   = id => getViewAllCfg(id).url;
 
-// =========================================================
+// ─────────────────────────────────────────────────────────
 // CLIPBOARD
-// =========================================================
+// ─────────────────────────────────────────────────────────
 async function copyToClipboard(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch { /* fallback */ }
   try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    try {
-      const ta = Object.assign(document.createElement('textarea'), {
-        value: text, style: 'position:fixed;opacity:0',
-      });
-      document.body.appendChild(ta);
-      ta.focus(); ta.select();
-      const ok = document.execCommand('copy');
-      document.body.removeChild(ta);
-      return ok;
-    } catch { return false; }
-  }
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch { return false; }
 }
 
-// =========================================================
+// ─────────────────────────────────────────────────────────
 // CSS INJECTION
-// =========================================================
+// ─────────────────────────────────────────────────────────
 function injectStyles() {
   if (document.getElementById('home-extra-styles')) return;
-
-  const style = document.createElement('style');
-  style.id = 'home-extra-styles';
-  style.textContent = `
-    /* ── View All card ─────────────────────────────────────
-       กลืนกับ item card ปกติ ต่างกันแค่ icon + ชื่อ
-       ไม่มี gimmick, hover เบาๆ เหมือน card ทั่วไป
-    ──────────────────────────────────────────────────────── */
+  const s = document.createElement('style');
+  s.id = 'home-extra-styles';
+  s.textContent = `
+    /* ════════════════════════════════════════════════════
+       VIEW ALL CARD
+       ดูแตกต่าง แต่ยังกลมกลืน — gradient อ่อนๆ + shimmer
+    ════════════════════════════════════════════════════ */
     .item-card--view-all {
       text-decoration: none;
-      background: #fafcff;
+      background: linear-gradient(160deg, #f0fdf9 0%, #f5f0ff 100%);
+      border-color: #c8ede4;
       color: var(--brand-1);
-    }
-    .item-card--view-all:hover {
-      border-color: #00CEB0;
-      background: #F6FFFD;
+      position: relative;
+      overflow: hidden;
     }
 
-    /* วงกลมเส้นบาง + ลูกศร */
+    /* shimmer line บน */
+    .item-card--view-all::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        105deg,
+        transparent 35%,
+        rgba(255,255,255,0.55) 50%,
+        transparent 65%
+      );
+      background-size: 200% 100%;
+      background-position: -100% 0;
+      transition: background-position 0.55s ease;
+      pointer-events: none;
+    }
+    .item-card--view-all:hover::before {
+      background-position: 200% 0;
+    }
+
+    .item-card--view-all:hover {
+      border-color: var(--brand-1);
+      background: linear-gradient(160deg, #e8fbf5 0%, #ede8ff 100%);
+    }
+
+    /* วงกลม gradient รอบลูกศร */
     .view-all-icon {
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 38px;
-      height: 38px;
+      width: 42px;
+      height: 42px;
       border-radius: 50%;
-      border: 1.4px solid currentColor;
-      opacity: 0.5;
-      transition: opacity 0.15s, transform 0.15s;
-      margin-bottom: 0.08rem;
+      background: linear-gradient(135deg, #13b47f26, #9B6EFF22);
+      border: 1.5px solid #13b47f55;
+      color: var(--brand-1);
+      transition: transform 0.2s ease, background 0.2s;
+      margin-bottom: 0.12rem;
+      flex-shrink: 0;
     }
     .item-card--view-all:hover .view-all-icon {
-      opacity: 0.85;
-      transform: translateX(2px);
+      background: linear-gradient(135deg, #13b47f40, #9B6EFF35);
+      transform: translateX(3px);
     }
     .view-all-icon svg { display: block; }
 
-    /* ป้ายชื่อ */
     .view-all-label {
       white-space: normal  !important;
       text-align: center;
       line-height: 1.25;
+      font-size: 0.82em !important;
+      letter-spacing: 0.02em;
       color: var(--brand-1) !important;
-      background: #eef8f4   !important;
+      background: rgba(19,180,127,0.08) !important;
+      border: 1px solid rgba(19,180,127,0.15) !important;
     }
 
-    /* ── Loading dots ─────────────────────────────────────── */
-    .home-loading {
+    /* ════════════════════════════════════════════════════
+       CAROUSEL WRAPPER — รองรับ overlay arrows
+    ════════════════════════════════════════════════════ */
+    .carousel-wrapper {
+      position: relative;
+    }
+
+    /* ════════════════════════════════════════════════════
+       SCROLL ARROWS
+    ════════════════════════════════════════════════════ */
+    .carousel-arrow {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 10;
+
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 0.6rem;
-      padding: 3rem 1rem;
-    }
-    .home-loading-dot {
-      width: 7px; height: 7px;
+
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
-      background: #13b47f;
-      animation: hldot 1.1s infinite ease-in-out;
-    }
-    .home-loading-dot:nth-child(2) { animation-delay: .18s; }
-    .home-loading-dot:nth-child(3) { animation-delay: .36s; }
-    @keyframes hldot {
-      0%,80%,100% { transform: scale(.7); opacity: .4; }
-      40%          { transform: scale(1.1); opacity: 1;  }
+      border: none;
+      cursor: pointer;
+      user-select: none;
+
+      /* glass-morphism เบาๆ */
+      background: rgba(255,255,255,0.82);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      box-shadow: 0 2px 12px rgba(6,20,40,0.10), 0 0 0 1px rgba(14,176,213,0.10);
+      color: #3a4a5a;
+
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.15s, background 0.15s;
     }
 
-    /* ── Error state ──────────────────────────────────────── */
+    .carousel-arrow.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .carousel-arrow:hover {
+      background: rgba(255,255,255,0.97);
+      color: var(--brand-1);
+      transform: translateY(-50%) scale(1.08);
+      box-shadow: 0 4px 18px rgba(19,180,127,0.18), 0 0 0 1.5px rgba(19,180,127,0.25);
+    }
+
+    .carousel-arrow:active {
+      transform: translateY(-50%) scale(0.97);
+    }
+
+    .carousel-arrow svg { display: block; pointer-events: none; }
+
+    .carousel-arrow--left  { left: 4px;  }
+    .carousel-arrow--right { right: 4px; }
+
+    /* fade edge ของ track ให้รู้ว่ายังมีเนื้อหา */
+    .carousel-wrapper::after,
+    .carousel-wrapper::before {
+      content: '';
+      position: absolute;
+      top: 0; bottom: 0;
+      width: 40px;
+      pointer-events: none;
+      z-index: 5;
+      opacity: 0;
+      transition: opacity 0.25s;
+    }
+    .carousel-wrapper::before {
+      left: 0;
+      background: linear-gradient(to right, rgba(255,255,255,0.7), transparent);
+    }
+    .carousel-wrapper::after {
+      right: 0;
+      background: linear-gradient(to left, rgba(255,255,255,0.7), transparent);
+    }
+    .carousel-wrapper.can-left::before  { opacity: 1; }
+    .carousel-wrapper.can-right::after  { opacity: 1; }
+
+    /* Error state */
     .home-error {
-      padding: 2rem 1rem;
-      border-radius: 20px;
-      background: #fff5f5;
-      border: 1.5px solid #ffd0d0;
-      color: #c0392b;
-      font-size: .95rem;
-      text-align: center;
+      padding: 2rem 1rem; border-radius: 20px;
+      background: #fff5f5; border: 1.5px solid #ffd0d0;
+      color: #c0392b; font-size: .95rem; text-align: center;
     }
     .home-error small {
-      display: block;
-      margin-top: .4rem;
-      color: #ff8a8a;
-      font-family: monospace;
-      font-size: .82em;
+      display: block; margin-top: .4rem;
+      color: #ff8a8a; font-family: monospace; font-size: .82em;
+    }
+
+    @media (max-width: 600px) {
+      .carousel-arrow { width: 30px; height: 30px; }
     }
   `;
-  document.head.appendChild(style);
+  document.head.appendChild(s);
 }
 
-// =========================================================
+// ─────────────────────────────────────────────────────────
 // ORDERING FIX
-// =========================================================
-// root cause: con-data-service.js ใช้ typeObjs.push() ใน Promise.all
-// callback → type ที่ fetch เสร็จเร็วกว่า push ก่อน → เรียงแบบ race
-// วิธีแก้ใน home.js: ดึง index.json + typeId.json (ถูก cache แล้ว)
-// แล้ว sort assembled.type และ category ให้ตรงกับ index
-
-async function fetchOrder(url) {
+// ─────────────────────────────────────────────────────────
+async function fetchIdOrder(url) {
   try {
-    const resp = await fetch(url);
-    if (!resp.ok) return null;
-    const json = await resp.json();
-    // รองรับทั้ง { categories: [] } และ { category: [] }
-    return (json.categories || json.category || []).map(c => c.id);
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    const j = await r.json();
+    return (j.categories || j.category || []).map(c => c.id);
   } catch { return null; }
 }
 
 async function reorderAssembled(assembled) {
   if (!assembled?.type?.length) return assembled;
-
   const typeIds = assembled.type.map(t => t.id);
-
-  // ดึง type order และ category order ของแต่ละ type พร้อมกัน
   const [typeOrder, ...catOrders] = await Promise.all([
-    fetchOrder(HOME_CONFIG.INDEX_PATH),
-    ...typeIds.map(id => fetchOrder(`/assets/db/con-data/${id}.json`)),
+    fetchIdOrder(HOME_CONFIG.INDEX_PATH),
+    ...typeIds.map(id => fetchIdOrder(`/assets/db/con-data/${id}.json`)),
   ]);
-
-  // เรียง type
   if (typeOrder?.length) {
     assembled.type.sort((a, b) => {
-      const ai = typeOrder.indexOf(a.id);
-      const bi = typeOrder.indexOf(b.id);
+      const ai = typeOrder.indexOf(a.id), bi = typeOrder.indexOf(b.id);
       return (ai < 0 ? 9999 : ai) - (bi < 0 ? 9999 : bi);
     });
   }
-
-  // เรียง category ภายในแต่ละ type
-  assembled.type.forEach((typeObj) => {
+  assembled.type.forEach(typeObj => {
     const catOrder = catOrders[typeIds.indexOf(typeObj.id)];
     if (!catOrder?.length || !typeObj.category?.length) return;
     typeObj.category.sort((a, b) => {
-      const ai = catOrder.indexOf(a.id);
-      const bi = catOrder.indexOf(b.id);
+      const ai = catOrder.indexOf(a.id), bi = catOrder.indexOf(b.id);
       return (ai < 0 ? 9999 : ai) - (bi < 0 ? 9999 : bi);
     });
   });
-
   return assembled;
 }
 
-// =========================================================
+// ─────────────────────────────────────────────────────────
+// SMART CAROUSEL ARROWS
+// ─────────────────────────────────────────────────────────
+
+/**
+ * คำนวณ scroll distance อัจฉริยะ:
+ * ดูจาก card แรกใน track เป็น reference width + gap
+ * แล้วคูณด้วย SCROLL_CARDS
+ */
+function calcScrollDistance(track) {
+  const firstCard = track.querySelector('.item-card');
+  if (!firstCard) return track.clientWidth * 0.75;
+
+  const cardRect = firstCard.getBoundingClientRect();
+  const cardW    = cardRect.width;
+
+  // หา gap จาก computed style ของ track
+  const trackStyle = getComputedStyle(track);
+  const gap = parseFloat(trackStyle.gap || trackStyle.columnGap || '16');
+
+  return Math.round((cardW + gap) * HOME_CONFIG.SCROLL_CARDS);
+}
+
+/**
+ * อัปเดตการแสดง/ซ่อน arrow และ fade edge
+ * debounced via rAF
+ */
+function updateArrows(track, wrapper, btnLeft, btnRight) {
+  const sl    = track.scrollLeft;
+  const maxSL = track.scrollWidth - track.clientWidth;
+
+  const canLeft  = sl > 1;
+  const canRight = sl < maxSL - 1;
+
+  btnLeft.classList.toggle('visible', canLeft);
+  btnRight.classList.toggle('visible', canRight);
+  wrapper.classList.toggle('can-left',  canLeft);
+  wrapper.classList.toggle('can-right', canRight);
+}
+
+/** สร้าง arrow button พร้อม SVG */
+function buildArrowBtn(dir) {
+  const btn = document.createElement('button');
+  btn.type      = 'button';
+  btn.className = `carousel-arrow carousel-arrow--${dir}`;
+  btn.setAttribute('aria-label', dir === 'left' ? 'Scroll left' : 'Scroll right');
+
+  // SVG ลูกศร
+  const d = dir === 'left'
+    ? 'M11 7 7 11l4 4'   // ← chevron left
+    : 'M7 7l4 4-4 4';    // → chevron right
+
+  btn.innerHTML = `
+    <svg width="16" height="16" viewBox="0 0 18 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="${d}" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  `;
+  return btn;
+}
+
+/**
+ * ผูก arrow scroll logic กับ track+wrapper
+ * เรียกหลังจาก DOM ถูก append แล้ว
+ */
+function attachCarouselArrows(wrapper, track) {
+  const btnLeft  = buildArrowBtn('left');
+  const btnRight = buildArrowBtn('right');
+  wrapper.appendChild(btnLeft);
+  wrapper.appendChild(btnRight);
+
+  // click → smooth scroll
+  btnLeft.addEventListener('click', () => {
+    track.scrollBy({ left: -calcScrollDistance(track), behavior: 'smooth' });
+  });
+  btnRight.addEventListener('click', () => {
+    track.scrollBy({ left:  calcScrollDistance(track), behavior: 'smooth' });
+  });
+
+  // scroll → update visibility (debounced via rAF)
+  let rafId = null;
+  const onScroll = () => {
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(() => updateArrows(track, wrapper, btnLeft, btnRight));
+  };
+  track.addEventListener('scroll', onScroll, { passive: true });
+
+  // initial state (defer เล็กน้อยให้ layout settle ก่อน)
+  requestAnimationFrame(() => updateArrows(track, wrapper, btnLeft, btnRight));
+}
+
+// ─────────────────────────────────────────────────────────
 // DOM BUILDERS
-// =========================================================
+// ─────────────────────────────────────────────────────────
 
 function buildItemCard(item, typeId, lang) {
   const itemName = pickLang(item.name, lang);
-
   const card = document.createElement('div');
   card.className = 'item-card';
   card.title = itemName;
@@ -230,63 +390,48 @@ function buildItemCard(item, typeId, lang) {
   card.setAttribute('tabindex', '0');
   card.setAttribute('aria-label', `คัดลอก ${itemName}`);
 
-  const emojiEl = document.createElement('span');
-  emojiEl.className = 'emoji';
-  emojiEl.textContent = item.text || '';
-
-  const nameEl = document.createElement('span');
-  nameEl.className = 'name';
-  nameEl.textContent = itemName;
-
-  card.appendChild(emojiEl);
-  card.appendChild(nameEl);
+  const e = document.createElement('div'); e.className = 'emoji'; e.textContent = item.text || '';
+  const n = document.createElement('div'); n.className = 'name';  n.textContent = itemName;
+  card.appendChild(e);
+  card.appendChild(n);
 
   const handleCopy = async () => {
     if (await copyToClipboard(item.text || '') && typeof window.showCopyNotification === 'function') {
       window.showCopyNotification({ text: item.text, name: itemName, typeId, lang });
     }
   };
-
   card.addEventListener('click', handleCopy);
-  card.addEventListener('keydown', e => {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCopy(); }
+  card.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); handleCopy(); }
   });
-
   return card;
 }
 
-/**
- * View All card — เรียบง่าย กลืนกับ item card
- * structure: วงกลมลูกศร (บน) + ป้ายชื่อ (ล่าง)
- */
+/** View All card — สวยงาม แตกต่าง แต่ยังกลมกลืน */
 function buildViewAllCard(typeId) {
   const label = getViewAllLabel(typeId);
-  const url   = getViewAllUrl(typeId);
-
-  const card = document.createElement('a');
+  const card  = document.createElement('a');
   card.className = 'item-card item-card--view-all';
-  card.href  = url;
+  card.href  = getViewAllUrl(typeId);
   card.title = label;
   card.setAttribute('aria-label', label);
 
-  const iconEl = document.createElement('span');
-  iconEl.className = 'view-all-icon';
-  iconEl.setAttribute('aria-hidden', 'true');
-  iconEl.innerHTML = `
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M6 9h7M9.5 6 13 9l-3.5 3"
-            stroke="currentColor" stroke-width="1.5"
-            stroke-linecap="round" stroke-linejoin="round"/>
+  const icon = document.createElement('span');
+  icon.className = 'view-all-icon';
+  icon.setAttribute('aria-hidden', 'true');
+  icon.innerHTML = `
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M5 10h11M11.5 6 16 10l-4.5 4" stroke="currentColor"
+            stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
   `;
 
-  const labelEl = document.createElement('span');
-  labelEl.className = 'name view-all-label';
-  labelEl.textContent = label;
+  const lbl = document.createElement('div');
+  lbl.className = 'name view-all-label';
+  lbl.textContent = label;
 
-  card.appendChild(iconEl);
-  card.appendChild(labelEl);
-
+  card.appendChild(icon);
+  card.appendChild(lbl);
   return card;
 }
 
@@ -298,19 +443,26 @@ function buildCategorySection(category, typeId, lang) {
   heading.textContent = pickLang(category.name, lang);
   section.appendChild(heading);
 
+  // wrapper สำหรับ position:relative ของ arrows
+  const wrapper = document.createElement('div');
+  wrapper.className = 'carousel-wrapper content';
+
   const container = document.createElement('div');
   container.className = 'carousel-container';
-
   const track = document.createElement('div');
   track.className = 'carousel-track';
   container.appendChild(track);
-  section.appendChild(container);
+  wrapper.appendChild(container);
+  section.appendChild(wrapper);
 
-  (category.data || [])
-    .slice(0, HOME_CONFIG.MAX_ITEMS_PER_CATEGORY)
-    .forEach(item => track.appendChild(buildItemCard(item, typeId, lang)));
+  // items
+  const frag = document.createDocumentFragment();
+  (category.data || []).slice(0, HOME_CONFIG.MAX_ITEMS_PER_CATEGORY).forEach(item => frag.appendChild(buildItemCard(item, typeId, lang)));
+  frag.appendChild(buildViewAllCard(typeId));
+  track.appendChild(frag);
 
-  track.appendChild(buildViewAllCard(typeId));
+  // arrows ผูกหลัง track มี content แล้ว (ใน rAF เพื่อให้ layout width ถูก)
+  requestAnimationFrame(() => attachCarouselArrows(wrapper, track));
 
   return section;
 }
@@ -331,65 +483,70 @@ function buildTypeSection(typeObj, lang) {
   viewAllBtn.setAttribute('aria-label', getViewAllLabel(typeObj.id));
   viewAllBtn.innerHTML = `<span class="btn-content">${getViewAllLabel(typeObj.id)}</span>`;
   header.appendChild(viewAllBtn);
-
   wrapper.appendChild(header);
 
-  (typeObj.category || [])
-    .slice(0, HOME_CONFIG.MAX_CATEGORIES_PER_TYPE)
-    .forEach(cat => wrapper.appendChild(buildCategorySection(cat, typeObj.id, lang)));
+  const frag = document.createDocumentFragment();
+  (typeObj.category || []).slice(0, HOME_CONFIG.MAX_CATEGORIES_PER_TYPE).forEach(cat => frag.appendChild(buildCategorySection(cat, typeObj.id, lang)));
+  wrapper.appendChild(frag);
 
   return wrapper;
 }
 
-// =========================================================
-// STATE HELPERS
-// =========================================================
-const buildLoading = () => {
-  const el = document.createElement('div');
-  el.className = 'home-loading';
-  el.innerHTML = '<span class="home-loading-dot"></span>'.repeat(3);
-  return el;
-};
-
-const buildError = (msg, detail = '') => {
+function buildError(msg, detail = '') {
   const el = document.createElement('div');
   el.className = 'home-error';
   el.innerHTML = `<strong>${msg}</strong>${detail ? `<small>${detail}</small>` : ''}`;
   return el;
-};
-
-// =========================================================
-// INIT
-// =========================================================
-async function initializeHomepage() {
-  const app = document.getElementById('app');
-  if (!app) return;
-
-  injectStyles();
-  app.innerHTML = '';
-  app.appendChild(buildLoading());
-
-  const lang = getLang();
-
-  try {
-    const { default: ConDataService } = await import(HOME_CONFIG.SERVICE_PATH);
-
-    // assemble + reorder ตาม index
-    const assembled = await reorderAssembled(await ConDataService.getAssembled());
-
-    if (!assembled?.type?.length) throw new Error(lang === 'th' ? 'ไม่พบข้อมูล' : 'No data found');
-
-    app.innerHTML = '';
-    assembled.type.forEach(typeObj => app.appendChild(buildTypeSection(typeObj, lang)));
-
-  } catch (err) {
-    console.error('[home.js] init error:', err);
-    app.innerHTML = '';
-    app.appendChild(buildError(
-      lang === 'th' ? 'เกิดข้อผิดพลาด: ไม่สามารถโหลดข้อมูลได้' : 'Error: Unable to load data',
-      err.message
-    ));
-  }
 }
 
-initializeHomepage();
+// ─────────────────────────────────────────────────────────
+// RENDER
+// ─────────────────────────────────────────────────────────
+function renderToApp(assembled, lang) {
+  const app = document.getElementById('app');
+  if (!app) return;
+  injectStyles();
+  const frag = document.createDocumentFragment();
+  assembled.type.forEach(typeObj => frag.appendChild(buildTypeSection(typeObj, lang)));
+  app.innerHTML = '';
+  app.appendChild(frag);
+}
+
+function renderErrorToApp(msg, detail) {
+  const app = document.getElementById('app');
+  if (!app) return;
+  injectStyles();
+  app.innerHTML = '';
+  app.appendChild(buildError(msg, detail));
+}
+
+// ─────────────────────────────────────────────────────────
+// FAST DATA FETCH — เริ่มทันทีที่ script parse
+// ─────────────────────────────────────────────────────────
+const _dataPromise = (async () => {
+  const { default: ConDataService } = await import(HOME_CONFIG.SERVICE_PATH);
+  const raw = await ConDataService.getAssembled();
+  return reorderAssembled(raw);
+})();
+
+// ─────────────────────────────────────────────────────────
+// BOOT
+// ─────────────────────────────────────────────────────────
+const lang = getLang();
+
+_dataPromise.then(assembled => {
+  if (!assembled?.type?.length) throw new Error('No data');
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => renderToApp(assembled, lang), { once: true });
+  } else {
+    renderToApp(assembled, lang);
+  }
+}).catch(err => {
+  console.error('[home.js] data error:', err);
+  const msg = lang === 'th' ? 'เกิดข้อผิดพลาด: ไม่สามารถโหลดข้อมูลได้' : 'Error: Unable to load data';
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => renderErrorToApp(msg, err.message), { once: true });
+  } else {
+    renderErrorToApp(msg, err.message);
+  }
+});
