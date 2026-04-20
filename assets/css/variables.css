@@ -1,5 +1,8 @@
+/* variables.css — redirect ไป tokens.css
+   ค่าต่างๆ ย้ายไปอยู่ใน tokens.css แล้ว
+   ไฟล์นี้เก็บไว้เพื่อ backward compat */
 :root {
- --main-color: linear-gradient(90deg, #13b47f 20%, #0eb0d5 80%);
+ --main-color: var(--fv-gradient-teal);
  --main-color0: linear-gradient(180deg, rgba(122, 46, 226, 0.5), rgba(58, 141, 247, 0.4));
  --main-active-color: linear-gradient(45deg, #9700FF, #B100FF);
 }

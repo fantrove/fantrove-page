@@ -1,210 +1,121 @@
-/* About page — further modernized iteration
-   Tailored to info/about/index.html (uses only existing selectors/IDs/classes/elements)
-   - File: assets/css/about.generated.css
-   Design goals:
-   - Cleaner visual hierarchy and modern typographic scale (clamp)
-   - Subtle glass/soft-neumorphism + refined shadows
-   - Better focus states & keyboard UX
-   - Micro-interactions (hover, focus) that respect prefers-reduced-motion
-   - Consistent spacing, improved readability on all screens
-*/
+/* About page */
 
-/* ========== Design tokens ========== */
-:root{
-  --brand-1: #13b47f;
-  --brand-2: #0eb0d5;
-  --brand-accent: #11c3ec;
-  --text: #0f2629;
-  --muted: #6d8590;
-  --bg-start: #FBFEFC;
-  --bg-end: #FFFFFF;
-  --card-bg: rgba(255,255,255,0.94);
-  --card-border: rgba(14,176,213,0.06);
-  --glass-blur: 10px;
+/* ── Base ── */
+html { font-size:15px; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; box-sizing:border-box; }
+*, *::before, *::after { box-sizing:inherit; }
 
-  /* Typographic scale using clamp for responsiveness */
-  --fs-root: 15px;
-  --body-size: clamp(0.98rem, 1rem + 0.2vw, 1.07rem);
-  --lead-size: clamp(1.02rem, 1.05rem + 0.35vw, 1.12rem);
-  --h2-size: clamp(1.02rem, 1.06rem + 0.4vw, 1.16rem);
-  --h1-size: clamp(1.30rem, 1.4rem + 0.9vw, 1.8rem);
-
-  --radius-lg: 30px;
-  --radius-md: 30px;
-  --container-max: 1110px;
-
-  --shadow-soft: 0 10px 28px rgba(6,20,24,0.06);
-  --shadow-pop: 0 22px 50px rgba(19,180,127,0.06);
-
-  --trans-fast: 150ms;
-  --trans-med: 260ms;
-  --trans-ease: cubic-bezier(.2,.9,.2,1);
-
-  --focus-ring: rgba(19,180,127,0.16);
-
-  --focus-outline-size: 4px;
-
-  --content-gap: 1.05rem;
-  --section-padding: 2.3rem;
-  --section-padding-mobile: 2rem;
-
-  --font-stack: 'Noto Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-}
-
-/* ========== Base / Reset ========== */
-html{
-  font-size: var(--fs-root);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  box-sizing: border-box;
-}
-*, *::before, *::after { box-sizing: inherit; }
-body{
-  margin: 0;
-  font-family: var(--font-stack);
-  color: var(--text);
-  background: linear-gradient(180deg, var(--bg-start), var(--bg-end));
-  font-size: var(--body-size);
+body {
+  margin:0;
+  font-family: var(--fv-font-stack);
+  color: var(--fv-text-primary);
+  background: linear-gradient(180deg,#FBFEFC,#FFFFFF);
+  font-size: clamp(0.98rem,1rem + 0.2vw,1.07rem);
   line-height: 1.72;
-  -webkit-text-size-adjust: 100%;
-  -webkit-tap-highlight-color: transparent;
-  min-height: 100vh;
-  -webkit-font-feature-settings: "liga" 1, "kern" 1;
+  -webkit-text-size-adjust:100%;
+  -webkit-tap-highlight-color:transparent;
+  min-height:100vh;
 }
 
-/* Respect reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  * { transition-duration: 0ms !important; animation-duration: 0ms !important; animation-iteration-count: 1 !important; }
+@media (prefers-reduced-motion:reduce) {
+  * { transition-duration:0ms!important; animation-duration:0ms!important; animation-iteration-count:1!important; }
 }
 
-/* ========== Main container ========== */
-main{
-  max-width: var(--container-max);
+/* ── Main container ── */
+main {
+  max-width: var(--fv-container-max);
   margin: 1.8rem auto 3.2rem;
   margin-top: 5rem;
-  padding: 0 1.6rem;
+  padding: 0 var(--fv-page-pad-x);
   box-sizing: border-box;
 }
 
-/* Section: soft glass card with clear spacing */
-.section{
-  background: var(--card-bg);
-  border-radius: var(--radius-lg);
-  padding: var(--section-padding);
-  margin-bottom: 5rem;
-  border: 1px solid var(--card-border);
-  box-shadow: var(--shadow-soft);
-  transition: transform var(--trans-med) var(--trans-ease), box-shadow var(--trans-med) var(--trans-ease), border-color var(--trans-fast) var(--trans-ease);
+/* ── Section card ── */
+.section {
+  background: var(--fv-surface-card-alpha);
+  border-radius: var(--fv-radius-lg);
+  padding: 2.3rem;
+  margin-bottom: var(--fv-space-20);
+  border: 1px solid var(--fv-border-default);
+  box-shadow: var(--fv-shadow-md);
+  transition: transform var(--fv-transition-normal), box-shadow var(--fv-transition-normal), border-color var(--fv-transition-fast);
   color: #21383c;
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
+  -webkit-backface-visibility:hidden;
+  backface-visibility:hidden;
 }
 
-/* Decorative accent line on left of h2.title via pseudo-element (no extra class) */
-h2.title{
+/* ── h2.title ── */
+h2.title {
   margin: 0 0 0.9rem 0;
-  font-size: var(--h2-size);
-  font-weight: 800;
-  color: #152a2f;
+  font-size: clamp(1.02rem,1.06rem + 0.4vw,1.16rem);
+  font-weight: var(--fv-font-extrabold);
+  color: var(--fv-text-heading);
   letter-spacing: 0.01em;
   position: relative;
   padding-left: 16px;
   line-height: 1.15;
 }
-h2.title::before{
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 8px;
-  bottom: 8px;
-  width: 6px;
-  border-radius: 6px;
-  background: linear-gradient(180deg, var(--brand-1), var(--brand-2));
+h2.title::before {
+  content:"";
+  position:absolute; left:0; top:8px; bottom:8px; width:6px;
+  border-radius:6px;
+  background: var(--fv-gradient-accent-bar);
   box-shadow: 0 6px 18px rgba(19,180,127,0.08);
-  transform-origin: center;
-  transition: transform var(--trans-fast) var(--trans-ease), opacity var(--trans-fast);
+  transform-origin:center;
+  transition: transform var(--fv-transition-fast), opacity var(--fv-transition-fast);
 }
 
-/* Content paragraphs: readable measure */
-p.content{
-  margin: 0;
-  color: #2f5157;
-  font-size: var(--lead-size);
-  font-weight: 500;
-  line-height: 1.78;
+/* ── Page h1 (SEO — visible) ── */
+h1.page-title-about {
+  font-size: clamp(1.3rem, 1.4rem + 0.9vw, 1.8rem);
+  font-weight: var(--fv-font-extrabold);
+  color: var(--fv-brand-teal);
+  margin: 0 0 1.5rem 0;
   letter-spacing: 0.01em;
-  white-space: pre-wrap;
-  word-break: break-word;
+  line-height: 1.2;
 }
 
-/* Developer name rows: strong prominence */
-p.developer-name{
-  margin: 0.55rem 0 0 0;
-  color: #1f3a3e;
-  font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-}
-p.developer-name strong{
-  color: var(--brand-1);
-  font-weight: 900;
-  letter-spacing: 0.02em;
-  display: inline-block;
+/* ── Content ── */
+p.content {
+  margin:0;
+  color: var(--fv-text-body);
+  font-size: clamp(1.02rem,1.05rem + 0.35vw,1.12rem);
+  font-weight: var(--fv-font-medium);
+  line-height:1.78;
+  letter-spacing:0.01em;
+  white-space:pre-wrap;
+  word-break:break-word;
 }
 
-/* Links inside content */
-p.content a{
-  color: var(--brand-2);
-  text-decoration: none;
-  font-weight: 700;
+p.developer-name { margin:0.55rem 0 0; color:#1f3a3e; font-size:1rem; font-weight:var(--fv-font-semibold); letter-spacing:0.01em; }
+p.developer-name strong { color:var(--fv-brand-teal); font-weight:var(--fv-font-black); letter-spacing:0.02em; display:inline-block; }
+
+p.content a {
+  color: var(--fv-brand-cyan);
+  text-decoration:none;
+  font-weight: var(--fv-font-bold);
   border-bottom: 1px solid rgba(14,176,213,0.07);
-  transition: color var(--trans-fast) var(--trans-ease), transform var(--trans-fast) var(--trans-ease), border-color var(--trans-fast) var(--trans-ease);
+  transition: color var(--fv-transition-fast), transform var(--fv-transition-fast), border-color var(--fv-transition-fast);
   will-change: color, transform;
 }
-p.content a:hover{
-  color: var(--brand-1);
-  transform: translateY(-2px);
-  border-color: rgba(19,180,127,0.14);
+p.content a:hover { color:var(--fv-brand-teal); transform:translateY(-2px); border-color:rgba(19,180,127,0.14); }
+p.content a:focus { outline:none; box-shadow:var(--fv-shadow-focus); border-radius:10px; }
+
+strong { color:var(--fv-brand-teal); font-weight:var(--fv-font-extrabold); }
+
+/* ── Responsive ── */
+@media (max-width:900px) {
+  main { padding:0 1rem; margin-top:2rem; }
+  .section { padding:1.3rem; border-radius:var(--fv-radius-lg); margin-bottom:var(--fv-space-20); }
+}
+@media (max-width:600px) {
+  main { margin:2rem auto; padding:0 0.9rem; }
+  .section { padding:2rem; border-radius:var(--fv-radius-lg); margin-bottom:var(--fv-space-20); }
+  h2.title { font-size:1rem; padding-left:12px; }
+  p.content { font-size:0.96rem; line-height:1.6; }
+  p.developer-name { font-size:0.98rem; }
 }
 
-/* Focus states for keyboard users (links & interactive elements) */
-p.content a:focus{
-  outline: none;
-  box-shadow: 0 0 0 var(--focus-outline-size) var(--focus-ring);
-  border-radius: 10px;
-}
-
-/* Small visual tweak for emphasized text (strong) — keep accessible contrast */
-strong{
-  color: var(--brand-1);
-  font-weight: 800;
-}
-
-/* ========== Responsive adjustments ========== */
-@media (max-width: 900px){
-  main{ padding: 0 1rem; margin-top: 2rem; }
-  .section{ padding: 1.3rem; border-radius: var(--radius-lg); margin-bottom: 5rem; }
-  h2.title{ font-size: calc(var(--h2-size) - 0.03rem); padding-left: 14px; }
-  p.content{ font-size: calc(var(--lead-size) - 0.03rem); line-height: 1.66; }
-}
-
-/* Mobile */
-@media (max-width: 600px){
-  main{ margin: 2rem auto; padding: 0 0.9rem; }
-  .section{ padding: var(--section-padding-mobile); border-radius: var(--radius-md); margin-bottom: 5rem; }
-  h2.title{ font-size: 1rem; padding-left: 12px; }
-  p.content{ font-size: 0.96rem; line-height: 1.6; }
-  p.developer-name{ font-size: 0.98rem; }
-  #introContainer.intro-container{ height: 60px; filter: blur(6px); }
-}
-
-
-
-/* ========== Small utility for visually-hidden content (if scripts add it) ========== */
-.visually-hidden{
-  position: absolute !important;
-  width: 1px; height: 1px;
-  padding: 0; margin: -1px;
-  overflow: hidden; clip: rect(0 0 0 0);
-  white-space: nowrap; border: 0;
+.visually-hidden, .fv-sr-only {
+  position:absolute!important; width:1px; height:1px; padding:0; margin:-1px;
+  overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0;
 }

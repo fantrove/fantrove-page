@@ -1,153 +1,72 @@
-/* header.min.css — v3
- *
- * v3 changes:
- *  - ลบ #content-loading-overlay block ออกทั้งหมด
- *    → ย้ายไปอยู่ใน /assets/css/loading.css แล้ว
- *  - ไฟล์นี้มีแค่ header + nav + logo + navbar-toggle
- *  - touch-action, contain จาก v2 ยังคงอยู่
- */
-
-/* ---------- FONT ---------- */
 @font-face {
   font-family: 'FoglihtenNo07calt';
   src: url('/assets/fonts/FoglihtenNo07calt.ttf') format('truetype');
   font-display: swap;
 }
 
-/* ---------- VARIABLES ---------- */
-:root {
-  --text-primary:     #00CEB0;
-  --text-secondary:   #52638a;
-  --nav-btn-radius:   25px;
-}
+body { margin:0; padding:0; }
 
-/* ---------- GLOBAL RESET (minimal) ---------- */
-body { margin: 0; padding: 0; }
-
-/* ---------- HEADER ---------- */
 header {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  width: 100%;
-  background: #fff;
-  margin-bottom: 30px;
-  contain: layout style;
+  position:relative; display:flex; flex-direction:column; align-items:flex-start;
+  width:100%; background:var(--fv-surface-page); margin-bottom:30px; contain:layout style;
 }
 
 .logo {
-  font-family: 'FoglihtenNo07calt', monospace;
-  font-size: 26px;
-  padding: 20px 0 0;
-  color: var(--text-primary);
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
-  margin-left: 10px;
-  pointer-events: none;
+  font-family:'FoglihtenNo07calt',monospace;
+  font-size:26px; padding:20px 0 0;
+  color:var(--fv-brand-teal-light);
+  white-space:nowrap; display:flex; align-items:center;
+  margin-left:10px; pointer-events:none;
 }
-.logo span { pointer-events: auto; user-select: text; }
-.logo img  { height: var(--height); margin-left: 5px; }
+.logo span { pointer-events:auto; user-select:text; }
+.logo img  { height:var(--height); margin-left:5px; }
 
-/* ---------- NAV ---------- */
-nav {
-  width: 100%;
-  margin-top: 7px;
-  contain: layout style;
-}
-
+nav { width:100%; margin-top:7px; contain:layout style; }
 nav ul {
-  display: flex;
-  list-style: none;
-  margin: 0;
-  padding: 7px 7px 0;
-  overflow-x: auto;
-  white-space: nowrap;
-  scrollbar-width: none;
-  border-bottom: 0.8px solid rgba(19,180,127,0.3);
-  overscroll-behavior-x: contain;
-  touch-action: pan-x;
-  -webkit-overflow-scrolling: touch;
-  contain: layout style;
+  display:flex; list-style:none; margin:0;
+  padding:7px 7px 0;
+  overflow-x:auto; white-space:nowrap;
+  scrollbar-width:none;
+  border-bottom:0.8px solid rgba(19,180,127,0.3);
+  overscroll-behavior-x:contain; touch-action:pan-x;
+  -webkit-overflow-scrolling:touch; contain:layout style;
 }
-nav ul::-webkit-scrollbar { display: none; }
-nav ul li { flex: none; }
+nav ul::-webkit-scrollbar { display:none; }
+nav ul li { flex:none; }
 
 nav ul li button {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 11px 13px;
-  border-radius: var(--nav-btn-radius);
-  font-size: 0.9em;
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  white-space: nowrap;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
+  position:relative; display:flex; align-items:center; justify-content:center;
+  padding:11px 13px; border-radius:var(--fv-radius-pill);
+  font-size:0.9em; background:transparent; border:1px solid transparent;
+  color:var(--fv-text-secondary); cursor:pointer; white-space:nowrap;
+  user-select:none; -webkit-tap-highlight-color:transparent; touch-action:manipulation;
 }
-
-nav ul li button:active { background: rgba(0,0,0,0.04); }
-
+nav ul li button:active { background:rgba(0,0,0,0.04); }
 nav ul li button.active {
-  color: var(--text-primary);
-  background: rgba(248,255,253,1);
-  border-color: #00CEB082;
+  color:var(--fv-brand-teal-light);
+  background:var(--fv-surface-teal-hover);
+  border-color:rgba(0,206,176,0.51);
 }
-
 nav ul li button.active::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  width: 40%;
-  height: 3px;
-  background: currentColor;
-  border-radius: 10px 10px 0 0;
-  transform: translateX(-50%);
+  content:''; position:absolute; left:50%; bottom:0;
+  width:40%; height:3px; background:currentColor;
+  border-radius:10px 10px 0 0; transform:translateX(-50%);
 }
 
-/* ---------- NAVBAR TOGGLE ---------- */
 .navbar-toggle {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-  position: fixed;
-  left: 16px;
-  top: 25.3px;
-  padding: 5px;
-  z-index: 10008;
-  will-change: transform;
+  display:flex; flex-direction:column; gap:4px; cursor:pointer;
+  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+  position:fixed; left:16px; top:25.3px; padding:5px;
+  z-index:var(--fv-z-overlay); will-change:transform;
 }
 
-/* ---------- ERROR ---------- */
-.error-message {
-  position: fixed;
-  top: 50%;
-  right: 20px;
-  background: #ff4444;
-  color: #fff;
-  padding: 15px 20px;
-  border-radius: 5px;
-  z-index: 1000;
-}
+.error-message { position:fixed; top:50%; right:20px; background:#ff4444; color:#fff; padding:15px 20px; border-radius:5px; z-index:1000; }
 
-/* ---------- RESPONSIVE ---------- */
-@media (min-width: 600px)  { nav { margin-top: 5px; } }
-@media (min-width: 1024px) { nav { margin-top: 5px; } }
-@media (max-width: 320px)  {
-  .logo { font-size: 20px; padding: 15px 0 0; }
-  nav ul li button { padding: 8px 10px; font-size: 0.85em; }
-  .navbar-toggle { left: 12px; top: 20px; }
+@media (min-width:600px)  { nav { margin-top:5px; } }
+@media (min-width:1024px) { nav { margin-top:5px; } }
+@media (max-width:320px)  {
+  .logo { font-size:20px; padding:15px 0 0; }
+  nav ul li button { padding:8px 10px; font-size:0.85em; }
+  .navbar-toggle { left:12px; top:20px; }
 }
-@media print {
-  header, nav, .navbar-toggle { display: none !important; }
-}
+@media print { header, nav, .navbar-toggle { display:none!important; } }

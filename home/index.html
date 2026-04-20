@@ -1,167 +1,165 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  
-
   <meta charset="UTF-8" />
   <script src="assets/js/lang-proxy.js?v=1.0.0-20250322"></script>
   <script src="assets/js/lang-sync.js?v=1.0.0-20250322"></script>
-  
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>FANTROVE - Emoji & Symbols Hub</title>
 
-  <!-- Theme color for browsers -->
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fantrove — Emoji &amp; Symbols Hub | Copy with One Tap</title>
+  <meta name="description" content="Browse thousands of emojis and special characters. Search, copy, and use them instantly — free forever. Your all-in-one emoji and symbol collection.">
+
   <meta name="theme-color" content="#13b47f" />
-  <!-- Status bar color for iOS Safari -->
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 
-  <!-- Favicon -->
   <link rel="icon" type="image/x-icon" href="/assets/images/fantrove-hub360.ico" />
 
-  <!-- CSS preload and fallback -->
-  <link rel="preload" href="/assets/css/bg.css?v=1.0.0-20250322" as="style" />
-  <link rel="stylesheet" href="/assets/css/bg.css?v=1.0.0-20250322" as="style" />
-  
-  <noscript><link rel="stylesheet" href="/assets/css/bg.min.css" /></noscript>
+  <!-- 1. Tokens ก่อนสุดเสมอ -->
+  <link rel="preload" href="/assets/css/tokens.css" as="style">
+  <link rel="stylesheet" href="/assets/css/tokens.css">
 
+  <!-- 2. Page CSS -->
+  <link rel="preload" href="/assets/css/bg.css?v=1.0.0-20250322" as="style" />
+  <link rel="stylesheet" href="/assets/css/bg.css?v=1.0.0-20250322" />
   <link rel="preload" href="/assets/css/home.css?v=1.0.0-20250322" as="style">
   <link rel="stylesheet" href="/assets/css/home.css?v=1.0.0-20250322">
-  <noscript><link rel="stylesheet" href="/assets/css/home.css" /></noscript>
 
-  <!-- Google Adsense (async, ไม่บล็อกโหลดหน้า) -->
-  <script
-    async
-    src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8233915433564101"
-    crossorigin="anonymous"
-  ></script>
+  <noscript>
+    <link rel="stylesheet" href="/assets/css/bg.css?v=1.0.0-20250322" />
+    <link rel="stylesheet" href="/assets/css/home.css?v=1.0.0-20250322" />
+  </noscript>
+
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8233915433564101" crossorigin="anonymous"></script>
 </head>
+
 <body style="opacity:0">
+  <!-- ════════════════════════════════════════════════
+       APP ROOT WRAPPER
+       data-page ใช้สำหรับ CSS scoping ในอนาคต
+  ════════════════════════════════════════════════ -->
+  <div id="fv-app" class="fv-app" data-page="home">
 
-  <main>
-    <div class="blur-overlay-top" style="opacity: 0;"></div>
+    <!-- SEO h1 — อ่านได้ทันทีโดย Crawler, ซ่อนจากผู้ใช้ -->
+    <h1 class="fv-sr-only">Fantrove — Emoji and Symbol Collection | Free Copy Tool</h1>
 
-    <div class="hio">
-      <div class="img-d1">
-        <img src="/assets/images/j.png" alt="FanTrove Hub Banner" />
-      </div>
-    </div>
+    <!-- Navigation Layer (JS inject bottom nav ที่นี่) -->
+    <div id="fv-nav-layer"></div>
 
-    <!-- HERO -->
-    <section class="hero nob">
-      <h1 class="h1" data-translate="home-hero-title"></h1>
-      <p class="lead" data-translate="home-hero-desc">
-        <span></span> <strong></strong> <strong></strong>
-      </p>
-      <div class="hero-btns">
-        <a wave
-          href="/data/verse/discover/?type=emojis__&page=1"
-          class="button button-secondary oc"
-          data-translate="home-hero-btn-emoji"
-        >
-          <span class="btn-icon" data-translate-slot="1"><img class="im" src="https://twemoji.maxcdn.com/v/latest/svg/2764.svg" alt="heart" width="20" height="20"></span>
-          <span></span>
-        </a>
-        <a wave
-          href="/data/verse/discover/?type=symbols__&page=1"
-          class="button button-secondary oc"
-          data-translate="home-hero-btn-symbol"
-        >
-          <span class="btn-icon" data-translate-slot="1">✦</span>
-          <span></span>
-        </a>
-      </div>
-    </section>
+    <!-- Page Shell -->
+    <div class="fv-page-shell">
+      <main id="fv-main">
 
-    <div class="container">
-      <!-- DYNAMIC CONTENT AREA (APP) -->
-      <div id="app">
-        <!-- Home page content is dynamically rendered by JS -->
-      </div>
+        <div class="blur-overlay-top" style="opacity:0;"></div>
 
-      <!-- NOTICE -->
-<!--      <section class=" mn notice">
-        <span class="notice-icon">💡</span>
-        <span data-translate="home-tip">
-          <span></span> <a wave href="/setting"></a>
-        </span>
-      </section>
--->
-
-      <!-- FEATURES -->
-      <h2 class="h2" data-translate="home-features-title"></h2>
-
-      <section>
-        <span class="feature-icon">🔍</span>
-        <div>
-          <h3 class="h3" data-translate="home-feature1-title"></h3>
-          <div data-translate="home-feature1-desc"></div>
+        <div class="hio">
+          <div class="img-d1">
+            <img src="/assets/images/j.png" alt="FanTrove Hub — Emoji and Symbol Collection" />
+          </div>
         </div>
-      </section>
-      <section>
-        <span class="feature-icon">📋</span>
-        <div>
-          <h3 class="h3" data-translate="home-feature2-title"></h3>
-          <div data-translate="home-feature2-desc"></div>
-        </div>
-      </section>
-      <section class="m">
-        <span class="feature-icon">✨</span>
-        <div>
-          <h3 class="h3" data-translate="home-feature3-title"></h3>
-          <div data-translate="home-feature3-desc"></div>
-        </div>
-      </section>
 
-      <!-- FAQ -->
-      <h2 class="h2" data-translate="home-faq-title"></h2>
+        <!-- HERO: visual display (ไม่ใช่ heading — ใช้ div แทน h) -->
+        <section class="hero nob">
+          <!-- aria-hidden เพราะ h1 จริงอยู่ด้านบนแล้ว -->
+          <div class="fv-hero-display h1"
+               data-translate="home-hero-title"
+               aria-hidden="true"></div>
+          <p class="lead" data-translate="home-hero-desc">
+            <span></span> <strong></strong> <strong></strong>
+          </p>
+          <div class="hero-btns">
+            <a wave
+              href="/data/verse/discover/?type=emojis__&page=1"
+              class="button button-secondary oc"
+              data-translate="home-hero-btn-emoji">
+              <span class="btn-icon" data-translate-slot="1">
+                <img class="im" src="https://twemoji.maxcdn.com/v/latest/svg/2764.svg" alt="heart" width="20" height="20">
+              </span>
+              <span></span>
+            </a>
+            <a wave
+              href="/data/verse/discover/?type=symbols__&page=1"
+              class="button button-secondary oc"
+              data-translate="home-hero-btn-symbol">
+              <span class="btn-icon" data-translate-slot="1">✦</span>
+              <span></span>
+            </a>
+          </div>
+        </section>
 
-      <section class="o">
-        <input type="checkbox" id="faq1" class="faq-toggle" hidden />
-        <label for="faq1" class="faq-question" data-translate="home-faq-q1"></label>
-        <div class="faq-answer">
-          <div data-translate="home-faq-a1"></div>
-        </div>
-      </section>
-      <section class="o">
-        <input type="checkbox" id="faq2" class="faq-toggle" hidden />
-        <label for="faq2" class="faq-question" data-translate="home-faq-q2"></label>
-        <div class="faq-answer">
-          <div data-translate="home-faq-a2"></div>
-        </div>
-      </section>
-      <section class="o">
-        <input type="checkbox" id="faq3" class="faq-toggle" hidden />
-        <label for="faq3" class="faq-question" data-translate="home-faq-q3"></label>
-        <div class="faq-answer">
-          <div data-translate="home-faq-a3"></div>
-        </div>
-      </section>
-    </div>
-  </main>
+        <div class="container">
+          <!-- DYNAMIC CONTENT (home.js renders here) -->
+          <div id="app"></div>
 
-  <!-- 
-    โหลดไฟล์ระบบภาษา (language.js) ก่อนใครแบบ synchronous
-    เพราะต้องใช้แปลข้อความตั้งแต่เริ่มต้น
-  -->
+          <!-- FEATURES SECTION -->
+          <section aria-labelledby="features-heading">
+            <h2 id="features-heading" data-translate="home-features-title"></h2>
+          </section>
+
+          <section>
+            <span class="feature-icon" aria-hidden="true">🔍</span>
+            <div>
+              <h3 data-translate="home-feature1-title"></h3>
+              <div data-translate="home-feature1-desc"></div>
+            </div>
+          </section>
+          <section>
+            <span class="feature-icon" aria-hidden="true">📋</span>
+            <div>
+              <h3 data-translate="home-feature2-title"></h3>
+              <div data-translate="home-feature2-desc"></div>
+            </div>
+          </section>
+          <section class="m">
+            <span class="feature-icon" aria-hidden="true">✨</span>
+            <div>
+              <h3 data-translate="home-feature3-title"></h3>
+              <div data-translate="home-feature3-desc"></div>
+            </div>
+          </section>
+
+          <!-- FAQ SECTION -->
+          <section aria-labelledby="faq-heading">
+            <h2 id="faq-heading" data-translate="home-faq-title"></h2>
+          </section>
+
+          <section class="o">
+            <input type="checkbox" id="faq1" class="faq-toggle" hidden />
+            <label for="faq1" class="faq-question" data-translate="home-faq-q1"></label>
+            <div class="faq-answer" role="region" aria-labelledby="faq1">
+              <div data-translate="home-faq-a1"></div>
+            </div>
+          </section>
+          <section class="o">
+            <input type="checkbox" id="faq2" class="faq-toggle" hidden />
+            <label for="faq2" class="faq-question" data-translate="home-faq-q2"></label>
+            <div class="faq-answer" role="region" aria-labelledby="faq2">
+              <div data-translate="home-faq-a2"></div>
+            </div>
+          </section>
+          <section class="o">
+            <input type="checkbox" id="faq3" class="faq-toggle" hidden />
+            <label for="faq3" class="faq-question" data-translate="home-faq-q3"></label>
+            <div class="faq-answer" role="region" aria-labelledby="faq3">
+              <div data-translate="home-faq-a3"></div>
+            </div>
+          </section>
+        </div><!-- /.container -->
+
+      </main>
+
+      <!-- Footer inject by JS -->
+      <div id="fv-footer-mount"></div>
+    </div><!-- /.fv-page-shell -->
+
+  </div><!-- /#fv-app -->
+
   <script src="/assets/js/language.js?v=1.0.0-20250322"></script>
-
-  <!-- โหลดไฟล์ JavaScript อื่นๆ แบบ defer
-       เพื่อโหลดพร้อม DOM แต่รันหลัง DOM โหลดเสร็จ
-       ให้เว็บเร็วและเสถียร -->
   <script defer src="/assets/js/version-core.js?v=1.0.0-20250322"></script>
-
-  <!--
-    home.js ใช้ ES Module (import/export)
-    จึงต้องใส่ type="module" — browser จะ defer ให้อัตโนมัติ
-    ไม่ต้องใส่ defer ซ้ำ (type="module" implies defer)
-  -->
   <script type="module" src="/assets/js/home.js?v=1.0.0-20250322"></script>
-
   <script defer src="/assets/js/copyNotification.js?v=1.0.0-20250322"></script>
   <script defer src="/assets/js/modern-navigation.js?v=1.0.0-20250322"></script>
   <script defer src="/assets/js/back-to-top.js?v=1.0.0-20250322"></script>
   <script defer src="/assets/js/footer-template.js?v=1.0.0-20250322"></script>
-
   <script defer src="/assets/js/lang-links.js?v=1.0.0-20250322"></script>
   <script src="/fantrove-console-bridge.js?v=1.0.0-20250322"></script>
 </body>

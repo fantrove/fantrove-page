@@ -1,25 +1,14 @@
 @font-face {
   font-family: 'MunroSmall';
   src: url('/assets/fonts/MunroSmall.ttf') format('truetype');
-  /* เพิ่มการแสดงฟอนต์แบบ non-blocking เพื่อไม่ให้ Cumulative Layout Shift เกิดจากการโหลดฟอนต์ */
   font-display: swap;
 }
 
 /* ---------- RESET & BASE ---------- */
-:root{
-  /* เพิ่มตัวแปรธีม เพื่อให้ง่ายต่อการปรับและไม่กระทบกับดีไซน์เดิม */
-  --brand-1: #13b47f;
-  --brand-2: #B58CFF;
-  --bg-soft: #f6f7fb;
-  --card-border: rgba(14,176,213,0.06);
-  --muted: #8ea1b8;
-}
+*, *:before, *:after { box-sizing: inherit; }
 
-*, *:before, *:after {
-  box-sizing: inherit;
-}
 body {
-  font-family: 'Segoe UI', 'Noto Sans Thai', 'Noto Sans', sans-serif;
+  font-family: var(--fv-font-stack);
   margin: 0;
   color: #23272f;
   line-height: 1.85;
@@ -31,217 +20,169 @@ body {
 /* ---------- TYPOGRAPHY ---------- */
 h1, .h1 {
   font-size: 1.7rem;
-  font-weight: 800;
+  font-weight: var(--fv-font-extrabold);
   margin: 0 0 1.3rem 0;
   letter-spacing: 0.045em;
-
-  background: radial-gradient(circle at 30% 30%, rgba(181, 140, 255, 0.75) 0%, transparent 60%),
-              radial-gradient(circle at 70% 70%, rgba(24, 228, 161, 0.75) 0%, transparent 60%),
-              linear-gradient(135deg, #9B6EFF 0%, #11C291 100%);
+  background: var(--fv-gradient-brand);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  text-fill-color: transparent;
-
-  /* ปรับ contrast และลด brightness ให้ดูคมขึ้น */
   filter: brightness(0.95) contrast(1.35) saturate(1.15);
-
   backface-visibility: hidden;
 }
+
 h2, .h2 {
   font-size: 1.23rem;
-  font-weight: 700;
-  color: #B58CFF;
+  font-weight: var(--fv-font-bold);
+  color: var(--fv-brand-purple);
   margin: 0 0 1.08rem 0;
   letter-spacing: 0.018em;
 }
+
 h3, .h3 {
   font-size: 1.16rem;
-  font-weight: 600;
-  color: #00CEB0;
+  font-weight: var(--fv-font-semibold);
+  color: var(--fv-brand-teal-light);
   margin: 0 0 0.88rem 0;
   letter-spacing: 0.013em;
 }
+
 .lead {
-  font-size: 1.125em; /* ปรับให้ขนาดฟอนต์พอดี ไม่เล็กไม่ใหญ่ */
-  color: #2c474d; /* โทนสีเข้มขึ้นนิด เพิ่มความลึก */
-  margin-bottom: 2.5rem; /* ขยายพื้นที่เว้นบรรทัดให้ดูโปรฯ */
-  font-weight: 400;
+  font-size: 1.125em;
+  color: #2c474d;
+  margin-bottom: 2.5rem;
+  font-weight: var(--fv-font-normal);
   text-align: center;
-  letter-spacing: 0.3px; /* เพิ่มความหายใจให้ตัวหนังสือ */
-  line-height: 1.5; /* เพิ่มระยะบรรทัดให้อ่านง่าย */
-  font-family: 'Noto Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  letter-spacing: 0.3px;
+  line-height: 1.5;
+  font-family: var(--fv-font-stack);
 }
 
 strong, b {
-  color: var(--brand-1);
-  font-weight: 700;
-  font-family: 'Noto Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  letter-spacing: 0.5px; /* ให้ข้อความเน้นมีความทันสมัย */
-  transition: color 0.3s ease; /* เพิ่มความนุ่มนวลเวลาสีเปลี่ยน */
+  color: var(--fv-brand-teal);
+  font-weight: var(--fv-font-bold);
+  font-family: var(--fv-font-stack);
+  letter-spacing: 0.5px;
+  transition: color 0.3s ease;
 }
 
 .text-center { text-align: center; }
-.text-muted { color: var(--muted); }
-.text-small { font-size: 0.94em; }
+.text-muted  { color: var(--fv-text-faint); }
+.text-small  { font-size: 0.94em; }
 
 /* ---------- CONTAINER ---------- */
 .container {
-  max-width: 1110px;
+  max-width: var(--fv-container-max);
   margin: 0 auto;
-  padding: 0 1.6rem;
-
-  /* ป้องกันการเลย์เอาต์กระโดดเมื่อ scrollbar ปรากฏ/หาย */
+  padding: 0 var(--fv-page-pad-x);
   scrollbar-gutter: stable;
 }
 
-/* ---------- SECTION SPACING ---------- */
+/* ---------- SECTION ---------- */
 .section {
   margin: 2.7rem 0 !important;
-  /* สร้าง stacking context แยกส่วน เพื่อไม่ให้เงาหรือ blend ไปกระทบส่วนอื่น */
   isolation: isolate;
-  /* จำกัดผลกระทบของ element นี้ต่อโลกภายนอก (ลด reflow) */
   contain: layout paint;
 }
-@media (max-width: 600px) {
-  .section { margin: 1.7rem 0 !important; }
-}
+@media (max-width:600px) { .section { margin:1.7rem 0 !important; } }
 
-/* ---------- CARD ---------- */
+/* ---------- CARD / SECTION BOX ---------- */
 section {
-  background: #fff;
-  border-radius: 30px;
-  border: 1.5px solid rgba(14,176,213,0.06);
-  /*box-shadow: 0 10px 28px rgba(6,20,24,0.06);*/
+  background: var(--fv-surface-card);
+  border-radius: var(--fv-radius-lg);
+  border: 1.5px solid var(--fv-border-default);
   padding: 2rem 2.1rem;
-  margin-bottom: 5rem;
+  margin-bottom: var(--fv-space-20);
   display: flex;
   flex-direction: column;
   gap: 1.3rem;
   font-size: 1.08rem;
   position: relative;
-
-  transition: border-color 0.09s, background 0.09s;
-  /* ช่วยให้ browser เตรียม composite layer ให้ section ที่มีเงา/transition */
+  transition: border-color var(--fv-transition-fast), background var(--fv-transition-fast);
   will-change: background, border-color;
   isolation: isolate;
 }
-section.n {
-  padding: 0 !important;
-  background: none;
-  border-radius: 0;
-  border: none;
-  box-shadow: none;
-}
-section.nob {
-  box-shadow: none;
-}
-/* เบา ๆ เพิ่ม hint ให้ browser ว่า element นี้จะเปลี่ยนแปลง */
-section.m {
-  margin-bottom: 5rem;
-}
-section.mn {
-  margin-bottom: 3rem;
-  margin-top: 2rem;
-}
-@media (max-width: 700px) {
-  section {
-    padding: 1.2rem 0.8rem;
-    margin-bottom: 3rem;
-    gap: 0.8rem;
-  }
-  section.o {
-    margin-bottom: 3rem;
-  }
+section.n  { padding:0!important; background:none; border-radius:0; border:none; box-shadow:none; }
+section.nob{ box-shadow:none; }
+section.m  { margin-bottom: var(--fv-space-20); }
+section.mn { margin-bottom: 3rem; margin-top: 2rem; }
+@media (max-width:700px) {
+  section { padding:1.2rem 0.8rem; margin-bottom:3rem; gap:0.8rem; }
+  section.o { margin-bottom:3rem; }
 }
 
-/* ---------- BUTTONS (IMPROVED) ---------- */
+/* ---------- BUTTONS ---------- */
 .button, .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-family: inherit;
-  font-weight: 700;
+  font-weight: var(--fv-font-bold);
   border: none;
   outline: none;
   gap: 1em;
   font-size: 0.9em;
   padding: 1.5em 1.3em;
-  border-radius: 40px;
+  border-radius: var(--fv-radius-xl);
   background: linear-gradient(to right, #E6F7FF 0%, #f1fff8 100%);
-  color: var(--brand-1);
+  color: var(--fv-brand-teal);
   box-shadow: 0 6px 20px rgba(8,20,40,0.06);
   cursor: pointer;
   letter-spacing: 0.013em;
   user-select: none;
   border: 5px solid #d8efe7;
   position: relative;
-  transition:
-    background 0.17s,
-    color 0.12s,
-    border-color 0.13s,
-    box-shadow 0.18s,
-    filter 0.13s;
+  transition: background var(--fv-transition-normal), color var(--fv-transition-fast),
+              border-color var(--fv-transition-fast), box-shadow var(--fv-transition-normal),
+              filter var(--fv-transition-fast);
 }
 
 .button-primary, .btn-primary {
-  background: linear-gradient(to right, #11c3ec 0%, #13b47f 100%);
-  color: #fff;
-  border: 1.5px solid var(--brand-1);
-  font-weight: 800;
-  box-shadow: 0 4px 24px 0 rgba(19, 180, 127, 0.12), 0 1.5px 8px 0 rgba(13,180,127,0.02);
+  background: var(--fv-gradient-btn);
+  color: var(--fv-text-inverse);
+  border: 1.5px solid var(--fv-brand-teal);
+  font-weight: var(--fv-font-extrabold);
+  box-shadow: var(--fv-shadow-teal), 0 1.5px 8px rgba(13,180,127,0.02);
 }
 .button-primary:active, .btn-primary:active {
-  background: linear-gradient(to right, #13b47f 0%, #11c3ec 100%);
+  background: linear-gradient(to right, var(--fv-brand-teal) 0%, var(--fv-brand-cyan-accent) 100%);
 }
-.button-secondary,
-.btn-secondary {
-  font-weight: 700;
-  
+
+.button-secondary, .btn-secondary {
+  font-weight: var(--fv-font-bold);
   background-color: #E9ECFF;
   color: #5FC7C1;
   text-decoration: none;
   border: 1px solid #7FD8D2;
-  
-  /* จัดกึ่งกลางแนวเดียวกันทั้งหมด (text + span + emoji) */
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.35em;
-  
-  /* ลด layout shift + render cost */
   line-height: 1;
   vertical-align: middle;
-  
-  /* GPU-friendly (ไม่สร้าง layer ใหม่ถ้าไม่จำเป็น) */
   transform: translateZ(0);
 }
-.btn-icon {
-  display: inline-block;
-  line-height: 0;
-  vertical-align: middle;
-  margin-top: -2px;
-}
-.im {
-  height: 13px !important;
-  width: auto;
-  display: block;
-}
+
+.btn-icon { display:inline-block; line-height:0; vertical-align:middle; margin-top:-2px; }
+.im { height:13px!important; width:auto; display:block; }
 
 .hio {
   height: 100%;
   width: 100%;
-  background: radial-gradient(circle at 30% 30%, rgba(181, 140, 255, 0.35) 0%, transparent 60%), radial-gradient(circle at 70% 70%, rgba(24, 228, 161, 0.35) 0%, transparent 60%), linear-gradient(135deg, #B58CFF 0%, #18E4A1 100%);
+  background: radial-gradient(circle at 30% 30%,rgba(181,140,255,0.35) 0%,transparent 60%),
+              radial-gradient(circle at 70% 70%,rgba(24,228,161,0.35) 0%,transparent 60%),
+              linear-gradient(135deg, var(--fv-brand-purple) 0%, var(--fv-brand-green-bright) 100%);
   background-blend-mode: screen;
-  padding-top: 0rem;
+  padding-top: 0;
   contain: paint;
 }
+
 /* ---------- HERO ---------- */
 .hero {
   background: none;
-  border-radius: 0px !important;
-  padding: 2.2rem 0rem 0rem 0rem;
-  margin-bottom: 5rem;
+  border-radius: 0 !important;
+  padding: 2.2rem 0 0 0;
+  margin-bottom: var(--fv-space-20);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -250,31 +191,24 @@ section.mn {
   border: none;
   position: relative;
   z-index: 1;
-
-  /* Hint สำหรับเบราว์เซอร์ว่า element นี้จะมี compositing */
   will-change: transform;
 }
 
 .herok::before {
   content: "";
   position: absolute;
-  top: -70px; /* ดันขึ้นไปด้านบน */
+  top: -70px;
   left: 0;
   width: 200%;
-  height: 100px; /* ความสูงของ effect */
-  background: linear-gradient(
-    to top,
-    rgba(247, 249, 251, 1) 0%,
-    rgba(247, 249, 251, 1) 50%,
-    rgba(247, 249, 251, 0.3) 80%,
-    rgba(247, 249, 251, 0) 100%
-  );
+  height: 100px;
+  background: linear-gradient(to top,rgba(247,249,251,1) 0%,rgba(247,249,251,1) 50%,rgba(247,249,251,0.3) 80%,rgba(247,249,251,0) 100%);
   z-index: -1;
   pointer-events: none;
   filter: blur(10px);
   left: 50%;
   transform: translateX(-50%);
 }
+
 .hero-btns {
   display: flex;
   justify-content: center;
@@ -283,45 +217,29 @@ section.mn {
   width: 100%;
   margin-top: 0.5rem;
 }
-.hero-btns button {
-  transition: transform 100ms;
-  will-change: transform;
-}
-.hero-btns button:active {
-  transform: scale(1);
-}
-.hero h1 {
+.hero-btns button { transition: transform 100ms; will-change: transform; }
+.hero-btns button:active { transform: scale(1); }
+
+.hero h1,
+.hero .fv-hero-display {
   text-align: center;
   max-width: 720px;
   width: 90%;
   margin: 0 auto;
-  
-  font-family: 'Noto Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  font-weight: 700;
-  font-feature-settings: "liga", "clig", "kern";
-  font-variation-settings: "wght" 700;
-  
+  font-family: var(--fv-font-stack);
+  font-weight: var(--fv-font-bold);
   line-height: 2.5;
   letter-spacing: 0.7px;
-  
-  /* gradient เข้มขึ้น */
-  background: radial-gradient(circle at 30% 30%, rgba(181, 140, 255, 0.75) 0%, transparent 60%),
-    radial-gradient(circle at 70% 70%, rgba(24, 228, 161, 0.75) 0%, transparent 60%),
-    linear-gradient(135deg, #9B6EFF 0%, #11C291 100%);
+  background: var(--fv-gradient-brand);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  text-fill-color: transparent;
-  
-  /* ทำให้สีคมและเข้มขึ้น */
   filter: brightness(0.95) contrast(1.35) saturate(1.2);
-  
-  /* เพิ่ม fallback สี ถ้า gradient จาง */
   color: #6540C0;
-  
   user-select: none;
   backface-visibility: hidden;
 }
+
 .hero-content {
   flex: 2;
   min-width: 0;
@@ -330,109 +248,70 @@ section.mn {
   gap: 1.8rem;
   z-index: 2;
 }
-.hero-visual {
-  flex: 1;
-  display: flex;
-  justify-content: flex-end;
-  align-items: flex-end;
-  z-index: 2;
-}
+.hero-visual { flex:1; display:flex; justify-content:flex-end; align-items:flex-end; z-index:2; }
+
 .hero-img {
   width: 90px;
   max-width: 120px;
-  border-radius: 25px;
+  border-radius: var(--fv-radius-md);
   background: #eaf7ff;
   object-fit: contain;
   aspect-ratio: 1/1;
   border: 3px solid #e6ecf7;
-  transition: border-color 0.1s;
-
-  /* เร่งให้เบราว์เซอร์ใช้ GPU layer สำหรับภาพที่มี transition */
+  transition: border-color var(--fv-transition-fast);
   transform: translateZ(0);
   backface-visibility: hidden;
   will-change: border-color, transform;
   contain: paint;
-  
-}
-@media (max-width: 900px) {
-  .hero {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2rem;
-    padding: 1.2rem 0.6rem 1.1rem 0.6rem;
-    border-radius: 25px;
-    min-height: initial;
-  }
-  .hero-img {
-    width: 65px;
-    max-width: 80px;
-    border-radius: 25px;
-    margin-top: 3px;
-  }
 }
 
-/* ---------- FEATURE ---------- */
+@media (max-width:900px) {
+  .hero { flex-direction:column; align-items:flex-start; gap:2rem; padding:1.2rem 0.6rem 1.1rem; border-radius:var(--fv-radius-md); min-height:initial; }
+  .hero-img { width:65px; max-width:80px; border-radius:var(--fv-radius-md); margin-top:3px; }
+}
+
+/* ---------- FEATURE ICON ---------- */
 .feature-icon {
   display: inline-grid;
   place-items: center;
   font-size: 1.8rem;
-  color: var(--brand-2);
+  color: var(--fv-brand-cyan);
   margin-bottom: 0.35rem;
-  background: linear-gradient(180deg, #EAF7FF, #FFFFFF);
+  background: linear-gradient(180deg,#EAF7FF,#FFFFFF);
   border-radius: 50%;
   padding: 0.45em;
   margin-top: 0.12em;
-  box-shadow: 0 6px 18px rgba(14, 176, 213, 0.06);
+  box-shadow: 0 6px 18px rgba(14,176,213,0.06);
   flex-shrink: 0;
-  font-weight: 700;
-
+  font-weight: var(--fv-font-bold);
   will-change: transform;
 }
 
 /* ---------- NOTICE ---------- */
-.notice  {
+.notice {
   background: #FFFEF8;
   color: #CA8400;
   border-left: 2px solid #FFD880;
-  border-radius: 35px !important;
+  border-radius: var(--fv-radius-xl) !important;
   padding: 1.6rem 1.8rem;
-  margin-bottom: 5rem;
+  margin-bottom: var(--fv-space-20);
   display: flex;
   align-items: center;
   gap: 1.1rem;
   font-size: 1.05em;
   position: relative;
-  font-weight: 600;
+  font-weight: var(--fv-font-semibold);
   margin-left: auto;
   margin-right: auto;
-  
-  contain: paint; /* ลดการ repaint ของส่วนอื่นเมื่อ notice เปลี่ยน */
+  contain: paint;
 }
-.notice-icon {
-  font-size: 1.26em;
-  margin-right: 0.46em;
-  background: #fffbe9;
-  border-radius: 99px;
-  padding: 0.13em 0.36em;
-  border: 1.1px solid #FFD15E;
-}
-
-.notice a {
-  color: #CA8400;
-  font-size: 1.05em;
-  font-weight: 600;
-  -webkit-tap-highlight-color: transparent;
-  transition: color 100ms;
-}
-
-.notice a:hover {
-  --c-c: #EBB95B;
-  color: var(--c-c);
-}
+.notice-icon { font-size:1.26em; margin-right:0.46em; background:#fffbe9; border-radius:99px; padding:0.13em 0.36em; border:1.1px solid #FFD15E; }
+.notice a { color:#CA8400; font-size:1.05em; font-weight:var(--fv-font-semibold); -webkit-tap-highlight-color:transparent; transition:color 100ms; }
+.notice a:hover { color:#EBB95B; }
 
 /* ---------- FAQ ---------- */
 .faq-question {
-  font-weight: 700;
+  font-weight: var(--fv-font-bold);
   color: #1b3f3f;
   cursor: pointer;
   position: relative;
@@ -448,352 +327,149 @@ section.mn {
   letter-spacing: 0.012em;
   z-index: 2;
 }
-
-.faq-question:hover {
-  color: var(--brand-1);
-}
-
+.faq-question:hover { color: var(--fv-brand-teal); }
 .faq-question::after {
   content: "▼";
   font-size: 0.92em;
-  color: var(--brand-1);
+  color: var(--fv-brand-teal);
   position: absolute;
   right: 0.8em;
   top: 50%;
   transform: translateY(-50%) rotate(0deg);
-  transition: transform 0.25s cubic-bezier(.4, 0, .2, 1);
+  transition: transform 0.25s cubic-bezier(.4,0,.2,1);
 }
-
-.faq-toggle:checked+.faq-question::after {
-  transform: translateY(-50%) rotate(-180deg);
-}
+.faq-toggle:checked+.faq-question::after { transform: translateY(-50%) rotate(-180deg); }
 
 .faq-answer {
   max-height: 0;
   overflow: hidden;
   color: #425060;
-  background: #f6f7fb;
+  background: var(--fv-surface-soft);
   font-size: 1em;
   padding: 0 1.1em;
   transition: max-height 0.4s ease, padding 0.3s ease;
   line-height: 1.82;
-  font-weight: 500;
+  font-weight: var(--fv-font-medium);
 }
+.faq-toggle:checked+.faq-question+.faq-answer { max-height:170px; padding:0.9em 1.1em 1.3em; }
 
-.faq-toggle:checked+.faq-question+.faq-answer {
-  max-height: 170px;
-  padding: 0.9em 1.1em 1.3em 1.1em;
-}
+section.o { padding-bottom:0.2rem!important; transition:padding 0.3s ease; }
+section.o:hover .faq-question { color: var(--fv-brand-teal); }
+section.o:has(.faq-toggle:checked) { padding-bottom:2.1rem!important; }
 
-section.o {
-  padding-bottom: 0.2rem !important;
-  transition: padding 0.3s ease;
-}
-
-section.o:hover .faq-question {
-  color: var(--brand-1);
-}
-
-/* ถ้า input checkbox checked อยู่ใน section.o → ให้ section.o เปลี่ยนได้! */
-section.o:has(.faq-toggle:checked) {
-  padding-bottom: 2.1rem !important;
-}
-
-/* ---------- APP HEADER IN BOX ---------- */
-.text-h {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0rem;
-  gap: 1.3rem;
-}
-.text-h h1 {
-  font-size: 1.12em;
-  font-weight: 800;
-  margin: 0;
-  color: #222b45;
-  line-height: 2;
-}
-/* Clean, no-click-animation styles for .text-h button */
+/* ---------- TEXT-H ---------- */
+.text-h { display:flex; align-items:center; justify-content:space-between; margin-bottom:0; gap:1.3rem; }
+.text-h h1 { font-size:1.12em; font-weight:var(--fv-font-extrabold); margin:0; color:#222b45; line-height:2; }
 .text-h button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.6rem;
-  font-family: inherit;
-  font-weight: 700;
-  font-size: 0.95em;
-  padding: 0.6em 1.15em;
-  border-radius: 25px;
-  background: #FFFFFF;
-  color: #4C4C4C;
-  border: 0px solid transparent;
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
-  transition: none;       /* ไม่มี transition/animation */
-  will-change: auto;
+  display: inline-flex; align-items:center; justify-content:center; gap:0.6rem;
+  font-family: inherit; font-weight:var(--fv-font-bold); font-size:0.95em;
+  padding: 0.6em 1.15em; border-radius: var(--fv-radius-pill);
+  background: var(--fv-surface-page); color:#4C4C4C; border:0 solid transparent;
+  cursor:pointer; position:relative; overflow:hidden; user-select:none;
+  -webkit-tap-highlight-color:transparent; transition:none; will-change:auto;
 }
+.text-h button:active { transform:scale(0.97); }
+.text-h button .btn-content { position:relative; z-index:2; display:inline-flex; align-items:center; justify-content:center; pointer-events:none; letter-spacing:0.05em; }
+.text-h button .full-overlay, .text-h button .arrow-trail-group, .text-h button .arrow-trail, .text-h button .btn-arrow { display:none!important; visibility:hidden!important; }
 
-.text-h button:active {
-  transform: scale(0.97);
-}
+/* ---------- CATEGORY ---------- */
+.category-section { background:var(--fv-surface-page); margin-bottom:2rem; contain:layout paint; }
+.category-section h2 { font-size:1.03em; margin:1.12rem 0 0.8rem; color:#575e6d; font-weight:var(--fv-font-bold); padding-left:15px; padding-top:10px; }
 
-/*
-.text-h button:hover {
-  outline: 2px solid rgba(19, 180, 127, 0.12);
-  outline-offset: 0px;
-}
-*/
-
-/* Inner content container (text) — inert to pointer events */
-.text-h button .btn-content {
-  position: relative;
-  z-index: 2;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-  letter-spacing: 0.05em;
-}
-
-/* If you have decorative children they should be static / hidden by default */
-.text-h button .full-overlay,
-.text-h button .arrow-trail-group,
-.text-h button .arrow-trail,
-.text-h button .btn-arrow {
-  display: none !important;
-  visibility: hidden !important;
-}
-
-/* ---------- APP CATEGORY SECTION ---------- */
-.category-section {
-  background: #FFFFFF;
-  /*border-radius: 30px;*/
-  margin-bottom: 2rem;
-  /*border: 1.2px solid var(--card-border);*/
-  /*box-shadow: 0 10px 28px rgba(6,20,24,0.06);*/
-  contain: layout paint;
-}
-
-.category-section h2 {
-  font-size: 1.03em;
-  margin: 1.12rem 0 0.8rem 0;
-  color: #575e6d;
-  font-weight: 700;
-  padding-left: 15px;
-  padding-top: 10px;
-}
-
-/* ---------- APP SCROLLABLE CONTENT / ITEM CARDS (IMPROVED) ---------- */
-/* ปรับปรุงพฤติกรรมการเลื่อนสำหรับ carousel */
+/* ---------- CAROUSEL / ITEM CARDS ---------- */
 .content {
-  display: flex;
-  align-items: flex-start;
-  gap: 1rem;
-  margin-bottom: 2px;
-  overflow-x: auto;
-  scrollbar-width: thin;
-  scrollbar-color: #c8d0e7 #f6f7fb;
-  white-space: nowrap;
-  padding-bottom: 0.22rem;
-  width: 100%;
-  min-width: 0;
-  flex-wrap: nowrap;
-  will-change: transform;
-  /* ป้องกัน scroll chaining (เมื่อเลื่อนบนมือถือ จะไม่สั่งให้ body เลื่อนต่อ) */
-  overscroll-behavior-x: contain;
-  -webkit-overflow-scrolling: touch; /* เพิ่มความนุ่มนวลบน iOS */
+  display: flex; align-items:flex-start; gap:1rem; margin-bottom:2px;
+  overflow-x:auto; scrollbar-width:thin; scrollbar-color:#c8d0e7 var(--fv-surface-soft);
+  white-space:nowrap; padding-bottom:0.22rem; width:100%; min-width:0; flex-wrap:nowrap;
+  will-change:transform; overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch;
 }
-.carousel-container {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  min-height: 102px;
-  overflow-x: auto;
-  overflow-y: visible;
-  will-change: transform;
-  overscroll-behavior-x: contain;
-  -webkit-overflow-scrolling: touch;
-}
+.carousel-container { display:flex; align-items:center; width:100%; min-height:102px; overflow-x:auto; overflow-y:visible; will-change:transform; overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch; }
 .carousel-track {
-  display: flex;
-  flex-direction: row;
-  gap: 1.5rem;
-  overflow-x: auto;
-  overflow-y: visible;
-  scroll-behavior: auto;
-  padding-bottom: 0rem;
-  width: 100%;
-  white-space: nowrap;
-  min-width: 0;
-  flex-wrap: nowrap;
-  padding: 10px;
-  will-change: transform;
-  contain: layout paint;
+  display:flex; flex-direction:row; gap:1.5rem; overflow-x:auto; overflow-y:visible;
+  scroll-behavior:auto; padding:10px; width:100%; white-space:nowrap; min-width:0; flex-wrap:nowrap;
+  will-change:transform; contain:layout paint;
 }
+
 .item-card {
-  background: #fff;
-  border-radius: 30px;
+  background: var(--fv-surface-card);
+  border-radius: var(--fv-radius-lg);
   width: 140px;
-  padding: 1.25rem 0.72rem 1.05rem 0.72rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  transition: border-color 0.11s, background 0.11s;
-  cursor: pointer;
+  padding: 1.25rem 0.72rem 1.05rem;
+  display: flex; flex-direction:column; align-items:center;
+  transition: border-color var(--fv-transition-fast), background var(--fv-transition-fast);
+  cursor:pointer;
   border: 1.4px solid #e6ecf7;
-  position: relative;
-  text-align: center;
-  font-size: 1.05em;
-  gap: 0.38rem;
-  outline: none;
-  flex-shrink: 0;
-  box-sizing: border-box;
-  word-break: break-word;
-  overflow: visible;
-
-  /* hint ให้ browser เตรียม composite layer แยกสำหรับการ hover */
-  will-change: transform, border-color, background;
-  backface-visibility: hidden;
-  transform: translateZ(0);
-
-  /* จำกัดการ repaint เฉพาะการ์ดนี้ */
-  contain: paint;
-  
+  position:relative; text-align:center; font-size:1.05em; gap:0.38rem;
+  outline:none; flex-shrink:0; box-sizing:border-box; word-break:break-word; overflow:visible;
+  will-change:transform, border-color, background;
+  backface-visibility:hidden; transform:translateZ(0); contain:paint;
 }
-.item-card .emoji {
-  font-size: 1.55rem;
-  margin-bottom: 0.16rem;
-  transition: filter 0.10s;
-  z-index: 2;
-  user-select: none;
-}
+.item-card .emoji { font-size:1.55rem; margin-bottom:0.16rem; transition:filter 0.10s; z-index:2; user-select:none; }
 .item-card .name {
-  font-size: 0.9em;
-  color: var(--brand-2);
-  font-weight: 800;
-  letter-spacing: 0.013em;
-  opacity: 0.99;
-  max-width: 100%;
-  /*line-height: 2.1;*/
-  margin-bottom: 0.09em;
-  z-index: 2;
-  white-space: nowrap;           /* ไม่ขึ้นบรรทัดใหม่ */
-  overflow: hidden;              /* ซ่อนส่วนที่เกิน */
-  text-overflow: ellipsis;       /* แสดง ... เมื่อเกิน */
-  display: block;                /* แน่ใจว่า element เป็น block สำหรับตัดบรรทัด */
-  background: #FAF8FF;
-  padding: 0.3em 0.5em;
-  border-radius: 25px;
+  font-size:0.9em; color:var(--fv-brand-purple); font-weight:var(--fv-font-extrabold);
+  letter-spacing:0.013em; max-width:100%; margin-bottom:0.09em; z-index:2;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block;
+  background:#FAF8FF; padding:0.3em 0.5em; border-radius:var(--fv-radius-pill);
 }
-.item-card .desc,
-.item-card .detail,
-.item-card .content {
-  font-size: 1em;
-  color: #295c73;
-  margin-top: 0.24em;
-  margin-bottom: 0.1em;
-  text-align: left;
-  width: 100%;
-  z-index: 2;
-  font-weight: 500;
+.item-card .desc, .item-card .detail, .item-card .content {
+  font-size:1em; color:#295c73; margin-top:0.24em; margin-bottom:0.1em;
+  text-align:left; width:100%; z-index:2; font-weight:var(--fv-font-medium);
 }
-.item-card:hover {
-  border-color: #00CEB0;
-  background: #F6FFFD;
-  z-index: 2;
+.item-card:hover { border-color:var(--fv-brand-teal-light); background:var(--fv-surface-teal-hover); z-index:2; }
+
+@media (max-width:900px) {
+  .item-card { width:108px; min-width:125px; max-width:140px; padding:1.2rem 1rem!important; border-radius:var(--fv-radius-xl); }
 }
 
-@media (max-width: 900px) {
-  .item-card {
-    width: 108px;
-    min-width: 125px;
-    max-width: 140px;
-    padding: 1.2rem 1rem 1.2rem 1rem !important;
-    border-radius: 40px;
-  }
-}
-
-/* ---------- MOBILE FONT ADJUSTMENTS ---------- */
-@media (max-width: 600px) {
-  .section { margin: 1.1rem 0; }
-  .h1, h1 { font-size: 1.1rem; }
-  .h2, h2 { font-size: 1rem; }
-  .h3, h3 { font-size: 0.95rem; }
-  .lead { font-size: 0.9em; }
-  section { font-size: 0.9rem; padding: 1.05rem 1.15rem; border-radius: 40px; }
-  .button, .btn { font-size: 0.9em; padding: 1.5em 1.3em; border-radius: 40px; }
-  .button-secondary { border-width: 1.5px; }
-  .feature-item { font-size: 0.93em; padding: 0.92rem 0.55rem 0.92rem 0.55rem; border-radius: 25px; }
-  .notice { font-size: 1.04em; padding: 2.3rem 1.5rem; border-radius: 30px; }
-  .faq-item { font-size: 0.92em; padding: 0 0.6em; border-radius: 25px; }
-  .faq-question { font-size: 0.9em; padding: 0.8em 1.1em 0.8em 0; }
-  .main { font-size: 0.96em;}
-  .text-h h1 { font-size: 1em; }
-  .text-h button { font-size: 0.9em !important; padding: 1.2em 1.2em; border-radius: 25px; }
-  .category-section h2 { font-size: 0.95em; margin: 0.6rem 0 0.6rem 0; }
-  .item-card { font-size: 0.91em; }
-  .item-card .name { font-size: 0.93em; }
-  .item-card .desc, .item-card .detail, .item-card .content { font-size: 1.1em; }
-  .img-d1 { padding: 0 10px 0 10px; }
+/* ---------- MOBILE ---------- */
+@media (max-width:600px) {
+  .section { margin:1.1rem 0; }
+  .h1, h1 { font-size:1.1rem; }
+  .h2, h2 { font-size:1rem; }
+  .h3, h3 { font-size:0.95rem; }
+  .lead { font-size:0.9em; }
+  section { font-size:0.9rem; padding:1.05rem 1.15rem; border-radius:var(--fv-radius-xl); }
+  .button, .btn { font-size:0.9em; padding:1.5em 1.3em; border-radius:var(--fv-radius-xl); }
+  .notice { font-size:1.04em; padding:2.3rem 1.5rem; border-radius:var(--fv-radius-lg); }
+  .text-h h1 { font-size:1em; }
+  .text-h button { font-size:0.9em!important; padding:1.2em; border-radius:var(--fv-radius-pill); }
+  .category-section h2 { font-size:0.95em; margin:0.6rem 0; }
+  .item-card { font-size:0.91em; }
+  .item-card .name { font-size:0.93em; }
+  .img-d1 { padding:0 10px; }
 }
 
 /* ---------- SCROLLBAR ---------- */
-::-webkit-scrollbar {
-  height: 7px;
-  width: 7px;
-  background: #f6f7fb;
-  border-radius: 6px;
-}
-::-webkit-scrollbar-thumb {
-  background: #e0e7f2;
-  border-radius: 6px;
-  transition: background 0.10s;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #c8d0e7;
-}
+::-webkit-scrollbar { height:7px; width:7px; background:var(--fv-surface-soft); border-radius:6px; }
+::-webkit-scrollbar-thumb { background:#e0e7f2; border-radius:6px; }
+::-webkit-scrollbar-thumb:hover { background:#c8d0e7; }
 
-@media (max-width: 450px) {
-  .container {
-    padding-left: 0.7rem;
-    padding-right: 0.7rem;
-    border-radius: 25px;
-  }
-}
+@media (max-width:450px) { .container { padding-left:0.7rem; padding-right:0.7rem; border-radius:var(--fv-radius-md); } }
 
 /* ---------- IMAGE WRAPPER ---------- */
-.img-d1 {
-  padding: 0 30px 0 30px;
-  z-index: -2;
-}
-.img-d1 img {
-  width: 100%;
-  border-radius: 25px;
+.img-d1 { padding:0 30px; z-index:-2; }
+.img-d1 img { width:100%; border-radius:var(--fv-radius-md); image-rendering:-webkit-optimize-contrast; image-rendering:crisp-edges; contain:paint; }
 
-  /* ปรับการแสดงผลรูปให้คมกว่าบนบางเบราว์เซอร์ */
-  image-rendering: -webkit-optimize-contrast;
-  image-rendering: crisp-edges;
-  contain: paint;
-}
-
-/* ---------- ACCESSIBILITY & PERFORMANCE ADAPTATIONS ---------- */
-/* ถ้าผู้ใช้ต้องการลดแอนิเมชัน ให้ลด transition ทั้งหมดลง */
-@media (prefers-reduced-motion: reduce) {
+/* ---------- REDUCED MOTION ---------- */
+@media (prefers-reduced-motion:reduce) {
   *, *::before, *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-    scroll-behavior: auto !important;
-    will-change: auto !important;
+    animation-duration:0.001ms!important; animation-iteration-count:1!important;
+    transition-duration:0.001ms!important; scroll-behavior:auto!important; will-change:auto!important;
   }
 }
 
-/* ---------- SAFETY NET: หลีกเลี่ยงการใช้ will-change เกินจำเป็น ---------- */
-/* หมายเหตุ: will-change มีประโยชน์แต่ถ้าใส่กับทุก element จะทำให้ memory usage เพิ่มขึ้น.
-   โค้ดข้างต้นใส่ will-change ในจุดสำคัญเท่านั้น (ปุ่ม, การ์ด, hero, section) เพื่อให้ browser เตรียม composite layers
-   โดยยังคงรักษาดีไซน์เดิม 100% และลดการรบกวนระบบอื่น ๆ ที่ยังไม่รู้จัก.
-*/
+/* ---------- ACCESSIBILITY: visually-hidden SR only ---------- */
+.fv-sr-only {
+  position:absolute!important; width:1px; height:1px; padding:0; margin:-1px;
+  overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0;
+}
+
+/* ---------- SECTION LABEL (แทน h ที่ใช้ตกแต่ง) ---------- */
+.fv-section-label {
+  font-size: var(--fv-text-sm);
+  font-weight: var(--fv-font-extrabold);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--fv-brand-teal);
+  margin: var(--fv-space-8) 0 var(--fv-space-3) var(--fv-space-3);
+}

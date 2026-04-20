@@ -1,148 +1,72 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    
+  <meta charset="UTF-8" />
+  <script src="assets/js/lang-proxy.js?v=1.0.0-20250322"></script>
+  <script src="assets/js/lang-sync.js?v=1.0.0-20250322"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Contact — Fantrove</title>
+  <meta name="description" content="Get in touch with the Fantrove team — contact us or report an issue.">
 
-    <meta charset="UTF-8" />
-    <script src="assets/js/lang-proxy.js?v=1.0.0-20250322"></script>
-    <script src="assets/js/lang-sync.js?v=1.0.0-20250322"></script>
-    
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title data-translate="contact-main-title">Contact Developer | Fantrove Verse</title>
-    <!-- Preload ไฟล์สำคัญก่อน พร้อม fallback -->
-    <link rel="preload" href="/assets/css/setting.css?v=1.0.0-20250322" as="style" onload="this.rel='stylesheet'" />
-    <noscript><link rel="stylesheet" href="/assets/css/setting.css" /></noscript>
+  <link rel="icon" type="image/x-icon" href="/assets/images/fantrove-hub360.ico" />
 
-    <link rel="preload" href="/assets/css/bg.css?v=1.0.0-20250322" as="style" onload="this.rel='stylesheet'" />
-    <noscript><link rel="stylesheet" href="/assets/css/bg.css" /></noscript>
-
-    <!-- โหลดไฟล์อื่นๆ แบบปกติ -->
-    <link rel="stylesheet" href="/assets/css/top-navigation-bar.css?v=1.0.0-20250322" media="all" />
-    <link rel="stylesheet" href="/assets/css/language-error.css?v=1.0.0-20250322" media="all" />
-
-    <link rel="icon" type="image/x-icon" href="/assets/images/fantrove-hub360.ico" />
-
+  <!-- 1. Tokens -->
+  <link rel="preload" href="/assets/css/tokens.css" as="style">
+  <link rel="stylesheet" href="/assets/css/tokens.css">
+  <link rel="preload" href="/assets/css/setting.css?v=1.0.0-20250322" as="style" onload="this.rel='stylesheet'" />
+  <noscript><link rel="stylesheet" href="/assets/css/setting.css?v=1.0.0-20250322" /></noscript>
+  <link rel="preload" href="/assets/css/bg.css?v=1.0.0-20250322" as="style" onload="this.rel='stylesheet'" />
+  <noscript><link rel="stylesheet" href="/assets/css/bg.css?v=1.0.0-20250322" /></noscript>
+  <link rel="stylesheet" href="/assets/css/top-navigation-bar.css?v=1.0.0-20250322" media="all" />
 </head>
-<body style="opacity:0">
 
-    <!-- Navigation Bar -->
-    <nav>
-        <button class="back-button" id="back-button" aria-label="Go back">
-            <svg
-                class="w-6 h-6 text-gray-800 dark:text-white"
-                aria-hidden="true"
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                fill="none"
-                viewBox="0 0 24 24"
-            >
-                <path
-                    stroke="currentColor"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="m15 19-7-7 7-7"
-                />
-            </svg>
-        </button>
-        <span class="page-title" data-translate="page-contact-main"></span>
+<body style="opacity:0">
+  <div id="fv-app" class="fv-app" data-page="contact">
+
+    <!-- h1 SEO จริง -->
+    <h1 class="fv-sr-only">Contact Fantrove</h1>
+
+    <nav aria-label="Page navigation">
+      <button class="back-button" id="back-button" aria-label="Go back">
+        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+          <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m15 19-7-7 7-7" />
+        </svg>
+      </button>
+      <span class="page-title" data-translate="page-contact-main"></span>
     </nav>
 
-    <main>
+    <div class="fv-page-shell">
+      <main id="fv-main">
         <section class="con">
-        <h1 data-translate="contact-main-title" style="margin-bottom:1.5rem;">
-            
-        </h1>
-        <p data-translate="contact-main-desc" style="margin-bottom:2rem;">
-            
-        </p>
+          <!-- visual heading ใช้ p แทน h1 -->
+          <p class="fv-section-label" data-translate="contact-main-title" style="font-size:1.3em;font-weight:700;margin-bottom:1.5rem;"></p>
+          <p data-translate="contact-main-desc" style="margin-bottom:2rem;font-size:1.1em;line-height:1.6;"></p>
         </section>
         <div class="pad">
-            
-        <section>
-            <button
-                data-translate="contact-other-text"
-                class="buttons m5"
-                onclick="window.location.href='./contact/'"
-                data-translate="contact-other-btn"
-                type="button"
-            >
-                <!--
-                  category: Map
-                  tags: [world, travel, journey, trip, planet, earth]
-                  version: "1.1"
-                  unicode: "eab9"
-                -->
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="#000000"
-                    stroke-width="1.25"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                >
-                    <path d="M7 9a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" />
-                    <path d="M5.75 15a8.015 8.015 0 1 0 9.25 -13" />
-                    <path d="M11 17v4" />
-                    <path d="M7 21h8" />
-                </svg>
-
-                
+          <section>
+            <button data-translate="contact-other-text" class="buttons m5"
+                    onclick="window.location.href='./contact/'" type="button">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" /><path d="M5.75 15a8.015 8.015 0 1 0 9.25 -13" /><path d="M11 17v4" /><path d="M7 21h8" /></svg>
             </button>
-            <button
-                data-translate="contact-report-text"
-                class="buttons"
-                onclick="window.location.href='./report/'"
-                data-translate="contact-report-btn"
-                type="button"
-            >
-                <!--
-                  tags: [warning, danger, caution, risk]
-                  version: "1.0"
-                  unicode: "ea06"
-                  category: System
-                -->
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="#000000"
-                    stroke-width="1.25"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                >
-                    <path d="M12 9v4" />
-                    <path
-                        d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z"
-                    />
-                    <path d="M12 16h.01" />
-                </svg>
-
-                
+            <button data-translate="contact-report-text" class="buttons"
+                    onclick="window.location.href='./report/'" type="button">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" /><path d="M12 16h.01" /></svg>
             </button>
-        </section>
+          </section>
         </div>
-    </main>
+      </main>
+      <div id="fv-footer-mount"></div>
+    </div>
 
-    <script src="/assets/js/language.js?v=1.0.0-20250322"></script>
-    <script defer src="/assets/js/footer-template.js?v=1.0.0-20250322"></script>
-    <script defer src="/assets/js/back-button.js?v=1.0.0-20250322"></script>
-    <script defer src="/assets/js/version-core.js?v=1.0.0-20250322"></script>
+  </div><!-- /#fv-app -->
 
-    <script>
-      // Fade in body on load for smooth UX
-      window.addEventListener('DOMContentLoaded', () => {
-        document.body.classList.add('loaded');
-      });
-    </script>
-
-    <script defer src="/assets/js/lang-links.js?v=1.0.0-20250322"></script>
-    <script src="/fantrove-console-bridge.js?v=1.0.0-20250322"></script>
+  <style>.fv-sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;}</style>
+  <script src="/assets/js/language.js?v=1.0.0-20250322"></script>
+  <script defer src="/assets/js/footer-template.js?v=1.0.0-20250322"></script>
+  <script defer src="/assets/js/back-button.js?v=1.0.0-20250322"></script>
+  <script defer src="/assets/js/version-core.js?v=1.0.0-20250322"></script>
+  <script>window.addEventListener('DOMContentLoaded',()=>{document.body.classList.add('loaded');});</script>
+  <script defer src="/assets/js/lang-links.js?v=1.0.0-20250322"></script>
+  <script src="/fantrove-console-bridge.js?v=1.0.0-20250322"></script>
 </body>
 </html>

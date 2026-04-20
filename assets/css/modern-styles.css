@@ -1,212 +1,78 @@
-/* =========================================================
-   NAVIGATION – ULTRA LOW RESOURCE CORE
-   Visual: IDENTICAL
-   ========================================================= */
-
-/* ---------------- CSS Layer (ลด cost การ cascade) ---------------- */
 @layer nav {
 
-/* ---------------- Design Tokens (static, shared once) ---------------- */
 :root {
-  --nav-bg: #fff;
-  --nav-border: rgba(0,0,0,.04);
-
-  --nav-primary: #00CEB0;
-  --nav-neutral: #575e6d;
-
-  --nav-radius: 40px;
-  --nav-item-radius: 12px;
-
+  --nav-radius:      var(--fv-radius-xl);
+  --nav-item-radius: var(--fv-radius-sm);
   --nav-item-w: 50px;
   --nav-item-h: 40px;
-
-  --t-fast: 150ms cubic-bezier(.4,0,.2,1);
 }
 
-/* ---------------- Scope reset (no global selector pollution) ---------------- */
 .bottom-nav,
-.bottom-nav * {
-  box-sizing: border-box;
-}
-
-/* =========================================================
-   NAV CONTAINER
-   ========================================================= */
+.bottom-nav * { box-sizing:border-box; }
 
 .bottom-nav {
-  position: fixed;
-  inset: auto 0 0 0;
-  z-index: 16000;
-
-  -webkit-tap-highlight-color: transparent;
-
-  display: flex;
-  justify-content: space-evenly;
-  align-items: center;
-
-  padding: 8px 0 calc(env(safe-area-inset-bottom,0px) + 10px);
-
-  background: var(--nav-bg);
-  border-top: 1px solid var(--nav-border);
-  border-radius: var(--nav-radius) var(--nav-radius) 0 0;
-
-  /* 🔥 isolate EVERYTHING */
-  contain: layout paint style;
-
-  /* promote once, never change */
-  transform: translateZ(0);
+  position:fixed; inset:auto 0 0 0; z-index:var(--fv-z-nav);
+  -webkit-tap-highlight-color:transparent;
+  display:flex; justify-content:space-evenly; align-items:center;
+  padding:8px 0 calc(env(safe-area-inset-bottom,0px) + 10px);
+  background: var(--fv-surface-page);
+  border-top:1px solid rgba(0,0,0,.04);
+  border-radius:var(--nav-radius) var(--nav-radius) 0 0;
+  contain:layout paint style;
+  transform:translateZ(0);
 }
-
-/* =========================================================
-   NAV ITEM – STATIC GEOMETRY
-   ========================================================= */
 
 .nav-item {
-  background: none;
-  border: 0;
-  padding: 0;
-
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-
-  border-radius: var(--nav-item-radius);
-  cursor: pointer;
-  user-select: none;
-  text-decoration: none;
-
-  /* no transform animation = no composite cost */
-  transition: color var(--t-fast);
+  background:none; border:0; padding:0;
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+  border-radius:var(--nav-item-radius);
+  cursor:pointer; user-select:none; text-decoration:none;
+  transition:color var(--fv-transition-fast);
 }
-
-/* =========================================================
-   ICON WRAPPER – NO LAYOUT SHIFT EVER
-   ========================================================= */
 
 .svg-wrapper {
-  position: relative;
-  width: var(--nav-item-w);
-  height: var(--nav-item-h);
-  border-radius: 50px;
-  overflow: hidden;
+  position:relative; width:var(--nav-item-w); height:var(--nav-item-h);
+  border-radius:50px; overflow:hidden;
 }
-
-/* SVG – cheap paint only */
 .svg-wrapper > svg {
-  position: absolute;
-  inset: 50% auto auto 50%;
-  transform: translate(-50%, -50%);
-  height: 22px;
-
-  stroke: var(--nav-neutral);
-  stroke-width: 1.6;
-  pointer-events: none;
-
-  transition: stroke var(--t-fast);
+  position:absolute; inset:50% auto auto 50%;
+  transform:translate(-50%,-50%); height:22px;
+  stroke: var(--fv-text-secondary);
+  stroke-width:1.6; pointer-events:none;
+  transition:stroke var(--fv-transition-fast);
 }
-
-/* highlight – opacity only */
 .svg-wrapper::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-
-  background: rgba(24,228,161,.08);
-  border: 1px solid rgba(24,228,161,.3);
-  border-radius: inherit;
-
-  opacity: 0;
-  pointer-events: none;
+  content:""; position:absolute; inset:0;
+  background:rgba(24,228,161,.08);
+  border:1px solid rgba(24,228,161,.3);
+  border-radius:inherit; opacity:0; pointer-events:none;
 }
-
-/* =========================================================
-   LABEL – TEXT ONLY (cheap)
-   ========================================================= */
-
 .nav-item .label {
-  font-size: 11.5px;
-  font-weight: 600;
-  letter-spacing: .01em;
-  white-space: nowrap;
-
-  color: var(--nav-neutral);
-  transition: color var(--t-fast);
+  font-size:11.5px; font-weight:var(--fv-font-semibold); letter-spacing:.01em;
+  white-space:nowrap; color:var(--fv-text-secondary);
+  transition:color var(--fv-transition-fast);
 }
 
-/* =========================================================
-   ACTIVE STATE – ZERO LAYOUT / ZERO REFLOW
-   ========================================================= */
+.nav-item.active-1 svg              { stroke:var(--fv-brand-teal-light); }
+.nav-item.active-1 .svg-wrapper::before { opacity:1; }
+.nav-item.active-1 .label          { color:var(--fv-brand-teal-light); letter-spacing:.02em; }
 
-.nav-item.active-1 svg {
-  stroke: var(--nav-primary);
-}
-
-.nav-item.active-1 .svg-wrapper::before {
-  opacity: 1;
-}
-
-.nav-item.active-1 .label {
-  color: var(--nav-primary);
-  letter-spacing: .02em;
-}
-
-/* =========================================================
-   TABLET / DESKTOP – LEFT RAIL
-   ========================================================= */
-
-@media (min-width: 768px) {
-
-  body.has-left-rail {
-    display: flex;
-    min-height: 100vh;
-  }
-
+@media (min-width:768px) {
+  body.has-left-rail { display:flex; min-height:100vh; }
   .bottom-nav {
-    inset: 0 auto 0 0;
-    width: 88px;
-    height: 100vh;
-
-    flex-direction: column;
-    justify-content: flex-start;
-    padding: 12px 0;
-
-    border-radius: 0 16px 16px 0;
-    border-top: 0;
-    border-right: 1px solid rgba(0,0,0,.05);
+    inset:0 auto 0 0; width:88px; height:100vh;
+    flex-direction:column; justify-content:flex-start;
+    padding:12px 0; border-radius:0 16px 16px 0;
+    border-top:0; border-right:1px solid rgba(0,0,0,.05);
   }
-
-  .nav-item {
-    width: 100%;
-    padding: 10px 0;
-  }
-
-  .svg-wrapper > svg {
-    height: 20px;
-  }
-
-  .nav-item .label {
-    font-size: 12px;
-    text-align: center;
-    line-height: 1;
-  }
-
-  .site-main {
-    flex: 1;
-    min-width: 0;
-  }
+  .nav-item { width:100%; padding:10px 0; }
+  .svg-wrapper > svg { height:20px; }
+  .nav-item .label { font-size:12px; text-align:center; line-height:1; }
+  .site-main { flex:1; min-width:0; }
 }
 
-/* =========================================================
-   ACCESSIBILITY / SYSTEM OPT
-   ========================================================= */
-
-/* ถ้าระบบขอ reduce motion → ตัด animation อัตโนมัติ */
-@media (prefers-reduced-motion: reduce) {
-  .bottom-nav *,
-  .bottom-nav *::before {
-    transition: none !important;
-  }
+@media (prefers-reduced-motion:reduce) {
+  .bottom-nav *, .bottom-nav *::before { transition:none!important; }
 }
 
 } /* end layer */

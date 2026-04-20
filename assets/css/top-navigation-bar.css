@@ -1,84 +1,45 @@
 @import url('variables.css');
 
-html, body {
-  margin: 0;
-  padding: 0;
-}
+html, body { margin:0; padding:0; }
 
-/* Style สำหรับ Navigation Bar */
 nav {
-  display: grid; /* เปลี่ยนเป็น grid แทน flex */
-  grid-template-columns: 50px 1fr 50px; /* แบ่งเป็น 3 ส่วน: ปุ่มซ้าย, เนื้อหา, พื้นที่ขวา */
+  display: grid;
+  grid-template-columns: 50px 1fr 50px;
   align-items: center;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 50px;
-  padding: 0;
-  background: rgba(253, 254, 255, 0.85);
-  box-shadow: 0 0px 8px rgba(0, 0, 0, 0.08);
-  z-index: 100;
+  position: fixed; top:0; left:0;
+  width:100%; height:var(--fv-nav-top-h);
+  padding:0;
+  background: rgba(253,254,255,0.85);
+  box-shadow: 0 0 8px rgba(0,0,0,0.08);
+  z-index: var(--fv-z-fixed);
   touch-action: none;
-  border-radius: 0 0 0px 0px; /* border-radius: 0 0 25px 25px; */
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
 }
 
-/* จัดการการวางตำแหน่งของปุ่มย้อนกลับ */
 .back-button {
-  grid-column: 1; /* วางในคอลัมน์แรก */
-  justify-self: center; /* จัดกึ่งกลางในคอลัมน์ */
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 6px;
-  z-index: 1010;
-  -webkit-tap-highlight-color: transparent;
-  border-radius: 10px;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  grid-column: 1;
+  justify-self: center;
+  background: none; border:none; cursor:pointer;
+  padding:6px; z-index:var(--fv-z-overlay);
+  -webkit-tap-highlight-color:transparent;
+  border-radius:var(--fv-radius-sm);
+  transition:all 0.2s cubic-bezier(0.4,0,0.2,1);
+  display:flex; align-items:center; justify-content:center;
 }
+.back-button:active        { background:rgba(0,0,0,0.07); }
+.back-button:active svg    { transform:scale(0.9); }
+.back-button svg           { width:auto; height:26px; color:var(--fv-brand-teal); transition:all 0.2s cubic-bezier(0.4,0,0.2,1); }
 
-.back-button:active {
-  background: rgba(0, 0, 0, 0.07);
-}
-
-.back-button:active svg {
-  transform: scale(0.9);
-}
-
-/* ปุ่มย้อนกลับ - SVG icon */
-.back-button svg {
-  width: auto;
-  height: 26px;
-  color: #13b47f;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* ชื่อหน้า (Page Title) - ปรับปรุงใหม่ */
 .page-title {
-  grid-column: 2; /* วางในคอลัมน์กลาง */
-  font-size: 1.06rem !important;
-  font-weight: bold;
-  color: #13b47f;
-  background: linear-gradient(90deg, #13b47f 20%, #0eb0d5 80%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  text-align: center; /* จัดข้อความกึ่งกลาง */
-  font-family: inherit;
-  padding: 0 10px;
-  width: 100%;
-  box-sizing: border-box;
-  overflow: hidden;
-  text-overflow: ellipsis; /* แสดง ... เมื่อข้อความยาวเกิน */
-  white-space: nowrap;
+  grid-column: 2;
+  font-size:1.06rem!important; font-weight:bold;
+  color: var(--fv-brand-teal);
+  background: var(--fv-gradient-teal);
+  -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+  text-align:center; font-family:inherit;
+  padding:0 10px; width:100%; box-sizing:border-box;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
 
-.date {
-  font-size: 0.8rem;
-  font-weight: 500;
-}
+.date { font-size:0.8rem; font-weight:var(--fv-font-medium); }

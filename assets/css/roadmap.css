@@ -1,162 +1,193 @@
-/* พื้นฐาน */
+/* Roadmap / Planned Features — v2.0
+   ออกแบบใหม่ให้สอดคล้องกับ design system
+   visual เหมือน What's New page */
+
 body {
-    line-height: 1.6;
-    font-size: 14px;
+  margin:0; padding:0; margin-top:90px;
+  background: var(--fv-surface-subtle);
+  font-family: var(--fv-font-stack);
+  color: var(--fv-text-body);
+  font-size:15px; line-height:1.72;
+  -webkit-font-smoothing:antialiased;
 }
 
+/* ── Container ── */
 .container {
-    width: 80%;
-    max-width: 1200px;
-    margin: 40px auto 0 auto;
-    padding: 20px 10px;
+  max-width: var(--fv-container-sm);
+  margin: 0 auto;
+  padding: 8px 20px 84px;
+  font-size: 1rem;
 }
 
-header {
-    text-align: center;
-    background-color: #13b47f;
-    color: white;
-    padding: 20px 15px;
-    border-radius: 20px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+/* ── Page header card ── */
+.roadmap-header {
+  background: var(--fv-surface-card);
+  border-radius: var(--fv-radius-lg);
+  border: 1px solid rgba(19,180,127,0.18);
+  padding: 24px 26px;
+  margin-bottom: 10px;
+  text-align: left;
 }
 
-h1 {
-    font-size: 1.2em;
-    letter-spacing: 1px;
+/* h1 ใช้งาน SEO จริง */
+h1.roadmap-title {
+  font-size: 1.1rem;
+  font-weight: var(--fv-font-extrabold);
+  color: var(--fv-text-heading);
+  margin: 0 0 6px 0;
+  letter-spacing: 0.005em;
+  line-height: 1.35;
 }
 
-h2, h3 {
-    color: #13b47f;
-    font-weight: 600;
+.roadmap-subtitle {
+  font-size: 0.89rem;
+  color: var(--fv-text-muted);
+  margin: 0;
+  line-height: 1.68;
 }
 
-h2 span {
- margin-right: 5px;
+/* ── Version badge ── */
+.roadmap-version-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--fv-gradient-teal);
+  color: var(--fv-text-inverse);
+  font-size: 0.69rem;
+  font-weight: var(--fv-font-bold);
+  padding: 4px 12px;
+  border-radius: var(--fv-radius-pill);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  margin-bottom: 12px;
 }
 
+/* ── Section label ── */
+.roadmap-section-label {
+  font-size: 0.67rem;
+  font-weight: var(--fv-font-semibold);
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--fv-text-faint);
+  padding: 20px 6px 10px;
+}
+
+/* ── Feature card ── */
+.roadmap-card {
+  background: var(--fv-surface-card);
+  border-radius: var(--fv-radius-lg);
+  border: 1px solid var(--fv-border-subtle);
+  margin-bottom: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: stretch;
+}
+
+.roadmap-card__bar {
+  width: 4px;
+  flex-shrink: 0;
+  border-radius: 30px 0 0 30px;
+}
+
+/* Status colors for bar */
+.roadmap-card--released  .roadmap-card__bar { background: var(--fv-brand-teal); }
+.roadmap-card--upcoming  .roadmap-card__bar { background: var(--fv-brand-cyan); }
+.roadmap-card--new       .roadmap-card__bar { background: var(--fv-brand-green-vivid); }
+.roadmap-card--planned   .roadmap-card__bar { background: var(--fv-brand-purple); }
+.roadmap-card--not-yet   .roadmap-card__bar { background: #c8d3d8; }
+
+.roadmap-card__body { padding: 16px 20px; flex: 1; min-width: 0; }
+
+.roadmap-card__title {
+  font-size: 0.95rem;
+  font-weight: var(--fv-font-semibold);
+  margin: 0 0 4px;
+  line-height: 1.45;
+  color: var(--fv-text-heading);
+}
+
+.roadmap-card__meta {
+  font-size: 0.78rem;
+  color: var(--fv-brand-teal);
+  font-weight: var(--fv-font-medium);
+  margin-bottom: 4px;
+}
+
+.roadmap-card__desc {
+  font-size: 0.84rem;
+  color: var(--fv-text-muted);
+  line-height: 1.7;
+  font-weight: 400;
+  margin: 0;
+}
+
+/* Status pill */
+.roadmap-status-pill {
+  display: inline-flex; align-items: center;
+  font-size: 0.62rem; font-weight: var(--fv-font-bold); letter-spacing: 0.07em;
+  text-transform: uppercase; padding: 3px 10px;
+  border-radius: var(--fv-radius-pill); border: 1px solid transparent;
+  margin-top: 8px;
+}
+.roadmap-card--released  .roadmap-status-pill { background:rgba(19,180,127,0.08);  color:var(--fv-brand-teal);   border-color:rgba(19,180,127,0.2); }
+.roadmap-card--upcoming  .roadmap-status-pill { background:rgba(14,176,213,0.08);  color:var(--fv-brand-cyan);   border-color:rgba(14,176,213,0.2); }
+.roadmap-card--new       .roadmap-status-pill { background:rgba(17,194,145,0.10);  color:#0a9273; border-color:rgba(17,194,145,0.25); }
+.roadmap-card--planned   .roadmap-status-pill { background:rgba(181,140,255,0.08); color:#7c4dcc; border-color:rgba(181,140,255,0.2); }
+.roadmap-card--not-yet   .roadmap-status-pill { background:rgba(0,0,0,0.04);       color:var(--fv-text-muted);   border-color:rgba(0,0,0,0.08); }
+
+/* ── Version info ── */
 #current-version {
-    text-align: center;
-    margin-top: 30px;
-    font-size: 0.8em;
-    color: #13b47f;
+  text-align: center;
+  margin: 0 0 16px;
+  font-size: 0.8em;
+  color: var(--fv-brand-teal);
 }
 
-#feature-list {
-    list-style-type: none;
-    padding: 0;
-}
+/* h2 section heading */
+h2 { color: var(--fv-brand-teal); font-weight: var(--fv-font-semibold); font-size: 1rem; margin: 1.5rem 0 0.8rem; }
+h3 { color: var(--fv-brand-teal); font-weight: var(--fv-font-semibold); font-size: 0.95rem; margin: 0 0 0.8rem; }
 
+/* Legacy list support (backward compat กับ roadmap.js เดิม) */
+#feature-list { list-style-type:none; padding:0; margin:0; }
 #feature-list li {
-    padding: 12px;
-    margin: 30px 0;
-    border-radius: 20px;
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1); /* เพิ่มเงาให้ดูพรีเมียม */
-    transition: background-color 0.3s ease, transform 0.2s ease;
+  background: var(--fv-surface-card);
+  border-radius: var(--fv-radius-lg);
+  border: 1px solid var(--fv-border-subtle);
+  padding: 16px 20px;
+  margin: 8px 0;
+  font-size: 0.93em;
+  color: var(--fv-text-body);
+  line-height: 1.6;
+  transition: border-color var(--fv-transition-fast);
 }
+#feature-list li:hover { border-color: var(--fv-border-teal); }
 
-/* ฟังก์ชันที่เผยแพร่แล้ว */
-.past-feature {
-    background-color: #F5F5F5;
-    border: 0.5px solid #D1D1D1;
-    color: #666;
-}
+#feature-list li.past-feature     { opacity: 0.75; border-color: var(--fv-border-subtle); }
+#feature-list li.past-feature small   { display:block; font-size:0.85em; color:var(--fv-brand-teal); font-weight:var(--fv-font-medium); margin-top:4px; }
 
-.past-feature small {
-    display: block;
-    font-size: 0.9em;
-    color: #13b47f;
-    font-weight: 500;
-}
+#feature-list li.upcoming-feature { border-style: dashed; }
+#feature-list li.upcoming-feature small { display:block; font-size:0.8em; color:var(--fv-text-muted); font-weight:var(--fv-font-medium); margin-top:4px; }
 
-/* ฟังก์ชันที่กำลังพัฒนาในลำดับถัดไป */
-.upcoming-feature {
-    background-color: #F8FCFF;
-    border: 1px dashed #CBCBCB;
-    color: #4A4A4A;
-    font-weight: 600;
+#feature-list li.new-feature {
+  border-color: rgba(19,180,127,0.3);
+  background: linear-gradient(135deg, rgba(19,180,127,0.04) 0%, rgba(14,176,213,0.04) 100%);
 }
+#feature-list li.new-feature small { display:block; font-size:0.8em; color:var(--fv-brand-teal); font-weight:400; margin-top:4px; }
 
-.upcoming-feature small {
-    display: block;
-    font-size: 0.8em;
-    color: #A7A7B3;
-    font-weight: 500;
-}
+#feature-list li.not-feature { opacity:0.55; font-style:italic; }
 
-.new-feature {
-    position: relative;
-    background-image: url(https://fantrove.github.io/assets/images/bokeh-1780209_1280.png);
-    color: #FFFFFF;
-    padding: 15px;
-    border: 1px solid #27C5AA;
-}
+.question-mark { margin-left:10px; font-size:1.4em; color:var(--fv-brand-teal); cursor:pointer; transition:color var(--fv-transition-fast); }
+.question-mark:hover { color:var(--fv-brand-teal-dark); }
 
-.new-feature small {
-    display: block;
-    font-size: 0.8em;
-    color: #2AFF53;
-    font-weight: 400;
+/* ── Responsive ── */
+@media (max-width:600px) {
+  .container { padding:6px 14px 68px; }
+  .roadmap-header { padding:20px 18px; }
+  h1.roadmap-title { font-size:1rem; }
+  .roadmap-card__title { font-size:0.91rem; }
+  .roadmap-card__desc  { font-size:0.82rem; }
 }
+@media (max-width:450px) { body{font-size:14px;} .container{padding:4px 12px 64px;} }
+@media (min-width:600px) { body{font-size:16px;} }
 
-/* ฟังก์ชันที่ยังไม่ได้เผยแพร่ */
-.not-feature {
-    background-color: #F0F0F0;
-    color: #8F8F8F;
-    font-style: italic;
-    border: 1px dashed #CBCBCB;
-}
-
-/* ปรับสไตล์สำหรับเครื่องหมายคำถาม */
-.question-mark {
-    margin-left: 10px;
-    font-size: 1.8em;
-    color: #0A9869;
-    cursor: pointer;
-    transition: color 0.3s ease;
-}
-
-.question-mark:hover {
-    color: #13b47f;
-}
-
-/* แท็บเล็ตแนวตั้ง */
-@media (min-width: 600px) {
-    body { font-size: 15px; }
-    .container { width: 85%; }
-}
-
-/* แท็บเล็ตแนวนอน */
-@media (min-width: 768px) {
-    body { font-size: 16px; }
-    .container { width: 80%; }
-    h1 { font-size: 2.8em; }
-}
-
-/* เดสก์ท็อปเล็ก */
-@media (min-width: 1024px) {
-    body { font-size: 17px; }
-    .container { width: 75%; }
-    header { padding: 25px; }
-    h1 { font-size: 3em; }
-}
-
-/* เดสก์ท็อปกลาง */
-@media (min-width: 1280px) {
-    body { font-size: 18px; }
-    .container { width: 70%; }
-    h1 { font-size: 3.2em; }
-}
-
-/* เดสก์ท็อปใหญ่ */
-@media (min-width: 1440px) {
-    body { font-size: 19px; }
-    .container { width: 65%; }
-    h1 { font-size: 3.4em; }
-}
-
-/* หน้าจอ 4K+ */
-@media (min-width: 1920px) {
-    body { font-size: 20px; }
-    .container { width: 60%; }
-    h1 { font-size: 3.6em; }
-}
+@media (prefers-reduced-motion:reduce) { * { transition:none; } }

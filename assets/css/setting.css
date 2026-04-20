@@ -1,485 +1,154 @@
-/* Reset และ Global Styles */
-:root {
-  /* สีม่วงหลัก */
-  --ui-color-purple-50: #F5F5F5;
-  --ui-color-purple-100: #F3E8FF;
-  --ui-color-purple-200: #E9D5FF;
-  --ui-color-purple-300: #D8B4FE;
-  --ui-color-purple-400: #C084FC;
-  --ui-color-purple-500: #A855F7;
-  --ui-color-purple-600: #9333EA;
-  --ui-color-purple-700: #7e22ce;
-  
-  /* สีพื้นฐาน */
-  --ui-color-primary: var(--ui-color-purple-600);
-  --ui-color-primary-hover: var(--ui-color-purple-700);
-  --ui-color-primary-light: var(--ui-color-purple-100);
-  --ui-color-background-main: #FFFFFF;
-  --ui-color-background-secondary: var(--ui-color-purple-50);
-  --ui-color-text-primary: #1E1B4B;
-  --ui-color-text-secondary: #6B7280;
-  --ui-color-border-default: #E2E8F0;
-  
-  /* เงา */
-  --ui-shadow-small: 0 1px 3px rgba(0,0,0,0.12);
-  --ui-shadow-medium: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
-  --ui-shadow-large: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
-  --ui-shadow-focus: 0 0 0 3px rgba(147, 51, 234, 0.2);
-  
-  /* Transitions */
-  --ui-transition-speed-fast: 200ms cubic-bezier(0.4, 0, 0.2, 1);
-  --ui-transition-speed-normal: 300ms cubic-bezier(0.4, 0, 0.2, 1);
-  
-  /* Spacing */
-  --ui-spacing-small: 0.5rem;
-  --ui-spacing-medium: 1rem;
-  --ui-spacing-large: 1.5rem;
-  --ui-spacing-xlarge: 2rem;
-  
-  /* Border Radius */
-  --ui-border-radius-small: 0.5rem;
-  --ui-border-radius-medium: 0.75rem;
-  --ui-border-radius-large: 1rem;
-  --ui-border-radius-full: 9999px;
-  
-  /* Font Sizes */
-  --ui-font-size-small: 0.9em;
-  --ui-font-size-medium: 1.2em;
-  --ui-font-size-large: 1.4em;
-  --ui-font-size-xlarge: 1.5em;
-  --ui-font-size-heading: 1.7em;
-}
+/* Setting page */
+*, *::before, *::after { box-sizing: border-box; }
 
-/* 0) Make sizing predictable across elements */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-/* พื้นฐานของเว็บไซต์ */
-html, body {
-  height: 100%;
-}
-
+html, body { height:100%; }
 body {
-  color: var(--ui-color-text-primary);
-  margin: 0;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  font-family: 'Segoe UI', 'Noto Sans Thai', 'Noto Sans', sans-serif;
+  color: var(--fv-text-primary);
+  margin:0;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  font-family: var(--fv-font-stack);
 }
 
-main {
-  padding: 3rem 1rem 1.8rem 1rem;
-}
+main { padding:3rem 1rem 1.8rem; }
 
-/* ส่วนการตั้งค่า */
 .settings {
-  max-width: 28rem;
-  width: 100%;
-  margin: 0 auto;
-  background: var(--ui-color-background-main);
-  padding: var(--ui-spacing-xlarge);
-  border-radius: var(--ui-border-radius-large);
-  box-shadow: var(--ui-shadow-medium);
-  border: 1px solid var(--ui-color-purple-200);
+  max-width:28rem; width:100%; margin:0 auto;
+  background: var(--fv-surface-page);
+  padding: var(--fv-space-8); border-radius:var(--fv-radius-lg);
+  box-shadow: var(--fv-shadow-md);
+  border:1px solid #E9D5FF;
 }
 
-/* สไตล์หัวข้อ */
-h1 {
-  font-size: var(--ui-font-size-heading);
-  font-weight: 700;
-  margin-top: var(--ui-spacing-xlarge);
-  color: #13b47f;
+/* ---------- ACCESSIBILITY: visually-hidden SR only ---------- */
+.fv-sr-only {
+  position:absolute!important; width:1px; height:1px; padding:0; margin:-1px;
+  overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0;
 }
 
-.h {
-  font-size: 1.05em;
-  font-weight: 700;
-  margin-top: var(--ui-spacing-xlarge);
+/* ── Headings (semantic h1 hidden, visual label = p.fv-section-label) ── */
+h1 { font-size:1.7em; font-weight:var(--fv-font-bold); margin-top:var(--fv-space-8); color:var(--fv-brand-teal); }
+
+/* visual section label (แทน h1.h เดิม) */
+.fv-section-label, .h {
+  font-size:1.05em; font-weight:var(--fv-font-bold);
+  margin-top: var(--fv-space-8);
   color: #38AA84;
-  margin-left: 10px;
-}
-
-h5 {
-  font-size: 1.3em;
-  margin-bottom: 5px;
-  color: #13b47f;
-}
-
-/* สไตล์ label */
-.setting-item label, label {
+  margin-left:10px;
   display: block;
-  font-size: var(--ui-font-size-small);
-  color: var(--ui-color-text-secondary);
-  margin-bottom: var(--ui-spacing-small);
-  font-weight: 600;
-  letter-spacing: 0.025em;
 }
 
-section {
-  overflow: hidden !important;
-  padding: 2px;
-  padding-top: 5px;
+h5 { font-size:1.3em; margin-bottom:5px; color:var(--fv-brand-teal); }
+
+.setting-item label, label {
+  display:block; font-size:0.9em; color:var(--fv-text-muted);
+  margin-bottom:var(--fv-space-2); font-weight:var(--fv-font-semibold); letter-spacing:0.025em;
 }
 
-.m5 {
-  margin-bottom: 20px;
-}
+section { overflow:hidden!important; padding:2px; padding-top:5px; }
+.m5 { margin-bottom:20px; }
+section.con { border-radius:0!important; padding:20px; }
+section.con p { font-size:1.3em; line-height:1.5; }
+section.con span { font-weight:bold!important; color:var(--fv-brand-teal)!important; }
+section.con h1 { font-size:1.5em; }
+.pad { padding:30px; }
 
-section.con {
-  border-radius: 0 !important;
-  padding: 20px;
-}
-
-section.con p {
-  font-size: 1.3em;
-  line-height: 1.5;
-}
-
-section.con span {
-  font-weight: bold !important;
-  color: #13b47f !important;
-}
-
-section.con h1 {
-  font-size: 1.5em;
-}
-
-.pad {
-  padding: 30px;
-}
-
-/* สไตล์ select และ button (ปรับให้ไม่ล้น) */
 .setting-item select,
 #language-button, .buttons {
-  width: 100%;
-  padding: calc(var(--ui-spacing-small) + 8px) var(--ui-spacing-medium);
-  font-size: var(--ui-font-size-small);
-  border: 1px solid rgba(255, 255, 255, 0);
-  border-radius: 30px;
-  background-color: var(--ui-color-background-main);
-  color: var(--ui-color-text-primary);
-  transition: all var(--ui-transition-speed-fast);
-  outline: none;
-  cursor: pointer;
-  appearance: none;
-  -webkit-tap-highlight-color: transparent;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background-position: right 0.75rem center;
-  background-repeat: no-repeat;
-  background-size: 1.25rem;
-  padding-right: 2.5rem;
-  user-select: none;
-  /*font-weight: 600;*/
-  min-width: 0; /* important for flex children shrinking */
+  width:100%; padding:calc(var(--fv-space-2) + 8px) var(--fv-space-4);
+  font-size:0.9em;
+  border:1px solid rgba(255,255,255,0);
+  border-radius:var(--fv-radius-xl);
+  background-color: var(--fv-surface-page);
+  color: var(--fv-text-primary);
+  transition:all var(--fv-transition-fast);
+  outline:none; cursor:pointer; appearance:none;
+  -webkit-tap-highlight-color:transparent;
+  display:flex; align-items:center; gap:0.5rem;
+  background-position:right 0.75rem center;
+  background-repeat:no-repeat; background-size:1.25rem;
+  padding-right:2.5rem; user-select:none; min-width:0;
 }
 
-/* ใช้ background arrow เฉพาะ container ที่ต้องการ */
 .setting-item.select, #language-button {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23000000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23000000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
 }
 
-/* Buttons group */
-.buttons {
-  display: flex;
-  gap: 15px;
-  align-items: center;
-  text-decoration: none;
-}
-
-/* วงกลมและ width ปรับให้ปลอดภัย */
-.w {
-  border-radius: 30px;
-  width: 100%;
-  min-width: 0;
-}
+.buttons { display:flex; gap:15px; align-items:center; text-decoration:none; }
+.w { border-radius:var(--fv-radius-xl)!important; width:100%; min-width:0; }
 
 .buttons:hover, .setting-item.select:hover, #language-button:hover, .buttons.auto-update-toggle:hover {
-  --b-1: #EFF2F8;
-  --b-2: #E9FFF8;
-  background-color: #FBFBFB;
-  box-shadow: 0 0 0 0.5px #D8DBE2;
+  background-color:#FBFBFB;
+  box-shadow:0 0 0 0.5px #D8DBE2;
 }
+.buttons.buy:hover { background-color:#FFF9FF; box-shadow:0 0 0 0.5px #E2D4E2; }
 
-.buttons.buy:hover {
-    background-color: #FFF9FF;
-  box-shadow: 0 0 0 0.5px #E2D4E2;
-}
+.buttons svg, #language-button svg { height:23px!important; width:auto; flex-shrink:0; display:block; stroke-width:1.2!important; }
+.buttons.tap { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23000000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 18l6-6-6-6'/%3E%3C/svg%3E"); }
+.buttons.e svg, .buttons.a svg { height:18.5px; }
+.buttons.buy { --buy:#FF0081; position:relative; overflow:hidden; -webkit-tap-highlight-color:transparent; user-select:none; }
+.buttons.buy.tap { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23FF0081' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 18l6-6-6-6'/%3E%3C/svg%3E"); }
+.buttons.buy svg { stroke:var(--buy); }
+.b2 { border-radius:var(--fv-radius-md)!important; }
 
-.buttons svg, #language-button svg {
-  height: 23px !important;
-  width: auto;
-  flex-shrink: 0;
-  display: block;
-  align-items: center;
-  stroke-width: 1.2 !important;
-}
-
-.buttons.tap {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23000000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 18l6-6-6-6'/%3E%3C/svg%3E");
-}
-
-.buttons.e svg,
-.buttons.a svg {
-  height: 18.5px;
-}
-
-.buttons.buy {
-  --buy: #FF0081;
-  position: relative;
-  overflow: hidden;
-  -webkit-tap-highlight-color: transparent;
-  user-select: none;
-}
-
-.buttons.buy.tap {
-  background-image: 
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23FF0081' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 18l6-6-6-6'/%3E%3C/svg%3E");
-}
-
-.buttons.buy svg {
-  stroke: var(--buy);
-}
-
-.b2 {
-  border-radius: 25px !important;
-}
-
-/* Language Selector Styles */
-#language-selector-container {
-  position: relative;
-}
-
-/* Disable touch scroll when overlay active (controlled by JS adding .scroll-lock) */
-.scroll-lock {
-  touch-action: none;
-}
-
-/* overlay ครอบหน้าจอ */
+/* Language overlay */
+#language-selector-container { position:relative; }
+.scroll-lock { touch-action:none; }
 #language-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  opacity: 0;
-  transition: opacity 300ms ease;
-  z-index: 90000;
-  display: none;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  position:fixed; top:0; left:0; width:100%; height:100%;
+  background:rgba(0,0,0,0.5); opacity:0;
+  transition:opacity 300ms ease; z-index:var(--fv-z-modal);
+  display:none; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
 }
+#language-overlay.fade-in { opacity:1; }
+#language-overlay.fade-out { opacity:0; }
 
-#language-overlay.fade-in {
-  opacity: 1;
-}
-
-#language-overlay.fade-out {
-  opacity: 0;
-}
-
-/* main dropdown: ใช้ box-sizing, max-width, min-width และ min-height เพื่อควบคุมขนาด */
 #language-dropdown {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  width: 70%;
-  max-width: 960px;
-  min-width: 280px;
-  max-height: 60%;
-  transform: translate(-50%, -50%) scale(0.9);
-  background: white;
-  padding: 25px;
-  border-radius: 30px;
-  box-shadow: 0 0px 15px rgba(0, 0, 0, 0.2);
-  opacity: 0;
-  transition: opacity 250ms var(--ui-transition-speed-fast), transform 700ms ease;
-  z-index: 99990;
-  display: none;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  position:fixed; top:50%; left:50%;
+  width:70%; max-width:960px; min-width:280px; max-height:60%;
+  transform:translate(-50%,-50%) scale(0.9);
+  background:var(--fv-surface-page); padding:25px; border-radius:var(--fv-radius-lg);
+  box-shadow:0 0 15px rgba(0,0,0,0.2);
+  opacity:0; transition:opacity 250ms, transform 700ms ease;
+  z-index:var(--fv-z-modal); display:none; overflow-y:auto; -webkit-overflow-scrolling:touch;
 }
+#language-dropdown.fade-in { opacity:1; transform:translate(-50%,-50%) scale(1); }
+#language-dropdown.fade-out { opacity:0; }
+#language-dropdown > * { min-width:0; }
 
-/* ถ้ามี fade-in ใช้แสดง */
-#language-dropdown.fade-in {
-  opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
-  
-}
-
-#language-dropdown.fade-out {
-  opacity: 0;
-}
-
-@keyframes c {
-  from {
-    transform: translate(-50%, -50%) scale(0.8);
-  }
-  to {
-    transform: translate(-50%, -50%) scale(1);
-  }
-}
-
-/* ป้องกัน flex child ขยายเกินขอบ */
-#language-dropdown > * {
-  min-width: 0;
-}
-
-/* ปรับ .language-option ให้คงความกว้างภายใน container */
 .language-option {
-  box-sizing: border-box;
-  display: block;
-  width: 100%;
-  padding: var(--ui-spacing-medium) var(--ui-spacing-large);
-  margin-bottom: var(--ui-spacing-small);
-  border-radius: 20px;
-  font-size: var(--ui-font-size-small);
-  font-weight: 500;
-  color: var(--ui-color-text-primary);
-  background-color: transparent;
-  transition: all var(--ui-transition-speed-fast);
-  cursor: pointer;
-  border: 1px solid rgba(255, 255, 255, 0);
-  text-align: left;
-  -webkit-tap-highlight-color: transparent;
-  user-select: none;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap; /* เปลี่ยนเป็น normal ถ้าต้องการ wrap */
-  min-width: 0;
+  box-sizing:border-box; display:block; width:100%;
+  padding:var(--fv-space-4) var(--fv-space-6);
+  margin-bottom:var(--fv-space-2); border-radius:var(--fv-radius-md);
+  font-size:0.9em; font-weight:var(--fv-font-medium); color:var(--fv-text-primary);
+  background-color:transparent;
+  transition:all var(--fv-transition-fast);
+  cursor:pointer; border:1px solid rgba(255,255,255,0); text-align:left;
+  -webkit-tap-highlight-color:transparent; user-select:none;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;
+}
+.language-option:hover { border-color:#00FFAA; background-color:rgba(0,255,170,0.03); }
+.language-option--wrap { white-space:normal; word-break:break-word; }
+.language-option .label, .language-option .meta {
+  display:inline-block; vertical-align:middle; max-width:100%;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
 
-/* hover ของ option */
-.language-option:hover {
-  border-color: #00FFAA;
-  background-color: rgba(0, 255, 170, 0.03);
-}
-
-/* ถ้าต้องการให้ option สามารถ wrap ข้อความได้ ให้ใช้ class .language-option--wrap */
-.language-option--wrap {
-  white-space: normal;
-  word-break: break-word;
-}
-
-/* ข้อความภายใน option ที่แยกเป็น label/meta */
-.language-option .label,
-.language-option .meta {
-  display: inline-block;
-  vertical-align: middle;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* Error toast สำหรับ language */
 .language-error {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  background-color: #ff4444;
-  color: white;
-  padding: 10px 20px;
-  border-radius: 4px;
-  z-index: 10000;
-  opacity: 0;
-  transform: translateX(20px);
-  transition: all 0.3s ease;
+  position:fixed; top:20px; right:20px; background-color:#ff4444; color:white;
+  padding:10px 20px; border-radius:4px; z-index:var(--fv-z-toast);
+  opacity:0; transform:translateX(20px); transition:all 0.3s ease;
 }
+.language-error.show { opacity:1; transform:translateX(0); }
+.language-error.hide { opacity:0; transform:translateX(20px); }
 
-.language-error.show {
-  opacity: 1;
-  transform: translateX(0);
+@media (max-width:420px) {
+  .setting-item select, #language-button, .buttons { padding-right:1.25rem; font-size:0.91em; }
+  #language-dropdown { width:85%; padding:18px; border-radius:var(--fv-radius-md); }
 }
-
-.language-error.hide {
-  opacity: 0;
-  transform: translateX(20px);
-}
-
-/* เลี่ยงการใช้ padding-right ใหญ่จนเกินไปบน small screens */
-@media (max-width: 420px) {
-  .setting-item select,
-  #language-button, .buttons {
-    padding-right: 1.25rem;
-    font-size: 0.91em;
-  }
-
-  #language-dropdown {
-    width: 85%;
-    padding: 18px;
-    border-radius: 20px;
-  }
-}
-
-/* Responsive Design */
-@media (max-width: 640px) {
-  body {
-    padding-top: 4rem;
-  }
-  
-  .settings {
-    padding: var(--ui-spacing-large);
-  }
-  
-  h1 {
-    font-size: var(--ui-font-size-xlarge);
-  }
-}
-
-@media (min-width: 768px) {
-  #language-dropdown {
-    width: 80%;
-  }
-  .language-option {
-    font-size: var(--ui-font-size-medium);
-  }
-}
-
-@media (min-width: 1024px) {
-  #language-dropdown {
-    width: 70%;
-  }
-  
-  .language-option {
-    font-size: var(--ui-font-size-medium);
-  }
-}
-
-@media (min-width: 1280px) {
-  .settings {
-    max-width: 32rem;
-  }
-  
-  #language-dropdown {
-    width: 60%;
-  }
-}
-
-@media (min-width: 1536px) {
-  .settings {
-    max-width: 36rem;
-  }
-  
-  #language-dropdown {
-    width: 50%;
-  }
-}
-
-/* Print Styles */
-@media print {
-  body {
-    background: none;
-    padding: 0;
-  }
-  
-  .settings {
-    box-shadow: none;
-    border: 1px solid #000;
-  }
-}
+@media (max-width:640px) { body{padding-top:4rem;} .settings{padding:var(--fv-space-6);} h1{font-size:1.5em;} }
+@media (min-width:768px) { #language-dropdown{width:80%;} .language-option{font-size:1.2em;} }
+@media (min-width:1024px) { #language-dropdown{width:70%;} .language-option{font-size:1.2em;} }
+@media (min-width:1280px) { .settings{max-width:32rem;} #language-dropdown{width:60%;} }
+@media (min-width:1536px) { .settings{max-width:36rem;} #language-dropdown{width:50%;} }
+@media print { body{background:none;padding:0;} .settings{box-shadow:none;border:1px solid #000;} }

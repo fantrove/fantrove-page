@@ -1,94 +1,84 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  
-
   <meta charset="UTF-8" />
   <script src="assets/js/lang-proxy.js?v=1.0.0-20250322"></script>
   <script src="assets/js/lang-sync.js?v=1.0.0-20250322"></script>
-  
+
   <meta name="theme-color" content="#13b47f" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Search | Fantrove Verse</title>
-
-  <link rel="preload" href="/assets/css/search.css?v=1.0.0-20250322" as="style" onload="this.rel='stylesheet'" />
-  <noscript><link rel="stylesheet" href="/assets/css/search.css?v=1.0.0-20250322" /></noscript>
-
-  <link rel="preload" href="/assets/css/bg.css?v=1.0.0-20250322" as="style" onload="this.rel='stylesheet'" />
-  <noscript><link rel="stylesheet" href="/assets/css/bg.css?v=1.0.0-20250322" /></noscript>
-
-  <link rel="stylesheet" href="/assets/css/general.css?v=1.0.0-20250322" media="all" />
-  <link rel="stylesheet" href="/assets/css/search-compact-overrides.css?v=1.0.0-20250322" />
+  <title>Search Emoji &amp; Symbols — Fantrove</title>
+  <meta name="description" content="Search our database of emojis, symbols, and special characters. Find and copy what you need instantly.">
 
   <link rel="icon" type="image/x-icon" href="/assets/images/fantrove-hub360.ico" />
+
+  <!-- 1. Tokens -->
+  <link rel="preload" href="/assets/css/tokens.css" as="style">
+  <link rel="stylesheet" href="/assets/css/tokens.css">
+
+  <!-- 2. CSS -->
+  <link rel="preload" href="/assets/css/search.css?v=1.0.0-20250322" as="style" onload="this.rel='stylesheet'" />
+  <noscript><link rel="stylesheet" href="/assets/css/search.css?v=1.0.0-20250322" /></noscript>
+  <link rel="preload" href="/assets/css/bg.css?v=1.0.0-20250322" as="style" onload="this.rel='stylesheet'" />
+  <noscript><link rel="stylesheet" href="/assets/css/bg.css?v=1.0.0-20250322" /></noscript>
+  <link rel="stylesheet" href="/assets/css/search-compact-overrides.css?v=1.0.0-20250322" />
 </head>
+
 <body>
-  <div id="search-sticky">
-    <header class="search-header">
-      <form id="searchForm" autocomplete="off" role="search" aria-label="ระบบค้นหา FanTrove">
-        <div class="search-input-wrapper">
-          <span class="search-input-icon" aria-hidden="true">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#13b47f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"></circle>
-              <path d="m21 21-4.35-4.35"></path>
-            </svg>
-          </span>
-          <input 
-            type="search" 
-            id="searchInput" 
-            name="q" 
-            placeholder="ค้นหาข้อมูล..." 
-            inputmode="search" 
-            enterkeyhint="search" 
-            aria-label="ค้นหาข้อมูลใน Fantrove"
-            autocomplete="off"
-            spellcheck="false"
-          />
-        </div>
-      </form>
+  <!-- SEO h1 ซ่อน -->
+  <h1 class="fv-sr-only">Search Emoji and Symbols — Fantrove</h1>
+  <style>.fv-sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;}</style>
 
-      <nav class="search-filters-panel" aria-label="ตัวกรองการค้นหา">
-        <div class="filter-row-wrapper">
-          <div id="typeFilter"
-               class="filter-pills-row"
-               role="group"
-               aria-label="ประเภท"></div>
-          <div class="filter-row-end">
-            <button class="filter-cat-toggle"
-                    id="filterCatToggle"
-                    type="button"
-                    aria-label="แสดง/ซ่อนหมวดหมู่"
-                    aria-expanded="false"
-                    aria-controls="filterCatWrap">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                   viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                   stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
-                   aria-hidden="true">
-                <path d="M6 9l6 6 6-6"/>
+  <div id="fv-app" class="fv-app" data-page="search">
+
+    <div id="search-sticky">
+      <header class="search-header" role="banner">
+        <form id="searchForm" autocomplete="off" role="search" aria-label="Fantrove Search">
+          <div class="search-input-wrapper">
+            <span class="search-input-icon" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--fv-brand-teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
               </svg>
-            </button>
+            </span>
+            <input type="search" id="searchInput" name="q"
+              placeholder="ค้นหาข้อมูล..."
+              inputmode="search" enterkeyhint="search"
+              aria-label="Search emojis and symbols"
+              autocomplete="off" spellcheck="false" />
           </div>
-        </div>
-      </nav>
-    </header>
+        </form>
 
-    <div class="filter-cat-wrap" id="filterCatWrap" aria-hidden="true">
-      <div id="categoryFilter"
-           class="filter-pills-row filter-pills-row--cat"
-           role="group"
-           aria-label="หมวดหมู่"></div>
+        <nav class="search-filters-panel" aria-label="Search filters">
+          <div class="filter-row-wrapper">
+            <div id="typeFilter" class="filter-pills-row" role="group" aria-label="Type filter"></div>
+            <div class="filter-row-end">
+              <button class="filter-cat-toggle" id="filterCatToggle" type="button"
+                      aria-label="Show/hide categories" aria-expanded="false" aria-controls="filterCatWrap">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M6 9l6 6 6-6"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </nav>
+      </header>
+
+      <div class="filter-cat-wrap" id="filterCatWrap" aria-hidden="true">
+        <div id="categoryFilter" class="filter-pills-row filter-pills-row--cat" role="group" aria-label="Category filter"></div>
+      </div>
     </div>
-  </div>
 
-  <div id="cat-spacer"></div>
+    <div id="cat-spacer"></div>
 
-  <div class="search-main-layout">
-    <main id="searchResults" aria-live="polite" aria-label="ผลการค้นหา" tabindex="0">
-    </main>
-  </div>
+    <div class="search-main-layout">
+      <main id="searchResults" role="main" aria-live="polite" aria-label="Search results" tabindex="0"></main>
+    </div>
 
-  <div id="copyToast" aria-live="assertive" role="alert" aria-atomic="true"></div>
+    <div id="copyToast" aria-live="assertive" role="alert" aria-atomic="true"></div>
+
+  </div><!-- /#fv-app -->
 
   <script type="module" src="/assets/js/con-data-service/con-data-registry.js?v=1.0.0-20250322"></script>
   <script type="module" src="/assets/js/con-data-service/con-data-service.js?v=1.0.0-20250322"></script>
@@ -98,129 +88,42 @@
   <script defer src="/assets/js/modern-navigation.js?v=1.0.0-20250322"></script>
   <script defer src="/assets/js/back-to-top.js?v=1.0.0-20250322"></script>
   <script defer src="/assets/js/version-core.js?v=1.0.0-20250322"></script>
-
   <script defer src="/assets/js/lang-links.js?v=1.0.0-20250322"></script>
   <script src="/fantrove-console-bridge.js?v=1.0.0-20250322"></script>
 
+  <!-- Sticky header behavior script (เหมือนเดิมทุกอย่าง) -->
   <script>
   (function(){
     'use strict';
-
-    var sticky = document.getElementById('search-sticky');
-    var btn    = document.getElementById('filterCatToggle');
-    var wrap   = document.getElementById('filterCatWrap');
-    var spacer = document.getElementById('cat-spacer');
-    var OVERLAP = 0;
-
-    var _visible       = true;
-    var _touching      = false;
-    var _lastY         = 0;
-    var _catOpen       = false;
-    var _raf           = null;
-    var _touchStartY   = 0;   /* scrollY ตอน touchstart — ทั้งซ่อนและแสดงวัดจากนี่ */
-
-    function _hide() {
-      sticky.style.transform     = 'translateZ(0) translateY(-100%)';
-      sticky.style.pointerEvents = 'none';
-      _visible = false;
+    var sticky=document.getElementById('search-sticky');
+    var btn=document.getElementById('filterCatToggle');
+    var wrap=document.getElementById('filterCatWrap');
+    var spacer=document.getElementById('cat-spacer');
+    var OVERLAP=0,_visible=true,_touching=false,_lastY=0,_catOpen=false,_raf=null,_touchStartY=0;
+    function _hide(){sticky.style.transform='translateZ(0) translateY(-100%)';sticky.style.pointerEvents='none';_visible=false;}
+    function _show(){sticky.style.transform='translateZ(0) translateY(0%)';sticky.style.pointerEvents='';_visible=true;}
+    window._showStickyHeader=function(){if(!_visible&&sticky)_show();};
+    if(sticky){sticky.style.transition='transform 0.22s cubic-bezier(0.33,1,0.68,1)';_lastY=window.scrollY;}
+    document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'&&sticky){requestAnimationFrame(function(){_lastY=window.scrollY;_touchStartY=window.scrollY;});}},{passive:true});
+    window.addEventListener('touchstart',function(){_touching=true;_lastY=window.scrollY;_touchStartY=window.scrollY;},{passive:true});
+    window.addEventListener('touchend',function(){_touching=false;},{passive:true});
+    window.addEventListener('scroll',function(){if(_raf)return;_raf=requestAnimationFrame(function(){_raf=null;var y=window.scrollY,delta=y-_lastY;_lastY=y;if(delta===0)return;if(y<=40){if(!_visible)_show();return;}if(_touching){if(delta>5&&_visible&&(y-_touchStartY)>30)_hide();else if(delta<-15&&!_visible&&(_touchStartY-y)>30)_show();}});},{passive:true});
+    if(btn&&wrap){
+      btn.addEventListener('click',function(){
+        if(!_visible)_show();_catOpen=!_catOpen;
+        wrap.style.willChange='transform, opacity';
+        wrap.classList.toggle('open',_catOpen);btn.classList.toggle('active',_catOpen);
+        if(sticky)sticky.classList.toggle('cat-open',_catOpen);
+        btn.setAttribute('aria-expanded',_catOpen?'true':'false');
+        wrap.setAttribute('aria-hidden',_catOpen?'false':'true');
+        var h=_catOpen?Math.max(0,wrap.offsetHeight-OVERLAP):0;
+        if(spacer)spacer.style.height=h+'px';
+        wrap.addEventListener('transitionend',function onEnd(e){if(e.target!==wrap)return;wrap.removeEventListener('transitionend',onEnd);wrap.style.willChange='';},{once:true,passive:true});
+      },{passive:true});
     }
-    function _show() {
-      sticky.style.transform     = 'translateZ(0) translateY(0%)';
-      sticky.style.pointerEvents = '';
-      _visible = true;
-    }
-
-    window._showStickyHeader = function() {
-      if (!_visible && sticky) _show();
-    };
-
-    if (sticky) {
-      sticky.style.transition = 'transform 0.22s cubic-bezier(0.33,1,0.68,1)';
-      _lastY = window.scrollY;
-    }
-
-    document.addEventListener('visibilitychange', function() {
-      if (document.visibilityState === 'visible' && sticky) {
-        requestAnimationFrame(function() {
-          _lastY       = window.scrollY;
-          _touchStartY = window.scrollY;
-        });
-      }
-    }, { passive: true });
-
-    window.addEventListener('touchstart', function() {
-      _touching    = true;
-      _lastY       = window.scrollY;
-      _touchStartY = window.scrollY; /* บันทึกจุดเริ่มต้นของ gesture นี้ */
-    }, { passive: true });
-
-    window.addEventListener('touchend', function() {
-      _touching = false;
-    }, { passive: true });
-
-    window.addEventListener('scroll', function() {
-      if (_raf) return;
-      _raf = requestAnimationFrame(function() {
-        _raf = null;
-        var y     = window.scrollY;
-        var delta = y - _lastY;
-        _lastY = y;
-        if (delta === 0) return;
-
-        if (y <= 40) { if (!_visible) _show(); return; }
-
-        if (_touching) {
-          /* ซ่อน: ปัดลง + เลื่อนจากจุด touchstart ลงมา > 30px */
-          if (delta > 5 && _visible && (y - _touchStartY) > 30) {
-            _hide();
-          }
-          /* แสดง: ปัดขึ้น + เลื่อนจากจุด touchstart ขึ้นมา > 30px (สมมาตรกับซ่อน) */
-          else if (delta < -15 && !_visible && (_touchStartY - y) > 30) {
-            _show();
-          }
-        }
-      });
-    }, { passive: true });
-
-    if (btn && wrap) {
-      btn.addEventListener('click', function() {
-        if (!_visible) _show();
-        _catOpen = !_catOpen;
-
-        wrap.style.willChange = 'transform, opacity';
-
-        wrap.classList.toggle('open', _catOpen);
-        btn.classList.toggle('active', _catOpen);
-        if (sticky) sticky.classList.toggle('cat-open', _catOpen);
-        btn.setAttribute('aria-expanded', _catOpen ? 'true' : 'false');
-        wrap.setAttribute('aria-hidden',  _catOpen ? 'false' : 'true');
-
-        var h = _catOpen ? Math.max(0, wrap.offsetHeight - OVERLAP) : 0;
-        if (spacer) spacer.style.height = h + 'px';
-
-        wrap.addEventListener('transitionend', function onEnd(e) {
-          if (e.target !== wrap) return;
-          wrap.removeEventListener('transitionend', onEnd);
-          wrap.style.willChange = '';
-        }, { once: true, passive: true });
-      }, { passive: true });
-    }
-
-    window._updateCatBarHeight = function() {
-      if (!_catOpen || !wrap || !spacer) return;
-      spacer.style.height = Math.max(0, wrap.offsetHeight - OVERLAP) + 'px';
-    };
-
-    window._closeCatBar = function() {
-      _catOpen = false;
-      if (spacer) spacer.style.height = '0px';
-      if (wrap)   { wrap.style.willChange = ''; }
-      if (sticky) sticky.classList.remove('cat-open');
-      if (btn)    { btn.classList.remove('active'); btn.setAttribute('aria-expanded','false'); }
-    };
-
+    window._updateCatBarHeight=function(){if(!_catOpen||!wrap||!spacer)return;spacer.style.height=Math.max(0,wrap.offsetHeight-OVERLAP)+'px';};
+    window._closeCatBar=function(){_catOpen=false;if(spacer)spacer.style.height='0px';if(wrap){wrap.style.willChange='';}if(sticky)sticky.classList.remove('cat-open');if(btn){btn.classList.remove('active');btn.setAttribute('aria-expanded','false');}};
   })();
   </script>
-
 </body>
 </html>

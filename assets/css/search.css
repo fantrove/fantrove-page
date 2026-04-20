@@ -1,145 +1,58 @@
-/* SEARCH UI — Base CSS
-   ─────────────────────────────────────────────────────────────────────
-   Role: global reset, design tokens, layout skeleton, non-filter UI.
+/* SEARCH UI Base CSS */
+* { box-sizing:border-box; }
 
-   search-compact-overrides.css (@layer base/card/overlay/responsive)
-   covers all interactive components (header, input, filter, cards).
-   This file only defines what overrides does NOT touch.
-*/
+html, body { margin:0; padding:0; }
 
-*{ box-sizing:border-box }
-
-:root{
-  --primary:#0dba92;
-  --primary-dark:#0a9273;
-  --text-main:#111827;
-  --text-secondary:#374151;
-  --text-muted:#6b7280;
-  --border:#e3e8ee;
-  --bg:#f7faf9;
-  --bg-accent:#f7faf9;
-  --white:#fff;
-  --transition:220ms cubic-bezier(.25,.8,.35,1);
-}
-
-html,body{ margin:0; padding:0 }
-
-body{
-  background:var(--bg);
-  font-family:'Sarabun','Tahoma','Segoe UI',sans-serif;
-  color:var(--text-main);
-  font-size:16px;
-  line-height:1.6;
+body {
+  background: var(--fv-surface-subtle);
+  font-family: var(--fv-font-stack);
+  color: var(--fv-text-primary);
+  font-size:16px; line-height:1.6;
   -webkit-font-smoothing:antialiased;
-  overflow-x:hidden;
-  -webkit-tap-highlight-color:transparent;
+  overflow-x:hidden; -webkit-tap-highlight-color:transparent;
 }
 
-/* ─── Layout ─────────────────────────────────────── */
-.search-main-layout{
-  display:block;
-  max-width:860px;
-  margin:24px auto;
-  padding:0 16px;
-  overflow-anchor:none;
+.search-main-layout {
+  display:block; max-width:var(--fv-container-md);
+  margin:24px auto; padding:0 16px; overflow-anchor:none;
 }
 
-/* ─── Category spacer ────────────────────────────── */
-/* Empty div — JS sets style.height on toggle. No animation needed. */
-#cat-spacer{ height:0; overflow:hidden; }
+#cat-spacer { height:0; overflow:hidden; }
+#searchResults { padding:0; margin:0; }
 
-/* ─── Results placeholder ────────────────────────── */
-#searchResults{ padding:0; margin:0; }
-
-.search-result-here{
-  text-align:center;
-  color:var(--text-muted);
-  font-size:1.08rem;
-  margin-top:60px;
-  padding:40px 28px;
-  font-weight:550;
-  letter-spacing:.2px;
+.search-result-here {
+  text-align:center; color:var(--fv-text-muted);
+  font-size:1.08rem; margin-top:60px; padding:40px 28px;
+  font-weight:550; letter-spacing:0.2px;
 }
 
-/* ─── Virtual Scroll containers ──────────────────── */
-.vs-container{ position:relative; min-height:2px; contain:layout style paint; }
-.vs-item{ position:absolute; left:0; right:0; contain:layout style paint; }
+.vs-container { position:relative; min-height:2px; contain:layout style paint; }
+.vs-item      { position:absolute; left:0; right:0; contain:layout style paint; }
 
-/* ─── Overlay ─────────────────────────────────────── */
-.search-overlay-backdrop,
-.search-overlay{
-  backdrop-filter:none !important;
-  -webkit-backdrop-filter:none !important;
+.search-overlay-backdrop, .search-overlay { backdrop-filter:none!important; -webkit-backdrop-filter:none!important; }
+
+#copyToast { position:fixed; top:24px; right:24px; z-index:var(--fv-z-toast); display:flex; flex-direction:column; gap:10px; }
+
+.search-footer {
+  width:100%; background:var(--fv-surface-page); color:var(--fv-brand-teal);
+  padding:24px 16px; text-align:center; margin-top:64px;
+  font-size:0.97rem; font-weight:550;
+  border-top:1px solid #e3e8ee;
+  border-top-left-radius:48px; border-top-right-radius:48px;
+  box-shadow:0 -2px 12px rgba(13,186,146,0.04); letter-spacing:0.2px;
 }
+.footer-content { max-width:1300px; margin:0 auto; }
 
-/* ─── Toast ──────────────────────────────────────── */
-#copyToast{ position:fixed; top:24px; right:24px; z-index:10000; display:flex; flex-direction:column; gap:10px; }
+@media (max-width:1024px) { .search-main-layout{padding:0 12px;margin:20px auto;} }
+@media (max-width:768px)  { .search-main-layout{padding:10px 10px 0;margin:10px auto 0;} .search-footer{margin-top:44px;padding:16px 11px;border-top-left-radius:40px;border-top-right-radius:40px;} #copyToast{top:14px;right:14px;} .search-result-here{margin-top:44px;padding:28px 20px;} }
+@media (max-width:480px)  { body{font-size:15px;} .search-main-layout{padding:9px 9px 0;margin:8px auto 0;} .search-footer{margin-top:36px;padding:12px 9px;border-top-left-radius:32px;border-top-right-radius:32px;} #copyToast{top:11px;right:11px;gap:7px;} .search-result-here{margin-top:36px;padding:20px 16px;font-size:.99rem;} }
 
-/* ─── Footer ─────────────────────────────────────── */
-.search-footer{
-  width:100%;
-  background:var(--white);
-  color:var(--primary);
-  padding:24px 16px;
-  text-align:center;
-  margin-top:64px;
-  font-size:.97rem;
-  font-weight:550;
-  border-top:1px solid var(--border);
-  border-top-left-radius:48px;
-  border-top-right-radius:48px;
-  box-shadow:0 -2px 12px rgba(13,186,146,.04);
-  letter-spacing:.2px;
-}
-.footer-content{ max-width:1300px; margin:0 auto; }
+@media (prefers-reduced-motion:reduce) { *{animation:none!important;transition:none!important;transform:none!important;} }
+@media print { #search-sticky,.search-filters-panel,#copyToast,.search-footer{display:none;} .search-main-layout{margin:0;padding:0;} }
 
-/* ─── Responsive ─────────────────────────────────── */
-@media(max-width:1024px){
-  .search-main-layout{ padding:0 12px; margin:20px auto; }
-}
+@supports not (contain:strict) { .search-overlay-scrollable-content,.vs-container{contain:none;} }
 
-@media(max-width:768px){
-  .search-main-layout{ padding:10px 10px 0; margin:10px auto 0; }
-  .search-footer{ margin-top:44px; padding:16px 11px; border-top-left-radius:40px; border-top-right-radius:40px; }
-  #copyToast{ top:14px; right:14px; }
-  .search-result-here{ margin-top:44px; padding:28px 20px; }
-}
-
-@media(max-width:480px){
-  body{ font-size:15px; }
-  .search-main-layout{ padding:9px 9px 0; margin:8px auto 0; }
-  .search-footer{ margin-top:36px; padding:12px 9px; border-top-left-radius:32px; border-top-right-radius:32px; }
-  #copyToast{ top:11px; right:11px; gap:7px; }
-  .search-result-here{ margin-top:36px; padding:20px 16px; font-size:.99rem; }
-}
-
-/* ─── Accessibility ──────────────────────────────── */
-@media(prefers-reduced-motion:reduce){
-  *{ animation:none !important; transition:none !important; transform:none !important; }
-}
-
-/* ─── Print ──────────────────────────────────────── */
-@media print{
-  #search-sticky,.search-filters-panel,#copyToast,.search-footer{ display:none; }
-  .search-main-layout{ margin:0; padding:0; }
-}
-
-/* ─── Feature fallbacks ──────────────────────────── */
-@supports not (contain:strict){
-  .search-overlay-scrollable-content{ contain:none; }
-  .vs-container{ contain:none; }
-}
-
-/* ─── Performance additions (missing from overrides) ─────── */
-
-/* Isolate suggestion list from scroll repaint path */
-.search-suggestions-fullscreen{ contain:layout style paint; }
-
-/* Isolate each suggestion row — cheap transition won't cascade out */
-.suggestion-item{ contain:layout style paint; }
-
-/* Isolate toast — fixed position, own compositor layer */
-.copy-toast-message{ contain:layout style paint; }
-
-/* GPU layer for overlay scroll — compositor thread, no main-thread scroll */
-.search-overlay-scrollable-content{ transform:translateZ(0); }
+.search-suggestions-fullscreen { contain:layout style paint; }
+.suggestion-item     { contain:layout style paint; }
+.copy-toast-message  { contain:layout style paint; }
+.search-overlay-scrollable-content { transform:translateZ(0); }

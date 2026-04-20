@@ -1,0 +1,213 @@
+/* ═══════════════════════════════════════════════════════════════
+   FANTROVE DESIGN TOKENS v1.0
+   assets/css/tokens.css
+   โหลดไฟล์นี้เป็น CSS แรกสุดในทุก HTML page
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Brand Colors */
+  --fv-brand-teal: #13b47f;
+  --fv-brand-teal-light: #00CEB0;
+  --fv-brand-teal-dark: #0a9273;
+  --fv-brand-cyan: #0eb0d5;
+  --fv-brand-cyan-accent: #11c3ec;
+  --fv-brand-purple: #B58CFF;
+  --fv-brand-purple-dark: #9B6EFF;
+  --fv-brand-green-vivid: #11C291;
+  --fv-brand-green-bright: #18E4A1;
+  
+  /* Text Colors */
+  --fv-text-primary: #0f2629;
+  --fv-text-heading: #152a2f;
+  --fv-text-body: #2f5157;
+  --fv-text-secondary: #52638A;
+  --fv-text-muted: #6d8590;
+  --fv-text-faint: #8ea1b8;
+  --fv-text-inverse: #ffffff;
+  
+  /* Surface / Background */
+  --fv-surface-page: #ffffff;
+  --fv-surface-card: #ffffff;
+  --fv-surface-card-alpha: rgba(255, 255, 255, 0.94);
+  --fv-surface-subtle: #f8faff;
+  --fv-surface-soft: #f6f7fb;
+  --fv-surface-teal-hover: rgba(248, 255, 253, 1);
+  
+  /* Border */
+  --fv-border-default: rgba(14, 176, 213, 0.06);
+  --fv-border-subtle: rgba(0, 0, 0, 0.07);
+  --fv-border-teal: rgba(0, 206, 176, 0.25);
+  --fv-border-teal-strong: rgba(0, 206, 176, 0.80);
+  --fv-border-focus-ring: rgba(19, 180, 127, 0.16);
+  
+  /* Gradients */
+  --fv-gradient-brand:
+    radial-gradient(circle at 30% 30%, rgba(181, 140, 255, 0.75) 0%, transparent 60%),
+    radial-gradient(circle at 70% 70%, rgba(24, 228, 161, 0.75) 0%, transparent 60%),
+    linear-gradient(135deg, #9B6EFF 0%, #11C291 100%);
+  --fv-gradient-teal: linear-gradient(90deg, #13b47f 20%, #0eb0d5 80%);
+  --fv-gradient-btn: linear-gradient(to right, #11c3ec 0%, #13b47f 100%);
+  --fv-gradient-accent-bar: linear-gradient(180deg, #13b47f, #0eb0d5);
+  
+  /* Spacing */
+  --fv-space-1: 0.25rem;
+  --fv-space-2: 0.5rem;
+  --fv-space-3: 0.75rem;
+  --fv-space-4: 1rem;
+  --fv-space-5: 1.25rem;
+  --fv-space-6: 1.5rem;
+  --fv-space-7: 1.75rem;
+  --fv-space-8: 2rem;
+  --fv-space-10: 2.5rem;
+  --fv-space-12: 3rem;
+  --fv-space-16: 4rem;
+  --fv-space-20: 5rem;
+  
+  /* Border Radius */
+  --fv-radius-xs: 8px;
+  --fv-radius-sm: 12px;
+  --fv-radius-md: 20px;
+  --fv-radius-lg: 30px;
+  --fv-radius-xl: 40px;
+  --fv-radius-pill: 999px;
+  
+  /* Typography */
+  --fv-font-stack: 'Noto Sans', 'Segoe UI', 'Noto Sans Thai', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --fv-text-xs: 0.75rem;
+  --fv-text-sm: 0.875rem;
+  --fv-text-base: 1rem;
+  --fv-text-lg: 1.125rem;
+  --fv-text-xl: 1.25rem;
+  --fv-text-2xl: 1.5rem;
+  --fv-text-3xl: 1.875rem;
+  --fv-text-4xl: 2.25rem;
+  --fv-font-normal: 400;
+  --fv-font-medium: 500;
+  --fv-font-semibold: 600;
+  --fv-font-bold: 700;
+  --fv-font-extrabold: 800;
+  --fv-font-black: 900;
+  --fv-leading-tight: 1.25;
+  --fv-leading-normal: 1.6;
+  --fv-leading-relaxed: 1.75;
+  
+  /* Shadows */
+  --fv-shadow-sm: 0 2px 8px rgba(6, 20, 24, 0.04);
+  --fv-shadow-md: 0 10px 28px rgba(6, 20, 24, 0.06);
+  --fv-shadow-lg: 0 22px 50px rgba(19, 180, 127, 0.06);
+  --fv-shadow-teal: 0 4px 24px rgba(19, 180, 127, 0.12);
+  --fv-shadow-focus: 0 0 0 4px rgba(19, 180, 127, 0.16);
+  
+  /* Transitions */
+  --fv-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --fv-ease-spring: cubic-bezier(0.2, 0.9, 0.2, 1);
+  --fv-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --fv-transition-normal: 260ms cubic-bezier(0.2, 0.9, 0.2, 1);
+  --fv-transition-slow: 400ms cubic-bezier(0.2, 0.9, 0.2, 1);
+  
+  /* Layout */
+  --fv-container-max: 1110px;
+  --fv-container-md: 860px;
+  --fv-container-sm: 600px;
+  --fv-nav-bottom-h: 64px;
+  --fv-nav-top-h: 50px;
+  --fv-page-pad-x: 1.6rem;
+  
+  /* Z-index */
+  --fv-z-sticky: 100;
+  --fv-z-nav: 16000;
+  --fv-z-overlay: 17000;
+  --fv-z-modal: 18000;
+  --fv-z-toast: 19000;
+  
+  /* ── Backward-compat aliases (ทำให้ CSS เก่าไม่พัง) ── */
+  --brand-1: var(--fv-brand-teal);
+  --brand-2: var(--fv-brand-cyan);
+  --brand-accent: var(--fv-brand-cyan-accent);
+  --muted: var(--fv-text-faint);
+  
+  --primary: var(--fv-brand-teal);
+  --primary-dark: var(--fv-brand-teal-dark);
+  --text-main: var(--fv-text-primary);
+  --text-secondary: var(--fv-text-secondary);
+  --text-muted: var(--fv-text-muted);
+  --bg: var(--fv-surface-subtle);
+  --white: var(--fv-surface-page);
+  --border: #e3e8ee;
+  
+  --nav-primary: var(--fv-brand-teal-light);
+  --nav-neutral: var(--fv-text-secondary);
+  --nav-bg: var(--fv-surface-page);
+  
+  --wn-brand-1: var(--fv-brand-teal);
+  --wn-brand-2: var(--fv-brand-cyan);
+  --wn-text-hi: var(--fv-text-heading);
+  --wn-text-body: var(--fv-text-body);
+  --wn-text-muted: var(--fv-text-muted);
+  --wn-text-faint: var(--fv-text-faint);
+  --wn-bg-page: var(--fv-surface-subtle);
+  --wn-bg-card: var(--fv-surface-card);
+  --wn-bg-item: #fbfcff;
+  --wn-border-card: rgba(0, 0, 0, 0.07);
+  --wn-border-item: rgba(0, 0, 0, 0.06);
+  --wn-radius: var(--fv-radius-lg);
+  --wn-radius-pill: var(--fv-radius-pill);
+  
+  --c-teal: var(--fv-brand-teal-light);
+  --c-teal-border: rgba(0, 206, 176, 0.15);
+  --c-teal-strong: rgba(0, 206, 176, 0.80);
+  --c-heading: #494E59;
+  --c-body: var(--fv-text-secondary);
+  --c-surface: var(--fv-surface-page);
+  --r-card: var(--fv-radius-lg);
+  --r-btn: 27px;
+  --r-pill: var(--fv-radius-pill);
+  --t-fast: var(--fv-transition-fast);
+  
+  --text-primary: var(--fv-brand-teal-light);
+  --nav-btn-radius: var(--fv-radius-pill);
+  
+  --ui-color-primary: var(--fv-brand-purple-dark);
+  --ui-color-background-main: var(--fv-surface-page);
+  --ui-color-text-primary: var(--fv-text-primary);
+  --ui-color-text-secondary: var(--fv-text-muted);
+  --ui-color-border-default: rgba(226, 232, 240, 1);
+  --ui-shadow-small: 0 1px 3px rgba(0, 0, 0, 0.12);
+  --ui-shadow-medium: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --ui-transition-speed-fast: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --ui-transition-speed-normal: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --ui-spacing-small: 0.5rem;
+  --ui-spacing-medium: 1rem;
+  --ui-spacing-large: 1.5rem;
+  --ui-spacing-xlarge: 2rem;
+  --ui-border-radius-small: 0.5rem;
+  --ui-border-radius-medium: 0.75rem;
+  --ui-border-radius-large: 1rem;
+  --ui-border-radius-full: 9999px;
+  --ui-font-size-small: 0.9em;
+  --ui-font-size-medium: 1.2em;
+  --ui-font-size-large: 1.4em;
+  --ui-font-size-xlarge: 1.5em;
+  --ui-font-size-heading: 1.7em;
+  
+  --bg-start: #FBFEFC;
+  --bg-end: #FFFFFF;
+  --card-bg: var(--fv-surface-card-alpha);
+  --card-border: var(--fv-border-default);
+  --radius-lg: var(--fv-radius-lg);
+  --radius-md: var(--fv-radius-lg);
+  --shadow-soft: var(--fv-shadow-md);
+  --shadow-pop: var(--fv-shadow-lg);
+  --focus-ring: var(--fv-border-focus-ring);
+  --trans-fast: var(--fv-transition-fast);
+  --trans-med: var(--fv-transition-normal);
+  --trans-ease: var(--fv-ease-spring);
+  --focus-outline-size: 4px;
+  --font-stack: var(--fv-font-stack);
+  --container-max: var(--fv-container-max);
+  --section-padding: 2.3rem;
+  --section-padding-mobile: 2rem;
+  --content-gap: 1.05rem;
+  --h2-size: clamp(1.02rem, 1.06rem + 0.4vw, 1.16rem);
+  --lead-size: clamp(1.02rem, 1.05rem + 0.35vw, 1.12rem);
+}
