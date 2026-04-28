@@ -1,20 +1,17 @@
-# Root → home (ใช้ redirect แทน rewrite)
-/ /home/ 302
-/index.html /home/ 302
+# Fallback: any unknown path → serve index.html with 200 (rewrite, not redirect)
+# This way URL stays intact, user sees 404 page content with their original URL
+/* /index.html 200
 
-# Language prefix (dev: ยังใช้ JS อยู่)
-/en /home/ 302
-/en/ /home/ 302
+# ── Explicitly route language pages ────────────────────────────────────────
+# /en/* and /th/* are handled by build process (pre-built dist/{lang}/*)
+# But during dev (before build), route them through language.js
+
 /en/* /:splat 200
-
-/th /home/ 302
-/th/ /home/ 302
 /th/* /:splat 200
 
-# Static files
+# ── Static files (passthrough) ─────────────────────────────────────────────
+/assets/* /assets/:splat 200
 /robots.txt /robots.txt 200
 /sitemap.xml /sitemap.xml 200
 /favicon.ico /assets/images/fantrove-hub360.ico 200
-
-# Assets passthrough
-/assets/* /assets/:splat 200
+/sw.js /sw.js 200

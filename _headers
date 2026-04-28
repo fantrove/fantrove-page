@@ -29,3 +29,7 @@ Content-Language: en
 # ทุก path อื่น (HTML ทุกไฟล์ ทุก folder): revalidate ทุกครั้ง
 /*
   Cache-Control: no-cache, must-revalidate
+
+/*
+  Content-Encoding: gzip
+  Vary: Accept-Encoding
