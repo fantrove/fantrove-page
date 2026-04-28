@@ -2,229 +2,153 @@
 'use strict';
 
 /**
- * build.js — Production Build Orchestrator v2.2
+ * build.js — Production Build Orchestrator
  * =========================================
  *
  * สร้าง static HTML สำหรับแต่ละภาษาจาก source HTML + translation JSON
- * 
- * ✨ NEW v2.2:
- *  - Minify HTML output (remove comments, compress whitespace)
- *  - Minify CSS + JS files (ถ้า terser + clean-css installed)
- *  - Generate preload hints ใน <head>
- *  - Compress HTML responses ด้วย gzip simulation (output stats)
- *  - Add build timestamp metadata
+ *
+ * สิ่งที่ script นี้ทำ:
+ *  1. อ่าน db.json เพื่อรู้จำนวนภาษาและ config
+ *  2. โหลด translation JSON ของแต่ละภาษา
+ *  3. หาไฟล์ HTML ทุกไฟล์ใน project
+ *  4. สำหรับแต่ละ HTML × ภาษา:
+ *       - แปลงเนื้อหา [data-translate] → text จริง
+ *       - ลบ data-translate + attribute พวก data-original-* ออก
+ *       - ลบ language system scripts ออก
+ *       - ลบ body opacity:0 ออก
+ *       - เพิ่ม hreflang + canonical สำหรับ SEO
+ *       - prefix internal links ด้วย /lang
+ *       - บันทึกไปที่ dist/{lang}/{path}
+ *  5. Copy assets/ ไปที่ dist/assets/
+ *  6. สร้าง _redirects สำหรับ production
+ *  7. Copy _headers ไปยัง dist/
+ *
+ * โครงสร้าง output:
+ *   dist/
+ *     en/
+ *       home/index.html
+ *       info/about/index.html
+ *       setting/index.html
+ *       …
+ *     th/
+ *       home/index.html
+ *       …
+ *     assets/             ← copied as-is
+ *     _redirects          ← generated
+ *     _headers            ← copied from source
+ *
+ * Usage:
+ *   node scripts/build.js             (normal build)
+ *   node scripts/build.js --dry-run   (show what would be built, no file writes)
+ *   node scripts/build.js --verbose   (show per-element translation details)
  */
 
 const fs   = require('fs');
 const path = require('path');
-const zlib = require('zlib');
 
 const { flattenJson, parseTranslation }     = require('./lib/marker-parser');
 const { transformHtml, setConfig }          = require('./lib/html-transformer');
 const { findHtmlFiles, copyDir, writeFile,
         loadTranslationFile, loadDbJson }   = require('./lib/file-utils');
 
-// ── Optional minification (install terser + clean-css for better compression) ──
-let Terser, CleanCSS;
-try {
-  Terser = require('terser');
-  console.log('[deps] ✓ terser available (JS minification enabled)');
-} catch (e) {
-  console.log('[deps] ⚠  terser not installed (JS will not be minified)');
-  Terser = null;
-}
-try {
-  CleanCSS = require('clean-css');
-  console.log('[deps] ✓ clean-css available (CSS minification enabled)');
-} catch (e) {
-  console.log('[deps] ⚠  clean-css not installed (CSS will not be minified)');
-  CleanCSS = null;
-}
-
 // ── Build configuration ───────────────────────────────────────────────────
 
 const CONFIG = {
+  /** Source root (where your HTML files are) */
   srcDir: '.',
+
+  /** Build output directory */
   distDir: 'dist',
+
+  /** Assets directory name */
   assetsDir: 'assets',
+
+  /** Path to db.json (language config) */
   dbJsonPath: 'assets/lang/options/db.json',
+
+  /** Path template for translation JSON files */
   translationPath: (lang) => `assets/lang/${lang}.json`,
+
+  /** Default language (used for x-default hreflang + fallback) */
   defaultLang: 'en',
-  excludeDirs: ['dist', 'node_modules', '.git', 'scripts', '.cloudflare'],
-  removeScriptPatterns: ['lang-proxy.js', 'lang-sync.js', 'lang-coordinator.js'],
+
+  /**
+   * Directories to exclude from HTML discovery.
+   * These are checked against the path relative to srcDir.
+   */
+  excludeDirs: [
+    'dist',
+    'node_modules',
+    '.git',
+    'scripts',
+    '.cloudflare',
+  ],
+
+  /**
+   * Script src patterns ที่จะถูกลบออกจาก built pages
+   *
+   * ลบเฉพาะ scripts ที่ไม่จำเป็นบน pre-built pages:
+   *  - lang-proxy.js      → URL มี prefix แล้ว ไม่ต้อง redirect
+   *  - lang-sync.js       → ไม่มี tab sync ที่ต้องทำเพิ่ม
+   *  - lang-coordinator.js → setting page เท่านั้น
+   *
+   * language.js และ lang-links.js → ยังคงอยู่ (ทำงาน static mode)
+   *
+   * [PATCH v2] เปลี่ยนชื่อจาก langScriptPatterns → removeScriptPatterns
+   *            เพื่อ sync กับ html-transformer.js v2
+   */
+  removeScriptPatterns: [
+    'lang-proxy.js',
+    'lang-sync.js',
+    'lang-coordinator.js',
+  ],
+
+  /**
+   * URL หน้าเว็บจริง สำหรับ canonical + hreflang tags
+   * [PATCH v2] เพิ่มใหม่ — html-transformer.js v2 ต้องการ
+   */
   baseUrl: 'https://fantrove.pages.dev',
+
+  /**
+   * Static files (in srcDir) to copy directly to dist/ root.
+   */
   staticFiles: [
     'robots.txt',
     'sitemap.xml',
     '_headers',
     'fantrove-console-bridge.js',
   ],
+
+  /**
+   * Path to the footer template HTML file.
+   * Build script reads this once and injects a translated copy
+   * into every built page — so footer-template.js can skip the fetch.
+   */
   footerTemplatePath: 'assets/template-html/footer-template.html',
 };
 
-// ── CLI flags ────────────────────────────────────────────────────────────
+// ── CLI flags ─────────────────────────────────────────────────────────────
 
 const args    = process.argv.slice(2);
 const DRY_RUN = args.includes('--dry-run');
 const VERBOSE = args.includes('--verbose');
-const NO_MINIFY = args.includes('--no-minify');
 
-// ══════════════════════════════════════════════════════════════════════════
-// OPTIMIZATION FUNCTIONS
-// ══════════════════════════════════════════════════════════════════════════
-
-/**
- * Minify HTML output
- * - Remove comments
- * - Compress whitespace (but preserve formatting in <pre> tags)
- * - Remove empty attributes
- */
-function minifyHtml(html) {
-  if (NO_MINIFY) return html;
-
-  // Remove HTML comments (except IE conditionals)
-  html = html.replace(/<!--(?!\[if)[\s\S]*?-->/g, '');
-
-  // Remove excessive whitespace between tags
-  html = html.replace(/>\s+</g, '><');
-
-  // Compress whitespace in inline styles
-  html = html.replace(/style="([^"]*)"/g, (match, style) => {
-    const compressed = style
-      .replace(/:\s+/g, ':')
-      .replace(/;\s+/g, ';')
-      .replace(/\s+/g, ' ')
-      .trim();
-    return `style="${compressed}"`;
-  });
-
-  // Remove data-original-* attributes (leftover from parsing)
-  html = html.replace(/\s+data-original-[^\s=]*(?:="[^"]*")?/g, '');
-
-  return html;
-}
-
-/**
- * Minify CSS files (if clean-css available)
- */
-function minifyCss(cssDir) {
-  if (!CleanCSS || NO_MINIFY) return 0;
-
-  let count = 0;
-  try {
-    const files = fs.readdirSync(cssDir);
-    for (const file of files) {
-      if (!file.endsWith('.css')) continue;
-
-      const filePath = path.join(cssDir, file);
-      const code = fs.readFileSync(filePath, 'utf8');
-      const output = new CleanCSS().minify(code);
-
-      if (output.errors.length) {
-        console.warn(`  ⚠  CSS minification error in ${file}: ${output.errors[0]}`);
-        continue;
-      }
-
-      fs.writeFileSync(filePath, output.styles, 'utf8');
-      count++;
-      if (VERBOSE) console.log(`    [minify] ${file}`);
-    }
-  } catch (e) {
-    console.warn(`  ⚠  CSS minification failed: ${e.message}`);
-  }
-  return count;
-}
-
-/**
- * Minify JS files (if terser available)
- */
-function minifyJs(jsDir) {
-  if (!Terser || NO_MINIFY) return 0;
-
-  let count = 0;
-  try {
-    const files = fs.readdirSync(jsDir);
-    for (const file of files) {
-      if (!file.endsWith('.js')) continue;
-
-      const filePath = path.join(jsDir, file);
-      const code = fs.readFileSync(filePath, 'utf8');
-
-      Terser.minify(code).then(result => {
-        if (result.error) {
-          console.warn(`  ⚠  JS minification error in ${file}: ${result.error.message}`);
-          return;
-        }
-        fs.writeFileSync(filePath, result.code, 'utf8');
-        count++;
-        if (VERBOSE) console.log(`    [minify] ${file}`);
-      }).catch(e => {
-        console.warn(`  ⚠  JS minification failed for ${file}: ${e.message}`);
-      });
-    }
-  } catch (e) {
-    console.warn(`  ⚠  JS minification failed: ${e.message}`);
-  }
-  return count;
-}
-
-/**
- * Estimate gzip compression ratio
- */
-function getGzipSize(data) {
-  return new Promise((resolve, reject) => {
-    zlib.gzip(data, (err, compressed) => {
-      if (err) reject(err);
-      else resolve(compressed.length);
-    });
-  });
-}
-
-/**
- * Format file size with unit
- */
-function formatSize(bytes) {
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-}
-
-/**
- * Get compression info (original + gzip)
- */
-async function getCompressionInfo(data) {
-  const original = Buffer.byteLength(data, 'utf8');
-  try {
-    const gzipped = await getGzipSize(data);
-    const ratio = ((1 - gzipped / original) * 100).toFixed(1);
-    return {
-      original: formatSize(original),
-      gzipped: formatSize(gzipped),
-      ratio: ratio + '%'
-    };
-  } catch (e) {
-    return { original: formatSize(original), gzipped: '?', ratio: '?' };
-  }
-}
-
-// ══════════════════════════════════════════════════════════════════════════
-// MAIN BUILD PROCESS
-// ══════════════════════════════════════════════════════════════════════════
+// ── Main ──────────────────────────────────────────────────────────────────
 
 async function build() {
   const startTime = Date.now();
   console.log('');
-  console.log('╔════════════════════════════════════════╗');
-  console.log('║  Fantrove Static Build System v2.2     ║');
-  if (DRY_RUN) console.log('║  ⚠  DRY RUN — no files written         ║');
-  if (NO_MINIFY) console.log('║  ⚠  MINIFICATION DISABLED              ║');
-  console.log('╚════════════════════════════════════════╝');
+  console.log('╔══════════════════════════════════════╗');
+  console.log('║   Fantrove Static Build System v1.0  ║');
+  if (DRY_RUN) console.log('║   ⚠  DRY RUN — no files written       ║');
+  console.log('╚══════════════════════════════════════╝');
   console.log('');
 
   // ── 1. Load language config ─────────────────────────────────────────────
   const dbJson = loadDbJson(CONFIG.dbJsonPath);
   if (!dbJson) {
     console.error(`[build] ✗ Cannot find db.json at "${CONFIG.dbJsonPath}"`);
+    console.error('        Please ensure the path is correct and re-run.');
     process.exit(1);
   }
 
@@ -239,13 +163,15 @@ async function build() {
   console.log(`[config] Output    : ${CONFIG.distDir}/`);
   console.log('');
 
-  // Load footer template
+  // Inject config into html-transformer
+  // [PATCH v2] ส่ง langs array ไปด้วย (html-transformer v2 ต้องการสำหรับ hreflang)
+  // [PATCH v2.1] อ่าน footer template และส่งไปด้วย เพื่อให้ transformer bake footer ลง HTML
   let footerHtml = '';
   if (CONFIG.footerTemplatePath && fs.existsSync(CONFIG.footerTemplatePath)) {
     footerHtml = fs.readFileSync(CONFIG.footerTemplatePath, 'utf8');
-    console.log(`[footer]  Loaded footer template (${formatSize(Buffer.byteLength(footerHtml, 'utf8'))})`);
+    console.log(`[footer]  Loaded footer template (${footerHtml.length} chars)`);
   } else {
-    console.warn('[footer]  ⚠  footer-template.html not found');
+    console.warn('[footer]  ⚠  footer-template.html not found — footer will not be baked in');
   }
   setConfig({ ...CONFIG, langs, footerHtml });
 
@@ -257,15 +183,16 @@ async function build() {
 
     if (data === null) {
       if (lang === CONFIG.defaultLang && dbJson[lang]?.enSource !== 'json') {
+        // English with enSource='html' → content lives in HTML itself, no JSON needed
         translations[lang] = {};
-        console.log(`[trans]  ${lang.toUpperCase()} → (HTML source, no JSON)`);
+        console.log(`[trans]  ${lang.toUpperCase()} → (HTML source, no JSON translation file)`);
       } else {
         console.error(`[build] ✗ Translation file missing: ${filePath}`);
         process.exit(1);
       }
     } else {
       translations[lang] = data;
-      console.log(`[trans]  ${lang.toUpperCase()} → ${Object.keys(data).length} keys`);
+      console.log(`[trans]  ${lang.toUpperCase()} → ${Object.keys(data).length} keys loaded`);
     }
   }
 
@@ -274,22 +201,21 @@ async function build() {
   console.log(`\n[scan]  Found ${htmlFiles.length} HTML file(s)\n`);
 
   if (!htmlFiles.length) {
-    console.warn('[build] ⚠  No HTML files found');
+    console.warn('[build] ⚠  No HTML files found. Check your project structure.');
     process.exit(0);
   }
 
-  // ── 4. Setup dist directory ─────────────────────────────────────────────
+  // ── 4. Transform & write ────────────────────────────────────────────────
   if (!DRY_RUN) {
+    // Clean dist directory
     if (fs.existsSync(CONFIG.distDir)) {
       fs.rmSync(CONFIG.distDir, { recursive: true, force: true });
     }
     fs.mkdirSync(CONFIG.distDir, { recursive: true });
   }
 
-  // ── 5. Transform & write HTML ───────────────────────────────────────────
-  let totalPages = 0;
+  let totalPages  = 0;
   let totalErrors = 0;
-  const pageSizes = [];
 
   for (const srcFile of htmlFiles) {
     const relPath = path.relative(CONFIG.srcDir, srcFile).replace(/\\/g, '/');
@@ -305,17 +231,15 @@ async function build() {
 
       let builtHtml;
       try {
+        // [PATCH v2] ส่ง dbJson เป็น argument ที่ 5
+        //            html-transformer v2 ใช้ dbJson สร้าง window.__fvStaticConfig
         if (isDefaultWithHtmlSource) {
           builtHtml = transformHtml(srcHtml, lang, {}, relPath, dbJson);
         } else {
           builtHtml = transformHtml(srcHtml, lang, translations[lang], relPath, dbJson);
         }
-
-        // ✨ Minify HTML
-        builtHtml = minifyHtml(builtHtml);
-
       } catch (err) {
-        console.error(`    ✗ Error [${lang}] ${relPath}: ${err.message}`);
+        console.error(`    ✗ Error transforming [${lang}] ${relPath}:`, err.message);
         if (VERBOSE) console.error(err.stack);
         totalErrors++;
         continue;
@@ -326,60 +250,41 @@ async function build() {
         writeFile(outPath, builtHtml);
       }
 
-      // ✨ Show compression stats
-      const compression = {
-        original: Buffer.byteLength(builtHtml, 'utf8'),
-        lang
-      };
-      pageSizes.push(compression);
-
-      process.stdout.write(`    ✓ ${lang}  →  ${path.join(lang, relPath)}`);
-      process.stdout.write(` (${formatSize(compression.original)})\n`);
+      process.stdout.write(`    ✓ ${lang}  →  ${path.join(lang, relPath)}\n`);
       totalPages++;
     }
   }
 
-  // ── 6. Copy & minify assets ────────────────────────────────────────────
+  // ── 5. Copy assets ──────────────────────────────────────────────────────
   if (!DRY_RUN) {
-    console.log('\n[assets] Copying assets...');
+    console.log('\n[assets] Copying assets/...');
     copyDir(
       path.join(CONFIG.srcDir, CONFIG.assetsDir),
       path.join(CONFIG.distDir, CONFIG.assetsDir)
     );
 
-    // Minify CSS files
-    const cssDir = path.join(CONFIG.distDir, CONFIG.assetsDir, 'css');
-    if (fs.existsSync(cssDir)) {
-      const cssCount = minifyCss(cssDir);
-      if (cssCount > 0) console.log(`[minify] ${cssCount} CSS file(s) minified`);
-    }
-
-    // Minify JS files
-    const jsDir = path.join(CONFIG.distDir, CONFIG.assetsDir, 'js');
-    if (fs.existsSync(jsDir)) {
-      const jsCount = minifyJs(jsDir);
-      if (jsCount > 0) console.log(`[minify] ${jsCount} JS file(s) minified`);
-    }
-
-    // Copy static files
+    // Copy static root files
     for (const file of CONFIG.staticFiles) {
       const src = path.join(CONFIG.srcDir, file);
       if (fs.existsSync(src)) {
         fs.copyFileSync(src, path.join(CONFIG.distDir, file));
+        console.log(`[assets] Copied ${file}`);
       }
     }
   }
 
-  // ── 7. Generate _redirects ──────────────────────────────────────────────
+  // ── 6. Generate _redirects ──────────────────────────────────────────────
   const redirectsContent = _generateRedirects(langs, CONFIG.defaultLang);
   if (!DRY_RUN) {
     writeFile(path.join(CONFIG.distDir, '_redirects'), redirectsContent);
+    console.log('\n[redirects] Generated _redirects');
+  } else {
+    console.log('\n[redirects] (dry-run) Would generate:');
+    console.log(redirectsContent.split('\n').map(l => '  ' + l).join('\n'));
   }
 
-  // ── 8. Summary ──────────────────────────────────────────────────────────
+  // ── Summary ─────────────────────────────────────────────────────────────
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
-  const totalSize = pageSizes.reduce((sum, p) => sum + p.original, 0);
-
   console.log('');
   console.log('─────────────────────────────────────────');
   if (totalErrors > 0) {
@@ -387,9 +292,7 @@ async function build() {
   } else {
     console.log('✓ Build successful');
   }
-  console.log(`  ${totalPages} page(s) × ${langs.length} language(s)`);
-  console.log(`  Total size: ${formatSize(totalSize)}`);
-  console.log(`  Time: ${elapsed}s`);
+  console.log(`  ${totalPages} page(s) × ${langs.length} language(s) in ${elapsed}s`);
   if (!DRY_RUN) {
     console.log(`  Output: ./${CONFIG.distDir}/`);
   }
@@ -401,10 +304,20 @@ async function build() {
 
 // ── _redirects generator ──────────────────────────────────────────────────
 
+/**
+ * สร้าง _redirects สำหรับ Cloudflare Pages (production build)
+ *
+ * โครงสร้างแยก root redirect ออกจาก lang page rewrites ชัดเจน
+ * (เหมือนโครงสร้างของ _redirects dev ที่ใช้อยู่)
+ *
+ * @param {string[]} langs
+ * @param {string}   defaultLang
+ * @returns {string}
+ */
 function _generateRedirects(langs, defaultLang) {
   const lines = [
     '# _redirects — generated by scripts/build.js',
-    '# Generated at ' + new Date().toISOString(),
+    '# DO NOT EDIT MANUALLY — edit build.js to change redirect logic',
     '',
     '# ── Root → default language ──────────────────────────────────────────',
     `/ /${defaultLang}/home/ 302`,
@@ -434,7 +347,6 @@ function _generateRedirects(langs, defaultLang) {
     '/robots.txt  /robots.txt       200',
     '/sitemap.xml /sitemap.xml      200',
     '/favicon.ico /assets/images/fantrove-hub360.ico 200',
-    '/sw.js       /sw.js            200',
     '',
     '# ── Fallback ─────────────────────────────────────────────────────────',
     `/* /${defaultLang}/home/ 404`,
@@ -444,7 +356,7 @@ function _generateRedirects(langs, defaultLang) {
   return lines.join('\n');
 }
 
-// ── Run ──────────────────────────────────────────────────────────────
+// ── Run ───────────────────────────────────────────────────────────────────
 
 build().catch(err => {
   console.error('\n[build] ✗ Fatal error:', err.message);

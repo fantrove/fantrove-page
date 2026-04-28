@@ -7,16 +7,11 @@
     "build": "node scripts/build.js",
     "build:dry": "node scripts/build.js --dry-run",
     "build:verbose": "node scripts/build.js --verbose",
-    "build:no-minify": "node scripts/build.js --no-minify",
     "dev": "echo 'Development mode: open index.html / home/index.html directly in browser (no build required)'",
     "clean": "node -e \"const fs=require('fs'); if(fs.existsSync('dist')) fs.rmSync('dist',{recursive:true,force:true}); console.log('dist/ cleaned');\""
   },
   "dependencies": {
     "cheerio": "^1.0.0"
-  },
-  "devDependencies": {
-    "terser": "^5.20.0",
-    "clean-css": "^5.3.2"
   },
   "engines": {
     "node": ">=18.0.0"
