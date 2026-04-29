@@ -1,3 +1,11 @@
+/* Path:    assets/css/home.css
+   Purpose: Home page styles — performance-optimised build
+   Changes: Removed will-change/backface-visibility/translateZ from item-card
+            (was promoting every card to its own GPU layer).
+            Added scroll-snap foundation so CSS owns card-alignment,
+            removing all JS-driven scroll calculation from the hot path.
+*/
+
 @font-face {
   font-family: 'MunroSmall';
   src: url('/assets/fonts/MunroSmall.ttf') format('truetype');
@@ -28,7 +36,7 @@ h1, .h1 {
   -webkit-text-fill-color: transparent;
   background-clip: text;
   filter: brightness(0.95) contrast(1.35) saturate(1.15);
-  backface-visibility: hidden;
+  /* Removed backface-visibility — unnecessary for static text */
 }
 
 h2, .h2 {
@@ -98,8 +106,8 @@ section {
   gap: 1.3rem;
   font-size: 1.08rem;
   position: relative;
+  /* Only transition the two properties that actually change on interaction */
   transition: border-color var(--fv-transition-fast), background var(--fv-transition-fast);
-  will-change: background, border-color;
   isolation: isolate;
 }
 section.n  { padding:0!important; background:none; border-radius:0; border:none; box-shadow:none; }
@@ -160,7 +168,6 @@ section.mn { margin-bottom: 3rem; margin-top: 2rem; }
   gap: 0.35em;
   line-height: 1;
   vertical-align: middle;
-  transform: translateZ(0);
 }
 
 .btn-icon { display:inline-block; line-height:0; vertical-align:middle; margin-top:-2px; }
@@ -191,22 +198,20 @@ section.mn { margin-bottom: 3rem; margin-top: 2rem; }
   border: none;
   position: relative;
   z-index: 1;
-  will-change: transform;
 }
 
 .herok::before {
   content: "";
   position: absolute;
   top: -70px;
-  left: 0;
+  left: 50%;
+  transform: translateX(-50%);
   width: 200%;
   height: 100px;
   background: linear-gradient(to top,rgba(247,249,251,1) 0%,rgba(247,249,251,1) 50%,rgba(247,249,251,0.3) 80%,rgba(247,249,251,0) 100%);
   z-index: -1;
   pointer-events: none;
   filter: blur(10px);
-  left: 50%;
-  transform: translateX(-50%);
 }
 
 .hero-btns {
@@ -217,7 +222,7 @@ section.mn { margin-bottom: 3rem; margin-top: 2rem; }
   width: 100%;
   margin-top: 0.5rem;
 }
-.hero-btns button { transition: transform 100ms; will-change: transform; }
+/* Removed will-change: transform — no measurable benefit for buttons */
 .hero-btns button:active { transform: scale(1); }
 
 .hero h1,
@@ -237,7 +242,7 @@ section.mn { margin-bottom: 3rem; margin-top: 2rem; }
   filter: brightness(0.95) contrast(1.35) saturate(1.2);
   color: #6540C0;
   user-select: none;
-  backface-visibility: hidden;
+  /* Removed backface-visibility — static element, no 3D transform */
 }
 
 .hero-content {
@@ -259,9 +264,7 @@ section.mn { margin-bottom: 3rem; margin-top: 2rem; }
   aspect-ratio: 1/1;
   border: 3px solid #e6ecf7;
   transition: border-color var(--fv-transition-fast);
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  will-change: border-color, transform;
+  /* Removed will-change, transform:translateZ — not being animated */
   contain: paint;
 }
 
@@ -284,7 +287,7 @@ section.mn { margin-bottom: 3rem; margin-top: 2rem; }
   box-shadow: 0 6px 18px rgba(14,176,213,0.06);
   flex-shrink: 0;
   font-weight: var(--fv-font-bold);
-  will-change: transform;
+  /* Removed will-change: transform — not animated */
 }
 
 /* ---------- NOTICE ---------- */
@@ -366,7 +369,7 @@ section.o:has(.faq-toggle:checked) { padding-bottom:2.1rem!important; }
   padding: 0.6em 1.15em; border-radius: var(--fv-radius-pill);
   background: var(--fv-surface-page); color:#4C4C4C; border:0 solid transparent;
   cursor:pointer; position:relative; overflow:hidden; user-select:none;
-  -webkit-tap-highlight-color:transparent; transition:none; will-change:auto;
+  -webkit-tap-highlight-color:transparent; transition:none;
 }
 .text-h button:active { transform:scale(0.97); }
 .text-h button .btn-content { position:relative; z-index:2; display:inline-flex; align-items:center; justify-content:center; pointer-events:none; letter-spacing:0.05em; }
@@ -381,30 +384,83 @@ section.o:has(.faq-toggle:checked) { padding-bottom:2.1rem!important; }
   display: flex; align-items:flex-start; gap:1rem; margin-bottom:2px;
   overflow-x:auto; scrollbar-width:thin; scrollbar-color:#c8d0e7 var(--fv-surface-soft);
   white-space:nowrap; padding-bottom:0.22rem; width:100%; min-width:0; flex-wrap:nowrap;
-  will-change:transform; overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch;
-}
-.carousel-container { display:flex; align-items:center; width:100%; min-height:102px; overflow-x:auto; overflow-y:visible; will-change:transform; overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch; }
-.carousel-track {
-  display:flex; flex-direction:row; gap:1.5rem; overflow-x:auto; overflow-y:visible;
-  scroll-behavior:auto; padding:10px; width:100%; white-space:nowrap; min-width:0; flex-wrap:nowrap;
-  will-change:transform; contain:layout paint;
+  overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch;
+  /* Removed will-change:transform — browser handles scroll compositing natively */
 }
 
+.carousel-container {
+  display:flex; align-items:center; width:100%; min-height:102px;
+  overflow-x:auto; overflow-y:visible;
+  overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch;
+  /* Removed will-change:transform */
+}
+
+.carousel-track {
+  display: flex;
+  flex-direction: row;
+  gap: 1.5rem;
+  overflow-x: auto;
+  overflow-y: visible;
+  /* scroll-behavior: auto — let CSS snap handle smoothness, not JS */
+  scroll-behavior: auto;
+  /* No left padding — first card sits flush to container edge.
+     Right/top/bottom padding kept for visual breathing room. */
+  padding: 10px 10px 10px 0;
+  width: 100%;
+  white-space: nowrap;
+  min-width: 0;
+  flex-wrap: nowrap;
+  contain: layout paint;
+
+  /* ── SCROLL SNAP ──────────────────────────────────────────
+     mandatory = every scroll stop aligns to a card boundary.
+     CSS snap is GPU-accelerated; replaces all JS distance math.
+     scroll-padding-inline-start: 0 so the first card snaps
+     flush to the left edge of the container with no gap.
+  ─────────────────────────────────────────────────────────── */
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline-start: 0;
+
+  /* Hide scrollbar visually; keep it functional for a11y */
+  scrollbar-width: none;
+}
+.carousel-track::-webkit-scrollbar { display: none; }
+
+/*
+ * Snap target on each card.
+ * scroll-snap-align: start → left edge of card aligns to scroll-padding.
+ * This is what makes the "peek previous card" effect work naturally —
+ * the next card's left edge snaps to the viewport's left boundary,
+ * leaving the tail of the previous card visible.
+ */
 .item-card {
   background: var(--fv-surface-card);
   border-radius: var(--fv-radius-lg);
   width: 140px;
   padding: 1.25rem 0.72rem 1.05rem;
   display: flex; flex-direction:column; align-items:center;
+  /* Only transition properties that actually change on hover */
   transition: border-color var(--fv-transition-fast), background var(--fv-transition-fast);
-  cursor:pointer;
+  cursor: pointer;
   border: 1.4px solid #e6ecf7;
-  position:relative; text-align:center; font-size:1.05em; gap:0.38rem;
-  outline:none; flex-shrink:0; box-sizing:border-box; word-break:break-word; overflow:visible;
-  will-change:transform, border-color, background;
-  backface-visibility:hidden; transform:translateZ(0); contain:paint;
+  position: relative; text-align:center; font-size:1.05em; gap:0.38rem;
+  outline: none; flex-shrink: 0; box-sizing: border-box;
+  word-break: break-word; overflow: visible;
+  contain: paint;
+
+  /* Snap anchor — every card is a snap target */
+  scroll-snap-align: start;
+  scroll-snap-stop: normal; /* allow fast swipe to skip multiple cards */
+
+  /*
+   * REMOVED: will-change:transform, backface-visibility:hidden, transform:translateZ(0)
+   * These were forcing the browser to promote EVERY card into its own GPU compositing
+   * layer, consuming large amounts of VRAM and causing jank when the section scrolled
+   * into view. Cards are static elements — no 3D transform, no animation — so layer
+   * promotion provides zero benefit and significant cost.
+   */
 }
-.item-card .emoji { font-size:1.55rem; margin-bottom:0.16rem; transition:filter 0.10s; z-index:2; user-select:none; }
+.item-card .emoji { font-size:1.55rem; margin-bottom:0.16rem; z-index:2; user-select:none; }
 .item-card .name {
   font-size:0.9em; color:var(--fv-brand-purple); font-weight:var(--fv-font-extrabold);
   letter-spacing:0.013em; max-width:100%; margin-bottom:0.09em; z-index:2;
@@ -437,6 +493,9 @@ section.o:has(.faq-toggle:checked) { padding-bottom:2.1rem!important; }
   .item-card { font-size:0.91em; }
   .item-card .name { font-size:0.93em; }
   .img-d1 { padding:0 10px; }
+
+  /* Mobile: snap-stop always so user can't swipe past a card accidentally */
+  .item-card { scroll-snap-stop: always; }
 }
 
 /* ---------- SCROLLBAR ---------- */
@@ -454,8 +513,10 @@ section.o:has(.faq-toggle:checked) { padding-bottom:2.1rem!important; }
 @media (prefers-reduced-motion:reduce) {
   *, *::before, *::after {
     animation-duration:0.001ms!important; animation-iteration-count:1!important;
-    transition-duration:0.001ms!important; scroll-behavior:auto!important; will-change:auto!important;
+    transition-duration:0.001ms!important; scroll-behavior:auto!important;
   }
+  /* Disable snap animation for reduced-motion users */
+  .carousel-track { scroll-snap-type: none; }
 }
 
 /* ---------- ACCESSIBILITY: visually-hidden SR only ---------- */
@@ -464,7 +525,7 @@ section.o:has(.faq-toggle:checked) { padding-bottom:2.1rem!important; }
   overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0;
 }
 
-/* ---------- SECTION LABEL (แทน h ที่ใช้ตกแต่ง) ---------- */
+/* ---------- SECTION LABEL ---------- */
 .fv-section-label {
   font-size: var(--fv-text-sm);
   font-weight: var(--fv-font-extrabold);
