@@ -1,13 +1,13 @@
-// home.js  v3.3.0
+// home.js  v3.4.0
 // =========================================================
 // Home page renderer — fast-path + carousel arrows
 //
-// v3.3:
-//  - View All card: สวยงาม แตกต่างชัดเจน แต่ยังกลมกลืน
-//  - Carousel: scroll arrows ซ้าย/ขวา overlay บน track
-//    · แสดง/ซ่อนอัตโนมัติตามตำแหน่ง scroll
-//    · คำนวณ scroll distance อัจฉริยะ (≈ 2.5 card widths)
-//    · smooth scroll + debounced visibility update
+// v3.4 changes:
+//  - Circular arrow buttons: fixed min-width/min-height/padding/box-sizing
+//    เพื่อป้องกัน flex layout ทำให้ปุ่มกลายเป็นวงรี
+//  - Card-aligned scroll: คำนวณจำนวน card ที่มองเห็นได้จริง
+//    แล้ว scroll ทีละ (visibleCount - 1) card เพื่อรักษา visual context
+//    และไม่ทิ้ง card ค้างระหว่างกลาง
 // =========================================================
 
 // ─────────────────────────────────────────────────────────
@@ -18,8 +18,6 @@ const HOME_CONFIG = {
   MAX_CATEGORIES_PER_TYPE: 4,
   SERVICE_PATH: '/assets/js/con-data-service/con-data-service.js',
   INDEX_PATH  : '/assets/db/con-data/index.json',
-  /** จำนวนการ์ดที่เลื่อนต่อครั้งกดลูกศร */
-  SCROLL_CARDS: 2.5,
 };
 
 // ─────────────────────────────────────────────────────────
@@ -43,7 +41,8 @@ const VIEW_ALL_CONFIGS = {
 // ─────────────────────────────────────────────────────────
 // LANGUAGE
 // ─────────────────────────────────────────────────────────
-const getLang = () => (typeof localStorage !== 'undefined' && localStorage.getItem('selectedLang')) || 'en';
+const getLang = () =>
+  (typeof localStorage !== 'undefined' && localStorage.getItem('selectedLang')) || 'en';
 
 function pickLang(obj, lang) {
   if (!obj || typeof obj !== 'object') return String(obj || '');
@@ -81,7 +80,6 @@ function injectStyles() {
   s.textContent = `
     /* ════════════════════════════════════════════════════
        VIEW ALL CARD
-       ดูแตกต่าง แต่ยังกลมกลืน — gradient อ่อนๆ + shimmer
     ════════════════════════════════════════════════════ */
     .item-card--view-all {
       text-decoration: none;
@@ -92,7 +90,6 @@ function injectStyles() {
       overflow: hidden;
     }
 
-    /* shimmer line บน */
     .item-card--view-all::before {
       content: '';
       position: absolute;
@@ -117,7 +114,6 @@ function injectStyles() {
       background: linear-gradient(160deg, #e8fbf5 0%, #ede8ff 100%);
     }
 
-    /* วงกลม gradient รอบลูกศร */
     .view-all-icon {
       display: flex;
       align-items: center;
@@ -150,7 +146,7 @@ function injectStyles() {
     }
 
     /* ════════════════════════════════════════════════════
-       CAROUSEL WRAPPER — รองรับ overlay arrows
+       CAROUSEL WRAPPER
     ════════════════════════════════════════════════════ */
     .carousel-wrapper {
       position: relative;
@@ -158,6 +154,8 @@ function injectStyles() {
 
     /* ════════════════════════════════════════════════════
        SCROLL ARROWS
+       FIX v3.4: min-width/min-height/padding:0/box-sizing
+       ป้องกัน flex container ยืด button ให้เป็นวงรี
     ════════════════════════════════════════════════════ */
     .carousel-arrow {
       position: absolute;
@@ -165,18 +163,23 @@ function injectStyles() {
       transform: translateY(-50%);
       z-index: 10;
 
+      /* Perfect circle — ต้องล็อค width = height ทุกกรณี */
       display: flex;
       align-items: center;
       justify-content: center;
-
       width: 36px;
       height: 36px;
+      min-width: 36px;   /* ป้องกัน flex shrink */
+      min-height: 36px;  /* ป้องกัน flex shrink */
+      padding: 0;        /* ลบ default browser button padding */
+      box-sizing: border-box;
+
       border-radius: 50%;
       border: none;
       cursor: pointer;
       user-select: none;
+      -webkit-user-select: none;
 
-      /* glass-morphism เบาๆ */
       background: rgba(255,255,255,0.82);
       backdrop-filter: blur(6px);
       -webkit-backdrop-filter: blur(6px);
@@ -186,6 +189,9 @@ function injectStyles() {
       opacity: 0;
       pointer-events: none;
       transition: opacity 0.2s, transform 0.15s, background 0.15s;
+
+      /* Prevent outline from breaking circle shape */
+      outline: none;
     }
 
     .carousel-arrow.visible {
@@ -196,6 +202,7 @@ function injectStyles() {
     .carousel-arrow:hover {
       background: rgba(255,255,255,0.97);
       color: var(--brand-1);
+      /* รักษา translateY(-50%) ไว้ ต่อท้ายด้วย scale */
       transform: translateY(-50%) scale(1.08);
       box-shadow: 0 4px 18px rgba(19,180,127,0.18), 0 0 0 1.5px rgba(19,180,127,0.25);
     }
@@ -204,12 +211,22 @@ function injectStyles() {
       transform: translateY(-50%) scale(0.97);
     }
 
-    .carousel-arrow svg { display: block; pointer-events: none; }
+    .carousel-arrow:focus-visible {
+      outline: 2px solid var(--brand-1, #13b47f);
+      outline-offset: 2px;
+    }
+
+    .carousel-arrow svg {
+      display: block;
+      pointer-events: none;
+      /* SVG ไม่ควรมี flex grow/shrink */
+      flex-shrink: 0;
+    }
 
     .carousel-arrow--left  { left: 4px;  }
     .carousel-arrow--right { right: 4px; }
 
-    /* fade edge ของ track ให้รู้ว่ายังมีเนื้อหา */
+    /* Fade-edge แสดงว่ายังมีเนื้อหา */
     .carousel-wrapper::after,
     .carousel-wrapper::before {
       content: '';
@@ -232,6 +249,16 @@ function injectStyles() {
     .carousel-wrapper.can-left::before  { opacity: 1; }
     .carousel-wrapper.can-right::after  { opacity: 1; }
 
+    /* Mobile */
+    @media (max-width: 600px) {
+      .carousel-arrow {
+        width: 32px;
+        height: 32px;
+        min-width: 32px;
+        min-height: 32px;
+      }
+    }
+
     /* Error state */
     .home-error {
       padding: 2rem 1rem; border-radius: 20px;
@@ -241,10 +268,6 @@ function injectStyles() {
     .home-error small {
       display: block; margin-top: .4rem;
       color: #ff8a8a; font-family: monospace; font-size: .82em;
-    }
-
-    @media (max-width: 600px) {
-      .carousel-arrow { width: 30px; height: 30px; }
     }
   `;
   document.head.appendChild(s);
@@ -287,38 +310,48 @@ async function reorderAssembled(assembled) {
 }
 
 // ─────────────────────────────────────────────────────────
-// SMART CAROUSEL ARROWS
+// CAROUSEL SCROLL — Card-aligned scrolling
 // ─────────────────────────────────────────────────────────
 
 /**
- * คำนวณ scroll distance อัจฉริยะ:
- * ดูจาก card แรกใน track เป็น reference width + gap
- * แล้วคูณด้วย SCROLL_CARDS
+ * คำนวณระยะ scroll ที่ align กับขอบ card เสมอ
+ *
+ * แนวคิด: นับว่า track แสดง card ได้กี่ใบ แล้ว scroll ทีละ
+ * (visibleCount - 1) ใบ เพื่อรักษา card สุดท้ายเป็น visual anchor
+ *
+ * ผลลัพธ์:
+ *  - ไม่มี card ถูก "ตัดครึ่ง" หลัง scroll
+ *  - บน mobile ที่มีพื้นที่น้อย จะ scroll ทีละ 1 card
+ *  - บน desktop scroll ทีละหลาย card ตามพื้นที่จริง
  */
 function calcScrollDistance(track) {
   const firstCard = track.querySelector('.item-card');
   if (!firstCard) return track.clientWidth * 0.75;
 
-  const cardRect = firstCard.getBoundingClientRect();
-  const cardW    = cardRect.width;
-
-  // หา gap จาก computed style ของ track
+  const cardW = firstCard.offsetWidth;
   const trackStyle = getComputedStyle(track);
-  const gap = parseFloat(trackStyle.gap || trackStyle.columnGap || '16');
+  const gap = parseFloat(trackStyle.columnGap || trackStyle.gap || '0') || 16;
+  const step = cardW + gap;
 
-  return Math.round((cardW + gap) * HOME_CONFIG.SCROLL_CARDS);
+  // จำนวน card ที่มองเห็นได้ครบ ใน viewport ปัจจุบัน
+  const visibleCount = Math.max(1, Math.floor((track.clientWidth + gap) / step));
+
+  // Scroll ทีละ (visibleCount - 1) เพื่อ overlap 1 card เป็น context
+  const scrollCards = Math.max(1, visibleCount - 1);
+  return Math.round(step * scrollCards);
 }
 
 /**
- * อัปเดตการแสดง/ซ่อน arrow และ fade edge
- * debounced via rAF
+ * อัปเดต visibility ของ arrows และ fade-edge
+ * เรียกผ่าน rAF เพื่อ batch DOM reads
  */
 function updateArrows(track, wrapper, btnLeft, btnRight) {
   const sl    = track.scrollLeft;
   const maxSL = track.scrollWidth - track.clientWidth;
 
-  const canLeft  = sl > 1;
-  const canRight = sl < maxSL - 1;
+  // ใช้ threshold เล็กน้อย (2px) เพื่อรองรับ subpixel rounding
+  const canLeft  = sl > 2;
+  const canRight = sl < maxSL - 2;
 
   btnLeft.classList.toggle('visible', canLeft);
   btnRight.classList.toggle('visible', canRight);
@@ -326,21 +359,32 @@ function updateArrows(track, wrapper, btnLeft, btnRight) {
   wrapper.classList.toggle('can-right', canRight);
 }
 
-/** สร้าง arrow button พร้อม SVG */
+/**
+ * สร้าง arrow button ด้วย SVG ลูกศร
+ *
+ * FIX v3.4: ใช้ viewBox="0 0 18 18" (square) เพื่อให้ icon
+ * ตรงกลางของปุ่มวงกลมพอดี ไม่ทำให้ปุ่มผิดรูป
+ */
 function buildArrowBtn(dir) {
   const btn = document.createElement('button');
   btn.type      = 'button';
   btn.className = `carousel-arrow carousel-arrow--${dir}`;
   btn.setAttribute('aria-label', dir === 'left' ? 'Scroll left' : 'Scroll right');
 
-  // SVG ลูกศร
+  /*
+   * Chevron paths สำหรับ viewBox 18×18 (square)
+   * Left  < : M12 4 → 6 9 → l6 5
+   * Right > : M6 4 → l6 5 → -6 5
+   */
   const d = dir === 'left'
-    ? 'M11 7 7 11l4 4'   // ← chevron left
-    : 'M7 7l4 4-4 4';    // → chevron right
+    ? 'M12 4L6 9l6 5'
+    : 'M6 4l6 5-6 5';
 
   btn.innerHTML = `
-    <svg width="16" height="16" viewBox="0 0 18 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="${d}" stroke="currentColor" stroke-width="2"
+    <svg width="14" height="14" viewBox="0 0 18 18"
+         fill="none" xmlns="http://www.w3.org/2000/svg"
+         aria-hidden="true" focusable="false">
+      <path d="${d}" stroke="currentColor" stroke-width="2.2"
             stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
   `;
@@ -348,8 +392,8 @@ function buildArrowBtn(dir) {
 }
 
 /**
- * ผูก arrow scroll logic กับ track+wrapper
- * เรียกหลังจาก DOM ถูก append แล้ว
+ * ผูก arrow scroll logic กับ carousel track
+ * เรียกหลังจาก track มี DOM content แล้ว
  */
 function attachCarouselArrows(wrapper, track) {
   const btnLeft  = buildArrowBtn('left');
@@ -357,23 +401,28 @@ function attachCarouselArrows(wrapper, track) {
   wrapper.appendChild(btnLeft);
   wrapper.appendChild(btnRight);
 
-  // click → smooth scroll
+  // Click → scroll ด้วยระยะที่ align กับ card boundary
   btnLeft.addEventListener('click', () => {
-    track.scrollBy({ left: -calcScrollDistance(track), behavior: 'smooth' });
+    const dist = calcScrollDistance(track);
+    track.scrollBy({ left: -dist, behavior: 'smooth' });
   });
   btnRight.addEventListener('click', () => {
-    track.scrollBy({ left:  calcScrollDistance(track), behavior: 'smooth' });
+    const dist = calcScrollDistance(track);
+    track.scrollBy({ left: dist, behavior: 'smooth' });
   });
 
-  // scroll → update visibility (debounced via rAF)
+  // Scroll → update arrow visibility (debounced via rAF)
   let rafId = null;
   const onScroll = () => {
     if (rafId) cancelAnimationFrame(rafId);
-    rafId = requestAnimationFrame(() => updateArrows(track, wrapper, btnLeft, btnRight));
+    rafId = requestAnimationFrame(() => {
+      updateArrows(track, wrapper, btnLeft, btnRight);
+      rafId = null;
+    });
   };
   track.addEventListener('scroll', onScroll, { passive: true });
 
-  // initial state (defer เล็กน้อยให้ layout settle ก่อน)
+  // Initial state — defer เพื่อให้ layout settle
   requestAnimationFrame(() => updateArrows(track, wrapper, btnLeft, btnRight));
 }
 
@@ -457,11 +506,13 @@ function buildCategorySection(category, typeId, lang) {
 
   // items
   const frag = document.createDocumentFragment();
-  (category.data || []).slice(0, HOME_CONFIG.MAX_ITEMS_PER_CATEGORY).forEach(item => frag.appendChild(buildItemCard(item, typeId, lang)));
+  (category.data || []).slice(0, HOME_CONFIG.MAX_ITEMS_PER_CATEGORY).forEach(item => {
+    frag.appendChild(buildItemCard(item, typeId, lang));
+  });
   frag.appendChild(buildViewAllCard(typeId));
   track.appendChild(frag);
 
-  // arrows ผูกหลัง track มี content แล้ว (ใน rAF เพื่อให้ layout width ถูก)
+  // arrows ผูกหลัง track มี content (ใน rAF เพื่อให้ layout width ถูก)
   requestAnimationFrame(() => attachCarouselArrows(wrapper, track));
 
   return section;
@@ -486,7 +537,9 @@ function buildTypeSection(typeObj, lang) {
   wrapper.appendChild(header);
 
   const frag = document.createDocumentFragment();
-  (typeObj.category || []).slice(0, HOME_CONFIG.MAX_CATEGORIES_PER_TYPE).forEach(cat => frag.appendChild(buildCategorySection(cat, typeObj.id, lang)));
+  (typeObj.category || []).slice(0, HOME_CONFIG.MAX_CATEGORIES_PER_TYPE).forEach(cat => {
+    frag.appendChild(buildCategorySection(cat, typeObj.id, lang));
+  });
   wrapper.appendChild(frag);
 
   return wrapper;
