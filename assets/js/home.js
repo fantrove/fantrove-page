@@ -1,31 +1,14 @@
 // Path:    assets/js/home.js
-// Purpose: Home page renderer — fast-path + carousel arrows (v4.1)
+// Purpose: Home page renderer — fast-path + carousel arrows (v4.2)
 // Used by: home/index.html
 //
-// v4.0 performance overhaul (see git history for details):
-//   Removed scroll listener, calcScrollDistance, backdrop-filter, GPU layers.
-//   CSS scroll-snap owns card alignment; IntersectionObserver owns arrow state.
-//
-// v4.1 fixes:
-//
-//  FIXED  Sentinel IntersectionObserver bug
-//         1px sentinels inserted before the first card sat at x=0 in content
-//         coordinates. With scroll-padding-inline-start:0, the first card snaps
-//         to scrollLeft=0, but the sentinel (0-1px) was treated as marginally
-//         outside the scrollport → IO reported "not intersecting" → left arrow
-//         stayed visible at the leftmost position.
-//         Fix: observe firstCard + lastCard directly (threshold:0.5).
-//
-//  FIXED  Arrow tap triggering card copy behind button
-//         Arrow buttons were 36px / 32px, too small to hit reliably on mobile.
-//         Near-miss taps landed directly on a card element, triggering copy.
-//         Fix: 44px buttons + touch-action:manipulation + stopPropagation.
-//
-//  FIXED  Copy notification race condition
-//         showCopyNotification (defer script) might not have executed when user
-//         clicks very quickly after page load. typeof check returned false on
-//         first click, silently discarding the notification.
-//         Fix: rAF retry — defer scripts run before the next paint frame.
+// v4.2 arrow redesign:
+//   Replaced circle button arrows with full-height gradient strip arrows.
+//   Click anywhere on the strip to scroll — no small hit target to miss.
+//   Strip is a gradient overlay (white→transparent) so card content stays
+//   readable underneath. Icon sits in a small pill inside the strip.
+//   scroll-padding-inline-start added to track so snapped cards land with
+//   breathing room instead of flushing against the viewport edge.
 
 // ─────────────────────────────────────────────────────────
 // CONFIG
@@ -168,55 +151,66 @@ function injectStyles() {
     ════════════════════════════════════════════════════ */
     .carousel-wrapper {
       position: relative;
+      /* Clip the gradient strips to the wrapper boundary */
+      overflow: hidden;
+      border-radius: var(--fv-radius-lg, 12px);
     }
 
     /* ════════════════════════════════════════════════════
-       SCROLL ARROWS  v4.1
-       - 44×44px minimum tap target (Apple HIG / Material)
-       - touch-action: manipulation eliminates 300ms tap delay
-       - No backdrop-filter (was expensive GPU compositing)
-       - Positioned to avoid visually covering card content;
-         arrows float in the gutter at each edge of the wrapper
+       SCROLL ARROW STRIPS  v4.2
+       ─────────────────────────────────────────────────
+       Design: full-height gradient strips instead of
+       circle buttons. Click anywhere on the strip to
+       scroll — no small hit target to miss.
+
+       Structure:
+         .carousel-arrow        — the strip itself (button)
+           └── .ca-icon-wrap    — centred pill housing the chevron
+
+       The strip background is a gradient so card content
+       remains readable underneath (not a solid block).
+       The icon pill adds contrast so the chevron is visible
+       against any card colour.
+
+       Touch: touch-action:manipulation removes the 300ms
+       delay and prevents the double-tap zoom that was
+       misfiring arrow taps as card copy actions.
     ════════════════════════════════════════════════════ */
+
+    /* -- Strip base ---------------------------------- */
     .carousel-arrow {
       position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      z-index: 20; /* above cards (default z-index) and fade overlays (z-index:5) */
+      top: 0;
+      bottom: 0;
+      height: 100%;
 
-      /* 44×44 minimum — matches Apple HIG & Material touch target guideline */
+      /* Strip width — wide enough to be an easy tap target */
+      width: 64px;
+
+      z-index: 20;
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 44px;
-      height: 44px;
-      min-width: 44px;
-      min-height: 44px;
-      padding: 0;
-      box-sizing: border-box;
 
-      border-radius: 50%;
       border: none;
+      margin: 0;
+      padding: 0;
       cursor: pointer;
       user-select: none;
       -webkit-user-select: none;
 
       /*
-       * touch-action: manipulation — prevents the 300ms click delay on
-       * mobile browsers and disables double-tap-to-zoom on the button,
-       * which was a hidden cause of arrow misfire on fast taps.
+       * touch-action: manipulation — removes 300ms tap delay
+       * on mobile and disables double-tap-to-zoom on the strip.
        */
       touch-action: manipulation;
 
-      /* Solid bg — no backdrop-filter, no compositing overhead */
-      background: rgba(255,255,255,0.96);
-      box-shadow: 0 2px 10px rgba(6,20,40,0.13), 0 0 0 1px rgba(14,176,213,0.12);
-      color: #3a4a5a;
-
+      /* Start hidden; JS adds .visible when scroll is possible */
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.18s ease, background 0.15s ease;
-      will-change: opacity;
+      transition: opacity 0.22s ease;
+
+      /* No outline — we add focus-visible below */
       outline: none;
     }
 
@@ -225,66 +219,123 @@ function injectStyles() {
       pointer-events: auto;
     }
 
-    .carousel-arrow:hover {
+    /* -- Left strip: white → transparent ------------ */
+    .carousel-arrow--left {
+      left: 0;
+      background: linear-gradient(
+        to right,
+        rgba(255, 255, 255, 0.96) 0%,
+        rgba(255, 255, 255, 0.80) 38%,
+        rgba(255, 255, 255, 0.30) 68%,
+        rgba(255, 255, 255, 0.00) 100%
+      );
+      /* Align icon toward the left edge of the strip */
+      justify-content: flex-start;
+      padding-left: 6px;
+    }
+
+    /* -- Right strip: transparent → white ----------- */
+    .carousel-arrow--right {
+      right: 0;
+      background: linear-gradient(
+        to left,
+        rgba(255, 255, 255, 0.96) 0%,
+        rgba(255, 255, 255, 0.80) 38%,
+        rgba(255, 255, 255, 0.30) 68%,
+        rgba(255, 255, 255, 0.00) 100%
+      );
+      /* Align icon toward the right edge of the strip */
+      justify-content: flex-end;
+      padding-right: 6px;
+    }
+
+    /* Deepen the gradient slightly on hover for feedback */
+    .carousel-arrow--left:hover {
+      background: linear-gradient(
+        to right,
+        rgba(255, 255, 255, 1.00) 0%,
+        rgba(255, 255, 255, 0.88) 42%,
+        rgba(255, 255, 255, 0.20) 72%,
+        rgba(255, 255, 255, 0.00) 100%
+      );
+    }
+    .carousel-arrow--right:hover {
+      background: linear-gradient(
+        to left,
+        rgba(255, 255, 255, 1.00) 0%,
+        rgba(255, 255, 255, 0.88) 42%,
+        rgba(255, 255, 255, 0.20) 72%,
+        rgba(255, 255, 255, 0.00) 100%
+      );
+    }
+
+    /* -- Icon pill ----------------------------------- */
+    /*
+     * Small pill/circle that houses the chevron SVG.
+     * Gives the arrow a distinct focal point against
+     * any card colour behind the gradient.
+     */
+    .ca-icon-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      flex-shrink: 0;
+
+      background: rgba(255, 255, 255, 0.92);
+      border: 1.5px solid rgba(14, 176, 213, 0.18);
+      box-shadow: 0 2px 8px rgba(6, 20, 40, 0.10);
+
+      color: #3a4a5a;
+      transition: background 0.15s ease, color 0.15s ease,
+                  border-color 0.15s ease, transform 0.15s ease,
+                  box-shadow 0.15s ease;
+    }
+
+    .carousel-arrow:hover .ca-icon-wrap {
       background: #fff;
       color: var(--brand-1, #13b47f);
-      transform: translateY(-50%) scale(1.06);
-      box-shadow: 0 4px 16px rgba(19,180,127,0.20), 0 0 0 1.5px rgba(19,180,127,0.28);
+      border-color: rgba(19, 180, 127, 0.35);
+      box-shadow: 0 3px 12px rgba(19, 180, 127, 0.18);
+      transform: scale(1.08);
     }
 
-    .carousel-arrow:active {
-      transform: translateY(-50%) scale(0.95);
-      transition-duration: 0.05s;
+    .carousel-arrow:active .ca-icon-wrap {
+      transform: scale(0.93);
+      transition-duration: 0.06s;
     }
 
-    .carousel-arrow:focus-visible {
+    .carousel-arrow:focus-visible .ca-icon-wrap {
       outline: 2px solid var(--brand-1, #13b47f);
-      outline-offset: 3px;
+      outline-offset: 2px;
     }
 
-    .carousel-arrow svg {
+    .ca-icon-wrap svg {
       display: block;
       pointer-events: none;
       flex-shrink: 0;
     }
 
-    /* Positioned at the very edge of the wrapper so they don't
-       sit on top of card content. The wrapper has position:relative. */
-    .carousel-arrow--left  { left: 0;  }
-    .carousel-arrow--right { right: 0; }
-
-    /* Fade-edge peek effect */
-    .carousel-wrapper::after,
-    .carousel-wrapper::before {
-      content: '';
-      position: absolute;
-      top: 0; bottom: 0;
-      width: 40px;
-      pointer-events: none;
-      z-index: 5;
-      opacity: 0;
-      transition: opacity 0.25s;
-    }
-    .carousel-wrapper::before {
-      left: 0;
-      background: linear-gradient(to right, rgba(255,255,255,0.7), transparent);
-    }
-    .carousel-wrapper::after {
-      right: 0;
-      background: linear-gradient(to left, rgba(255,255,255,0.7), transparent);
-    }
-    .carousel-wrapper.can-left::before  { opacity: 1; }
-    .carousel-wrapper.can-right::after  { opacity: 1; }
-
+    /* Mobile: slightly narrower strip, smaller pill */
     @media (max-width: 600px) {
-      /* 40px on mobile — slightly smaller than desktop but still within
-         the 44px touch target when you account for surrounding whitespace */
       .carousel-arrow {
-        width: 40px;
-        height: 40px;
-        min-width: 40px;
-        min-height: 40px;
+        width: 52px;
       }
+      .ca-icon-wrap {
+        width: 28px;
+        height: 28px;
+      }
+    }
+
+    /* ════════════════════════════════════════════════════
+       Remove the old pseudo-element fade overlays —
+       the gradient strips now serve this purpose.
+    ════════════════════════════════════════════════════ */
+    .carousel-wrapper::before,
+    .carousel-wrapper::after {
+      display: none !important;
     }
 
     /* Error state */
@@ -338,29 +389,18 @@ async function reorderAssembled(assembled) {
 }
 
 // ─────────────────────────────────────────────────────────
-// CAROUSEL ARROWS — v4.1 architecture
+// CAROUSEL ARROWS — v4.2 full-height gradient strip design
 //
 // Arrow visibility: IntersectionObserver watches the FIRST and
-// LAST .item-card in the track (not 1px sentinels — sentinels
-// caused a bug where their position relative to the snap point
-// left them permanently outside the scrollport at scrollLeft=0,
-// keeping the left arrow visible even at the leftmost card).
+// LAST .item-card in the track directly (threshold:0.5).
 //
-//   firstCard ≥50% visible in scrollport → at left edge → hide left arrow
-//   lastCard  ≥50% visible in scrollport → at right edge → hide right arrow
+//   firstCard ≥50% visible → at left edge → hide left strip
+//   lastCard  ≥50% visible → at right edge → hide right strip
 //
-// threshold:0.5 prevents false positives from partially-peeking
-// cards at the scroll boundary.
-//
-// Arrow click: stopPropagation prevents the event bubbling through
-// to any card that might sit behind the arrow in the layout,
-// which was causing accidental card copy on near-miss taps.
+// Arrow click: stopPropagation prevents the event bubbling to
+// any card that might sit behind the strip in the layout.
 // ─────────────────────────────────────────────────────────
 
-/**
- * Returns the pixel distance for one card step (card width + gap).
- * Called only on arrow click — not in any scroll path.
- */
 function getCardStep(track) {
   const card = track.querySelector('.item-card');
   if (!card) return 200;
@@ -369,8 +409,9 @@ function getCardStep(track) {
 }
 
 /**
- * Builds a circular arrow button with chevron SVG.
- * viewBox is square (18×18) so the icon stays centred in the circle.
+ * Builds a full-height gradient strip arrow button.
+ * The button IS the strip — click anywhere on it to scroll.
+ * A small icon pill sits inside for visual affordance.
  */
 function buildArrowBtn(dir) {
   const btn = document.createElement('button');
@@ -378,20 +419,27 @@ function buildArrowBtn(dir) {
   btn.className = `carousel-arrow carousel-arrow--${dir}`;
   btn.setAttribute('aria-label', dir === 'left' ? 'Scroll left' : 'Scroll right');
 
-  const d = dir === 'left' ? 'M12 4L6 9l6 5' : 'M6 4l6 5-6 5';
-  btn.innerHTML = `
-    <svg width="16" height="16" viewBox="0 0 18 18"
-         fill="none" xmlns="http://www.w3.org/2000/svg"
-         aria-hidden="true" focusable="false">
-      <path d="${d}" stroke="currentColor" stroke-width="2.4"
+  // Chevron path differs by direction
+  const d = dir === 'left' ? 'M11 4L5 9l6 5' : 'M7 4l6 5-6 5';
+
+  // Icon pill — the only solid element inside the transparent strip
+  const pill = document.createElement('span');
+  pill.className = 'ca-icon-wrap';
+  pill.setAttribute('aria-hidden', 'true');
+  pill.innerHTML = `
+    <svg width="14" height="14" viewBox="0 0 18 18"
+         fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="${d}" stroke="currentColor" stroke-width="2.5"
             stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
   `;
+
+  btn.appendChild(pill);
   return btn;
 }
 
 /**
- * Attaches scroll arrows + IntersectionObserver to a carousel.
+ * Attaches scroll-strip arrows + IntersectionObserver to a carousel.
  *
  * Performance contract:
  *  - Zero scroll event listeners.
@@ -405,11 +453,6 @@ function attachCarouselArrows(wrapper, track) {
   wrapper.appendChild(btnLeft);
   wrapper.appendChild(btnRight);
 
-  /*
-   * stopPropagation: prevents click from reaching any card element
-   * that might be visually behind the arrow, which was causing
-   * accidental copy when the user's tap slightly missed the button.
-   */
   btnLeft.addEventListener('click', (e) => {
     e.stopPropagation();
     track.scrollBy({ left: -getCardStep(track), behavior: 'smooth' });
@@ -419,30 +462,24 @@ function attachCarouselArrows(wrapper, track) {
     track.scrollBy({ left: getCardStep(track), behavior: 'smooth' });
   });
 
-  // Observe first and last card directly — no intermediate sentinel elements.
-  // The view-all card is always last; it counts as the right-edge marker.
-  const cards    = track.querySelectorAll('.item-card');
+  // Observe first and last card directly.
+  const cards     = track.querySelectorAll('.item-card');
   const firstCard = cards[0];
   const lastCard  = cards[cards.length - 1];
 
-  // Edge case: single card — no scrolling possible, skip arrows
   if (!firstCard || firstCard === lastCard) return;
 
   const io = new IntersectionObserver(entries => {
     for (const { target, isIntersecting } of entries) {
       if (target === firstCard) {
-        // First card visible → at left edge → left arrow should be hidden
         btnLeft.classList.toggle('visible', !isIntersecting);
-        wrapper.classList.toggle('can-left', !isIntersecting);
       } else {
-        // Last card visible → at right edge → right arrow should be hidden
         btnRight.classList.toggle('visible', !isIntersecting);
-        wrapper.classList.toggle('can-right', !isIntersecting);
       }
     }
   }, {
-    root: track,       // observe within the track's own scrollport
-    threshold: 0.5,    // ≥50% of card must be visible to count as "at edge"
+    root: track,
+    threshold: 0.5,
   });
 
   io.observe(firstCard);
@@ -470,15 +507,6 @@ function buildItemCard(item, typeId, lang) {
   const handleCopy = async () => {
     const ok = await copyToClipboard(item.text || '');
     if (!ok) return;
-    /*
-     * showCopyNotification is loaded via `defer` script.
-     * home.js is a `type="module"` (also deferred) loaded earlier in the
-     * document. Execution order between the two is browser-dependent —
-     * the notification script may not have run yet on the very first click.
-     *
-     * Strategy: try direct call first; if not ready, retry after one
-     * requestAnimationFrame (defer scripts always run before the next paint).
-     */
     if (typeof window.showCopyNotification === 'function') {
       window.showCopyNotification({ text: item.text, name: itemName, typeId, lang });
     } else {
@@ -494,7 +522,6 @@ function buildItemCard(item, typeId, lang) {
   return card;
 }
 
-/** View All card */
 function buildViewAllCard(typeId) {
   const label = getViewAllLabel(typeId);
   const card  = document.createElement('a');
@@ -530,7 +557,11 @@ function buildCategorySection(category, typeId, lang) {
   heading.textContent = pickLang(category.name, lang);
   section.appendChild(heading);
 
-  // carousel-wrapper: position:relative anchor for arrows + fade edges
+  /*
+   * carousel-wrapper: position:relative + overflow:hidden.
+   * The strips are clipped to the wrapper so they don't
+   * bleed into adjacent category sections.
+   */
   const wrapper = document.createElement('div');
   wrapper.className = 'carousel-wrapper content';
 
@@ -542,7 +573,6 @@ function buildCategorySection(category, typeId, lang) {
   wrapper.appendChild(container);
   section.appendChild(wrapper);
 
-  // Populate cards synchronously into a fragment (single reflow)
   const frag = document.createDocumentFragment();
   (category.data || []).slice(0, HOME_CONFIG.MAX_ITEMS_PER_CATEGORY).forEach(item => {
     frag.appendChild(buildItemCard(item, typeId, lang));
@@ -550,10 +580,6 @@ function buildCategorySection(category, typeId, lang) {
   frag.appendChild(buildViewAllCard(typeId));
   track.appendChild(frag);
 
-  /*
-   * Defer arrow attachment one rAF so the track has a computed width
-   * before IntersectionObserver takes its first measurement.
-   */
   requestAnimationFrame(() => attachCarouselArrows(wrapper, track));
 
   return section;

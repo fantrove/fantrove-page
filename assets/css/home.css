@@ -1,9 +1,13 @@
 /* Path:    assets/css/home.css
    Purpose: Home page styles — performance-optimised build
-   Changes: Removed will-change/backface-visibility/translateZ from item-card
-            (was promoting every card to its own GPU layer).
-            Added scroll-snap foundation so CSS owns card-alignment,
-            removing all JS-driven scroll calculation from the hot path.
+   Changes v4.2:
+     - carousel-wrapper gets overflow:hidden so gradient strips
+       are clipped to the wrapper boundary.
+     - carousel-track gains scroll-padding-inline-start so snapped
+       cards land with breathing room from the left edge (not flush
+       against the viewport where the left strip lives).
+     - Removed will-change/backface-visibility/translateZ from item-card.
+     - scroll-snap foundation so CSS owns card-alignment.
 */
 
 @font-face {
@@ -36,7 +40,6 @@ h1, .h1 {
   -webkit-text-fill-color: transparent;
   background-clip: text;
   filter: brightness(0.95) contrast(1.35) saturate(1.15);
-  /* Removed backface-visibility — unnecessary for static text */
 }
 
 h2, .h2 {
@@ -106,7 +109,6 @@ section {
   gap: 1.3rem;
   font-size: 1.08rem;
   position: relative;
-  /* Only transition the two properties that actually change on interaction */
   transition: border-color var(--fv-transition-fast), background var(--fv-transition-fast);
   isolation: isolate;
 }
@@ -222,7 +224,6 @@ section.mn { margin-bottom: 3rem; margin-top: 2rem; }
   width: 100%;
   margin-top: 0.5rem;
 }
-/* Removed will-change: transform — no measurable benefit for buttons */
 .hero-btns button:active { transform: scale(1); }
 
 .hero h1,
@@ -242,7 +243,6 @@ section.mn { margin-bottom: 3rem; margin-top: 2rem; }
   filter: brightness(0.95) contrast(1.35) saturate(1.2);
   color: #6540C0;
   user-select: none;
-  /* Removed backface-visibility — static element, no 3D transform */
 }
 
 .hero-content {
@@ -264,7 +264,6 @@ section.mn { margin-bottom: 3rem; margin-top: 2rem; }
   aspect-ratio: 1/1;
   border: 3px solid #e6ecf7;
   transition: border-color var(--fv-transition-fast);
-  /* Removed will-change, transform:translateZ — not being animated */
   contain: paint;
 }
 
@@ -287,7 +286,6 @@ section.mn { margin-bottom: 3rem; margin-top: 2rem; }
   box-shadow: 0 6px 18px rgba(14,176,213,0.06);
   flex-shrink: 0;
   font-weight: var(--fv-font-bold);
-  /* Removed will-change: transform — not animated */
 }
 
 /* ---------- NOTICE ---------- */
@@ -385,14 +383,12 @@ section.o:has(.faq-toggle:checked) { padding-bottom:2.1rem!important; }
   overflow-x:auto; scrollbar-width:thin; scrollbar-color:#c8d0e7 var(--fv-surface-soft);
   white-space:nowrap; padding-bottom:0.22rem; width:100%; min-width:0; flex-wrap:nowrap;
   overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch;
-  /* Removed will-change:transform — browser handles scroll compositing natively */
 }
 
 .carousel-container {
   display:flex; align-items:center; width:100%; min-height:102px;
   overflow-x:auto; overflow-y:visible;
   overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch;
-  /* Removed will-change:transform */
 }
 
 .carousel-track {
@@ -401,45 +397,39 @@ section.o:has(.faq-toggle:checked) { padding-bottom:2.1rem!important; }
   gap: 1.5rem;
   overflow-x: auto;
   overflow-y: visible;
-  /* scroll-behavior: auto — let CSS snap handle smoothness, not JS */
   scroll-behavior: auto;
-  /* No left padding — first card sits flush to container edge.
-     Right/top/bottom padding kept for visual breathing room. */
-  padding: 10px 10px 10px 0;
+
+  /*
+   * Left padding: matches the gradient strip width (64px desktop / 52px mobile)
+   * so when a card snaps flush-left it sits inside the strip's transparent zone —
+   * readable through the gradient — rather than completely hidden behind it.
+   * Right padding mirrors this for symmetry.
+   *
+   * scroll-padding-inline-start tells the snap engine to treat the left edge
+   * of the scrollport as starting 64px in, so the first card snaps to x=0
+   * with the same visual offset.
+   */
+  padding: 10px 64px 10px 64px;
+  scroll-padding-inline-start: 64px;
+
   width: 100%;
   white-space: nowrap;
   min-width: 0;
   flex-wrap: nowrap;
   contain: layout paint;
 
-  /* ── SCROLL SNAP ──────────────────────────────────────────
-     mandatory = every scroll stop aligns to a card boundary.
-     CSS snap is GPU-accelerated; replaces all JS distance math.
-     scroll-padding-inline-start: 0 so the first card snaps
-     flush to the left edge of the container with no gap.
-  ─────────────────────────────────────────────────────────── */
   scroll-snap-type: x mandatory;
-  scroll-padding-inline-start: 0;
 
-  /* Hide scrollbar visually; keep it functional for a11y */
   scrollbar-width: none;
 }
 .carousel-track::-webkit-scrollbar { display: none; }
 
-/*
- * Snap target on each card.
- * scroll-snap-align: start → left edge of card aligns to scroll-padding.
- * This is what makes the "peek previous card" effect work naturally —
- * the next card's left edge snaps to the viewport's left boundary,
- * leaving the tail of the previous card visible.
- */
 .item-card {
   background: var(--fv-surface-card);
   border-radius: var(--fv-radius-lg);
   width: 140px;
   padding: 1.25rem 0.72rem 1.05rem;
   display: flex; flex-direction:column; align-items:center;
-  /* Only transition properties that actually change on hover */
   transition: border-color var(--fv-transition-fast), background var(--fv-transition-fast);
   cursor: pointer;
   border: 1.4px solid #e6ecf7;
@@ -448,17 +438,8 @@ section.o:has(.faq-toggle:checked) { padding-bottom:2.1rem!important; }
   word-break: break-word; overflow: visible;
   contain: paint;
 
-  /* Snap anchor — every card is a snap target */
   scroll-snap-align: start;
-  scroll-snap-stop: normal; /* allow fast swipe to skip multiple cards */
-
-  /*
-   * REMOVED: will-change:transform, backface-visibility:hidden, transform:translateZ(0)
-   * These were forcing the browser to promote EVERY card into its own GPU compositing
-   * layer, consuming large amounts of VRAM and causing jank when the section scrolled
-   * into view. Cards are static elements — no 3D transform, no animation — so layer
-   * promotion provides zero benefit and significant cost.
-   */
+  scroll-snap-stop: normal;
 }
 .item-card .emoji { font-size:1.55rem; margin-bottom:0.16rem; z-index:2; user-select:none; }
 .item-card .name {
@@ -494,7 +475,13 @@ section.o:has(.faq-toggle:checked) { padding-bottom:2.1rem!important; }
   .item-card .name { font-size:0.93em; }
   .img-d1 { padding:0 10px; }
 
-  /* Mobile: snap-stop always so user can't swipe past a card accidentally */
+  /* Mobile: narrower padding matches 52px strip width */
+  .carousel-track {
+    padding-left: 52px;
+    padding-right: 52px;
+    scroll-padding-inline-start: 52px;
+  }
+
   .item-card { scroll-snap-stop: always; }
 }
 
@@ -515,7 +502,6 @@ section.o:has(.faq-toggle:checked) { padding-bottom:2.1rem!important; }
     animation-duration:0.001ms!important; animation-iteration-count:1!important;
     transition-duration:0.001ms!important; scroll-behavior:auto!important;
   }
-  /* Disable snap animation for reduced-motion users */
   .carousel-track { scroll-snap-type: none; }
 }
 
