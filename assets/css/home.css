@@ -400,17 +400,13 @@ section.o:has(.faq-toggle:checked) { padding-bottom:2.1rem!important; }
   scroll-behavior: auto;
 
   /*
-   * Left padding: matches the gradient strip width (64px desktop / 52px mobile)
-   * so when a card snaps flush-left it sits inside the strip's transparent zone —
-   * readable through the gradient — rather than completely hidden behind it.
-   * Right padding mirrors this for symmetry.
-   *
-   * scroll-padding-inline-start tells the snap engine to treat the left edge
-   * of the scrollport as starting 64px in, so the first card snaps to x=0
-   * with the same visual offset.
+   * Left/right padding: matches the strip width (44px desktop / 40px mobile)
+   * so the first and last card snap with minimal breathing room —
+   * not pushed far from the edge.
+   * scroll-padding-inline-start aligns the snap point accordingly.
    */
-  padding: 10px 64px 10px 64px;
-  scroll-padding-inline-start: 64px;
+  padding: 10px 44px 10px 44px;
+  scroll-padding-inline-start: 44px;
 
   width: 100%;
   white-space: nowrap;
@@ -475,11 +471,11 @@ section.o:has(.faq-toggle:checked) { padding-bottom:2.1rem!important; }
   .item-card .name { font-size:0.93em; }
   .img-d1 { padding:0 10px; }
 
-  /* Mobile: narrower padding matches 52px strip width */
+  /* Mobile: padding matches 40px strip width */
   .carousel-track {
-    padding-left: 52px;
-    padding-right: 52px;
-    scroll-padding-inline-start: 52px;
+    padding-left: 40px;
+    padding-right: 40px;
+    scroll-padding-inline-start: 40px;
   }
 
   .item-card { scroll-snap-stop: always; }

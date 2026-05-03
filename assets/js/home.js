@@ -57,16 +57,21 @@ const getViewAllUrl   = id => getViewAllCfg(id).url;
 // CLIPBOARD
 // ─────────────────────────────────────────────────────────
 async function copyToClipboard(text) {
-  try { await navigator.clipboard.writeText(text); return true; } catch { /* fallback below */ }
+  // Primary path: Clipboard API (HTTPS / modern browsers)
+  try { await navigator.clipboard.writeText(text); return true; } catch { /* try legacy fallback */ }
+  // Legacy fallback: execCommand — deprecated but still works in older browsers.
+  // NOTE: execCommand('copy') returns false in many modern browsers even when the
+  // copy succeeded (the return value is unreliable). We therefore assume success
+  // if no exception was thrown, and return true unconditionally from this branch.
   try {
     const ta = document.createElement('textarea');
     ta.value = text;
-    ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+    ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;pointer-events:none';
     document.body.appendChild(ta);
     ta.focus(); ta.select();
-    const ok = document.execCommand('copy');
+    document.execCommand('copy'); // return value intentionally ignored — unreliable
     document.body.removeChild(ta);
-    return ok;
+    return true; // assume success if no exception thrown
   } catch { return false; }
 }
 
@@ -184,8 +189,8 @@ function injectStyles() {
       bottom: 0;
       height: 100%;
 
-      /* Strip width — wide enough to be an easy tap target */
-      width: 64px;
+      /* Strip width — 44px matches Apple HIG minimum touch target */
+      width: 44px;
 
       z-index: 20;
       display: flex;
@@ -229,9 +234,8 @@ function injectStyles() {
         rgba(255, 255, 255, 0.30) 68%,
         rgba(255, 255, 255, 0.00) 100%
       );
-      /* Align icon toward the left edge of the strip */
       justify-content: flex-start;
-      padding-left: 6px;
+      padding-left: 4px;
     }
 
     /* -- Right strip: transparent → white ----------- */
@@ -244,9 +248,8 @@ function injectStyles() {
         rgba(255, 255, 255, 0.30) 68%,
         rgba(255, 255, 255, 0.00) 100%
       );
-      /* Align icon toward the right edge of the strip */
       justify-content: flex-end;
-      padding-right: 6px;
+      padding-right: 4px;
     }
 
     /* Deepen the gradient slightly on hover for feedback */
@@ -318,10 +321,9 @@ function injectStyles() {
       flex-shrink: 0;
     }
 
-    /* Mobile: slightly narrower strip, smaller pill */
     @media (max-width: 600px) {
       .carousel-arrow {
-        width: 52px;
+        width: 40px;
       }
       .ca-icon-wrap {
         width: 28px;
@@ -507,12 +509,30 @@ function buildItemCard(item, typeId, lang) {
   const handleCopy = async () => {
     const ok = await copyToClipboard(item.text || '');
     if (!ok) return;
+
+    /*
+     * showCopyNotification is loaded via `defer` script (copyNotification.js).
+     * home.js is `type="module"` which defers to after the document is parsed,
+     * roughly the same time as defer scripts — execution order is browser-dependent.
+     *
+     * Strategy:
+     *   1. Direct call if already available (most common case).
+     *   2. Double-rAF: gives the browser two paint frames — defer scripts always
+     *      complete within one frame after DOMContentLoaded.
+     *   3. setTimeout(0) final backstop for any edge-case browser scheduling.
+     */
+    const notify = () =>
+      window.showCopyNotification?.({ text: item.text, name: itemName, typeId, lang });
+
     if (typeof window.showCopyNotification === 'function') {
-      window.showCopyNotification({ text: item.text, name: itemName, typeId, lang });
+      notify();
     } else {
-      requestAnimationFrame(() => {
-        window.showCopyNotification?.({ text: item.text, name: itemName, typeId, lang });
-      });
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          if (typeof window.showCopyNotification === 'function') { notify(); }
+          else { setTimeout(notify, 0); }
+        })
+      );
     }
   };
   card.addEventListener('click', handleCopy);
