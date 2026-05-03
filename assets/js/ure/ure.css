@@ -1,0 +1,130 @@
+/*
+ * Path:    assets/js/ure/ure.css
+ * Purpose: Minimal styles required by the URE virtual scroll engine.
+ *          No visual opinions — only structural styles needed for
+ *          correct positioning, compositing, and CLS prevention.
+ *          Pages add their own card/button CSS on top of this.
+ */
+
+/* ── Container ─────────────────────────────────────────────────────────────── */
+
+[data-ure-container] {
+  position: relative;
+  /* Establish a new stacking context so GPU layers stay isolated */
+  isolation: isolate;
+  /* Prevent content from leaking outside the container */
+  overflow: hidden;
+}
+
+/* ── Spacer box (sets virtual list height) ─────────────────────────────────── */
+
+.ure-spacer {
+  position: relative;
+  width: 100%;
+  min-height: 2px;
+  /* Layout containment: spacer size changes don't trigger ancestor relayout */
+  contain: layout style;
+}
+
+/* ── Virtual item wrappers ─────────────────────────────────────────────────── */
+
+.ure-visible {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  /* CSS containment: each item is an isolated paint/layout boundary */
+  contain: layout style paint;
+  /*
+   * GPU compositing hint — removed when item exits viewport by engine.
+   * Declared here so the browser can hoist the layer on first mount
+   * without waiting for a JS property assignment.
+   */
+  will-change: transform;
+}
+
+/* Remove compositing hint once item is fully settled (class toggled by JS) */
+.ure-visible.ure-settled {
+  will-change: auto;
+}
+
+/* ── Placeholder (used for height-only divs when item is pooled) ───────────── */
+
+.ure-placeholder {
+  visibility: hidden;
+  pointer-events: none;
+  contain: layout style;
+}
+
+/* ── Lazy image states ─────────────────────────────────────────────────────── */
+
+img.ure-img-loading {
+  /* Reserve space while image loads — prevents CLS */
+  background: #f0f0f0;
+  /* Animate only if user hasn't opted out of motion */
+  @media (prefers-reduced-motion: no-preference) {
+    animation: ure-shimmer 1.4s linear infinite;
+  }
+}
+
+img.ure-img-loaded {
+  animation: none;
+}
+
+img.ure-img-error {
+  /* Distinct colour so broken images are obvious during development */
+  background: #ffeaea;
+  border: 1px solid #f5c6c6;
+}
+
+/* ── Shimmer loading animation ─────────────────────────────────────────────── */
+
+@keyframes ure-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+img.ure-img-loading {
+  background: linear-gradient(
+    90deg,
+    #f0f0f0 25%,
+    #e0e0e0 50%,
+    #f0f0f0 75%
+  );
+  background-size: 200% 100%;
+  animation: ure-shimmer 1.4s linear infinite;
+}
+
+/* ── Render error state ─────────────────────────────────────────────────────── */
+
+.ure-render-error {
+  padding: 8px 12px;
+  color: #c0392b;
+  font-size: 0.82em;
+  background: #fff5f5;
+  border: 1px solid #ffd0d0;
+  border-radius: 6px;
+}
+
+/* ── Reduced-motion override ────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .ure-visible,
+  .ure-img-loading {
+    animation: none !important;
+    transition: none !important;
+    will-change: auto !important;
+  }
+}
+
+/* ── content-visibility auto hint (modern browsers) ────────────────────────── */
+/*
+ * Applied to list groups when engine uses "grouped" rendering mode.
+ * Individual .ure-visible nodes use contain:paint instead — content-visibility
+ * is not applied to absolutely-positioned elements.
+ */
+.ure-group {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 260px;
+  contain: layout style;
+}
