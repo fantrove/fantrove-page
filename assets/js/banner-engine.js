@@ -26,7 +26,7 @@
   // ── CONFIG ────────────────────────────────────────────────────────────────
   var BANNER_ENGINE_URL = (
     global.__BANNER_ENGINE_URL ||                      // override จาก HTML
-    'https://your-banner-engine.vercel.app'            // ← เปลี่ยนเป็น Vercel URL จริง
+    'https://fantrove-banner.vercel.app'            // ← เปลี่ยนเป็น Vercel URL จริง
   );
 
   var API_BASE   = BANNER_ENGINE_URL + '/api/public/banners';
