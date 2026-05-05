@@ -1,6 +1,6 @@
 /**
  * banner-engine.js — Fantrove Client SDK
- * Version: 2.1.1
+ * Version: 2.0.0
  *
  * PURPOSE: Fetches banner config from the Banner Engine API and renders
  *          HTML that is PIXEL-IDENTICAL to the dashboard preview.
@@ -13,7 +13,7 @@
  * USAGE:
  *   1. Copy this file to Fantrove /assets/js/banner-engine.js
  *   2. Set BANNER_ENGINE_URL below to your Vercel deployment URL
- *   3. Add <script defer src="/assets/js/banner-engine.js?v=2.1.1"></script>
+ *   3. Add <script defer src="/assets/js/banner-engine.js?v=2.0.0"></script>
  *   4. Place <div data-banner="your-slug"></div> anywhere on the page
  *
  * SECURITY: Zero raw JS from DB. Only preset keys are stored; functions
@@ -26,7 +26,7 @@
   // ── Configuration ────────────────────────────────────────────────────────────
   var BANNER_ENGINE_URL = (
     global.__BANNER_ENGINE_URL ||
-    'https://fantrove-banner.vercel.app'
+    'https://fantrove-banner.vercel.app'   // ← Change to your Vercel URL
   );
 
   // Cache TTL in ms — avoids hammering the API on SPA route changes
@@ -102,7 +102,7 @@
   // ── JS Trigger Presets ───────────────────────────────────────────────────────
   // WHY hardcoded: Zero raw JS from DB. Each preset maps to a safe DOM function.
   var JS_TRIGGERS = {
-    confetti: function (el, cleanupFns) {
+    confetti: function (el) {
       // Simple CSS-only confetti burst using pseudo-random spans
       var colors = ['#13b47f', '#0eb0d5', '#ff9a9e', '#fad0c4', '#fff'];
       var burst = document.createElement('div');
@@ -131,14 +131,10 @@
       }
       el.style.position = 'relative';
       el.appendChild(burst);
-      var timeoutId = setTimeout(function () { burst.remove(); }, 1500);
-      cleanupFns.push(function () {
-        clearTimeout(timeoutId);
-        if (burst.parentNode) burst.remove();
-      });
+      setTimeout(function () { burst.remove(); }, 1500);
     },
 
-    shake: function (el, cleanupFns) {
+    shake: function (el) {
       var kfId = 'be-shake-kf';
       if (!document.getElementById(kfId)) {
         var kf = document.createElement('style');
@@ -146,28 +142,19 @@
         kf.textContent = '@keyframes be-shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)} }';
         document.head.appendChild(kf);
       }
-      var onEnter = function () {
+      el.addEventListener('mouseenter', function () {
         el.style.animation = 'be-shake .4s ease';
-      };
-      var onEnd = function () {
+      });
+      el.addEventListener('animationend', function () {
         el.style.animation = '';
-      };
-      el.addEventListener('mouseenter', onEnter);
-      el.addEventListener('animationend', onEnd);
-      cleanupFns.push(function () {
-        el.removeEventListener('mouseenter', onEnter);
-        el.removeEventListener('animationend', onEnd);
       });
     },
 
-    pulse: function (el, cleanupFns) {
+    pulse: function (el) {
       el.classList.add('be-trigger-pulse');
-      cleanupFns.push(function () {
-        el.classList.remove('be-trigger-pulse');
-      });
     },
 
-    scroll_reveal: function (el, cleanupFns) {
+    scroll_reveal: function (el) {
       el.style.opacity = '0';
       el.style.transform = 'translateY(20px)';
       el.style.transition = 'opacity .5s ease, transform .5s ease';
@@ -177,36 +164,21 @@
             el.style.opacity = '1';
             el.style.transform = 'translateY(0)';
             observer.unobserve(el);
-            observer.disconnect();
           }
         });
       }, { threshold: 0.1 });
       observer.observe(el);
-      cleanupFns.push(function () {
-        observer.disconnect();
-        el.style.opacity = '';
-        el.style.transform = '';
-        el.style.transition = '';
-      });
     },
 
-    bounce: function (el, cleanupFns) {
+    bounce: function (el) {
       el.classList.add('be-trigger-bounce');
-      var onEnd = function () {
+      el.addEventListener('animationend', function () {
         el.classList.remove('be-trigger-bounce');
-      };
-      el.addEventListener('animationend', onEnd, { once: true });
-      cleanupFns.push(function () {
-        el.removeEventListener('animationend', onEnd);
-        el.classList.remove('be-trigger-bounce');
-      });
+      }, { once: true });
     },
 
-    glow: function (el, cleanupFns) {
+    glow: function (el) {
       el.classList.add('be-trigger-glow');
-      cleanupFns.push(function () {
-        el.classList.remove('be-trigger-glow');
-      });
     },
   };
 
@@ -239,25 +211,14 @@
       .replace(/"/g, '&quot;');
   }
 
-  // ── URL sanitizer for href ────────────────────────────────────────────────────
-  // Block javascript:, data:, vbscript: protocols to prevent XSS
-  var DANGEROUS_PROTOCOLS = /^\s*(javascript|data|vbscript):/i;
-  function sanitizeHref(url) {
-    if (!url) return '#';
-    if (DANGEROUS_PROTOCOLS.test(url)) return '#';
-    return url;
-  }
-
   // ── HTML sanitizer (admin-facing HTML blocks only) ────────────────────────────
   // Strips script tags and dangerous event handlers before inserting into DOM.
   // The authoritative sanitization runs server-side; this is a defence-in-depth layer.
   function sanitize(raw) {
     return String(raw || '')
       .replace(/<script[\s\S]*?<\/script>/gi, '')
-      .replace(/<script[^>]*>/gi, '')
       .replace(/on\w+\s*=\s*"[^"]*"/gi, '')
-      .replace(/on\w+\s*=\s*'[^']*'/gi, '')
-      .replace(/on\w+\s*=\s*[^>\s]*/gi, '');
+      .replace(/on\w+\s*=\s*'[^']*'/gi, '');
   }
 
   // ── Render: Content Blocks ────────────────────────────────────────────────────
@@ -286,11 +247,7 @@
     var btns = (buttons && buttons.length) ? buttons : (legacyButtonConfig ? [legacyButtonConfig] : []);
     if (!btns.length) return '';
     var inner = btns.map(function (b) {
-      var safeHref = sanitizeHref(b.href);
-      var target = b.target || '_self';
-      // Prevent target="_blank" without rel="noopener noreferrer" (security)
-      var rel = target === '_blank' ? ' rel="noopener noreferrer"' : '';
-      return '<a href="' + esc(safeHref) + '" class="' + esc(b.className) + '" target="' + esc(target) + '"' + rel + '>' + esc(b.label) + '</a>';
+      return '<a href="' + esc(b.href) + '" class="' + esc(b.className) + '" target="' + esc(b.target) + '">' + esc(b.label) + '</a>';
     }).join('\n');
     return '<div class="be-btn-row">' + inner + '</div>';
   }
@@ -300,12 +257,12 @@
     if (!imageAssets || !imageAssets.url) return '';
     return '<img src="' + esc(imageAssets.url) + '" alt="' + esc(imageAssets.alt) + '" ' +
       'width="' + (imageAssets.width || 'auto') + '" height="' + (imageAssets.height || 'auto') + '" ' +
-      'style="max-width:100%;border-radius:8px;" loading="lazy" />';
+      'style="max-width:100%;border-radius:8px;" />';
   }
 
   // ── Render: Countdown (real timer) ────────────────────────────────────────────
   // Preview shows static numbers; real engine ticks every second.
-  function renderCountdown(countdownConfig, cleanupFns) {
+  function renderCountdown(countdownConfig) {
     if (!countdownConfig) return '';
     var labels = countdownConfig.labels || { days: 'Days', hours: 'Hrs', mins: 'Min', secs: 'Sec' };
     var id = 'be-cd-' + Math.random().toString(36).slice(2, 7);
@@ -316,89 +273,62 @@
         '<span class="be-cd-lbl">' + esc(labels[k]) + '</span>' +
         '</span>';
     }).join('');
-
-    // Store timer ID for cleanup
-    var timerId = null;
-    var isCleaned = false;
-    
-    function tick() {
-      if (isCleaned) return;
+    // Start live ticker after DOM insertion
+    setTimeout(function () {
       var container = document.getElementById(id);
-      if (!container || !document.body.contains(container)) {
-        isCleaned = true;
-        return;
-      }
+      if (!container) return;
       var endTime = new Date(countdownConfig.endIso).getTime();
-      var diff = endTime - Date.now();
-      if (diff <= 0) { diff = 0; }
-      var d = Math.floor(diff / 86400000);
-      var h = Math.floor((diff % 86400000) / 3600000);
-      var m = Math.floor((diff % 3600000) / 60000);
-      var s = Math.floor((diff % 60000) / 1000);
-      function pad(n) { return n < 10 ? '0' + n : String(n); }
-      ['days', 'hours', 'mins', 'secs'].forEach(function (k, i) {
-        var el = container.querySelector('[data-key="' + k + '"]');
-        if (el) el.textContent = pad([d, h, m, s][i]);
-      });
-      if (diff > 0 && !isCleaned) {
-        timerId = setTimeout(tick, 1000);
+      function tick() {
+        var diff = endTime - Date.now();
+        if (diff <= 0) { diff = 0; }
+        var d = Math.floor(diff / 86400000);
+        var h = Math.floor((diff % 86400000) / 3600000);
+        var m = Math.floor((diff % 3600000) / 60000);
+        var s = Math.floor((diff % 60000) / 1000);
+        function pad(n) { return n < 10 ? '0' + n : String(n); }
+        ['days', 'hours', 'mins', 'secs'].forEach(function (k, i) {
+          var el = container.querySelector('[data-key="' + k + '"]');
+          if (el) el.textContent = pad([d, h, m, s][i]);
+        });
+        if (diff > 0) setTimeout(tick, 1000);
       }
-    }
-
-    timerId = setTimeout(tick, 0);
-
-    cleanupFns.push(function () {
-      isCleaned = true;
-      if (timerId) clearTimeout(timerId);
-    });
-
+      tick();
+    }, 0);
     return '<div class="be-countdown" id="' + id + '">' + cells + '</div>';
   }
 
   // ── Render: Slider ────────────────────────────────────────────────────────────
-  function renderSlider(sliderConfig, cleanupFns) {
+  function renderSlider(sliderConfig) {
     if (!sliderConfig || !sliderConfig.images || !sliderConfig.images.length) return '';
     var id = 'be-sl-' + Math.random().toString(36).slice(2, 7);
     var slides = sliderConfig.images.map(function (img, i) {
       var active = i === 0 ? ' active' : '';
       return '<div class="be-slide' + active + '">' +
-        (img.url ? '<img src="' + esc(img.url) + '" alt="' + esc(img.alt) + '" loading="lazy" />' : '') +
+        (img.url ? '<img src="' + esc(img.url) + '" alt="' + esc(img.alt) + '" />' : '') +
         '</div>';
     }).join('');
 
+    // Start auto-slide after DOM insertion
     var interval = sliderConfig.interval || 3000;
-    var intervalId = null;
-    var isCleaned = false;
-
-    function startSlider() {
-      if (isCleaned) return;
+    var animation = sliderConfig.animation || 'fade';
+    setTimeout(function () {
       var container = document.getElementById(id);
-      if (!container || !document.body.contains(container)) {
-        isCleaned = true;
-        return;
-      }
+      if (!container) return;
       var slideEls = container.querySelectorAll('.be-slide');
       if (slideEls.length < 2) return;
       var current = 0;
-
-      intervalId = setInterval(function () {
-        if (isCleaned) {
-          clearInterval(intervalId);
-          return;
-        }
+      if (animation === 'slide') {
+        // Override CSS for slide animation
+        container.style.cssText += 'overflow:hidden;';
+        var track = container.querySelector('.be-slide-track');
+        if (track) track.style.cssText = 'display:flex;transition:transform ' + (interval * 0.15 / 1000) + 's ease;';
+      }
+      setInterval(function () {
         slideEls[current].classList.remove('active');
         current = (current + 1) % slideEls.length;
         slideEls[current].classList.add('active');
       }, interval);
-    }
-
-    var rafId = requestAnimationFrame(startSlider);
-
-    cleanupFns.push(function () {
-      isCleaned = true;
-      cancelAnimationFrame(rafId);
-      if (intervalId) clearInterval(intervalId);
-    });
+    }, 0);
 
     return '<div class="be-slider" id="' + id + '">' + slides + '</div>';
   }
@@ -414,22 +344,14 @@
     document.head.appendChild(style);
   }
 
-  // ── Active banner registry for cleanup ────────────────────────────────────────
-  var _activeBanners = {};
-
   // ── Mount: render config → DOM ────────────────────────────────────────────────
   function mountBanner(el, config) {
-    // 1. Cleanup any existing banner on this element
-    var existingSlug = el.getAttribute('data-be-mounted');
-    if (existingSlug && _activeBanners[existingSlug]) {
-      _activeBanners[existingSlug].cleanup();
-      delete _activeBanners[existingSlug];
-    }
-
-    // 2. Inject base CSS (shared across all banners on page)
+    // 1. Inject base CSS (shared across all banners on page)
     injectBaseCSS();
 
-    // 3. Inject banner-specific CSS (scoped to .banner-custom)
+    // 2. Inject banner-specific CSS (scoped to .banner-custom)
+    //    WHY: Each banner can have unique styles. We scope them with a unique
+    //    data attribute to prevent one banner's styles leaking into another.
     var uid = 'be-' + config.slug;
     if (config.bannerStyles && !document.getElementById(uid + '-css')) {
       var bStyle = document.createElement('style');
@@ -442,17 +364,16 @@
       document.head.appendChild(bStyle);
     }
 
-    // 4. Build inner HTML — identical structure to LivePreview.tsx
-    var cleanupFns = [];
+    // 3. Build inner HTML — identical structure to LivePreview.tsx
     var html = [
-      renderSlider(config.sliderConfig, cleanupFns),
+      renderSlider(config.sliderConfig),
       renderImage(config.imageAssets),
       renderContent(config.content),
-      renderCountdown(config.countdownConfig, cleanupFns),
+      renderCountdown(config.countdownConfig),
       renderButtons(config.buttons, config.buttonConfig),
     ].filter(Boolean).join('\n');
 
-    // 5. Create wrapper and inject
+    // 4. Create wrapper and inject
     el.innerHTML = '';
     var wrapper = document.createElement('div');
     wrapper.className = 'be-wrapper';
@@ -465,29 +386,10 @@
     wrapper.appendChild(inner);
     el.appendChild(wrapper);
 
-    // 6. Apply JS trigger preset (hardcoded functions — zero DB-injected JS)
+    // 5. Apply JS trigger preset (hardcoded functions — zero DB-injected JS)
     if (config.jsTrigger && JS_TRIGGERS[config.jsTrigger]) {
-      JS_TRIGGERS[config.jsTrigger](wrapper, cleanupFns);
+      JS_TRIGGERS[config.jsTrigger](wrapper);
     }
-
-    // 7. Register for cleanup
-    el.setAttribute('data-be-mounted', config.slug);
-    _activeBanners[config.slug] = {
-      el: el,
-      uid: uid,
-      cleanup: function () {
-        // Run all cleanup functions
-        cleanupFns.forEach(function (fn) {
-          try { fn(); } catch (e) { /* ignore cleanup errors */ }
-        });
-        // Remove banner-specific CSS
-        var styleEl = document.getElementById(uid + '-css');
-        if (styleEl) styleEl.remove();
-        // Clear DOM
-        el.innerHTML = '';
-        el.removeAttribute('data-be-mounted');
-      }
-    };
   }
 
   // ── Auto-discover mount points ────────────────────────────────────────────────
@@ -497,6 +399,7 @@
       (function (el) {
         var slug = el.getAttribute('data-banner');
         if (!slug || el.getAttribute('data-be-mounted')) return;
+        el.setAttribute('data-be-mounted', '1');
         fetchConfig(slug, function (err, config) {
           if (err) {
             console.warn('[BannerEngine] Failed to load banner "' + slug + '":', err.message);
@@ -529,28 +432,25 @@
      */
     refresh: function () {
       _cache = {};
-      // Cleanup all active banners first
-      Object.keys(_activeBanners).forEach(function (slug) {
-        _activeBanners[slug].cleanup();
-      });
-      _activeBanners = {};
+      // Remove mounted markers so autodiscover re-renders
+      var mounts = document.querySelectorAll('[data-be-mounted]');
+      for (var i = 0; i < mounts.length; i++) {
+        mounts[i].removeAttribute('data-be-mounted');
+      }
       autodiscover();
     },
 
     /**
-     * Destroy: clear all intervals and observers. Call on SPA route change / unmount.
+     * Destroy: clear all intervals. Call on SPA route change / unmount.
      */
     destroy: function () {
       _cache = {};
-      // Cleanup all active banners
-      Object.keys(_activeBanners).forEach(function (slug) {
-        _activeBanners[slug].cleanup();
-      });
-      _activeBanners = {};
-      // Also clear base CSS injection flag so it can be re-injected
-      _cssInjected = false;
-      var baseStyle = document.getElementById('banner-engine-base');
-      if (baseStyle) baseStyle.remove();
+      // Sliders/countdowns use native setInterval; clear by re-cloning nodes
+      var mounts = document.querySelectorAll('[data-banner]');
+      for (var i = 0; i < mounts.length; i++) {
+        mounts[i].innerHTML = '';
+        mounts[i].removeAttribute('data-be-mounted');
+      }
     },
   };
 
