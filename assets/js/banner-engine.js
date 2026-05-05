@@ -1,482 +1,466 @@
 /**
- * banner-engine.js  v2.0.0
- * Headless Low-Code Banner Engine — Client SDK
- * v2: content blocks (heading/text/html) + multiple buttons
+ * banner-engine.js — Fantrove Client SDK
+ * Version: 2.0.0
+ *
+ * PURPOSE: Fetches banner config from the Banner Engine API and renders
+ *          HTML that is PIXEL-IDENTICAL to the dashboard preview.
+ *
+ * CRITICAL DESIGN RULE — "Preview = Reality":
+ *   The CSS in BANNER_BASE_CSS and all render functions here MUST stay
+ *   in sync with LivePreview.tsx's buildPreviewHtml(). When you update
+ *   the preview, update this file too, and vice versa.
+ *
+ * USAGE:
+ *   1. Copy this file to Fantrove /assets/js/banner-engine.js
+ *   2. Set BANNER_ENGINE_URL below to your Vercel deployment URL
+ *   3. Add <script defer src="/assets/js/banner-engine.js?v=2.0.0"></script>
+ *   4. Place <div data-banner="your-slug"></div> anywhere on the page
+ *
+ * SECURITY: Zero raw JS from DB. Only preset keys are stored; functions
+ *   are hardcoded here. bannerStyles is CSS scoped to .banner-custom only.
  */
 
 (function (global) {
   'use strict';
 
+  // ── Configuration ────────────────────────────────────────────────────────────
   var BANNER_ENGINE_URL = (
     global.__BANNER_ENGINE_URL ||
-    'https://fantrove-banner.vercel.app'
+    'https://your-banner-engine.vercel.app'   // ← Change to your Vercel URL
   );
 
-  var API_BASE   = BANNER_ENGINE_URL + '/api/public/banners';
-  var CACHE_TTL  = 60 * 1000;
-  var MOUNT_ATTR = 'data-banner';
+  // Cache TTL in ms — avoids hammering the API on SPA route changes
+  var CACHE_TTL_MS = 60 * 1000;
 
-  var _cache = Object.create(null);
+  // ── BANNER_BASE_CSS ──────────────────────────────────────────────────────────
+  // THIS IS THE SINGLE SOURCE OF TRUTH for banner visual style.
+  // The dashboard preview (LivePreview.tsx) uses an identical copy.
+  // If you change anything here, update LivePreview.tsx's <style> block too.
+  var BANNER_BASE_CSS = [
+    '.be-wrapper { border-radius: 12px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,.12); }',
+    '.banner-custom {',
+    '  padding: 24px 20px;',
+    '  min-height: 80px;',
+    '  display: flex;',
+    '  flex-direction: column;',
+    '  align-items: flex-start;',
+    '  gap: 12px;',
+    '  background: linear-gradient(90deg, #13b47f, #0eb0d5);',
+    '  color: #fff;',
+    '  position: relative;',
+    '}',
+    // ── Buttons ──────────────────────────────────────────────────────────────
+    '.banner-custom .button {',
+    '  display: inline-flex; align-items: center; gap: 6px;',
+    '  padding: 10px 20px; border-radius: 24px;',
+    '  font-weight: 600; font-size: 14px;',
+    '  text-decoration: none; cursor: pointer;',
+    '  transition: opacity .18s; border: none;',
+    '}',
+    '.banner-custom .button-secondary {',
+    '  background: transparent; border: 2px solid currentColor; color: inherit;',
+    '}',
+    '.banner-custom .button-primary {',
+    '  background: #fff; color: #13b47f; border: 2px solid #fff;',
+    '}',
+    '.banner-custom .button-secondary.oc { position: relative; overflow: hidden; }',
+    '.banner-custom .banner-btn-white { background: #fff; color: #1a1a2e; border: 2px solid #fff; }',
+    '.banner-custom .banner-btn-dark  { background: #1a1a2e; color: #fff; border: 2px solid #1a1a2e; }',
+    '.banner-custom .be-btn-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }',
+    // ── Countdown ────────────────────────────────────────────────────────────
+    '.banner-custom .be-countdown { display: flex; gap: 8px; align-items: center; }',
+    '.banner-custom .be-cd-cell {',
+    '  display: flex; flex-direction: column; align-items: center;',
+    '  background: rgba(0,0,0,.18); border-radius: 6px;',
+    '  padding: 6px 10px; min-width: 42px;',
+    '}',
+    '.banner-custom .be-cd-num { font-size: 20px; font-weight: 700; line-height: 1; }',
+    '.banner-custom .be-cd-lbl { font-size: 10px; opacity: .75; margin-top: 2px; }',
+    // ── Slider ───────────────────────────────────────────────────────────────
+    '.banner-custom .be-slider { width: 100%; position: relative; overflow: hidden; border-radius: 6px; }',
+    '.banner-custom .be-slide { width: 100%; display: none; }',
+    '.banner-custom .be-slide.active { display: block; }',
+    '.banner-custom .be-slide img { width: 100%; height: auto; border-radius: 6px; display: block; }',
+    // ── Headings & text ───────────────────────────────────────────────────────
+    '.banner-custom h1, .banner-custom h2, .banner-custom h3 { margin: 0 0 4px; }',
+    '.banner-custom p { margin: 0 0 4px; }',
+    // ── JS trigger animations ─────────────────────────────────────────────────
+    '@keyframes be-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(19,180,127,.6); } 50% { box-shadow: 0 0 0 14px rgba(19,180,127,0); } }',
+    '@keyframes be-bounce { 0%,100% { transform: translateY(0); } 40% { transform: translateY(-10px); } 70% { transform: translateY(-5px); } }',
+    '@keyframes be-glow { 0%,100% { box-shadow: 0 0 8px 2px #13b47f; } 50% { box-shadow: 0 0 24px 8px #0eb0d5; } }',
+    '.be-trigger-pulse { animation: be-pulse 2s infinite; }',
+    '.be-trigger-bounce { animation: be-bounce .8s ease; }',
+    '.be-trigger-glow .banner-custom { animation: be-glow 2s ease-in-out infinite; }',
+    // ── Mobile responsive ─────────────────────────────────────────────────────
+    '@media (max-width: 600px) {',
+    '  .banner-custom { padding: 16px; }',
+    '  .banner-custom .button { padding: 12px 18px; font-size: 15px; min-height: 44px; }',
+    '  .banner-custom .be-btn-row { flex-direction: column; align-items: stretch; }',
+    '}',
+  ].join('\n');
 
-  function _getCached(slug) {
-    var entry = _cache[slug];
-    if (!entry) return null;
-    if (Date.now() - entry.ts < CACHE_TTL) return entry.data;
-    _fetchAndRender(slug, false);
-    return entry.data;
-  }
-
-  function _setCache(slug, data) {
-    _cache[slug] = { data: data, ts: Date.now() };
-  }
-
-  function _fetchAndRender(slug, withRender) {
-    fetch(API_BASE + '/' + slug, {
-      method: 'GET',
-      headers: { 'Accept': 'application/json' },
-      cache: 'no-store',
-    })
-      .then(function (res) {
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.json();
-      })
-      .then(function (json) {
-        if (!json.ok || !json.data) return;
-        _setCache(slug, json.data);
-        if (withRender) _renderAll(slug, json.data);
-        else            _rerenderAll(slug, json.data);
-      })
-      .catch(function (err) {
-        if (withRender) console.warn('[banner-engine] fetch failed for "' + slug + '":', err.message);
-      });
-  }
-
-  // ── DOM helpers ───────────────────────────────────────────────────────────
-  function _esc(s) {
-    return String(s || '')
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
-
-  function _safeAttr(s) {
-    return String(s || '').replace(/[^a-zA-Z0-9\-_/.?=&#:]/g, '');
-  }
-
-  // ── Simple HTML sanitizer for html-type content blocks ────────────────────
-  // Belt-and-suspenders: server already sanitizes. This guards against stale cache.
-  function _sanitizeHtml(raw) {
-    return String(raw || '')
-      .replace(/<script[\s\S]*?<\/script>/gi, '')
-      .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
-      .replace(/javascript\s*:/gi, '');
-  }
-
-  // ── CSS injection ─────────────────────────────────────────────────────────
-  var _injectedStyles = Object.create(null);
-
-  function _injectStyles(slug, rawCss) {
-    if (_injectedStyles[slug]) {
-      _injectedStyles[slug].textContent = _scopeCss(slug, rawCss);
-      return;
-    }
-    var styleEl = document.createElement('style');
-    styleEl.setAttribute('data-banner-style', slug);
-    styleEl.textContent = _scopeCss(slug, rawCss);
-    document.head.appendChild(styleEl);
-    _injectedStyles[slug] = styleEl;
-  }
-
-  function _scopeCss(slug, rawCss) {
-    var clean = String(rawCss || '').replace(/<\/?style[^>]*>/gi, '');
-    return clean.replace(/\.banner-custom/g, '[data-banner-mount="' + slug + '"] .banner-custom');
-  }
-
-  // ── Build content blocks ──────────────────────────────────────────────────
-  function _buildContentBlocks(blocks) {
-    if (!blocks || !blocks.length) return null;
-    var frag = document.createDocumentFragment();
-
-    blocks.forEach(function (block) {
-      var el;
-      var align = block.align || 'left';
-
-      switch (block.type) {
-        case 'heading': {
-          var level = block.level || 2;
-          el = document.createElement('h' + level);
-          el.textContent = block.value || '';
-          break;
-        }
-        case 'text': {
-          el = document.createElement('p');
-          el.textContent = block.value || '';
-          break;
-        }
-        case 'html': {
-          el = document.createElement('div');
-          // Sanitize before innerHTML — server is authoritative, this is defense-in-depth
-          el.innerHTML = _sanitizeHtml(block.value || '');
-          break;
-        }
-        default:
-          return;
-      }
-
-      el.style.textAlign = align;
-      frag.appendChild(el);
-    });
-
-    return frag;
-  }
-
-  // ── Build multiple buttons ─────────────────────────────────────────────────
-  function _buildButtons(btns) {
-    if (!btns || !btns.length) return null;
-    var row = document.createElement('div');
-    row.className = 'be-btn-row';
-    row.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;align-items:center;';
-
-    btns.forEach(function (btnCfg) {
-      var a = document.createElement('a');
-      a.href      = _safeAttr(btnCfg.href || '/');
-      a.className = String(btnCfg.className || 'button button-secondary');
-      a.target    = btnCfg.target === '_blank' ? '_blank' : '_self';
-      if (a.target === '_blank') a.rel = 'noopener noreferrer';
-      a.textContent = btnCfg.label || '';
-      row.appendChild(a);
-    });
-
-    return row;
-  }
-
-  // Legacy single button
-  function _buildButton(btnCfg) {
-    return _buildButtons([btnCfg]);
-  }
-
-  // ── Image ─────────────────────────────────────────────────────────────────
-  function _buildImage(imgCfg) {
-    if (!imgCfg || !imgCfg.url) return null;
-    var img = document.createElement('img');
-    img.src     = _safeAttr(imgCfg.url);
-    img.alt     = imgCfg.alt || '';
-    img.loading = 'lazy';
-    img.decoding= 'async';
-    if (imgCfg.width)  img.width  = parseInt(imgCfg.width,  10);
-    if (imgCfg.height) img.height = parseInt(imgCfg.height, 10);
-    img.style.maxWidth     = '100%';
-    img.style.borderRadius = '6px';
-    return img;
-  }
-
-  // ── Countdown ─────────────────────────────────────────────────────────────
-  var _countdownTimers = Object.create(null);
-
-  function _buildCountdown(cfg, mountEl) {
-    var wrap  = document.createElement('div');
-    wrap.className = 'be-countdown';
-    var cells = {};
-    var units  = ['days', 'hours', 'mins', 'secs'];
-
-    units.forEach(function (u) {
-      var cell = document.createElement('span');
-      cell.className = 'be-cd-cell';
-      var num = document.createElement('span');
-      num.className = 'be-cd-num'; num.textContent = '--';
-      var lbl = document.createElement('span');
-      lbl.className = 'be-cd-lbl';
-      lbl.textContent = (cfg.labels && cfg.labels[u]) || u;
-      cell.appendChild(num); cell.appendChild(lbl);
-      wrap.appendChild(cell);
-      cells[u] = num;
-    });
-
-    var endTime  = new Date(cfg.endIso).getTime();
-    var mountKey = (mountEl.getAttribute(MOUNT_ATTR) || 'cd') + '_cd';
-    if (_countdownTimers[mountKey]) clearInterval(_countdownTimers[mountKey]);
-
-    function tick() {
-      var diff = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
-      if (diff <= 0) {
-        clearInterval(_countdownTimers[mountKey]);
-        units.forEach(function (u) { cells[u].textContent = '00'; });
-        return;
-      }
-      cells.days.textContent  = String(Math.floor(diff / 86400)).padStart(2, '0');
-      cells.hours.textContent = String(Math.floor((diff % 86400) / 3600)).padStart(2, '0');
-      cells.mins.textContent  = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
-      cells.secs.textContent  = String(diff % 60).padStart(2, '0');
-    }
-    tick();
-    _countdownTimers[mountKey] = setInterval(tick, 1000);
-    return wrap;
-  }
-
-  // ── Slider ────────────────────────────────────────────────────────────────
-  var _sliderTimers = Object.create(null);
-
-  function _buildSlider(cfg, mountEl) {
-    var wrap = document.createElement('div');
-    wrap.className = 'be-slider';
-    wrap.style.cssText = 'position:relative;overflow:hidden;border-radius:8px;';
-
-    var images = (cfg.images || []).filter(function (i) { return i.url; });
-    if (!images.length) return null;
-
-    var slides = []; var current = 0;
-    images.forEach(function (imgCfg, idx) {
-      var img = document.createElement('img');
-      img.src     = _safeAttr(imgCfg.url);
-      img.alt     = imgCfg.alt || '';
-      img.loading = idx === 0 ? 'eager' : 'lazy';
-      img.style.cssText = 'width:100%;height:auto;display:block;transition:opacity .4s ease;' +
-        'position:' + (idx === 0 ? 'relative' : 'absolute') + ';top:0;left:0;opacity:' + (idx === 0 ? '1' : '0') + ';';
-      wrap.appendChild(img);
-      slides.push(img);
-    });
-
-    if (slides.length < 2) return wrap;
-    var animation = cfg.animation === 'slide' ? 'slide' : 'fade';
-    var interval  = Math.max(1000, parseInt(cfg.interval, 10) || 3000);
-    var mountKey  = (mountEl.getAttribute(MOUNT_ATTR) || 'sl') + '_sl';
-    if (_sliderTimers[mountKey]) clearInterval(_sliderTimers[mountKey]);
-
-    _sliderTimers[mountKey] = setInterval(function () {
-      var prev = current;
-      current  = (current + 1) % slides.length;
-      if (animation === 'fade') {
-        slides[prev].style.opacity = '0';
-        slides[current].style.opacity = '1';
-        slides[current].style.position = 'relative';
-        slides[prev].style.position = 'absolute';
-      } else {
-        slides[prev].style.transform = 'translateX(-100%)';
-        slides[current].style.transform = 'translateX(0)';
-        slides[current].style.opacity = '1';
-        slides[current].style.position = 'relative';
-        setTimeout(function () {
-          slides[prev].style.opacity = '0';
-          slides[prev].style.position = 'absolute';
-          slides[prev].style.transform = 'translateX(0)';
-        }, 420);
-      }
-    }, interval);
-
-    return wrap;
-  }
-
-  // ── JS Trigger Presets ────────────────────────────────────────────────────
+  // ── JS Trigger Presets ───────────────────────────────────────────────────────
+  // WHY hardcoded: Zero raw JS from DB. Each preset maps to a safe DOM function.
   var JS_TRIGGERS = {
-    confetti: function (bannerEl) {
-      var count = 30;
-      for (var i = 0; i < count; i++) {
-        (function (i) {
-          var dot = document.createElement('span');
-          dot.style.cssText = [
-            'position:absolute','width:6px','height:6px','border-radius:50%',
-            'background:' + ['#13b47f','#0eb0d5','#ff9a9e','#fad0c4','#fff'][i % 5],
-            'left:' + Math.random() * 100 + '%',
-            'top:' + Math.random() * 100 + '%',
-            'opacity:1','pointer-events:none',
-            'animation:be-confetti-fall ' + (0.6 + Math.random() * 0.8) + 's ease forwards',
-            'animation-delay:' + Math.random() * 0.4 + 's',
-          ].join(';');
-          bannerEl.appendChild(dot);
-          setTimeout(function () { try { bannerEl.removeChild(dot); } catch (e) {} }, 1400);
-        })(i);
+    confetti: function (el) {
+      // Simple CSS-only confetti burst using pseudo-random spans
+      var colors = ['#13b47f', '#0eb0d5', '#ff9a9e', '#fad0c4', '#fff'];
+      var burst = document.createElement('div');
+      burst.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;';
+      for (var i = 0; i < 30; i++) {
+        var dot = document.createElement('span');
+        var color = colors[i % colors.length];
+        var x = Math.random() * 100;
+        var delay = Math.random() * 0.6;
+        var size = 4 + Math.random() * 6;
+        dot.style.cssText = [
+          'position:absolute;border-radius:50%;',
+          'width:' + size + 'px;height:' + size + 'px;',
+          'background:' + color + ';',
+          'left:' + x + '%;top:-10px;',
+          'animation:be-confetti-fall .8s ' + delay + 's ease-in forwards;',
+        ].join('');
+        burst.appendChild(dot);
       }
+      // Inject keyframe once
       if (!document.getElementById('be-confetti-kf')) {
-        var s = document.createElement('style'); s.id = 'be-confetti-kf';
-        s.textContent = '@keyframes be-confetti-fall{0%{transform:translateY(0) rotate(0);opacity:1}100%{transform:translateY(60px) rotate(360deg);opacity:0}}';
-        document.head.appendChild(s);
+        var kf = document.createElement('style');
+        kf.id = 'be-confetti-kf';
+        kf.textContent = '@keyframes be-confetti-fall { to { top: 110%; opacity: 0; } }';
+        document.head.appendChild(kf);
       }
+      el.style.position = 'relative';
+      el.appendChild(burst);
+      setTimeout(function () { burst.remove(); }, 1500);
     },
-    shake: function (bannerEl) {
-      bannerEl.style.animation = 'be-shake .4s ease';
-      if (!document.getElementById('be-shake-kf')) {
-        var s = document.createElement('style'); s.id = 'be-shake-kf';
-        s.textContent = '@keyframes be-shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}';
-        document.head.appendChild(s);
+
+    shake: function (el) {
+      var kfId = 'be-shake-kf';
+      if (!document.getElementById(kfId)) {
+        var kf = document.createElement('style');
+        kf.id = kfId;
+        kf.textContent = '@keyframes be-shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)} }';
+        document.head.appendChild(kf);
       }
-      bannerEl.addEventListener('mouseover', function () {
-        bannerEl.style.animation = '';
-        setTimeout(function () { bannerEl.style.animation = 'be-shake .4s ease'; }, 16);
+      el.addEventListener('mouseenter', function () {
+        el.style.animation = 'be-shake .4s ease';
+      });
+      el.addEventListener('animationend', function () {
+        el.style.animation = '';
       });
     },
-    pulse: function (bannerEl) {
-      bannerEl.style.animation = 'be-pulse 2s ease-in-out infinite';
-      if (!document.getElementById('be-pulse-kf')) {
-        var s = document.createElement('style'); s.id = 'be-pulse-kf';
-        s.textContent = '@keyframes be-pulse{0%,100%{box-shadow:0 0 0 0 rgba(19,180,127,.4)}50%{box-shadow:0 0 0 12px rgba(19,180,127,0)}}';
-        document.head.appendChild(s);
-      }
+
+    pulse: function (el) {
+      el.classList.add('be-trigger-pulse');
     },
-    scroll_reveal: function (bannerEl) {
-      bannerEl.style.opacity = '0';
-      bannerEl.style.transform = 'translateY(16px)';
-      bannerEl.style.transition = 'opacity .5s ease, transform .5s ease';
-      if (!('IntersectionObserver' in window)) {
-        bannerEl.style.opacity = '1'; bannerEl.style.transform = ''; return;
-      }
-      var io = new IntersectionObserver(function (entries) {
-        entries.forEach(function (e) {
-          if (e.isIntersecting) {
-            bannerEl.style.opacity = '1'; bannerEl.style.transform = 'translateY(0)';
-            io.disconnect();
+
+    scroll_reveal: function (el) {
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(20px)';
+      el.style.transition = 'opacity .5s ease, transform .5s ease';
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            el.style.opacity = '1';
+            el.style.transform = 'translateY(0)';
+            observer.unobserve(el);
           }
         });
-      }, { threshold: 0.15 });
-      io.observe(bannerEl);
+      }, { threshold: 0.1 });
+      observer.observe(el);
     },
-    bounce: function (bannerEl) {
-      bannerEl.style.animation = 'be-bounce .6s cubic-bezier(.36,.07,.19,.97)';
-      if (!document.getElementById('be-bounce-kf')) {
-        var s = document.createElement('style'); s.id = 'be-bounce-kf';
-        s.textContent = '@keyframes be-bounce{0%,100%{transform:translateY(0)}30%{transform:translateY(-10px)}60%{transform:translateY(-5px)}}';
-        document.head.appendChild(s);
-      }
+
+    bounce: function (el) {
+      el.classList.add('be-trigger-bounce');
+      el.addEventListener('animationend', function () {
+        el.classList.remove('be-trigger-bounce');
+      }, { once: true });
     },
-    glow: function (bannerEl) {
-      bannerEl.style.animation = 'be-glow 2s ease-in-out infinite alternate';
-      if (!document.getElementById('be-glow-kf')) {
-        var s = document.createElement('style'); s.id = 'be-glow-kf';
-        s.textContent = '@keyframes be-glow{from{box-shadow:0 0 8px rgba(19,180,127,.3)}to{box-shadow:0 0 22px rgba(19,180,127,.75)}}';
-        document.head.appendChild(s);
-      }
+
+    glow: function (el) {
+      el.classList.add('be-trigger-glow');
     },
   };
 
-  // ── Base styles ───────────────────────────────────────────────────────────
-  function _injectBaseStyles() {
-    if (document.getElementById('be-base-styles')) return;
-    var s = document.createElement('style');
-    s.id = 'be-base-styles';
-    s.textContent = [
-      '.be-banner{position:relative;overflow:hidden;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px;background:linear-gradient(90deg,#13b47f,#0eb0d5);}',
-      '.be-countdown{display:flex;gap:8px;align-items:center;}',
-      '.be-cd-cell{display:flex;flex-direction:column;align-items:center;background:rgba(0,0,0,.18);border-radius:6px;padding:6px 10px;min-width:44px;}',
-      '.be-cd-num{font-size:22px;font-weight:700;color:#fff;line-height:1;}',
-      '.be-cd-lbl{font-size:10px;color:rgba(255,255,255,.75);margin-top:2px;}',
-      '.be-slider{width:100%;border-radius:8px;overflow:hidden;}',
-      '.be-btn-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}',
-      '.be-banner .button{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:24px;font-weight:600;font-size:14px;text-decoration:none;transition:opacity .18s;cursor:pointer;}',
-      '.be-banner .button-secondary{background:transparent;border:2px solid currentColor;color:inherit;}',
-      '.be-banner .button-primary{background:#fff;color:#13b47f;border:2px solid #fff;}',
-      '.be-banner .banner-btn-white{background:#fff;color:#1a1a2e;border:2px solid #fff;}',
-      '.be-banner .banner-btn-dark{background:#1a1a2e;color:#fff;border:2px solid #1a1a2e;}',
-    ].join('');
-    document.head.appendChild(s);
+  // ── In-memory fetch cache ─────────────────────────────────────────────────────
+  var _cache = {};
+
+  function fetchConfig(slug, cb) {
+    var now = Date.now();
+    var cached = _cache[slug];
+    if (cached && now - cached.ts < CACHE_TTL_MS) {
+      return cb(null, cached.data);
+    }
+    var url = BANNER_ENGINE_URL + '/api/public/banners/' + slug;
+    fetch(url, { headers: { 'Accept': 'application/json' } })
+      .then(function (res) { return res.json(); })
+      .then(function (json) {
+        if (!json.ok) return cb(new Error(json.error || 'API error'));
+        _cache[slug] = { ts: now, data: json.data };
+        cb(null, json.data);
+      })
+      .catch(cb);
   }
 
-  // ── Render one banner ─────────────────────────────────────────────────────
-  function _render(mountEl, data) {
-    mountEl.setAttribute('data-banner-mount', data.slug);
-    if (data.bannerStyles) _injectStyles(data.slug, data.bannerStyles);
+  // ── HTML escape ───────────────────────────────────────────────────────────────
+  function esc(s) {
+    return String(s || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
 
+  // ── HTML sanitizer (admin-facing HTML blocks only) ────────────────────────────
+  // Strips script tags and dangerous event handlers before inserting into DOM.
+  // The authoritative sanitization runs server-side; this is a defence-in-depth layer.
+  function sanitize(raw) {
+    return String(raw || '')
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '');
+  }
+
+  // ── Render: Content Blocks ────────────────────────────────────────────────────
+  // Matches LivePreview.tsx buildPreviewHtml() content section exactly.
+  function renderContent(blocks) {
+    if (!blocks || !blocks.length) return '';
+    return blocks.map(function (block) {
+      var align = block.align || 'left';
+      var style = 'text-align:' + align + ';';
+      if (block.type === 'heading') {
+        var tag = 'h' + (block.level || 2);
+        return '<' + tag + ' style="' + style + 'margin:0 0 4px;">' + esc(block.value) + '</' + tag + '>';
+      }
+      if (block.type === 'text') {
+        return '<p style="' + style + 'margin:0 0 4px;">' + esc(block.value) + '</p>';
+      }
+      if (block.type === 'html') {
+        return '<div style="' + style + '">' + sanitize(block.value) + '</div>';
+      }
+      return '';
+    }).join('\n');
+  }
+
+  // ── Render: Buttons ───────────────────────────────────────────────────────────
+  function renderButtons(buttons, legacyButtonConfig) {
+    var btns = (buttons && buttons.length) ? buttons : (legacyButtonConfig ? [legacyButtonConfig] : []);
+    if (!btns.length) return '';
+    var inner = btns.map(function (b) {
+      return '<a href="' + esc(b.href) + '" class="' + esc(b.className) + '" target="' + esc(b.target) + '">' + esc(b.label) + '</a>';
+    }).join('\n');
+    return '<div class="be-btn-row">' + inner + '</div>';
+  }
+
+  // ── Render: Image ─────────────────────────────────────────────────────────────
+  function renderImage(imageAssets) {
+    if (!imageAssets || !imageAssets.url) return '';
+    return '<img src="' + esc(imageAssets.url) + '" alt="' + esc(imageAssets.alt) + '" ' +
+      'width="' + (imageAssets.width || 'auto') + '" height="' + (imageAssets.height || 'auto') + '" ' +
+      'style="max-width:100%;border-radius:8px;" />';
+  }
+
+  // ── Render: Countdown (real timer) ────────────────────────────────────────────
+  // Preview shows static numbers; real engine ticks every second.
+  function renderCountdown(countdownConfig) {
+    if (!countdownConfig) return '';
+    var labels = countdownConfig.labels || { days: 'Days', hours: 'Hrs', mins: 'Min', secs: 'Sec' };
+    var id = 'be-cd-' + Math.random().toString(36).slice(2, 7);
+    var keys = ['days', 'hours', 'mins', 'secs'];
+    var cells = keys.map(function (k) {
+      return '<span class="be-cd-cell">' +
+        '<span class="be-cd-num" data-key="' + k + '">--</span>' +
+        '<span class="be-cd-lbl">' + esc(labels[k]) + '</span>' +
+        '</span>';
+    }).join('');
+    // Start live ticker after DOM insertion
+    setTimeout(function () {
+      var container = document.getElementById(id);
+      if (!container) return;
+      var endTime = new Date(countdownConfig.endIso).getTime();
+      function tick() {
+        var diff = endTime - Date.now();
+        if (diff <= 0) { diff = 0; }
+        var d = Math.floor(diff / 86400000);
+        var h = Math.floor((diff % 86400000) / 3600000);
+        var m = Math.floor((diff % 3600000) / 60000);
+        var s = Math.floor((diff % 60000) / 1000);
+        function pad(n) { return n < 10 ? '0' + n : String(n); }
+        ['days', 'hours', 'mins', 'secs'].forEach(function (k, i) {
+          var el = container.querySelector('[data-key="' + k + '"]');
+          if (el) el.textContent = pad([d, h, m, s][i]);
+        });
+        if (diff > 0) setTimeout(tick, 1000);
+      }
+      tick();
+    }, 0);
+    return '<div class="be-countdown" id="' + id + '">' + cells + '</div>';
+  }
+
+  // ── Render: Slider ────────────────────────────────────────────────────────────
+  function renderSlider(sliderConfig) {
+    if (!sliderConfig || !sliderConfig.images || !sliderConfig.images.length) return '';
+    var id = 'be-sl-' + Math.random().toString(36).slice(2, 7);
+    var slides = sliderConfig.images.map(function (img, i) {
+      var active = i === 0 ? ' active' : '';
+      return '<div class="be-slide' + active + '">' +
+        (img.url ? '<img src="' + esc(img.url) + '" alt="' + esc(img.alt) + '" />' : '') +
+        '</div>';
+    }).join('');
+
+    // Start auto-slide after DOM insertion
+    var interval = sliderConfig.interval || 3000;
+    var animation = sliderConfig.animation || 'fade';
+    setTimeout(function () {
+      var container = document.getElementById(id);
+      if (!container) return;
+      var slideEls = container.querySelectorAll('.be-slide');
+      if (slideEls.length < 2) return;
+      var current = 0;
+      if (animation === 'slide') {
+        // Override CSS for slide animation
+        container.style.cssText += 'overflow:hidden;';
+        var track = container.querySelector('.be-slide-track');
+        if (track) track.style.cssText = 'display:flex;transition:transform ' + (interval * 0.15 / 1000) + 's ease;';
+      }
+      setInterval(function () {
+        slideEls[current].classList.remove('active');
+        current = (current + 1) % slideEls.length;
+        slideEls[current].classList.add('active');
+      }, interval);
+    }, 0);
+
+    return '<div class="be-slider" id="' + id + '">' + slides + '</div>';
+  }
+
+  // ── Inject CSS (once per page) ────────────────────────────────────────────────
+  var _cssInjected = false;
+  function injectBaseCSS() {
+    if (_cssInjected) return;
+    _cssInjected = true;
+    var style = document.createElement('style');
+    style.id = 'banner-engine-base';
+    style.textContent = BANNER_BASE_CSS;
+    document.head.appendChild(style);
+  }
+
+  // ── Mount: render config → DOM ────────────────────────────────────────────────
+  function mountBanner(el, config) {
+    // 1. Inject base CSS (shared across all banners on page)
+    injectBaseCSS();
+
+    // 2. Inject banner-specific CSS (scoped to .banner-custom)
+    //    WHY: Each banner can have unique styles. We scope them with a unique
+    //    data attribute to prevent one banner's styles leaking into another.
+    var uid = 'be-' + config.slug;
+    if (config.bannerStyles && !document.getElementById(uid + '-css')) {
+      var bStyle = document.createElement('style');
+      bStyle.id = uid + '-css';
+      // Replace .banner-custom with [data-be-uid="uid"] .banner-custom for scoping
+      bStyle.textContent = config.bannerStyles.replace(
+        /\.banner-custom/g,
+        '[data-be-uid="' + uid + '"] .banner-custom'
+      );
+      document.head.appendChild(bStyle);
+    }
+
+    // 3. Build inner HTML — identical structure to LivePreview.tsx
+    var html = [
+      renderSlider(config.sliderConfig),
+      renderImage(config.imageAssets),
+      renderContent(config.content),
+      renderCountdown(config.countdownConfig),
+      renderButtons(config.buttons, config.buttonConfig),
+    ].filter(Boolean).join('\n');
+
+    // 4. Create wrapper and inject
+    el.innerHTML = '';
     var wrapper = document.createElement('div');
-    wrapper.className = 'be-banner banner-custom';
-    wrapper.setAttribute('data-be', data.slug);
+    wrapper.className = 'be-wrapper';
+    wrapper.setAttribute('data-be-uid', uid);
 
-    // Slider
-    if (data.sliderConfig) {
-      var slider = _buildSlider(data.sliderConfig, mountEl);
-      if (slider) wrapper.appendChild(slider);
-    }
+    var inner = document.createElement('div');
+    inner.className = 'banner-custom';
+    inner.innerHTML = html;
 
-    // Image (if no slider)
-    if (!data.sliderConfig) {
-      var img = _buildImage(data.imageAssets);
-      if (img) wrapper.appendChild(img);
-    }
+    wrapper.appendChild(inner);
+    el.appendChild(wrapper);
 
-    // Content blocks (v2) — heading / text / html
-    if (data.content && data.content.length) {
-      var contentFrag = _buildContentBlocks(data.content);
-      if (contentFrag) wrapper.appendChild(contentFrag);
-    }
-
-    // Countdown
-    if (data.countdownConfig) {
-      var cd = _buildCountdown(data.countdownConfig, mountEl);
-      if (cd) wrapper.appendChild(cd);
-    }
-
-    // Buttons — v2 multiple buttons, fall back to legacy single button
-    var btns = (data.buttons && data.buttons.length) ? data.buttons
-             : data.buttonConfig ? [data.buttonConfig]
-             : null;
-    if (btns) {
-      var btnRow = _buildButtons(btns);
-      if (btnRow) wrapper.appendChild(btnRow);
-    }
-
-    // JS trigger
-    mountEl.innerHTML = '';
-    mountEl.appendChild(wrapper);
-
-    if (data.jsTrigger && JS_TRIGGERS[data.jsTrigger]) {
-      try { JS_TRIGGERS[data.jsTrigger](wrapper); }
-      catch (e) { console.warn('[banner-engine] trigger error:', e); }
+    // 5. Apply JS trigger preset (hardcoded functions — zero DB-injected JS)
+    if (config.jsTrigger && JS_TRIGGERS[config.jsTrigger]) {
+      JS_TRIGGERS[config.jsTrigger](wrapper);
     }
   }
 
-  function _renderAll(slug, data) {
-    var mounts = document.querySelectorAll('[' + MOUNT_ATTR + '="' + slug + '"]');
-    for (var i = 0; i < mounts.length; i++) _render(mounts[i], data);
-  }
-
-  function _rerenderAll(slug, data) {
-    var mounts = document.querySelectorAll('[data-banner-mount="' + slug + '"]');
-    if (!mounts.length) return;
-    var newHash = JSON.stringify(data);
-    if (mounts[0].__beHash === newHash) return;
+  // ── Auto-discover mount points ────────────────────────────────────────────────
+  function autodiscover() {
+    var mounts = document.querySelectorAll('[data-banner]');
     for (var i = 0; i < mounts.length; i++) {
-      mounts[i].__beHash = newHash;
-      _render(mounts[i], data);
+      (function (el) {
+        var slug = el.getAttribute('data-banner');
+        if (!slug || el.getAttribute('data-be-mounted')) return;
+        el.setAttribute('data-be-mounted', '1');
+        fetchConfig(slug, function (err, config) {
+          if (err) {
+            console.warn('[BannerEngine] Failed to load banner "' + slug + '":', err.message);
+            return;
+          }
+          mountBanner(el, config);
+        });
+      })(mounts[i]);
     }
   }
 
-  function _init() {
-    _injectBaseStyles();
-    var mounts = document.querySelectorAll('[' + MOUNT_ATTR + ']');
-    var seen   = Object.create(null);
-    for (var i = 0; i < mounts.length; i++) {
-      var slug = mounts[i].getAttribute(MOUNT_ATTR);
-      if (!slug || seen[slug]) continue;
-      seen[slug] = true;
-      var cached = _getCached(slug);
-      if (cached) _renderAll(slug, cached);
-      else        _fetchAndRender(slug, true);
-    }
-  }
-
-  // ── Public API ────────────────────────────────────────────────────────────
-  global.BannerEngine = {
-    version: '2.0.0',
-    mount: function (selector, slug) {
-      var el = typeof selector === 'string' ? document.querySelector(selector) : selector;
-      if (!el) return console.warn('[banner-engine] mount: element not found:', selector);
-      el.setAttribute(MOUNT_ATTR, slug);
-      var cached = _getCached(slug);
-      if (cached) _render(el, cached);
-      else        _fetchAndRender(slug, true);
+  // ── Public API ────────────────────────────────────────────────────────────────
+  var BannerEngine = {
+    /**
+     * Manually mount a banner into a selector or element.
+     * @param {string|Element} target  CSS selector or DOM element
+     * @param {string}         slug    Banner slug from dashboard
+     */
+    mount: function (target, slug) {
+      var el = typeof target === 'string' ? document.querySelector(target) : target;
+      if (!el) { console.warn('[BannerEngine] mount: element not found', target); return; }
+      fetchConfig(slug, function (err, config) {
+        if (err) { console.warn('[BannerEngine] mount error:', err.message); return; }
+        mountBanner(el, config);
+      });
     },
+
+    /**
+     * Force refresh all banners (bypasses cache).
+     */
     refresh: function () {
-      _cache = Object.create(null);
-      _init();
+      _cache = {};
+      // Remove mounted markers so autodiscover re-renders
+      var mounts = document.querySelectorAll('[data-be-mounted]');
+      for (var i = 0; i < mounts.length; i++) {
+        mounts[i].removeAttribute('data-be-mounted');
+      }
+      autodiscover();
     },
+
+    /**
+     * Destroy: clear all intervals. Call on SPA route change / unmount.
+     */
     destroy: function () {
-      Object.keys(_countdownTimers).forEach(function (k) { clearInterval(_countdownTimers[k]); });
-      Object.keys(_sliderTimers).forEach(function (k)    { clearInterval(_sliderTimers[k]);    });
-      _countdownTimers = Object.create(null);
-      _sliderTimers    = Object.create(null);
+      _cache = {};
+      // Sliders/countdowns use native setInterval; clear by re-cloning nodes
+      var mounts = document.querySelectorAll('[data-banner]');
+      for (var i = 0; i < mounts.length; i++) {
+        mounts[i].innerHTML = '';
+        mounts[i].removeAttribute('data-be-mounted');
+      }
     },
   };
 
+  // ── Boot ──────────────────────────────────────────────────────────────────────
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', _init);
+    document.addEventListener('DOMContentLoaded', autodiscover);
   } else {
-    _init();
+    autodiscover();
   }
 
-})(window);
+  // Expose globally for manual API usage
+  global.BannerEngine = BannerEngine;
+
+})(typeof window !== 'undefined' ? window : this);
