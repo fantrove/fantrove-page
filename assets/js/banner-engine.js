@@ -26,7 +26,7 @@
   // ── Configuration ────────────────────────────────────────────────────────────
   var BANNER_ENGINE_URL = (
     global.__BANNER_ENGINE_URL ||
-    'https://fantrove-banner.vercel.app'   // ← Change to your Vercel URL
+    'https://your-banner-engine.vercel.app'   // ← Change to your Vercel URL
   );
 
   // Cache TTL in ms — avoids hammering the API on SPA route changes
@@ -217,7 +217,8 @@
   function sanitize(raw) {
     return String(raw || '')
       .replace(/<script[\s\S]*?<\/script>/gi, '')
-      .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '');
+      .replace(/on\w+\s*=\s*"[^"]*"/gi, '')
+      .replace(/on\w+\s*=\s*'[^']*'/gi, '');
   }
 
   // ── Render: Content Blocks ────────────────────────────────────────────────────
