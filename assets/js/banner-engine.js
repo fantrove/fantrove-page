@@ -26,7 +26,7 @@
   // ── Configuration ────────────────────────────────────────────────────────────
   var BANNER_ENGINE_URL = (
     global.__BANNER_ENGINE_URL ||
-    'https://your-banner-engine.vercel.app'
+    'https://fantrove-banner.vercel.app'
   );
 
   // Cache TTL in ms — avoids hammering the API on SPA route changes
