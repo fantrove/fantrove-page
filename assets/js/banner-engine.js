@@ -1,12 +1,11 @@
 /**
- * banner-engine.js  v3.0.0
+ * banner-engine.js  v3.0.0 (scoped CSS patch)
  * v3: Multi-language (reads selectedLang from localStorage like search system)
  *     + HTML mode (customHtml per lang) + data-i18n substitution
  *
- * ── Language detection ────────────────────────────────────────────────────
- * Reads localStorage.selectedLang — same key as search system (utils.js).
- * Fallback: navigator.language → 'en'.
- * Re-checks on every mount so language changes reflect immediately.
+ * NOTE:
+ * - This patched version scopes base CSS to the banner container (.be-banner)
+ *   to avoid leaking rules like ".button" into the global page styles.
  */
 (function (global) {
   'use strict';
@@ -26,7 +25,7 @@
     } catch { return 'en'; }
   }
 
-  // ── Cache ──────────────────────────────────────────────────────────────────
+  // ── Cache ───────────────────────────────────────────────────────────────
   var _cache = Object.create(null);
   function _getCached(slug) {
     var entry = _cache[slug];
@@ -37,7 +36,7 @@
   }
   function _setCache(slug, data) { _cache[slug] = { data: data, ts: Date.now() }; }
 
-  // ── Fetch ──────────────────────────────────────────────────────────────────
+  // ── Fetch ───────────────────────────────────────────────────────────────
   function _fetchAndRender(slug, withRender) {
     fetch(API_BASE + '/' + slug, { method:'GET', headers:{'Accept':'application/json'}, cache:'no-store' })
       .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
@@ -52,7 +51,7 @@
       });
   }
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
+  // ── Helpers ─────────────────────────────────────────────────────────────
   function _esc(s) {
     return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
@@ -64,16 +63,14 @@
       .replace(/javascript\s*:/gi,'javascript-blocked:');
   }
 
-  // ── LangValue resolver (mirrors resolveLang() in banner.ts) ───────────────
+  // ── LangValue resolver (mirrors resolveLang() in banner.ts) ──────────────
   function _resolve(val, lang) {
     if (!val) return '';
     if (typeof val === 'string') return val;
     return val[lang] || val['en'] || Object.values(val)[0] || '';
   }
 
-  // ── data-i18n substitution ─────────────────────────────────────────────────
-  // Walks the banner DOM after render and replaces textContent of elements
-  // that have data-i18n="key" with the translation for the active language.
+  // ── data-i18n substitution ───────────────────────────────────────────────
   function _applyI18n(bannerEl, translations, lang) {
     if (!translations || !lang) return;
     var langMap = translations[lang] || translations['en'] || {};
@@ -83,38 +80,53 @@
     });
   }
 
-  // ── CSS injection ──────────────────────────────────────────────────────────
+  // ── CSS injection (SCOPED) ───────────────────────────────────────────────
   var _injectedStyles = Object.create(null);
 
   function _injectBaseStyles() {
     if (document.getElementById('be-base')) return;
     var s = document.createElement('style');
     s.id = 'be-base';
-    // MIRROR of BASE_CSS in bannerTemplate.ts
+    // SCOPED base CSS: selectors that target elements inside the banner are prefixed with ".be-banner "
     s.textContent = [
-      '.be-banner{position:relative;overflow:hidden;border-radius:16px;padding:28px 24px;display:flex;flex-direction:column;gap:14px;background:linear-gradient(135deg,#13b47f 0%,#0eb0d5 100%);color:#fff;font-family:system-ui,-apple-system,sans-serif;box-shadow:0 4px 24px rgba(0,0,0,.12);}',
+      /* Container */
+      '.be-banner{position:relative;overflow:hidden;border-radius:16px;padding:28px 24px;display:flex;flex-direction:column;gap:14px;background:linear-gradient(135deg,#13b47f 0%,#0eb0d5 100%);color:#fff;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;}',
       '.be-banner h1,.be-banner h2,.be-banner h3{margin:0;line-height:1.2;font-weight:700;}',
-      '.be-banner h1{font-size:clamp(22px,4vw,36px);}.be-banner h2{font-size:clamp(18px,3vw,28px);}.be-banner h3{font-size:clamp(15px,2.5vw,22px);}',
-      '.be-banner p{margin:0;font-size:14px;line-height:1.6;opacity:.9;}',
-      '.be-btn-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}',
-      '.button{display:inline-flex;align-items:center;gap:6px;padding:10px 22px;border-radius:999px;font-weight:600;font-size:14px;text-decoration:none;border:2px solid transparent;cursor:pointer;transition:opacity .18s,transform .15s;white-space:nowrap;}',
-      '.button:hover{opacity:.85;transform:translateY(-1px);}',
-      '.button-secondary{background:transparent;border-color:currentColor;color:inherit;}',
-      '.button-primary{background:#fff;color:#13b47f;border-color:#fff;}',
-      '.banner-btn-white{background:#fff;color:#1a1a2e;border-color:#fff;}',
-      '.banner-btn-dark{background:#1a1a2e;color:#fff;border-color:#1a1a2e;}',
-      '.be-countdown{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}',
-      '.be-cd-cell{display:flex;flex-direction:column;align-items:center;background:rgba(0,0,0,.18);border-radius:8px;padding:8px 12px;min-width:48px;}',
-      '.be-cd-num{font-size:24px;font-weight:700;line-height:1;}.be-cd-lbl{font-size:10px;opacity:.75;margin-top:3px;letter-spacing:.05em;}',
-      '.be-image{max-width:100%;border-radius:8px;display:block;}',
-      '.be-slider{position:relative;overflow:hidden;border-radius:10px;width:100%;}.be-slider img{width:100%;height:auto;display:block;}',
-      '@media(max-width:480px){.be-banner{padding:20px 16px;border-radius:12px;}.button{padding:12px 20px;font-size:15px;width:100%;justify-content:center;}.be-btn-row{flex-direction:column;}.be-cd-num{font-size:20px;}}',
+      '.be-banner h1{font-size:clamp(22px,4vw,36px);}',
+      '.be-banner h2{font-size:clamp(18px,3vw,28px);}',
+      '.be-banner h3{font-size:clamp(15px,2.5vw,22px);}',
+      '.be-banner p{margin:0;font-size:14px;line-height:1.6;opacity:.95;}',
+
+      /* Button row and buttons (SCOPED) */
+      '.be-banner .be-btn-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}',
+      '.be-banner .button{display:inline-flex;align-items:center;gap:6px;padding:10px 22px;border-radius:999px;font-weight:600;font-size:14px;text-decoration:none;border:2px solid transparent;cursor:pointer;transition:all .12s ease;background:transparent;color:inherit;}',
+      '.be-banner .button:hover{opacity:.92;transform:translateY(-1px);}',
+
+      '.be-banner .button-secondary{background:transparent;border-color:currentColor;color:inherit;}',
+      '.be-banner .button-primary{background:#fff;color:#13b47f;border-color:#fff;}',
+      '.be-banner .banner-btn-white{background:#fff;color:#1a1a2e;border-color:#fff;}',
+      '.be-banner .banner-btn-dark{background:#1a1a2e;color:#fff;border-color:#1a1a2e;}',
+
+      /* Countdown */
+      '.be-banner .be-countdown{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}',
+      '.be-banner .be-cd-cell{display:flex;flex-direction:column;align-items:center;background:rgba(0,0,0,.12);border-radius:8px;padding:8px 12px;min-width:48px;}',
+      '.be-banner .be-cd-num{font-size:24px;font-weight:700;line-height:1;}',
+      '.be-banner .be-cd-lbl{font-size:10px;opacity:.85;margin-top:3px;letter-spacing:.05em;}',
+
+      /* Image and slider */
+      '.be-banner .be-image{max-width:100%;border-radius:8px;display:block;}',
+      '.be-banner .be-slider{position:relative;overflow:hidden;border-radius:10px;width:100%;}.be-banner .be-slider img{width:100%;height:auto;display:block;}',
+
+      /* Responsive tweaks */
+      '@media(max-width:480px){.be-banner{padding:20px 16px;border-radius:12px;}.be-banner .button{padding:12px 20px;font-size:15px;width:100%;justify-content:center;}.be-banner .be-btn-row{flex-direction:column;}.be-banner .be-cd-num{font-size:20px;}}'
     ].join('');
     document.head.appendChild(s);
   }
 
   function _injectUserStyles(slug, rawCss) {
     var clean  = String(rawCss||'').replace(/<\/?style[^>]*>/gi,'');
+    // Replace any occurrence of .banner-custom in user CSS with an explicit attribute selector scoped to mount slug
+    // This preserves user's intention for ".banner-custom" while scoping to the specific mounted banner.
     var scoped = clean.replace(/\.banner-custom/g,'[data-banner-mount="'+slug+'"] .be-banner');
     if (_injectedStyles[slug]) { _injectedStyles[slug].textContent = scoped; return; }
     var s = document.createElement('style');
@@ -132,7 +144,7 @@
       return _sanitizeHtml(html);
     }
 
-    // Builder mode — same logic as bannerTemplate.ts buildBannerInnerHtml()
+    // Builder mode
     var parts = [];
 
     // Slider
@@ -182,7 +194,8 @@
         var label  = _resolve(b.label, lang);
         var target = b.target === '_blank' ? '_blank' : '_self';
         var rel    = target === '_blank' ? ' rel="noopener noreferrer"' : '';
-        return '<a href="'+_safeAttr(b.href)+'" class="'+_esc(b.className)+'" target="'+target+'"'+rel+'>'+_esc(label)+'</a>';
+        // Ensure className is escaped and will be scoped by injected CSS (.be-banner .button ...)
+        return '<a href="'+_safeAttr(b.href)+'" class="'+_esc(b.className || 'button')+'" target="'+target+'"'+rel+'>'+_esc(label)+'</a>';
       }).join('\n');
       parts.push('<div class="be-btn-row">'+btnHtml+'</div>');
     }
@@ -235,19 +248,19 @@
     }, interval);
   }
 
-  // ── JS Triggers ────────────────────────────────────────────────────────────
+  // ── JS Triggers ──────────────────────────────────────────────────────────
   var JS_TRIGGERS = {
     confetti: function(el) {
-      for (var i=0;i<30;i++){(function(i){var d=document.createElement('span');d.style.cssText='position:absolute;width:6px;height:6px;border-radius:50%;pointer-events:none;background:'+['#13b47f','#0eb0d5','#ff9a9e','#fad0c4','#fff'][i%5]+';left:'+Math.random()*100+'%;top:'+Math.random()*100+'%;opacity:1;animation:be-cf '+(0.6+Math.random()*0.8)+'s ease forwards '+Math.random()*0.4+'s;';el.appendChild(d);setTimeout(function(){try{el.removeChild(d);}catch(e){}},1500);})(i);}
-      if(!document.getElementById('be-cf-kf')){var s=document.createElement('style');s.id='be-cf-kf';s.textContent='@keyframes be-cf{0%{transform:translateY(0) rotate(0);opacity:1}100%{transform:translateY(70px) rotate(360deg);opacity:0}}';document.head.appendChild(s);}
+      for (var i=0;i<30;i++){(function(i){var d=document.createElement('span');d.style.cssText='position:absolute;width:6px;height:6px;border-radius:50%;pointer-events:none;background:'+['#13b47f','#0eb0d5','#fff','#ffd166'][i%4]+';left:'+Math.floor(Math.random()*100)+'%;top:'+Math.floor(Math.random()*100)+'%;transform:translateY(-10px) scale(.9);opacity:0.95;z-index:9999;';el.appendChild(d);setTimeout(function(){d.style.transition='transform .9s ease,opacity .9s ease';d.style.transform='translateY(120px) scale(.6)';d.style.opacity='0';setTimeout(function(){d.remove();},1000);},2);})(i);}
+      if(!document.getElementById('be-cf-kf')){var s=document.createElement('style');s.id='be-cf-kf';s.textContent='@keyframes be-cf{0%{transform:translateY(0) rotate(0);opacity:1}100%{transform:translateY(120px) rotate(360deg);opacity:0}}';document.head.appendChild(s);}
     },
     shake: function(el) {
-      if(!document.getElementById('be-shake-kf')){var s=document.createElement('style');s.id='be-shake-kf';s.textContent='@keyframes be-shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}';document.head.appendChild(s);}
+      if(!document.getElementById('be-shake-kf')){var s=document.createElement('style');s.id='be-shake-kf';s.textContent='@keyframes be-shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%{transform:translateX(6px)}}';document.head.appendChild(s);}
       el.style.animation='be-shake .4s ease';
       el.addEventListener('mouseover',function(){el.style.animation='none';requestAnimationFrame(function(){el.style.animation='be-shake .4s ease';});});
     },
     pulse: function(el) {
-      if(!document.getElementById('be-pulse-kf')){var s=document.createElement('style');s.id='be-pulse-kf';s.textContent='@keyframes be-pulse{0%,100%{box-shadow:0 0 0 0 rgba(19,180,127,.4)}50%{box-shadow:0 0 0 14px rgba(19,180,127,0)}}';document.head.appendChild(s);}
+      if(!document.getElementById('be-pulse-kf')){var s=document.createElement('style');s.id='be-pulse-kf';s.textContent='@keyframes be-pulse{0%,100%{box-shadow:0 0 0 0 rgba(19,180,127,.2)}50%{box-shadow:0 0 26px 6px rgba(19,180,127,.04)}}';document.head.appendChild(s);}
       el.style.animation='be-pulse 2s ease-in-out infinite';
     },
     scroll_reveal: function(el) {
@@ -257,16 +270,16 @@
       io.observe(el);
     },
     bounce: function(el) {
-      if(!document.getElementById('be-bounce-kf')){var s=document.createElement('style');s.id='be-bounce-kf';s.textContent='@keyframes be-bounce{0%,100%{transform:translateY(0)}30%{transform:translateY(-12px)}60%{transform:translateY(-6px)}}';document.head.appendChild(s);}
+      if(!document.getElementById('be-bounce-kf')){var s=document.createElement('style');s.id='be-bounce-kf';s.textContent='@keyframes be-bounce{0%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}50%{transform:translateY(0)}}';document.head.appendChild(s);}
       el.style.animation='be-bounce .6s cubic-bezier(.36,.07,.19,.97)';
     },
     glow: function(el) {
-      if(!document.getElementById('be-glow-kf')){var s=document.createElement('style');s.id='be-glow-kf';s.textContent='@keyframes be-glow{from{box-shadow:0 0 8px rgba(19,180,127,.3)}to{box-shadow:0 0 24px rgba(19,180,127,.8)}}';document.head.appendChild(s);}
+      if(!document.getElementById('be-glow-kf')){var s=document.createElement('style');s.id='be-glow-kf';s.textContent='@keyframes be-glow{from{box-shadow:0 0 8px rgba(19,180,127,.3)}to{box-shadow:0 0 18px rgba(14,176,213,.25)}}';document.head.appendChild(s);}
       el.style.animation='be-glow 2s ease-in-out infinite alternate';
     },
   };
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // ── Render ───────────────────────────────────────────────────────────────
   function _render(mountEl, data) {
     var lang = _getLang();
     mountEl.setAttribute('data-banner-mount', data.slug);
@@ -315,9 +328,9 @@
     });
   }
 
-  // ── Public API ─────────────────────────────────────────────────────────────
+  // ── Public API ──────────────────────────────��────────────────────────────
   global.BannerEngine = {
-    version: '3.0.0',
+    version: '3.0.0-scoped',
     mount: function(selector, slug) {
       var el = typeof selector === 'string' ? document.querySelector(selector) : selector;
       if (!el) return console.warn('[banner-engine] element not found:', selector);
@@ -342,7 +355,6 @@
   }
 
   // ── Auto re-render on language change ─────────────────────────────────────
-  // Listen for storage changes (when another tab changes selectedLang)
   window.addEventListener('storage', function(e) {
     if (e.key === 'selectedLang') global.BannerEngine.refresh();
   });
