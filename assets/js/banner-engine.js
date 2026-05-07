@@ -1,567 +1,350 @@
 /**
- * banner-engine.js — Fantrove Client SDK
- * Version: 2.1.1
+ * banner-engine.js  v3.0.0
+ * v3: Multi-language (reads selectedLang from localStorage like search system)
+ *     + HTML mode (customHtml per lang) + data-i18n substitution
  *
- * PURPOSE: Fetches banner config from the Banner Engine API and renders
- *          HTML that is PIXEL-IDENTICAL to the dashboard preview.
- *
- * CRITICAL DESIGN RULE — "Preview = Reality":
- *   The CSS in BANNER_BASE_CSS and all render functions here MUST stay
- *   in sync with LivePreview.tsx's buildPreviewHtml(). When you update
- *   the preview, update this file too, and vice versa.
- *
- * USAGE:
- *   1. Copy this file to Fantrove /assets/js/banner-engine.js
- *   2. Set BANNER_ENGINE_URL below to your Vercel deployment URL
- *   3. Add <script defer src="/assets/js/banner-engine.js?v=2.1.1"></script>
- *   4. Place <div data-banner="your-slug"></div> anywhere on the page
- *
- * SECURITY: Zero raw JS from DB. Only preset keys are stored; functions
- *   are hardcoded here. bannerStyles is CSS scoped to .banner-custom only.
+ * ── Language detection ────────────────────────────────────────────────────
+ * Reads localStorage.selectedLang — same key as search system (utils.js).
+ * Fallback: navigator.language → 'en'.
+ * Re-checks on every mount so language changes reflect immediately.
  */
-
 (function (global) {
   'use strict';
 
-  // ── Configuration ────────────────────────────────────────────────────────────
   var BANNER_ENGINE_URL = (
-    global.__BANNER_ENGINE_URL ||
-    'https://fantrove-banner.vercel.app'
+    global.__BANNER_ENGINE_URL || 'https://fantrove-banner.vercel.app'
   );
+  var API_BASE   = BANNER_ENGINE_URL + '/api/public/banners';
+  var CACHE_TTL  = 60 * 1000;
+  var MOUNT_ATTR = 'data-banner';
 
-  // Cache TTL in ms — avoids hammering the API on SPA route changes
-  var CACHE_TTL_MS = 60 * 1000;
+  // ── Language (mirrors search system getLang()) ─────────────────────────────
+  function _getLang() {
+    try {
+      return localStorage.getItem('selectedLang') ||
+        (navigator.language && navigator.language.startsWith('th') ? 'th' : 'en');
+    } catch { return 'en'; }
+  }
 
-  // ── BANNER_BASE_CSS ──────────────────────────────────────────────────────────
-  // THIS IS THE SINGLE SOURCE OF TRUTH for banner visual style.
-  // The dashboard preview (LivePreview.tsx) uses an identical copy.
-  // If you change anything here, update LivePreview.tsx's <style> block too.
-  var BANNER_BASE_CSS = [
-    '.be-wrapper { border-radius: 12px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,.12); }',
-    '.banner-custom {',
-    '  padding: 24px 20px;',
-    '  min-height: 80px;',
-    '  display: flex;',
-    '  flex-direction: column;',
-    '  align-items: flex-start;',
-    '  gap: 12px;',
-    '  background: linear-gradient(90deg, #13b47f, #0eb0d5);',
-    '  color: #fff;',
-    '  position: relative;',
-    '}',
-    // ── Buttons ──────────────────────────────────────────────────────────────
-    '.banner-custom .button {',
-    '  display: inline-flex; align-items: center; gap: 6px;',
-    '  padding: 10px 20px; border-radius: 24px;',
-    '  font-weight: 600; font-size: 14px;',
-    '  text-decoration: none; cursor: pointer;',
-    '  transition: opacity .18s; border: none;',
-    '}',
-    '.banner-custom .button-secondary {',
-    '  background: transparent; border: 2px solid currentColor; color: inherit;',
-    '}',
-    '.banner-custom .button-primary {',
-    '  background: #fff; color: #13b47f; border: 2px solid #fff;',
-    '}',
-    '.banner-custom .button-secondary.oc { position: relative; overflow: hidden; }',
-    '.banner-custom .banner-btn-white { background: #fff; color: #1a1a2e; border: 2px solid #fff; }',
-    '.banner-custom .banner-btn-dark  { background: #1a1a2e; color: #fff; border: 2px solid #1a1a2e; }',
-    '.banner-custom .be-btn-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }',
-    // ── Countdown ────────────────────────────────────────────────────────────
-    '.banner-custom .be-countdown { display: flex; gap: 8px; align-items: center; }',
-    '.banner-custom .be-cd-cell {',
-    '  display: flex; flex-direction: column; align-items: center;',
-    '  background: rgba(0,0,0,.18); border-radius: 6px;',
-    '  padding: 6px 10px; min-width: 42px;',
-    '}',
-    '.banner-custom .be-cd-num { font-size: 20px; font-weight: 700; line-height: 1; }',
-    '.banner-custom .be-cd-lbl { font-size: 10px; opacity: .75; margin-top: 2px; }',
-    // ── Slider ───────────────────────────────────────────────────────────────
-    '.banner-custom .be-slider { width: 100%; position: relative; overflow: hidden; border-radius: 6px; }',
-    '.banner-custom .be-slide { width: 100%; display: none; }',
-    '.banner-custom .be-slide.active { display: block; }',
-    '.banner-custom .be-slide img { width: 100%; height: auto; border-radius: 6px; display: block; }',
-    // ── Headings & text ───────────────────────────────────────────────────────
-    '.banner-custom h1, .banner-custom h2, .banner-custom h3 { margin: 0 0 4px; }',
-    '.banner-custom p { margin: 0 0 4px; }',
-    // ── JS trigger animations ─────────────────────────────────────────────────
-    '@keyframes be-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(19,180,127,.6); } 50% { box-shadow: 0 0 0 14px rgba(19,180,127,0); } }',
-    '@keyframes be-bounce { 0%,100% { transform: translateY(0); } 40% { transform: translateY(-10px); } 70% { transform: translateY(-5px); } }',
-    '@keyframes be-glow { 0%,100% { box-shadow: 0 0 8px 2px #13b47f; } 50% { box-shadow: 0 0 24px 8px #0eb0d5; } }',
-    '.be-trigger-pulse { animation: be-pulse 2s infinite; }',
-    '.be-trigger-bounce { animation: be-bounce .8s ease; }',
-    '.be-trigger-glow .banner-custom { animation: be-glow 2s ease-in-out infinite; }',
-    // ── Mobile responsive ─────────────────────────────────────────────────────
-    '@media (max-width: 600px) {',
-    '  .banner-custom { padding: 16px; }',
-    '  .banner-custom .button { padding: 12px 18px; font-size: 15px; min-height: 44px; }',
-    '  .banner-custom .be-btn-row { flex-direction: column; align-items: stretch; }',
-    '}',
-  ].join('\n');
+  // ── Cache ──────────────────────────────────────────────────────────────────
+  var _cache = Object.create(null);
+  function _getCached(slug) {
+    var entry = _cache[slug];
+    if (!entry) return null;
+    if (Date.now() - entry.ts < CACHE_TTL) return entry.data;
+    _fetchAndRender(slug, false);
+    return entry.data;
+  }
+  function _setCache(slug, data) { _cache[slug] = { data: data, ts: Date.now() }; }
 
-  // ── JS Trigger Presets ───────────────────────────────────────────────────────
-  // WHY hardcoded: Zero raw JS from DB. Each preset maps to a safe DOM function.
-  var JS_TRIGGERS = {
-    confetti: function (el, cleanupFns) {
-      // Simple CSS-only confetti burst using pseudo-random spans
-      var colors = ['#13b47f', '#0eb0d5', '#ff9a9e', '#fad0c4', '#fff'];
-      var burst = document.createElement('div');
-      burst.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;';
-      for (var i = 0; i < 30; i++) {
-        var dot = document.createElement('span');
-        var color = colors[i % colors.length];
-        var x = Math.random() * 100;
-        var delay = Math.random() * 0.6;
-        var size = 4 + Math.random() * 6;
-        dot.style.cssText = [
-          'position:absolute;border-radius:50%;',
-          'width:' + size + 'px;height:' + size + 'px;',
-          'background:' + color + ';',
-          'left:' + x + '%;top:-10px;',
-          'animation:be-confetti-fall .8s ' + delay + 's ease-in forwards;',
-        ].join('');
-        burst.appendChild(dot);
-      }
-      // Inject keyframe once
-      if (!document.getElementById('be-confetti-kf')) {
-        var kf = document.createElement('style');
-        kf.id = 'be-confetti-kf';
-        kf.textContent = '@keyframes be-confetti-fall { to { top: 110%; opacity: 0; } }';
-        document.head.appendChild(kf);
-      }
-      el.style.position = 'relative';
-      el.appendChild(burst);
-      var timeoutId = setTimeout(function () { burst.remove(); }, 1500);
-      cleanupFns.push(function () {
-        clearTimeout(timeoutId);
-        if (burst.parentNode) burst.remove();
-      });
-    },
-
-    shake: function (el, cleanupFns) {
-      var kfId = 'be-shake-kf';
-      if (!document.getElementById(kfId)) {
-        var kf = document.createElement('style');
-        kf.id = kfId;
-        kf.textContent = '@keyframes be-shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)} }';
-        document.head.appendChild(kf);
-      }
-      var onEnter = function () {
-        el.style.animation = 'be-shake .4s ease';
-      };
-      var onEnd = function () {
-        el.style.animation = '';
-      };
-      el.addEventListener('mouseenter', onEnter);
-      el.addEventListener('animationend', onEnd);
-      cleanupFns.push(function () {
-        el.removeEventListener('mouseenter', onEnter);
-        el.removeEventListener('animationend', onEnd);
-      });
-    },
-
-    pulse: function (el, cleanupFns) {
-      el.classList.add('be-trigger-pulse');
-      cleanupFns.push(function () {
-        el.classList.remove('be-trigger-pulse');
-      });
-    },
-
-    scroll_reveal: function (el, cleanupFns) {
-      el.style.opacity = '0';
-      el.style.transform = 'translateY(20px)';
-      el.style.transition = 'opacity .5s ease, transform .5s ease';
-      var observer = new IntersectionObserver(function (entries) {
-        entries.forEach(function (entry) {
-          if (entry.isIntersecting) {
-            el.style.opacity = '1';
-            el.style.transform = 'translateY(0)';
-            observer.unobserve(el);
-            observer.disconnect();
-          }
-        });
-      }, { threshold: 0.1 });
-      observer.observe(el);
-      cleanupFns.push(function () {
-        observer.disconnect();
-        el.style.opacity = '';
-        el.style.transform = '';
-        el.style.transition = '';
-      });
-    },
-
-    bounce: function (el, cleanupFns) {
-      el.classList.add('be-trigger-bounce');
-      var onEnd = function () {
-        el.classList.remove('be-trigger-bounce');
-      };
-      el.addEventListener('animationend', onEnd, { once: true });
-      cleanupFns.push(function () {
-        el.removeEventListener('animationend', onEnd);
-        el.classList.remove('be-trigger-bounce');
-      });
-    },
-
-    glow: function (el, cleanupFns) {
-      el.classList.add('be-trigger-glow');
-      cleanupFns.push(function () {
-        el.classList.remove('be-trigger-glow');
-      });
-    },
-  };
-
-  // ── In-memory fetch cache ─────────────────────────────────────────────────────
-  var _cache = {};
-
-  function fetchConfig(slug, cb) {
-    var now = Date.now();
-    var cached = _cache[slug];
-    if (cached && now - cached.ts < CACHE_TTL_MS) {
-      return cb(null, cached.data);
-    }
-    var url = BANNER_ENGINE_URL + '/api/public/banners/' + slug;
-    fetch(url, { headers: { 'Accept': 'application/json' } })
-      .then(function (res) { return res.json(); })
-      .then(function (json) {
-        if (!json.ok) return cb(new Error(json.error || 'API error'));
-        _cache[slug] = { ts: now, data: json.data };
-        cb(null, json.data);
+  // ── Fetch ──────────────────────────────────────────────────────────────────
+  function _fetchAndRender(slug, withRender) {
+    fetch(API_BASE + '/' + slug, { method:'GET', headers:{'Accept':'application/json'}, cache:'no-store' })
+      .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
+      .then(function(json) {
+        if (!json.ok || !json.data) return;
+        _setCache(slug, json.data);
+        if (withRender) _renderAll(slug, json.data);
+        else            _rerenderAll(slug, json.data);
       })
-      .catch(cb);
-  }
-
-  // ── HTML escape ───────────────────────────────────────────────────────────────
-  function esc(s) {
-    return String(s || '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
-  }
-
-  // ── URL sanitizer for href ────────────────────────────────────────────────────
-  // Block javascript:, data:, vbscript: protocols to prevent XSS
-  var DANGEROUS_PROTOCOLS = /^\s*(javascript|data|vbscript):/i;
-  function sanitizeHref(url) {
-    if (!url) return '#';
-    if (DANGEROUS_PROTOCOLS.test(url)) return '#';
-    return url;
-  }
-
-  // ── HTML sanitizer (admin-facing HTML blocks only) ────────────────────────────
-  // Strips script tags and dangerous event handlers before inserting into DOM.
-  // The authoritative sanitization runs server-side; this is a defence-in-depth layer.
-  function sanitize(raw) {
-    return String(raw || '')
-      .replace(/<script[\s\S]*?<\/script>/gi, '')
-      .replace(/<script[^>]*>/gi, '')
-      .replace(/on\w+\s*=\s*"[^"]*"/gi, '')
-      .replace(/on\w+\s*=\s*'[^']*'/gi, '')
-      .replace(/on\w+\s*=\s*[^>\s]*/gi, '');
-  }
-
-  // ── Render: Content Blocks ────────────────────────────────────────────────────
-  // Matches LivePreview.tsx buildPreviewHtml() content section exactly.
-  function renderContent(blocks) {
-    if (!blocks || !blocks.length) return '';
-    return blocks.map(function (block) {
-      var align = block.align || 'left';
-      var style = 'text-align:' + align + ';';
-      if (block.type === 'heading') {
-        var tag = 'h' + (block.level || 2);
-        return '<' + tag + ' style="' + style + 'margin:0 0 4px;">' + esc(block.value) + '</' + tag + '>';
-      }
-      if (block.type === 'text') {
-        return '<p style="' + style + 'margin:0 0 4px;">' + esc(block.value) + '</p>';
-      }
-      if (block.type === 'html') {
-        return '<div style="' + style + '">' + sanitize(block.value) + '</div>';
-      }
-      return '';
-    }).join('\n');
-  }
-
-  // ── Render: Buttons ───────────────────────────────────────────────────────────
-  function renderButtons(buttons, legacyButtonConfig) {
-    var btns = (buttons && buttons.length) ? buttons : (legacyButtonConfig ? [legacyButtonConfig] : []);
-    if (!btns.length) return '';
-    var inner = btns.map(function (b) {
-      var safeHref = sanitizeHref(b.href);
-      var target = b.target || '_self';
-      // Prevent target="_blank" without rel="noopener noreferrer" (security)
-      var rel = target === '_blank' ? ' rel="noopener noreferrer"' : '';
-      return '<a href="' + esc(safeHref) + '" class="' + esc(b.className) + '" target="' + esc(target) + '"' + rel + '>' + esc(b.label) + '</a>';
-    }).join('\n');
-    return '<div class="be-btn-row">' + inner + '</div>';
-  }
-
-  // ── Render: Image ─────────────────────────────────────────────────────────────
-  function renderImage(imageAssets) {
-    if (!imageAssets || !imageAssets.url) return '';
-    return '<img src="' + esc(imageAssets.url) + '" alt="' + esc(imageAssets.alt) + '" ' +
-      'width="' + (imageAssets.width || 'auto') + '" height="' + (imageAssets.height || 'auto') + '" ' +
-      'style="max-width:100%;border-radius:8px;" loading="lazy" />';
-  }
-
-  // ── Render: Countdown (real timer) ────────────────────────────────────────────
-  // Preview shows static numbers; real engine ticks every second.
-  function renderCountdown(countdownConfig, cleanupFns) {
-    if (!countdownConfig) return '';
-    var labels = countdownConfig.labels || { days: 'Days', hours: 'Hrs', mins: 'Min', secs: 'Sec' };
-    var id = 'be-cd-' + Math.random().toString(36).slice(2, 7);
-    var keys = ['days', 'hours', 'mins', 'secs'];
-    var cells = keys.map(function (k) {
-      return '<span class="be-cd-cell">' +
-        '<span class="be-cd-num" data-key="' + k + '">--</span>' +
-        '<span class="be-cd-lbl">' + esc(labels[k]) + '</span>' +
-        '</span>';
-    }).join('');
-
-    // Store timer ID for cleanup
-    var timerId = null;
-    var isCleaned = false;
-    
-    function tick() {
-      if (isCleaned) return;
-      var container = document.getElementById(id);
-      if (!container || !document.body.contains(container)) {
-        isCleaned = true;
-        return;
-      }
-      var endTime = new Date(countdownConfig.endIso).getTime();
-      var diff = endTime - Date.now();
-      if (diff <= 0) { diff = 0; }
-      var d = Math.floor(diff / 86400000);
-      var h = Math.floor((diff % 86400000) / 3600000);
-      var m = Math.floor((diff % 3600000) / 60000);
-      var s = Math.floor((diff % 60000) / 1000);
-      function pad(n) { return n < 10 ? '0' + n : String(n); }
-      ['days', 'hours', 'mins', 'secs'].forEach(function (k, i) {
-        var el = container.querySelector('[data-key="' + k + '"]');
-        if (el) el.textContent = pad([d, h, m, s][i]);
+      .catch(function(err) {
+        if (withRender) console.warn('[banner-engine] fetch failed "' + slug + '":', err.message);
       });
-      if (diff > 0 && !isCleaned) {
-        timerId = setTimeout(tick, 1000);
-      }
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  function _esc(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function _safeAttr(s) { return String(s||'').replace(/[^a-zA-Z0-9\-_/.?=&#:%]/g,''); }
+  function _sanitizeHtml(raw) {
+    return String(raw||'')
+      .replace(/<script[\s\S]*?<\/script>/gi,'')
+      .replace(/on\w+\s*=\s*["'][^"']*["']/gi,'')
+      .replace(/javascript\s*:/gi,'javascript-blocked:');
+  }
+
+  // ── LangValue resolver (mirrors resolveLang() in banner.ts) ───────────────
+  function _resolve(val, lang) {
+    if (!val) return '';
+    if (typeof val === 'string') return val;
+    return val[lang] || val['en'] || Object.values(val)[0] || '';
+  }
+
+  // ── data-i18n substitution ─────────────────────────────────────────────────
+  // Walks the banner DOM after render and replaces textContent of elements
+  // that have data-i18n="key" with the translation for the active language.
+  function _applyI18n(bannerEl, translations, lang) {
+    if (!translations || !lang) return;
+    var langMap = translations[lang] || translations['en'] || {};
+    bannerEl.querySelectorAll('[data-i18n]').forEach(function(el) {
+      var key = el.getAttribute('data-i18n');
+      if (key && langMap[key] !== undefined) el.textContent = langMap[key];
+    });
+  }
+
+  // ── CSS injection ──────────────────────────────────────────────────────────
+  var _injectedStyles = Object.create(null);
+
+  function _injectBaseStyles() {
+    if (document.getElementById('be-base')) return;
+    var s = document.createElement('style');
+    s.id = 'be-base';
+    // MIRROR of BASE_CSS in bannerTemplate.ts
+    s.textContent = [
+      '.be-banner{position:relative;overflow:hidden;border-radius:16px;padding:28px 24px;display:flex;flex-direction:column;gap:14px;background:linear-gradient(135deg,#13b47f 0%,#0eb0d5 100%);color:#fff;font-family:system-ui,-apple-system,sans-serif;box-shadow:0 4px 24px rgba(0,0,0,.12);}',
+      '.be-banner h1,.be-banner h2,.be-banner h3{margin:0;line-height:1.2;font-weight:700;}',
+      '.be-banner h1{font-size:clamp(22px,4vw,36px);}.be-banner h2{font-size:clamp(18px,3vw,28px);}.be-banner h3{font-size:clamp(15px,2.5vw,22px);}',
+      '.be-banner p{margin:0;font-size:14px;line-height:1.6;opacity:.9;}',
+      '.be-btn-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}',
+      '.button{display:inline-flex;align-items:center;gap:6px;padding:10px 22px;border-radius:999px;font-weight:600;font-size:14px;text-decoration:none;border:2px solid transparent;cursor:pointer;transition:opacity .18s,transform .15s;white-space:nowrap;}',
+      '.button:hover{opacity:.85;transform:translateY(-1px);}',
+      '.button-secondary{background:transparent;border-color:currentColor;color:inherit;}',
+      '.button-primary{background:#fff;color:#13b47f;border-color:#fff;}',
+      '.banner-btn-white{background:#fff;color:#1a1a2e;border-color:#fff;}',
+      '.banner-btn-dark{background:#1a1a2e;color:#fff;border-color:#1a1a2e;}',
+      '.be-countdown{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}',
+      '.be-cd-cell{display:flex;flex-direction:column;align-items:center;background:rgba(0,0,0,.18);border-radius:8px;padding:8px 12px;min-width:48px;}',
+      '.be-cd-num{font-size:24px;font-weight:700;line-height:1;}.be-cd-lbl{font-size:10px;opacity:.75;margin-top:3px;letter-spacing:.05em;}',
+      '.be-image{max-width:100%;border-radius:8px;display:block;}',
+      '.be-slider{position:relative;overflow:hidden;border-radius:10px;width:100%;}.be-slider img{width:100%;height:auto;display:block;}',
+      '@media(max-width:480px){.be-banner{padding:20px 16px;border-radius:12px;}.button{padding:12px 20px;font-size:15px;width:100%;justify-content:center;}.be-btn-row{flex-direction:column;}.be-cd-num{font-size:20px;}}',
+    ].join('');
+    document.head.appendChild(s);
+  }
+
+  function _injectUserStyles(slug, rawCss) {
+    var clean  = String(rawCss||'').replace(/<\/?style[^>]*>/gi,'');
+    var scoped = clean.replace(/\.banner-custom/g,'[data-banner-mount="'+slug+'"] .be-banner');
+    if (_injectedStyles[slug]) { _injectedStyles[slug].textContent = scoped; return; }
+    var s = document.createElement('style');
+    s.setAttribute('data-be-style', slug);
+    s.textContent = scoped;
+    document.head.appendChild(s);
+    _injectedStyles[slug] = s;
+  }
+
+  // ── buildInnerHtml — MIRROR of buildBannerInnerHtml() in bannerTemplate.ts ─
+  function _buildInnerHtml(data, lang) {
+    // HTML mode: use customHtml[lang] or fallback
+    if (data.editorMode === 'html') {
+      var html = (data.customHtml && (data.customHtml[lang] || data.customHtml['en'])) || '';
+      return _sanitizeHtml(html);
     }
 
-    timerId = setTimeout(tick, 0);
+    // Builder mode — same logic as bannerTemplate.ts buildBannerInnerHtml()
+    var parts = [];
 
-    cleanupFns.push(function () {
-      isCleaned = true;
-      if (timerId) clearTimeout(timerId);
-    });
+    // Slider
+    if (data.sliderConfig && data.sliderConfig.images && data.sliderConfig.images.length) {
+      var imgs = data.sliderConfig.images.filter(function(i){return i.url;}).map(function(img, idx){
+        return '<img src="'+_safeAttr(img.url)+'" alt="'+_esc(_resolve(img.alt,lang))+'" class="be-slide-img" loading="'+(idx===0?'eager':'lazy')+'" style="display:'+(idx===0?'block':'none')+';" />';
+      }).join('\n');
+      parts.push('<div class="be-slider" data-interval="'+_esc(data.sliderConfig.interval)+'" data-animation="'+_esc(data.sliderConfig.animation)+'">'+imgs+'</div>');
+    }
 
-    return '<div class="be-countdown" id="' + id + '">' + cells + '</div>';
-  }
+    // Image (no slider)
+    if (!data.sliderConfig && data.imageAssets && data.imageAssets.url) {
+      var img = data.imageAssets;
+      parts.push('<img src="'+_safeAttr(img.url)+'" alt="'+_esc(img.alt)+'" class="be-image"'+(img.width?' width="'+img.width+'"':'')+(img.height?' height="'+img.height+'"':'')+' />');
+    }
 
-  // ── Render: Slider ────────────────────────────────────────────────────────────
-  function renderSlider(sliderConfig, cleanupFns) {
-    if (!sliderConfig || !sliderConfig.images || !sliderConfig.images.length) return '';
-    var id = 'be-sl-' + Math.random().toString(36).slice(2, 7);
-    var slides = sliderConfig.images.map(function (img, i) {
-      var active = i === 0 ? ' active' : '';
-      return '<div class="be-slide' + active + '">' +
-        (img.url ? '<img src="' + esc(img.url) + '" alt="' + esc(img.alt) + '" loading="lazy" />' : '') +
-        '</div>';
-    }).join('');
-
-    var interval = sliderConfig.interval || 3000;
-    var intervalId = null;
-    var isCleaned = false;
-
-    function startSlider() {
-      if (isCleaned) return;
-      var container = document.getElementById(id);
-      if (!container || !document.body.contains(container)) {
-        isCleaned = true;
-        return;
-      }
-      var slideEls = container.querySelectorAll('.be-slide');
-      if (slideEls.length < 2) return;
-      var current = 0;
-
-      intervalId = setInterval(function () {
-        if (isCleaned) {
-          clearInterval(intervalId);
-          return;
+    // Content blocks — i18n via _resolve()
+    if (data.content && data.content.length) {
+      data.content.forEach(function(block) {
+        var text  = _resolve(block.value, lang);
+        var align = 'text-align:'+(block.align||'left')+';';
+        if (block.type === 'heading') {
+          var tag = 'h'+(block.level||2);
+          parts.push('<'+tag+' style="'+align+'">'+_esc(text)+'</'+tag+'>');
+        } else if (block.type === 'text') {
+          parts.push('<p style="'+align+'">'+_esc(text)+'</p>');
+        } else if (block.type === 'html') {
+          parts.push('<div style="'+align+'">'+_sanitizeHtml(text)+'</div>');
         }
-        slideEls[current].classList.remove('active');
-        current = (current + 1) % slideEls.length;
-        slideEls[current].classList.add('active');
-      }, interval);
+      });
     }
 
-    var rafId = requestAnimationFrame(startSlider);
+    // Countdown — i18n labels
+    if (data.countdownConfig) {
+      var lbl  = data.countdownConfig.labels || {};
+      var units = ['days','hours','mins','secs'];
+      var cells = units.map(function(u){
+        return '<span class="be-cd-cell"><span class="be-cd-num" data-cd-unit="'+u+'">--</span><span class="be-cd-lbl">'+_esc(_resolve(lbl[u]||u,lang))+'</span></span>';
+      }).join('');
+      parts.push('<div class="be-countdown" data-end-iso="'+_esc(data.countdownConfig.endIso)+'">'+cells+'</div>');
+    }
 
-    cleanupFns.push(function () {
-      isCleaned = true;
-      cancelAnimationFrame(rafId);
-      if (intervalId) clearInterval(intervalId);
-    });
+    // Buttons — i18n labels, v2 array + legacy fallback
+    var btns = (data.buttons && data.buttons.length) ? data.buttons : data.buttonConfig ? [data.buttonConfig] : [];
+    if (btns.length) {
+      var btnHtml = btns.map(function(b){
+        var label  = _resolve(b.label, lang);
+        var target = b.target === '_blank' ? '_blank' : '_self';
+        var rel    = target === '_blank' ? ' rel="noopener noreferrer"' : '';
+        return '<a href="'+_safeAttr(b.href)+'" class="'+_esc(b.className)+'" target="'+target+'"'+rel+'>'+_esc(label)+'</a>';
+      }).join('\n');
+      parts.push('<div class="be-btn-row">'+btnHtml+'</div>');
+    }
 
-    return '<div class="be-slider" id="' + id + '">' + slides + '</div>';
+    return parts.join('\n');
   }
 
-  // ── Inject CSS (once per page) ────────────────────────────────────────────────
-  var _cssInjected = false;
-  function injectBaseCSS() {
-    if (_cssInjected) return;
-    _cssInjected = true;
-    var style = document.createElement('style');
-    style.id = 'banner-engine-base';
-    style.textContent = BANNER_BASE_CSS;
-    document.head.appendChild(style);
+  // ── Countdown ticker ───────────────────────────────────────────────────────
+  var _cdTimers = Object.create(null);
+  function _startCountdown(bannerEl) {
+    var cdEl = bannerEl.querySelector('.be-countdown');
+    if (!cdEl) return;
+    var endTime = new Date(cdEl.getAttribute('data-end-iso')||'').getTime();
+    if (!endTime) return;
+    var key = bannerEl.getAttribute('data-be') + '_cd';
+    if (_cdTimers[key]) clearInterval(_cdTimers[key]);
+    function tick() {
+      var diff = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
+      var map  = { days:Math.floor(diff/86400), hours:Math.floor((diff%86400)/3600), mins:Math.floor((diff%3600)/60), secs:diff%60 };
+      bannerEl.querySelectorAll('[data-cd-unit]').forEach(function(el){
+        el.textContent = String(map[el.getAttribute('data-cd-unit')]||0).padStart(2,'0');
+      });
+      if (diff <= 0) clearInterval(_cdTimers[key]);
+    }
+    tick();
+    _cdTimers[key] = setInterval(tick, 1000);
   }
 
-  // ── Active banner registry for cleanup ────────────────────────────────────────
-  var _activeBanners = {};
-
-  // ── Mount: render config → DOM ────────────────────────────────────────────────
-  function mountBanner(el, config) {
-    // 1. Cleanup any existing banner on this element
-    var existingSlug = el.getAttribute('data-be-mounted');
-    if (existingSlug && _activeBanners[existingSlug]) {
-      _activeBanners[existingSlug].cleanup();
-      delete _activeBanners[existingSlug];
-    }
-
-    // 2. Inject base CSS (shared across all banners on page)
-    injectBaseCSS();
-
-    // 3. Inject banner-specific CSS (scoped to .banner-custom)
-    var uid = 'be-' + config.slug;
-    if (config.bannerStyles && !document.getElementById(uid + '-css')) {
-      var bStyle = document.createElement('style');
-      bStyle.id = uid + '-css';
-      // Replace .banner-custom with [data-be-uid="uid"] .banner-custom for scoping
-      bStyle.textContent = config.bannerStyles.replace(
-        /\.banner-custom/g,
-        '[data-be-uid="' + uid + '"] .banner-custom'
-      );
-      document.head.appendChild(bStyle);
-    }
-
-    // 4. Build inner HTML — identical structure to LivePreview.tsx
-    var cleanupFns = [];
-    var html = [
-      renderSlider(config.sliderConfig, cleanupFns),
-      renderImage(config.imageAssets),
-      renderContent(config.content),
-      renderCountdown(config.countdownConfig, cleanupFns),
-      renderButtons(config.buttons, config.buttonConfig),
-    ].filter(Boolean).join('\n');
-
-    // 5. Create wrapper and inject
-    el.innerHTML = '';
-    var wrapper = document.createElement('div');
-    wrapper.className = 'be-wrapper';
-    wrapper.setAttribute('data-be-uid', uid);
-
-    var inner = document.createElement('div');
-    inner.className = 'banner-custom';
-    inner.innerHTML = html;
-
-    wrapper.appendChild(inner);
-    el.appendChild(wrapper);
-
-    // 6. Apply JS trigger preset (hardcoded functions — zero DB-injected JS)
-    if (config.jsTrigger && JS_TRIGGERS[config.jsTrigger]) {
-      JS_TRIGGERS[config.jsTrigger](wrapper, cleanupFns);
-    }
-
-    // 7. Register for cleanup
-    el.setAttribute('data-be-mounted', config.slug);
-    _activeBanners[config.slug] = {
-      el: el,
-      uid: uid,
-      cleanup: function () {
-        // Run all cleanup functions
-        cleanupFns.forEach(function (fn) {
-          try { fn(); } catch (e) { /* ignore cleanup errors */ }
-        });
-        // Remove banner-specific CSS
-        var styleEl = document.getElementById(uid + '-css');
-        if (styleEl) styleEl.remove();
-        // Clear DOM
-        el.innerHTML = '';
-        el.removeAttribute('data-be-mounted');
+  // ── Slider ticker ──────────────────────────────────────────────────────────
+  var _slTimers = Object.create(null);
+  function _startSlider(bannerEl) {
+    var sliderEl = bannerEl.querySelector('.be-slider');
+    if (!sliderEl) return;
+    var slides   = Array.prototype.slice.call(sliderEl.querySelectorAll('.be-slide-img'));
+    if (slides.length < 2) return;
+    var interval  = Math.max(1000, parseInt(sliderEl.getAttribute('data-interval'),10)||3000);
+    var animation = sliderEl.getAttribute('data-animation') || 'fade';
+    var current   = 0;
+    var key = bannerEl.getAttribute('data-be') + '_sl';
+    if (_slTimers[key]) clearInterval(_slTimers[key]);
+    _slTimers[key] = setInterval(function() {
+      var prev = current; current = (current+1) % slides.length;
+      slides[prev].style.display = 'none';
+      slides[current].style.display = 'block';
+      if (animation === 'fade') {
+        slides[current].style.opacity = '0';
+        slides[current].style.transition = 'opacity .4s ease';
+        requestAnimationFrame(function(){ slides[current].style.opacity = '1'; });
       }
-    };
+    }, interval);
   }
 
-  // ── Auto-discover mount points ────────────────────────────────────────────────
-  function autodiscover() {
-    var mounts = document.querySelectorAll('[data-banner]');
-    for (var i = 0; i < mounts.length; i++) {
-      (function (el) {
-        var slug = el.getAttribute('data-banner');
-        if (!slug || el.getAttribute('data-be-mounted')) return;
-        fetchConfig(slug, function (err, config) {
-          if (err) {
-            console.warn('[BannerEngine] Failed to load banner "' + slug + '":', err.message);
-            return;
-          }
-          mountBanner(el, config);
-        });
-      })(mounts[i]);
-    }
-  }
-
-  // ── Public API ────────────────────────────────────────────────────────────────
-  var BannerEngine = {
-    /**
-     * Manually mount a banner into a selector or element.
-     * @param {string|Element} target  CSS selector or DOM element
-     * @param {string}         slug    Banner slug from dashboard
-     */
-    mount: function (target, slug) {
-      var el = typeof target === 'string' ? document.querySelector(target) : target;
-      if (!el) { console.warn('[BannerEngine] mount: element not found', target); return; }
-      fetchConfig(slug, function (err, config) {
-        if (err) { console.warn('[BannerEngine] mount error:', err.message); return; }
-        mountBanner(el, config);
-      });
+  // ── JS Triggers ────────────────────────────────────────────────────────────
+  var JS_TRIGGERS = {
+    confetti: function(el) {
+      for (var i=0;i<30;i++){(function(i){var d=document.createElement('span');d.style.cssText='position:absolute;width:6px;height:6px;border-radius:50%;pointer-events:none;background:'+['#13b47f','#0eb0d5','#ff9a9e','#fad0c4','#fff'][i%5]+';left:'+Math.random()*100+'%;top:'+Math.random()*100+'%;opacity:1;animation:be-cf '+(0.6+Math.random()*0.8)+'s ease forwards '+Math.random()*0.4+'s;';el.appendChild(d);setTimeout(function(){try{el.removeChild(d);}catch(e){}},1500);})(i);}
+      if(!document.getElementById('be-cf-kf')){var s=document.createElement('style');s.id='be-cf-kf';s.textContent='@keyframes be-cf{0%{transform:translateY(0) rotate(0);opacity:1}100%{transform:translateY(70px) rotate(360deg);opacity:0}}';document.head.appendChild(s);}
     },
-
-    /**
-     * Force refresh all banners (bypasses cache).
-     */
-    refresh: function () {
-      _cache = {};
-      // Cleanup all active banners first
-      Object.keys(_activeBanners).forEach(function (slug) {
-        _activeBanners[slug].cleanup();
-      });
-      _activeBanners = {};
-      autodiscover();
+    shake: function(el) {
+      if(!document.getElementById('be-shake-kf')){var s=document.createElement('style');s.id='be-shake-kf';s.textContent='@keyframes be-shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}';document.head.appendChild(s);}
+      el.style.animation='be-shake .4s ease';
+      el.addEventListener('mouseover',function(){el.style.animation='none';requestAnimationFrame(function(){el.style.animation='be-shake .4s ease';});});
     },
-
-    /**
-     * Destroy: clear all intervals and observers. Call on SPA route change / unmount.
-     */
-    destroy: function () {
-      _cache = {};
-      // Cleanup all active banners
-      Object.keys(_activeBanners).forEach(function (slug) {
-        _activeBanners[slug].cleanup();
-      });
-      _activeBanners = {};
-      // Also clear base CSS injection flag so it can be re-injected
-      _cssInjected = false;
-      var baseStyle = document.getElementById('banner-engine-base');
-      if (baseStyle) baseStyle.remove();
+    pulse: function(el) {
+      if(!document.getElementById('be-pulse-kf')){var s=document.createElement('style');s.id='be-pulse-kf';s.textContent='@keyframes be-pulse{0%,100%{box-shadow:0 0 0 0 rgba(19,180,127,.4)}50%{box-shadow:0 0 0 14px rgba(19,180,127,0)}}';document.head.appendChild(s);}
+      el.style.animation='be-pulse 2s ease-in-out infinite';
+    },
+    scroll_reveal: function(el) {
+      el.style.opacity='0';el.style.transform='translateY(18px)';el.style.transition='opacity .5s ease, transform .5s ease';
+      if(!('IntersectionObserver' in window)){el.style.opacity='1';el.style.transform='';return;}
+      var io=new IntersectionObserver(function(e){if(e[0].isIntersecting){el.style.opacity='1';el.style.transform='translateY(0)';io.disconnect();}},{threshold:0.15});
+      io.observe(el);
+    },
+    bounce: function(el) {
+      if(!document.getElementById('be-bounce-kf')){var s=document.createElement('style');s.id='be-bounce-kf';s.textContent='@keyframes be-bounce{0%,100%{transform:translateY(0)}30%{transform:translateY(-12px)}60%{transform:translateY(-6px)}}';document.head.appendChild(s);}
+      el.style.animation='be-bounce .6s cubic-bezier(.36,.07,.19,.97)';
+    },
+    glow: function(el) {
+      if(!document.getElementById('be-glow-kf')){var s=document.createElement('style');s.id='be-glow-kf';s.textContent='@keyframes be-glow{from{box-shadow:0 0 8px rgba(19,180,127,.3)}to{box-shadow:0 0 24px rgba(19,180,127,.8)}}';document.head.appendChild(s);}
+      el.style.animation='be-glow 2s ease-in-out infinite alternate';
     },
   };
 
-  // ── Boot ──────────────────────────────────────────────────────────────────────
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', autodiscover);
-  } else {
-    autodiscover();
+  // ── Render ─────────────────────────────────────────────────────────────────
+  function _render(mountEl, data) {
+    var lang = _getLang();
+    mountEl.setAttribute('data-banner-mount', data.slug);
+    if (data.bannerStyles) _injectUserStyles(data.slug, data.bannerStyles);
+
+    var wrapper = document.createElement('div');
+    wrapper.className = 'be-banner banner-custom';
+    wrapper.setAttribute('data-be', data.slug);
+    wrapper.innerHTML = _buildInnerHtml(data, lang);
+
+    mountEl.innerHTML = '';
+    mountEl.appendChild(wrapper);
+
+    // Apply data-i18n translations (works for both modes)
+    if (data.translations) _applyI18n(wrapper, data.translations, lang);
+
+    _startCountdown(wrapper);
+    _startSlider(wrapper);
+
+    if (data.jsTrigger && JS_TRIGGERS[data.jsTrigger]) {
+      try { JS_TRIGGERS[data.jsTrigger](wrapper); } catch(e) { console.warn('[banner-engine] trigger error:', e); }
+    }
   }
 
-  // Expose globally for manual API usage
-  global.BannerEngine = BannerEngine;
+  function _renderAll(slug, data) {
+    document.querySelectorAll('['+MOUNT_ATTR+'="'+slug+'"]').forEach(function(el){ _render(el, data); });
+  }
+  function _rerenderAll(slug, data) {
+    var mounts = document.querySelectorAll('[data-banner-mount="'+slug+'"]');
+    if (!mounts.length) return;
+    var hash = JSON.stringify(data) + _getLang(); // re-render on lang change too
+    if (mounts[0].__beHash === hash) return;
+    mounts.forEach(function(el){ el.__beHash = hash; _render(el, data); });
+  }
 
-})(typeof window !== 'undefined' ? window : this);
+  function _init() {
+    _injectBaseStyles();
+    var seen = Object.create(null);
+    document.querySelectorAll('['+MOUNT_ATTR+']').forEach(function(el){
+      var slug = el.getAttribute(MOUNT_ATTR);
+      if (!slug || seen[slug]) return;
+      seen[slug] = true;
+      var cached = _getCached(slug);
+      if (cached) _renderAll(slug, cached);
+      else        _fetchAndRender(slug, true);
+    });
+  }
+
+  // ── Public API ─────────────────────────────────────────────────────────────
+  global.BannerEngine = {
+    version: '3.0.0',
+    mount: function(selector, slug) {
+      var el = typeof selector === 'string' ? document.querySelector(selector) : selector;
+      if (!el) return console.warn('[banner-engine] element not found:', selector);
+      el.setAttribute(MOUNT_ATTR, slug);
+      var cached = _getCached(slug);
+      if (cached) _render(el, cached);
+      else        _fetchAndRender(slug, true);
+    },
+    // Call after user changes language — re-renders all banners in new language
+    refresh: function() { _cache = Object.create(null); _init(); },
+    destroy: function() {
+      Object.keys(_cdTimers).forEach(function(k){ clearInterval(_cdTimers[k]); });
+      Object.keys(_slTimers).forEach(function(k){ clearInterval(_slTimers[k]); });
+      _cdTimers = Object.create(null); _slTimers = Object.create(null);
+    },
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _init);
+  } else {
+    _init();
+  }
+
+  // ── Auto re-render on language change ─────────────────────────────────────
+  // Listen for storage changes (when another tab changes selectedLang)
+  window.addEventListener('storage', function(e) {
+    if (e.key === 'selectedLang') global.BannerEngine.refresh();
+  });
+
+})(window);
