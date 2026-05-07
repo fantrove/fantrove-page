@@ -1,11 +1,13 @@
 /**
- * banner-engine.js  v3.0.0 (scoped CSS patch)
- * v3: Multi-language (reads selectedLang from localStorage like search system)
- *     + HTML mode (customHtml per lang) + data-i18n substitution
+ * banner-engine.js  v4.0.0
  *
- * NOTE:
- * - This patched version scopes base CSS to the banner container (.be-banner)
- *   to avoid leaking rules like ".button" into the global page styles.
+ * Three rendering modes:
+ *   'builder' — builds HTML from JSON config (content/buttons/countdown/slider)
+ *   'html'    — wraps customHtml[lang] in .be-banner; CSS scoped to mount
+ *   'full'    — mounts customHtml[lang] as-is; CSS global; framework imports injected
+ *
+ * Multi-language: reads selectedLang from localStorage (mirrors search system).
+ * Cache: 60s stale-while-revalidate.
  */
 (function (global) {
   'use strict';
@@ -17,7 +19,7 @@
   var CACHE_TTL  = 60 * 1000;
   var MOUNT_ATTR = 'data-banner';
 
-  // ── Language (mirrors search system getLang()) ─────────────────────────────
+  // ── Language ───────────────────────────────────────────────────────────────
   function _getLang() {
     try {
       return localStorage.getItem('selectedLang') ||
@@ -25,7 +27,7 @@
     } catch { return 'en'; }
   }
 
-  // ── Cache ───────────────────────────────────────────────────────────────
+  // ── Cache ──────────────────────────────────────────────────────────────────
   var _cache = Object.create(null);
   function _getCached(slug) {
     var entry = _cache[slug];
@@ -36,10 +38,17 @@
   }
   function _setCache(slug, data) { _cache[slug] = { data: data, ts: Date.now() }; }
 
-  // ── Fetch ───────────────────────────────────────────────────────────────
+  // ── Fetch ──────────────────────────────────────────────────────────────────
   function _fetchAndRender(slug, withRender) {
-    fetch(API_BASE + '/' + slug, { method:'GET', headers:{'Accept':'application/json'}, cache:'no-store' })
-      .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
+    fetch(API_BASE + '/' + slug, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+      cache: 'no-store',
+    })
+      .then(function(res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
       .then(function(json) {
         if (!json.ok || !json.data) return;
         _setCache(slug, json.data);
@@ -51,82 +60,102 @@
       });
   }
 
-  // ── Helpers ─────────────────────────────────────────────────────────────
+  // ── Helpers ────────────────────────────────────────────────────────────────
   function _esc(s) {
-    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return String(s||'')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
-  function _safeAttr(s) { return String(s||'').replace(/[^a-zA-Z0-9\-_/.?=&#:%]/g,''); }
+  function _safeAttr(s) {
+    return String(s||'').replace(/[^a-zA-Z0-9\-_/.?=&#:%]/g,'');
+  }
   function _sanitizeHtml(raw) {
     return String(raw||'')
       .replace(/<script[\s\S]*?<\/script>/gi,'')
       .replace(/on\w+\s*=\s*["'][^"']*["']/gi,'')
       .replace(/javascript\s*:/gi,'javascript-blocked:');
   }
-
-  // ── LangValue resolver (mirrors resolveLang() in banner.ts) ──────────────
   function _resolve(val, lang) {
     if (!val) return '';
     if (typeof val === 'string') return val;
     return val[lang] || val['en'] || Object.values(val)[0] || '';
   }
-
-  // ── data-i18n substitution ───────────────────────────────────────────────
-  function _applyI18n(bannerEl, translations, lang) {
+  function _applyI18n(el, translations, lang) {
     if (!translations || !lang) return;
     var langMap = translations[lang] || translations['en'] || {};
-    bannerEl.querySelectorAll('[data-i18n]').forEach(function(el) {
-      var key = el.getAttribute('data-i18n');
-      if (key && langMap[key] !== undefined) el.textContent = langMap[key];
+    el.querySelectorAll('[data-i18n]').forEach(function(node) {
+      var key = node.getAttribute('data-i18n');
+      if (key && langMap[key] !== undefined) node.textContent = langMap[key];
     });
   }
 
-  // ── CSS injection (SCOPED) ───────────────────────────────────────────────
+  // ── Framework imports injection (full mode only) ───────────────────────────
+  // WHY: CDN CSS/JS let users use Tailwind, Bootstrap, etc.
+  // Security: only HTTPS URLs accepted; injected once per URL, not re-injected.
+  var _injectedFrameworks = Object.create(null);
+
+  function _injectFrameworkImports(imports) {
+    if (!imports || !imports.length) return;
+    imports.forEach(function(imp) {
+      if (!imp.url || _injectedFrameworks[imp.url]) return;
+      try {
+        var parsed = new URL(imp.url);
+        if (parsed.protocol !== 'https:') return; // HTTPS only
+      } catch { return; }
+
+      _injectedFrameworks[imp.url] = true;
+      var tag;
+      if (imp.type === 'css') {
+        tag = document.createElement('link');
+        tag.rel  = 'stylesheet';
+        tag.href = imp.url;
+        tag.setAttribute('crossorigin', 'anonymous');
+      } else {
+        tag = document.createElement('script');
+        tag.src = imp.url;
+        tag.setAttribute('crossorigin', 'anonymous');
+        tag.defer = true;
+      }
+      document.head.appendChild(tag);
+    });
+  }
+
+  // ── CSS injection ──────────────────────────────────────────────────────────
   var _injectedStyles = Object.create(null);
 
   function _injectBaseStyles() {
     if (document.getElementById('be-base')) return;
     var s = document.createElement('style');
     s.id = 'be-base';
-    // SCOPED base CSS: selectors that target elements inside the banner are prefixed with ".be-banner "
     s.textContent = [
-      /* Container */
       '.be-banner{position:relative;overflow:hidden;border-radius:16px;padding:28px 24px;display:flex;flex-direction:column;gap:14px;background:linear-gradient(135deg,#13b47f 0%,#0eb0d5 100%);color:#fff;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;}',
       '.be-banner h1,.be-banner h2,.be-banner h3{margin:0;line-height:1.2;font-weight:700;}',
       '.be-banner h1{font-size:clamp(22px,4vw,36px);}',
       '.be-banner h2{font-size:clamp(18px,3vw,28px);}',
       '.be-banner h3{font-size:clamp(15px,2.5vw,22px);}',
       '.be-banner p{margin:0;font-size:14px;line-height:1.6;opacity:.95;}',
-
-      /* Button row and buttons (SCOPED) */
       '.be-banner .be-btn-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}',
       '.be-banner .button{display:inline-flex;align-items:center;gap:6px;padding:10px 22px;border-radius:999px;font-weight:600;font-size:14px;text-decoration:none;border:2px solid transparent;cursor:pointer;transition:all .12s ease;background:transparent;color:inherit;}',
       '.be-banner .button:hover{opacity:.92;transform:translateY(-1px);}',
-
-      '.be-banner .button-secondary{background:transparent;border-color:currentColor;color:inherit;}',
+      '.be-banner .button-secondary{background:transparent;border-color:currentColor;}',
       '.be-banner .button-primary{background:#fff;color:#13b47f;border-color:#fff;}',
       '.be-banner .banner-btn-white{background:#fff;color:#1a1a2e;border-color:#fff;}',
       '.be-banner .banner-btn-dark{background:#1a1a2e;color:#fff;border-color:#1a1a2e;}',
-
-      /* Countdown */
       '.be-banner .be-countdown{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}',
       '.be-banner .be-cd-cell{display:flex;flex-direction:column;align-items:center;background:rgba(0,0,0,.12);border-radius:8px;padding:8px 12px;min-width:48px;}',
       '.be-banner .be-cd-num{font-size:24px;font-weight:700;line-height:1;}',
       '.be-banner .be-cd-lbl{font-size:10px;opacity:.85;margin-top:3px;letter-spacing:.05em;}',
-
-      /* Image and slider */
       '.be-banner .be-image{max-width:100%;border-radius:8px;display:block;}',
-      '.be-banner .be-slider{position:relative;overflow:hidden;border-radius:10px;width:100%;}.be-banner .be-slider img{width:100%;height:auto;display:block;}',
-
-      /* Responsive tweaks */
-      '@media(max-width:480px){.be-banner{padding:20px 16px;border-radius:12px;}.be-banner .button{padding:12px 20px;font-size:15px;width:100%;justify-content:center;}.be-banner .be-btn-row{flex-direction:column;}.be-banner .be-cd-num{font-size:20px;}}'
+      '.be-banner .be-slider{position:relative;overflow:hidden;border-radius:10px;width:100%;}',
+      '.be-banner .be-slider img{width:100%;height:auto;display:block;}',
+      '@media(max-width:480px){.be-banner{padding:20px 16px;border-radius:12px;}.be-banner .button{padding:12px 20px;font-size:15px;width:100%;justify-content:center;}.be-banner .be-btn-row{flex-direction:column;}.be-banner .be-cd-num{font-size:20px;}}',
     ].join('');
     document.head.appendChild(s);
   }
 
+  // Scoped CSS for builder/html modes
   function _injectUserStyles(slug, rawCss) {
     var clean  = String(rawCss||'').replace(/<\/?style[^>]*>/gi,'');
-    // Replace any occurrence of .banner-custom in user CSS with an explicit attribute selector scoped to mount slug
-    // This preserves user's intention for ".banner-custom" while scoping to the specific mounted banner.
     var scoped = clean.replace(/\.banner-custom/g,'[data-banner-mount="'+slug+'"] .be-banner');
     if (_injectedStyles[slug]) { _injectedStyles[slug].textContent = scoped; return; }
     var s = document.createElement('style');
@@ -136,15 +165,25 @@
     _injectedStyles[slug] = s;
   }
 
-  // ── buildInnerHtml — MIRROR of buildBannerInnerHtml() in bannerTemplate.ts ─
+  // Global CSS for full mode — no scoping applied
+  var _injectedFullStyles = Object.create(null);
+  function _injectFullStyles(slug, rawCss) {
+    var clean = String(rawCss||'').replace(/<\/?style[^>]*>/gi,'');
+    if (_injectedFullStyles[slug]) { _injectedFullStyles[slug].textContent = clean; return; }
+    var s = document.createElement('style');
+    s.setAttribute('data-be-full-style', slug);
+    s.textContent = clean;
+    document.head.appendChild(s);
+    _injectedFullStyles[slug] = s;
+  }
+
+  // ── buildInnerHtml (builder + html modes) ─────────────────────────────────
   function _buildInnerHtml(data, lang) {
-    // HTML mode: use customHtml[lang] or fallback
     if (data.editorMode === 'html') {
       var html = (data.customHtml && (data.customHtml[lang] || data.customHtml['en'])) || '';
       return _sanitizeHtml(html);
     }
 
-    // Builder mode
     var parts = [];
 
     // Slider
@@ -155,13 +194,13 @@
       parts.push('<div class="be-slider" data-interval="'+_esc(data.sliderConfig.interval)+'" data-animation="'+_esc(data.sliderConfig.animation)+'">'+imgs+'</div>');
     }
 
-    // Image (no slider)
+    // Static image
     if (!data.sliderConfig && data.imageAssets && data.imageAssets.url) {
       var img = data.imageAssets;
       parts.push('<img src="'+_safeAttr(img.url)+'" alt="'+_esc(img.alt)+'" class="be-image"'+(img.width?' width="'+img.width+'"':'')+(img.height?' height="'+img.height+'"':'')+' />');
     }
 
-    // Content blocks — i18n via _resolve()
+    // Content blocks
     if (data.content && data.content.length) {
       data.content.forEach(function(block) {
         var text  = _resolve(block.value, lang);
@@ -177,9 +216,9 @@
       });
     }
 
-    // Countdown — i18n labels
+    // Countdown
     if (data.countdownConfig) {
-      var lbl  = data.countdownConfig.labels || {};
+      var lbl   = data.countdownConfig.labels || {};
       var units = ['days','hours','mins','secs'];
       var cells = units.map(function(u){
         return '<span class="be-cd-cell"><span class="be-cd-num" data-cd-unit="'+u+'">--</span><span class="be-cd-lbl">'+_esc(_resolve(lbl[u]||u,lang))+'</span></span>';
@@ -187,14 +226,13 @@
       parts.push('<div class="be-countdown" data-end-iso="'+_esc(data.countdownConfig.endIso)+'">'+cells+'</div>');
     }
 
-    // Buttons — i18n labels, v2 array + legacy fallback
+    // Buttons
     var btns = (data.buttons && data.buttons.length) ? data.buttons : data.buttonConfig ? [data.buttonConfig] : [];
     if (btns.length) {
       var btnHtml = btns.map(function(b){
         var label  = _resolve(b.label, lang);
         var target = b.target === '_blank' ? '_blank' : '_self';
         var rel    = target === '_blank' ? ' rel="noopener noreferrer"' : '';
-        // Ensure className is escaped and will be scoped by injected CSS (.be-banner .button ...)
         return '<a href="'+_safeAttr(b.href)+'" class="'+_esc(b.className || 'button')+'" target="'+target+'"'+rel+'>'+_esc(label)+'</a>';
       }).join('\n');
       parts.push('<div class="be-btn-row">'+btnHtml+'</div>');
@@ -210,7 +248,7 @@
     if (!cdEl) return;
     var endTime = new Date(cdEl.getAttribute('data-end-iso')||'').getTime();
     if (!endTime) return;
-    var key = bannerEl.getAttribute('data-be') + '_cd';
+    var key = (bannerEl.getAttribute('data-be')||'') + '_cd';
     if (_cdTimers[key]) clearInterval(_cdTimers[key]);
     function tick() {
       var diff = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
@@ -234,7 +272,7 @@
     var interval  = Math.max(1000, parseInt(sliderEl.getAttribute('data-interval'),10)||3000);
     var animation = sliderEl.getAttribute('data-animation') || 'fade';
     var current   = 0;
-    var key = bannerEl.getAttribute('data-be') + '_sl';
+    var key = (bannerEl.getAttribute('data-be')||'') + '_sl';
     if (_slTimers[key]) clearInterval(_slTimers[key]);
     _slTimers[key] = setInterval(function() {
       var prev = current; current = (current+1) % slides.length;
@@ -248,11 +286,10 @@
     }, interval);
   }
 
-  // ── JS Triggers ──────────────────────────────────────────────────────────
+  // ── JS Triggers ───────────────────────────────────────────────────────────
   var JS_TRIGGERS = {
     confetti: function(el) {
-      for (var i=0;i<30;i++){(function(i){var d=document.createElement('span');d.style.cssText='position:absolute;width:6px;height:6px;border-radius:50%;pointer-events:none;background:'+['#13b47f','#0eb0d5','#fff','#ffd166'][i%4]+';left:'+Math.floor(Math.random()*100)+'%;top:'+Math.floor(Math.random()*100)+'%;transform:translateY(-10px) scale(.9);opacity:0.95;z-index:9999;';el.appendChild(d);setTimeout(function(){d.style.transition='transform .9s ease,opacity .9s ease';d.style.transform='translateY(120px) scale(.6)';d.style.opacity='0';setTimeout(function(){d.remove();},1000);},2);})(i);}
-      if(!document.getElementById('be-cf-kf')){var s=document.createElement('style');s.id='be-cf-kf';s.textContent='@keyframes be-cf{0%{transform:translateY(0) rotate(0);opacity:1}100%{transform:translateY(120px) rotate(360deg);opacity:0}}';document.head.appendChild(s);}
+      for (var i=0;i<30;i++){(function(i){var d=document.createElement('span');d.style.cssText='position:absolute;width:6px;height:6px;border-radius:50%;pointer-events:none;background:'+['#13b47f','#0eb0d5','#fff','#ffd166'][i%4]+';left:'+Math.floor(Math.random()*100)+'%;top:'+Math.floor(Math.random()*100)+'%;opacity:0.95;z-index:9999;';el.style.position='relative';el.appendChild(d);setTimeout(function(){d.style.transition='transform .9s ease,opacity .9s ease';d.style.transform='translateY(120px) scale(.6)';d.style.opacity='0';setTimeout(function(){d.remove();},1000);},2);})(i);}
     },
     shake: function(el) {
       if(!document.getElementById('be-shake-kf')){var s=document.createElement('style');s.id='be-shake-kf';s.textContent='@keyframes be-shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%{transform:translateX(6px)}}';document.head.appendChild(s);}
@@ -279,23 +316,52 @@
     },
   };
 
-  // ── Render ───────────────────────────────────────────────────────────────
+  // ── Render ─────────────────────────────────────────────────────────────────
   function _render(mountEl, data) {
     var lang = _getLang();
-    mountEl.setAttribute('data-banner-mount', data.slug);
-    if (data.bannerStyles) _injectUserStyles(data.slug, data.bannerStyles);
+    var slug = data.slug;
+    mountEl.setAttribute('data-banner-mount', slug);
+
+    // ── FULL MODE: mount as-is, no wrapper, CSS global ─────────────────────
+    if (data.editorMode === 'full') {
+      // Framework imports (Tailwind, Bootstrap, etc.)
+      if (data.frameworkImports && data.frameworkImports.length) {
+        _injectFrameworkImports(data.frameworkImports);
+      }
+
+      // CSS: lang-specific → fallback to EN → fallback to bannerStyles
+      var fullCss = (data.customCss && (data.customCss[lang] || data.customCss['en'])) || data.bannerStyles || '';
+      if (fullCss) _injectFullStyles(slug, fullCss);
+
+      // HTML: render directly into mount point (no .be-banner wrapper)
+      var rawHtml = (data.customHtml && (data.customHtml[lang] || data.customHtml['en'])) || '';
+      mountEl.innerHTML = _sanitizeHtml(rawHtml);
+      mountEl.setAttribute('data-be', slug);
+
+      // i18n + timers still work in full mode — elements just need matching selectors
+      if (data.translations) _applyI18n(mountEl, data.translations, lang);
+      _startCountdown(mountEl);
+      _startSlider(mountEl);
+
+      // JS triggers attach to the mount point directly in full mode
+      if (data.jsTrigger && JS_TRIGGERS[data.jsTrigger]) {
+        try { JS_TRIGGERS[data.jsTrigger](mountEl); } catch(e) { console.warn('[banner-engine] trigger error:', e); }
+      }
+      return;
+    }
+
+    // ── BUILDER + HTML MODE: wrap in .be-banner ────────────────────────────
+    if (data.bannerStyles) _injectUserStyles(slug, data.bannerStyles);
 
     var wrapper = document.createElement('div');
     wrapper.className = 'be-banner banner-custom';
-    wrapper.setAttribute('data-be', data.slug);
+    wrapper.setAttribute('data-be', slug);
     wrapper.innerHTML = _buildInnerHtml(data, lang);
 
     mountEl.innerHTML = '';
     mountEl.appendChild(wrapper);
 
-    // Apply data-i18n translations (works for both modes)
     if (data.translations) _applyI18n(wrapper, data.translations, lang);
-
     _startCountdown(wrapper);
     _startSlider(wrapper);
 
@@ -310,7 +376,7 @@
   function _rerenderAll(slug, data) {
     var mounts = document.querySelectorAll('[data-banner-mount="'+slug+'"]');
     if (!mounts.length) return;
-    var hash = JSON.stringify(data) + _getLang(); // re-render on lang change too
+    var hash = JSON.stringify(data) + _getLang();
     if (mounts[0].__beHash === hash) return;
     mounts.forEach(function(el){ el.__beHash = hash; _render(el, data); });
   }
@@ -328,9 +394,9 @@
     });
   }
 
-  // ── Public API ──────────────────────────────��────────────────────────────
+  // ── Public API ─────────────────────────────────────────────────────────────
   global.BannerEngine = {
-    version: '3.0.0-scoped',
+    version: '4.0.0',
     mount: function(selector, slug) {
       var el = typeof selector === 'string' ? document.querySelector(selector) : selector;
       if (!el) return console.warn('[banner-engine] element not found:', selector);
@@ -339,7 +405,6 @@
       if (cached) _render(el, cached);
       else        _fetchAndRender(slug, true);
     },
-    // Call after user changes language — re-renders all banners in new language
     refresh: function() { _cache = Object.create(null); _init(); },
     destroy: function() {
       Object.keys(_cdTimers).forEach(function(k){ clearInterval(_cdTimers[k]); });
@@ -354,7 +419,6 @@
     _init();
   }
 
-  // ── Auto re-render on language change ─────────────────────────────────────
   window.addEventListener('storage', function(e) {
     if (e.key === 'selectedLang') global.BannerEngine.refresh();
   });
