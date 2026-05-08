@@ -123,7 +123,7 @@
           const bar = DOMService.create('div', 'overlay-header-bar', null, {
             display      : 'flex',
             alignItems   : 'center',
-            padding      : '10px 14px',
+            padding      : '8px 10px',
             background   : '#fff',
             borderBottom : '1px solid rgba(0,0,0,.08)',
             flexShrink   : '0',

@@ -102,15 +102,15 @@
     flex-direction: row   !important;
     gap: 2px;
     border-radius: var(--rp);
-    background: rgba(255,255,255,.96);
-    border: 1px solid rgba(0,0,0,.09);
+    background: rgba(255,255,255,1);
+    border: 1px solid transparent;
     padding: 0 10px 0 4px !important;
     max-width: none;
     width: 100%;
     margin: 0;
     height: 44px;
     box-sizing: border-box;
-    box-shadow: none;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.05);
     transition: border-color var(--tf), background-color var(--tf);
 
     &:focus-within {
@@ -128,7 +128,7 @@
 
       &:focus-within {
         background: var(--surf);
-        border-color: var(--g5);
+        border-color: transparent;
         box-shadow: 0 0 0 3px rgba(13,186,146,.16);
       }
     }
@@ -140,10 +140,10 @@
     top:  auto !important;
     z-index: auto !important;
     flex-shrink: 0;
-    width: 38px; height: 38px; min-width: 38px;
+    width: 39px; height: 39px; min-width: 39px;
     display: flex; align-items: center; justify-content: center;
     border-radius: 50%;
-    color: var(--g5);
+    color: var(--tmd);
     background: transparent;
     transition: background-color var(--tf), opacity var(--tf);
     pointer-events: none;
@@ -175,13 +175,13 @@
     border: 0;
     background: transparent;
     outline: none;
-    color: var(--thi);
+    color: var(--t);
     font-family: inherit;
     letter-spacing: .1px;
     caret-color: var(--g5);
     font-synthesis: none;
 
-    &::placeholder      { color: var(--tph); font-weight: 500; }
+    &::placeholder      { color: var(--tmd); font-weight: 500; }
     &::-webkit-search-cancel-button { display: none; }
   }
 
@@ -211,8 +211,8 @@
   }
 
   .suggestions-head {
-    padding: 20px 20px 8px;
-    font-size: .69rem; font-weight: 600;
+    padding: 20px 16px 8px;
+    font-size: .83rem; font-weight: 600;
     color: var(--tmd);
     text-transform: uppercase; letter-spacing: .8px;
     user-select: none;
@@ -228,11 +228,11 @@
 
     &:active { background: rgba(0,0,0,.015); }
 
-    &::before {
+    /*&::before {
       content: ''; flex-shrink: 0;
       width: 7px; height: 7px; border-radius: 50%;
       background: var(--g5); opacity: .3;
-    }
+    }*/
   }
 
   .suggestion-body {
@@ -637,10 +637,10 @@
   .filter-pill {
     flex-shrink: 0;
     display: inline-flex; align-items: center; justify-content: center;
-    padding-block: 0.78em;
+    padding-block: 1.1em;
     padding-inline: 0.95em;
     border-radius: var(--rp);
-    font-size: .91rem; font-weight: 700; line-height: 1;
+    font-size: .94rem; line-height: 1;
     font-family: inherit;
     background: transparent;
     border: none;
@@ -656,10 +656,10 @@
     &:active { opacity: .6; }
 
     &.active {
-      background: var(--g5);
-      color: #fff;
+      box-shadow: 0 0 0 1px var(--fv-brand-teal-light);
       opacity: 1;
-      box-shadow: none;
+      color: var(--fv-brand-teal-light);
+      background: rgba(255, 255, 255, 1);
     }
   }
 
@@ -740,8 +740,8 @@
     }
 
     .search-input-icon {
-      width: 34px; height: 34px; min-width: 34px;
-      & svg { width: 18px; height: 18px; }
+      width: 38px; height: 38px; min-width: 38px;
+      & svg { width: 20px; height: 20px; }
     }
 
     #searchInput { font-size: .95rem; }
@@ -749,7 +749,7 @@
     .suggestion-item { padding: 12px 16px; }
 
     .filter-pills-row  { padding-block: 7px; padding-inline: 12px; gap: 6px; }
-    .filter-pill       { font-size: .89rem;  padding-block: 0.74em; padding-inline: 0.9em; }
+    .filter-pill       { font-size: .92rem;  padding-block: 1.05em; padding-inline: 0.9em; }
     .filter-pill--cat  { font-size: .85rem;  padding-block: 0.7em;  padding-inline: 0.88em; }
     .filter-cat-toggle { width: 32px; height: 32px; }
     .filter-row-end    { padding-inline-end: 10px; }
@@ -775,14 +775,14 @@
     .search-input-wrapper { height: 46px; }
 
     .search-input-icon {
-      width: 32px; height: 32px; min-width: 32px;
-      & svg { width: 17px; height: 17px; }
+      width: 40px; height: 40px; min-width: 40px;
+      & svg { width: 20px; height: 20px; }
     }
 
     #searchInput { font-size: .98rem; }
 
     .filter-pills-row  { padding-block: 6px; padding-inline: 10px; gap: 5px; }
-    .filter-pill       { font-size: .87rem;  padding-block: 0.7em;  padding-inline: 0.88em; }
+    .filter-pill       { font-size: .9rem;  padding-block: 1.03em;  padding-inline: 0.88em; }
     .filter-pill--cat  { font-size: .82rem;  padding-block: 0.66em; padding-inline: 0.82em; }
     .filter-cat-toggle { width: 30px; height: 30px; }
 

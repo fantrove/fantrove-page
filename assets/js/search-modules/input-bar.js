@@ -76,7 +76,7 @@
         slot.setAttribute('role', 'presentation');
         slot.removeAttribute('tabindex');
         slot.removeAttribute('aria-label');
-        slot.style.cssText = 'cursor:default;color:var(--g5,#13b47f);pointer-events:none;';
+        slot.style.cssText = 'cursor:default;pointer-events:none;';
       }
     },
   };
