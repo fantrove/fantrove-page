@@ -37,7 +37,7 @@ body {
   width:100%; background:var(--fv-surface-page); color:var(--fv-brand-teal);
   padding:24px 16px; text-align:center; margin-top:64px;
   font-size:0.97rem; font-weight:550;
-  border-top:1px solid #e3e8ee;
+  border-top:1px solid #E3E8EE;
   border-top-left-radius:48px; border-top-right-radius:48px;
   box-shadow:0 -2px 12px rgba(13,186,146,0.04); letter-spacing:0.2px;
 }

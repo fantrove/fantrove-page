@@ -1,22 +1,35 @@
-/* search-compact-overrides.css  v5.1
+/* search-compact-overrides.css  v6.0
    ═══════════════════════════════════════════════════════════════
-   v5.1 changes vs v5.0:
-   • Removed .scr (copy button) — whole card is the click target
-   • .sc cursor:pointer + softer :active teal tint (opacity .04)
-   • .copy-hint — subtle tip above results
-   • .copy-hint--enter — entrance animation (fade + rise + blur)
-     plays only when hint first appears; silent on result refinement
+   v6.0 changes vs v5.1
+   ─────────────────────────────────────────────────────────────
+   COLOR SYSTEM
+   • Non-green neutrals → blue-tinted from fv token family
+     --bg #f0f4f2 → #f4f7fc   | surface: f0f4f2 → #edf1f8
+     --thi #111827 → #152a2f  | --tmd #374151 → #2f5157
+     --tlo #6b7280 → #6d8590  | border rgba(0,0,.13) → blue-tinted
+   • ALL green/teal accents → --fv-brand-teal-light (#00CEB0)
+     was #0dba92 throughout
+   ─────────────────────────────────────────────────────────────
+   DESIGN — Progressive Disclosure · Minimal Interface · Modern SaaS
+   • Cards: 1px blue-tinted border + layered shadow + blue-white bg
+   • Hover: border highlight + deeper shadow (no transform — VS-safe)
+   • Input: premium blue-tinted border + refined focus ring
+   • Tags: added border, refined cyan-teal palette
+   • Filter pills: bolder active state, teal-light bg tint
+   • No-result: soft card shell for empty state
+   ─────────────────────────────────────────────────────────────
+   PERFORMANCE — no JS, CSS-only — zero behavior change
    ═══════════════════════════════════════════════════════════════ */
 
-@property --g5   { syntax: '<color>'; inherits: true;  initial-value: #0dba92; }
+@property --g5   { syntax: '<color>'; inherits: true;  initial-value: #00CEB0; }
 @property --g6   { syntax: '<color>'; inherits: true;  initial-value: #0a9273; }
-@property --g05  { syntax: '<color>'; inherits: true;  initial-value: #f0f7f5; }
-@property --g1   { syntax: '<color>'; inherits: true;  initial-value: #c5ece5; }
+@property --g05  { syntax: '<color>'; inherits: true;  initial-value: rgba(0,206,176,.07); }
+@property --g1   { syntax: '<color>'; inherits: true;  initial-value: #a8ede7; }
 @property --surf { syntax: '<color>'; inherits: true;  initial-value: #ffffff; }
-@property --sur2 { syntax: '<color>'; inherits: true;  initial-value: #f0f4f2; }
-@property --thi  { syntax: '<color>'; inherits: true;  initial-value: #0d1f17; }
-@property --tmd  { syntax: '<color>'; inherits: true;  initial-value: #2b4539; }
-@property --tlo  { syntax: '<color>'; inherits: true;  initial-value: #637a6e; }
+@property --sur2 { syntax: '<color>'; inherits: true;  initial-value: #edf1f8; }
+@property --thi  { syntax: '<color>'; inherits: true;  initial-value: #152a2f; }
+@property --tmd  { syntax: '<color>'; inherits: true;  initial-value: #2f5157; }
+@property --tlo  { syntax: '<color>'; inherits: true;  initial-value: #6d8590; }
 
 @layer search-base, tokens, base, card, overlay, state, responsive, print, fallbacks;
 
@@ -26,32 +39,36 @@
   html { scroll-behavior: auto; }
 
   :root {
-    --g5  : #0dba92;
-    --g6  : #0a9273;
-    --g05 : rgba(13,186,146,.07);
-    --g1  : #b8ede6;
-    --g2  : #0dba92;
-    --bg  : #f0f4f2;
-    --surf: #ffffff;
-    --sur2: #e8eceb;
-    --thi : #111827;
-    --tmd : #374151;
-    --tlo : #6b7280;
-    --tph : rgba(13,31,23,.34);
-    --bd  : rgba(0,0,0,.13);
-    --bdm : rgba(0,0,0,.13);
-    --sh  : 0 1px 3px rgba(0,0,0,.05);
+    /* ── Green/teal accents → fv-brand-teal-light ────────────── */
+    --g5  : #00CEB0;               /* was #0dba92 */
+    --g6  : #0a9273;               /* dark teal, hover/pressed */
+    --g05 : rgba(0,206,176,.07);
+    --g1  : #a8ede7;               /* teal-light bg tint */
+    --g2  : #00CEB0;               /* was #0dba92 */
 
+    /* ── Surfaces — blue-tinted neutrals ─────────────────────── */
+    --bg  : #f4f7fc;               /* was #f0f4f2 (green-tinted) */
+    --surf: #ffffff;
+    --sur2: #edf1f8;               /* was #e8eceb (green-tinted) */
+
+    /* ── Text — blue-tinted token values ─────────────────────── */
+    --thi : #152a2f;               /* fv-text-heading  was #111827 */
+    --tmd : #2f5157;               /* fv-text-body     was #374151 */
+    --tlo : #6d8590;               /* fv-text-muted    was #6b7280 */
+    --tph : rgba(15,38,41,.26);    /* placeholder      was rgba(13,31,23,.34) */
+
+    /* ── Border & shadow — blue-tinted ──────────────────────── */
+    --bd  : rgba(14,95,153,.08);   /* was rgba(0,0,0,.13) */
+    --bdm : rgba(14,95,153,.08);
+    --sh  : 0 2px 8px rgba(6,20,24,.04); /* was 0 1px 3px rgba(0,0,0,.05) */
+
+    /* ── Shape & motion (unchanged) ──────────────────────────── */
     --rp  : 999px;
     --rx  : 26px;
     --rl  : 20px;
     --rm  : 16px;
     --rs  : 10px;
-
     --tf  : 140ms ease;
-
-    --ease-expo : var(--ease-expo);
-    --ease-nav  : var(--ease-nav);
 
     color-scheme: light;
     overscroll-behavior-y: contain;
@@ -73,9 +90,10 @@
 
   .search-header {
     padding: 14px 0 0;
-    background: var(--surf);
-    border-bottom: 1px solid rgba(0,0,0,.08);
-    box-shadow: 0 1px 0 rgba(0,0,0,.06), 0 2px 8px rgba(0,0,0,.04);
+    /* Slight blue-white wash instead of flat white */
+    background: rgba(255,255,255,.98);
+    border-bottom: 1px solid rgba(14,95,153,.07);
+    box-shadow: 0 1px 0 rgba(14,95,153,.05), 0 4px 16px rgba(6,20,24,.05);
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
     position: relative;
@@ -96,40 +114,45 @@
     box-sizing: border-box;
   }
 
+  /* ── Search input wrapper ────────────────────────────────── */
   .search-input-wrapper {
     display: flex         !important;
     align-items: center   !important;
     flex-direction: row   !important;
     gap: 2px;
     border-radius: var(--rp);
+    /* Blue-tinted border replaces the old black-alpha one */
     background: rgba(255,255,255,1);
-    border: 1px solid transparent;
+    border: 1px solid rgba(14,95,153,.12);
     padding: 0 10px 0 4px !important;
     max-width: none;
     width: 100%;
     margin: 0;
     height: 44px;
     box-sizing: border-box;
-    box-shadow: 0 0 0 1px rgba(0,0,0,.05);
-    transition: border-color var(--tf), background-color var(--tf);
+    /* Subtle blue-leaning shadow for depth */
+    box-shadow: 0 1px 4px rgba(6,20,24,.04);
+    transition: border-color var(--tf), box-shadow var(--tf), background-color var(--tf);
 
     &:focus-within {
-      background: var(--surf);
-      border-color: var(--g5);
-      box-shadow: 0 0 0 2px rgba(13,186,146,.2);
+      background: #fff;
+      border-color: var(--g5);                               /* #00CEB0 */
+      box-shadow: 0 0 0 3px rgba(0,206,176,.18),
+                  0 1px 4px rgba(6,20,24,.04);
     }
 
     #searchOverlayContainer & {
-      background: rgba(255,255,255,.96);
+      background: rgba(255,255,255,.97);
       max-width: none;
       margin: 0;
       height: 44px;
       box-shadow: none;
+      border-color: rgba(14,95,153,.10);
 
       &:focus-within {
-        background: var(--surf);
-        border-color: transparent;
-        box-shadow: 0 0 0 3px rgba(13,186,146,.16);
+        background: #fff;
+        border-color: var(--g5);
+        box-shadow: 0 0 0 3px rgba(0,206,176,.16);
       }
     }
   }
@@ -175,13 +198,14 @@
     border: 0;
     background: transparent;
     outline: none;
-    color: var(--t);
+    /* Blue-tinted text color */
+    color: var(--thi);
     font-family: inherit;
     letter-spacing: .1px;
     caret-color: var(--g5);
     font-synthesis: none;
 
-    &::placeholder      { color: var(--tmd); font-weight: 500; }
+    &::placeholder      { color: var(--tlo); font-weight: 400; }
     &::-webkit-search-cancel-button { display: none; }
   }
 
@@ -191,7 +215,8 @@
     align-items: center; justify-content: center;
     width: 20px; height: 20px; min-width: 20px;
     border-radius: 50%;
-    background: rgba(0,0,0,.10);
+    /* Blue-tinted clear button */
+    background: rgba(14,95,153,.10);
     border: none;
     cursor: pointer;
     touch-action: manipulation;
@@ -212,9 +237,10 @@
 
   .suggestions-head {
     padding: 20px 16px 8px;
-    font-size: .83rem; font-weight: 600;
-    color: var(--tmd);
-    text-transform: uppercase; letter-spacing: .8px;
+    font-size: .80rem; font-weight: 700;
+    /* Blue-tinted secondary text */
+    color: var(--fv-text-secondary, #52638A);
+    text-transform: uppercase; letter-spacing: 1px;
     user-select: none;
   }
 
@@ -226,13 +252,7 @@
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
 
-    &:active { background: rgba(0,0,0,.015); }
-
-    /*&::before {
-      content: ''; flex-shrink: 0;
-      width: 7px; height: 7px; border-radius: 50%;
-      background: var(--g5); opacity: .3;
-    }*/
+    &:active { background: rgba(14,95,153,.03); }
   }
 
   .suggestion-body {
@@ -244,33 +264,36 @@
   .suggestion-body mark {
     background: var(--g1);
     color: var(--thi);
-    font-weight: 500;
+    font-weight: 600;
     display: inline;
     vertical-align: baseline;
-    padding: 0;
-    border-radius: 0;
+    padding: 0 1px;
+    border-radius: 2px;
   }
 
   /* ── Empty state ─────────────────────────────────────────── */
   .no-result {
-    margin-top: 56px; padding: 32px 24px;
-    text-align: center; color: var(--tlo);
-    font-size: .91rem; font-weight: 500; line-height: 1.65;
+    margin-top: 40px;
+    padding: 36px 28px;
+    text-align: center;
+    color: var(--tlo);
+    font-size: .91rem; font-weight: 500; line-height: 1.7;
+    /* Modern SaaS: soft card shell for empty state */
+    background: rgba(248,250,255,.7);
+    border: 1px solid rgba(14,95,153,.06);
+    border-radius: var(--rx);
+    max-width: 480px;
+    margin-inline: auto;
 
     &::before {
       content: '🔍'; display: block;
-      font-size: 2.2rem; margin-bottom: 10px; opacity: .5;
+      font-size: 2.2rem; margin-bottom: 12px; opacity: .45;
     }
   }
 
-  /* ── Copy hint text slot ──────────────────────────────────────
-     Animated <span> inside .copy-hint that cycles between two texts.
-     --out: current text slides down + fades (leaving)
-     --in:  new text arrives from above + fades in
-     Timings match JS setTimeout values (280ms / 300ms).              */
+  /* ── Copy hint text slot ──────────────────────────────────── */
   .copy-hint__text {
     display: inline-block;
-    /* out-transition: fast ease-in — text leaves quickly, no drag */
     transition: transform 220ms cubic-bezier(0.4,0,1,1),
                 opacity   220ms cubic-bezier(0.4,0,1,1);
   }
@@ -284,45 +307,39 @@
     animation: _text-in 620ms cubic-bezier(0.34,2.0,0.64,1) both;
   }
 
-  /* amplitude 2.0 = very visible overshoot ~20%, snaps back with weight */
   @keyframes _text-in {
     from { transform: translateY(-60%); opacity: 0; }
     55%  {                              opacity: 1; }
     to   { transform: translateY(0);    opacity: 1; }
   }
 
-  /* ── Copy hint ────────────────────────────────────────────
-     Simple muted row below header — not a pill, not teal.
-     Clickable: hover (mouseenter) swaps text to demo label.
-     Three lifecycle classes:
-       .copy-hint         — base, invisible (opacity:0)
-       .copy-hint--enter  — spring slide-in from behind header
-       .copy-hint--exit   — drift-up fade out, JS removes on end   */
+  /* ── Copy hint ─────────────────────────────────────────────
+     Slightly more confident text — blue-tinted secondary color */
   .copy-hint {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 7px;
     padding: 4px 16px 6px;
-    font-size: .88rem;
+    font-size: .86rem;
     font-weight: 600;
-    color: var(--tlo);
+    /* Blue-tinted muted instead of plain gray */
+    color: var(--fv-text-secondary, #52638A);
     letter-spacing: .2px;
     user-select: none;
     cursor: pointer;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
     opacity: 0;
-    /* clip the text slot during slide transitions */
     overflow: hidden;
 
     &::before {
       content: '';
       display: inline-block;
-      width: 17px; height: 17px;
+      width: 15px; height: 15px;
       flex-shrink: 0;
       background-color: currentColor;
-      opacity: .55;
+      opacity: .5;
       -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='2' width='6' height='4' rx='1'/%3E%3Cpath d='M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'/%3E%3C/svg%3E");
               mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='2' width='6' height='4' rx='1'/%3E%3Cpath d='M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'/%3E%3C/svg%3E");
       -webkit-mask-size: contain; mask-size: contain;
@@ -338,8 +355,8 @@
   }
 
   @keyframes _hint-exit {
-    from { opacity: 1; transform: translateY(0);     }
-    to   { opacity: 0; transform: translateY(-8px);  }
+    from { opacity: 1; transform: translateY(0);    }
+    to   { opacity: 0; transform: translateY(-8px); }
   }
 
   .copy-hint--enter {
@@ -351,40 +368,35 @@
     pointer-events: none;
   }
 
-  /* Demo flash: scale + teal ring, compositor-safe */
+  /* Demo flash — updated to teal-light */
   .sc--demo-active {
-    background: rgba(13,186,146,.14) !important;
+    background: rgba(0,206,176,.12) !important;
     box-shadow:
-      inset 0 0 0 2.5px var(--g5),
-      inset 0 0 18px rgba(13,186,146,.22) !important;
+      inset 0 0 0 2px var(--g5),
+      inset 0 0 18px rgba(0,206,176,.20) !important;
     transition: background-color 80ms ease, box-shadow 80ms ease !important;
-    /* ripple pulse — draws attention without layout cost */
     animation: _demo-pulse 400ms ease-out !important;
   }
 
-  /* Outward ring that fades — like a ripple from the card */
   @keyframes _demo-pulse {
-    0%   { box-shadow: inset 0 0 0 2.5px var(--g5), inset 0 0 18px rgba(13,186,146,.22), 0 0 0 0   rgba(13,186,146,.45); }
-    60%  { box-shadow: inset 0 0 0 2.5px var(--g5), inset 0 0 18px rgba(13,186,146,.22), 0 0 0 12px rgba(13,186,146,.0); }
-    100% { box-shadow: inset 0 0 0 2.5px var(--g5), inset 0 0 18px rgba(13,186,146,.22), 0 0 0 16px rgba(13,186,146,.0); }
+    0%   { box-shadow: inset 0 0 0 2px var(--g5), inset 0 0 18px rgba(0,206,176,.20), 0 0 0 0   rgba(0,206,176,.40); }
+    60%  { box-shadow: inset 0 0 0 2px var(--g5), inset 0 0 18px rgba(0,206,176,.20), 0 0 0 12px rgba(0,206,176,.0); }
+    100% { box-shadow: inset 0 0 0 2px var(--g5), inset 0 0 18px rgba(0,206,176,.20), 0 0 0 16px rgba(0,206,176,.0); }
   }
 
-  /* Tap label: absolute overlay on top-right of card — says "แตะ" briefly */
   .sc--demo-label {
     position: absolute;
-    top: 50%;
-    left: 50%;
+    top: 50%; left: 50%;
     transform: translate(-50%, -50%) scale(0.7);
     background: var(--g5);
     color: #fff;
-    font-size: .78rem;
-    font-weight: 700;
+    font-size: .78rem; font-weight: 700;
     padding: 5px 12px;
     border-radius: var(--rp);
     pointer-events: none;
     white-space: nowrap;
     letter-spacing: .3px;
-    box-shadow: 0 4px 16px rgba(13,186,146,.4);
+    box-shadow: 0 4px 16px rgba(0,206,176,.35);
     animation: _demo-label-in 300ms cubic-bezier(0.34,1.56,0.64,1) both;
     z-index: 10;
   }
@@ -394,13 +406,13 @@
     to   { opacity: 1; transform: translate(-50%, -50%) scale(1);   }
   }
 
-  /* ── Toast ───────────────────────────────────────────────── */
+  /* ── Toast — teal-light gradient ────────────────────────── */
   .copy-toast-message {
-    background: linear-gradient(135deg, var(--g5), var(--g6));
+    background: linear-gradient(135deg, var(--g5), #0a9273);
     color: #fff; padding: 10px 18px;
     border-radius: var(--rl);
     font-size: .91rem; font-weight: 650;
-    box-shadow: 0 4px 16px rgba(13,186,146,.22);
+    box-shadow: 0 4px 20px rgba(0,206,176,.25);
     animation: _toast 220ms cubic-bezier(.4,0,.2,1) both;
     letter-spacing: .1px;
   }
@@ -420,82 +432,103 @@
 
   .sc {
     display: flex;
-    gap: 18px;
+    gap: 16px;
     align-items: flex-start;
-    padding: 20px 20px;
+    padding: 18px 20px;
     border-radius: var(--rx);
-    background: rgba(255,255,255,.72);
-    border: none;
+
+    /* Modern SaaS card: blue-white tint + 1px border + layered shadow */
+    background: rgba(255,255,255,.97);
+    border: 1px solid rgba(14,95,153,.07);
+    box-shadow: 0 1px 3px rgba(6,20,24,.04),
+                0 4px 16px rgba(6,20,24,.025);
+
     position: relative;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
-    transition: background-color var(--tf);
+
+    /* Include border-color + box-shadow in transition for smooth hover */
+    transition: background-color var(--tf),
+                border-color var(--tf),
+                box-shadow var(--tf);
     cursor: pointer;
 
-    /*
-     * :active tint — kept deliberately soft (opacity .04) so it reads as
-     * "acknowledged" not "selected". A stronger tint would fight the card's
-     * existing white background and look heavy on fast taps.
-     * On desktop, hover (.sc:hover in @layer state) provides a slightly
-     * stronger affordance at .06 — hover is slower so more contrast is fine.
-     */
-    &:active { background: rgba(13,186,146,.04); }
+    /* Active: teal-light tint (was green rgba(13,186,146,...)) */
+    &:active {
+      background: rgba(0,206,176,.05);
+      border-color: rgba(0,206,176,.18);
+    }
 
+    /* ── Emoji / icon box ──────────────────────────────────── */
     & .scc {
-      flex: 0 0 58px; height: 58px;
-      font-size: 26px;
+      flex: 0 0 56px; height: 56px;
+      font-size: 24px;
       border-radius: var(--rl);
       padding: 6px;
       display: flex; align-items: center; justify-content: center;
-      background: rgba(13,186,146,.11);
-      color: #0a9273;
+      /* teal-light tinted bg */
+      background: rgba(0,206,176,.10);
+      color: #00CEB0;
       border: none;
       flex-shrink: 0;
     }
 
+    /* ── Body ─────────────────────────────────────────────── */
     & .scb {
       flex: 1 1 auto; min-width: 0;
-      display: flex; flex-direction: column; gap: 7px;
+      display: flex; flex-direction: column; gap: 5px;
     }
 
+    /* ── Title — blue-tinted deep text ───────────────────── */
     & .sct {
-      font-size: 1.05rem; font-weight: 700;
-      color: #111827; line-height: 1.45;
+      font-size: 1.02rem; font-weight: 700;
+      /* fv-text-heading */
+      color: #152a2f;
+      line-height: 1.4;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       letter-spacing: -.01em;
       text-rendering: optimizeSpeed;
       font-synthesis: none;
     }
 
+    /* ── Subtitle — blue-tinted secondary ─────────────────── */
     & .scs {
-      font-size: .91rem; font-weight: 500;
-      color: #374151;
+      font-size: .89rem; font-weight: 500;
+      /* fv-text-secondary — noticeably blue-tinted */
+      color: #52638A;
       line-height: 1.4;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       text-rendering: optimizeSpeed;
       font-synthesis: none;
     }
 
+    /* ── Tag row ──────────────────────────────────────────── */
     & .scg {
-      display: flex; gap: 6px;
-      margin-top: 6px;
+      display: flex; gap: 5px;
+      margin-top: 5px;
       align-items: center;
       flex-wrap: nowrap;
       overflow: hidden;
     }
 
+    /* ── Tags — cyan-teal with border definition ──────────── */
     & .tag {
-      background: rgba(13,186,146,.05);
-      color: #0a7d6d;
-      padding: 4px 11px; font-size: 13px;
+      background: rgba(0,206,176,.06);
+      color: #0099a8;
+      padding: 3px 10px;
+      font-size: 12px;
       border-radius: var(--rp);
-      font-weight: 500; border: none;
+      font-weight: 500;
+      /* Added 1px border for Modern SaaS definition */
+      border: 1px solid rgba(0,206,176,.15);
       line-height: 1.5;
       white-space: nowrap;
       flex-shrink: 0;
+      letter-spacing: .1px;
     }
 
+    /* ── Vertical layout (long content) ───────────────────── */
     &.sv {
       flex-direction: column; gap: 10px; padding: 14px;
 
@@ -528,13 +561,13 @@
 
   .filter-row-wrapper {
     display: flex; align-items: center; overflow: hidden;
-    border-top: 1px solid rgba(0,0,0,.06);
+    border-top: 1px solid rgba(14,95,153,.06);   /* blue-tinted separator */
   }
 
   .filter-pills-row {
     flex: 1 1 0;
     display: flex; align-items: center;
-    gap: 8px;
+    gap: 4px;                                     /* tighter for Modern SaaS */
     padding-block: 10px;
     padding-inline: 14px;
     overflow-x: auto; overflow-y: hidden;
@@ -559,18 +592,21 @@
     & > * { pointer-events: auto; }
   }
 
+  /* ── Category toggle button ───────────────────────────── */
   .filter-cat-toggle {
     display: flex; align-items: center; justify-content: center;
-    width: 33px; height: 33px;
+    width: 32px; height: 32px;
     border-radius: 50%;
-    border: 1px solid rgba(0,0,0,.09);
-    background: var(--sur2);
+    /* Blue-tinted inactive state */
+    border: 1px solid rgba(14,95,153,.09);
+    background: rgba(248,250,255,.8);
     color: var(--tlo);
     cursor: pointer;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
     outline: none; flex-shrink: 0;
-    transition: opacity 140ms ease;
+    transition: opacity 140ms ease, background-color 140ms ease,
+                border-color 140ms ease;
 
     & svg {
       display: block; pointer-events: none;
@@ -578,8 +614,8 @@
     }
 
     &.active {
-      background: rgba(13,186,146,.12);
-      border-color: var(--g5);
+      background: rgba(0,206,176,.10);
+      border-color: rgba(0,206,176,.40);
       color: var(--g5);
       opacity: 1;
       & svg { transform: rotate(180deg); }
@@ -597,7 +633,7 @@
     padding-top: 0;
     z-index: 1;
     background: var(--surf);
-    border-bottom: 1px solid rgba(0,0,0,.08);
+    border-bottom: 1px solid rgba(14,95,153,.07);
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
     opacity: 0;
@@ -634,49 +670,54 @@
 
   .filter-cat-wrap.open::after { opacity: 1; }
 
+  /* ── Type filter pills ───────────────────────────────────── */
   .filter-pill {
     flex-shrink: 0;
     display: inline-flex; align-items: center; justify-content: center;
-    padding-block: 1.1em;
-    padding-inline: 0.95em;
+    padding-block: 1.0em;
+    padding-inline: 0.9em;
     border-radius: var(--rp);
-    font-size: .94rem; line-height: 1;
+    font-size: .90rem; line-height: 1;
     font-family: inherit;
     background: transparent;
     border: none;
     color: var(--tmd);
-    opacity: .7;
+    opacity: .65;
     cursor: pointer; white-space: nowrap;
     letter-spacing: .01em;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
     outline: none; user-select: none; font-synthesis: none;
-    transition: opacity 140ms ease;
+    transition: opacity 140ms ease, background-color 140ms ease;
 
-    &:active { opacity: .6; }
+    &:active { opacity: .55; }
 
+    /* Active: teal-light color + bg tint + bolder weight */
     &.active {
-      box-shadow: 0 0 0 1px var(--fv-brand-teal-light);
+      box-shadow: 0 0 0 1.5px var(--fv-brand-teal-light, #00CEB0);
+      /* Subtle teal-light bg tint */
+      background: rgba(0,206,176,.07);
       opacity: 1;
-      color: var(--fv-brand-teal-light);
-      background: rgba(255, 255, 255, 1);
+      color: var(--fv-brand-teal-light, #00CEB0);
+      font-weight: 600;
     }
   }
 
+  /* ── Category filter pills ──────────────────────────────── */
   .filter-pill--cat {
-    padding-block: 0.74em;
-    padding-inline: 0.94em;
-    font-size: .91rem; font-weight: 500;
+    padding-block: 0.70em;
+    padding-inline: 0.90em;
+    font-size: .88rem; font-weight: 500;
     background: transparent;
-    border: 1px solid rgba(0,0,0,.09);
+    border: 1px solid rgba(14,95,153,.09);   /* blue-tinted border */
     color: var(--tlo);
     opacity: .85;
 
     &.active {
-      background: rgba(13,186,146,.06);
-      border-color: rgba(13,186,146,.5);
-      color: var(--g6);
-      font-weight: 500;
+      background: rgba(0,206,176,.07);        /* was rgba(13,186,146,.06) */
+      border-color: rgba(0,206,176,.42);      /* was rgba(13,186,146,.5) */
+      color: #00CEB0;                          /* was var(--g6) */
+      font-weight: 600;
       opacity: 1;
       box-shadow: none;
     }
@@ -697,7 +738,7 @@
     display: flex; align-items: center;
     padding: 10px 14px;
     background: var(--surf);
-    border-bottom: 1px solid var(--bd);
+    border-bottom: 1px solid rgba(14,95,153,.07);
     flex-shrink: 0; width: 100%; box-sizing: border-box;
     box-shadow: var(--sh);
   }
@@ -714,14 +755,21 @@
 @layer state {
 
   @media (hover: hover) {
-    .search-input-icon[role="button"]:hover { background: rgba(0,0,0,.07); }
-    #search-clear-btn:hover                 { background: rgba(0,0,0,.17); }
-    .suggestion-item:hover                  { background: rgba(0,0,0,.03); }
-    .sc:hover                               { background: rgba(13,186,146,.06); }
+    .search-input-icon[role="button"]:hover { background: rgba(14,95,153,.06); }
+    #search-clear-btn:hover                 { background: rgba(14,95,153,.16); }
+    .suggestion-item:hover                  { background: rgba(14,95,153,.03); }
 
-    .filter-pill:not(.active):hover         { opacity: .7; }
-    .filter-pill--cat:not(.active):hover    { opacity: .7; }
-    .filter-cat-toggle:not(.active):hover   { opacity: .7; }
+    /* Card hover: border highlight + deeper shadow = Modern SaaS lift feel */
+    .sc:hover {
+      background: rgba(248,250,255,1);
+      border-color: rgba(0,206,176,.24);
+      box-shadow: 0 4px 24px rgba(6,20,24,.09),
+                  0 1px 4px rgba(6,20,24,.04);
+    }
+
+    .filter-pill:not(.active):hover         { opacity: .75; }
+    .filter-pill--cat:not(.active):hover    { opacity: .75; background: rgba(14,95,153,.03); }
+    .filter-cat-toggle:not(.active):hover   { opacity: .75; background: rgba(14,95,153,.05); }
   }
 
 }
@@ -748,10 +796,10 @@
 
     .suggestion-item { padding: 12px 16px; }
 
-    .filter-pills-row  { padding-block: 7px; padding-inline: 12px; gap: 6px; }
-    .filter-pill       { font-size: .92rem;  padding-block: 1.05em; padding-inline: 0.9em; }
-    .filter-pill--cat  { font-size: .85rem;  padding-block: 0.7em;  padding-inline: 0.88em; }
-    .filter-cat-toggle { width: 32px; height: 32px; }
+    .filter-pills-row  { padding-block: 7px; padding-inline: 12px; gap: 4px; }
+    .filter-pill       { font-size: .89rem;  padding-block: 1.0em; padding-inline: 0.86em; }
+    .filter-pill--cat  { font-size: .83rem;  padding-block: 0.68em; padding-inline: 0.86em; }
+    .filter-cat-toggle { width: 31px; height: 31px; }
     .filter-row-end    { padding-inline-end: 10px; }
 
     .sc {
@@ -760,11 +808,13 @@
       contain-intrinsic-size: auto 78px;
     }
 
-    .scc { flex: 0 0 54px; height: 54px; font-size: 22px; }
-    .sct { font-size: .94rem; font-weight: 600; }
-    .scs { font-size: .89rem; }
+    .scc { flex: 0 0 52px; height: 52px; font-size: 21px; }
+    .sct { font-size: .93rem; font-weight: 700; }
+    .scs { font-size: .87rem; }
 
-    .copy-hint { font-size: .84rem; padding: 3px 14px 5px; }
+    .copy-hint { font-size: .83rem; padding: 3px 14px 5px; }
+
+    .no-result { margin-top: 32px; padding: 28px 20px; }
   }
 
   @media (max-width: 480px) {
@@ -781,15 +831,17 @@
 
     #searchInput { font-size: .98rem; }
 
-    .filter-pills-row  { padding-block: 6px; padding-inline: 10px; gap: 5px; }
-    .filter-pill       { font-size: .9rem;  padding-block: 1.03em;  padding-inline: 0.88em; }
-    .filter-pill--cat  { font-size: .82rem;  padding-block: 0.66em; padding-inline: 0.82em; }
+    .filter-pills-row  { padding-block: 6px; padding-inline: 10px; gap: 3px; }
+    .filter-pill       { font-size: .87rem;  padding-block: 1.0em;  padding-inline: 0.84em; }
+    .filter-pill--cat  { font-size: .80rem;  padding-block: 0.64em; padding-inline: 0.80em; }
     .filter-cat-toggle { width: 30px; height: 30px; }
 
     .sc  { padding: 12px 13px; gap: 10px; }
-    .scc { flex: 0 0 50px; height: 50px; font-size: 20px; }
+    .scc { flex: 0 0 48px; height: 48px; font-size: 20px; }
 
-    .copy-hint { font-size: .80rem; }
+    .copy-hint { font-size: .79rem; }
+
+    .no-result { padding: 22px 16px; border-radius: var(--rl); }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -831,10 +883,10 @@
     html { scroll-behavior: auto; }
 
     :root {
-      --g5  : #0dba92;
+      --g5  : #00CEB0;
       --g6  : #0a9273;
-      --g05 : #f0f7f5;
-      --g1  : rgba(13,186,146,.18);
+      --g05 : rgba(0,206,176,.07);
+      --g1  : rgba(0,206,176,.18);
     }
   }
 

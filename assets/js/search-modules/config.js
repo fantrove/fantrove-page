@@ -8,6 +8,22 @@
  *  • No dependencies on other modules.
  *  • Change a value here and every module sees it immediately.
  *
+ * v1.1 — Performance tuning
+ *  conDataServiceWaitMs 5000 → 1200
+ *    WHY: con-data-service.js now calls preload() immediately on
+ *    module load. The data fetch is in-flight before search-ui
+ *    even finishes loading its modules (~200ms). 1200ms is more
+ *    than enough headroom even on slow connections, while the old
+ *    5000ms caused a noticeable blank period on every page load.
+ *
+ *  conDataServicePollMs 30 → 20
+ *    WHY: tighter poll = faster detection when module lands.
+ *    20ms is still async-friendly and won't block the main thread.
+ *
+ *  urlSearchRetryMs 200 → 120
+ *    WHY: URL-based search (page load with ?q=...) retries faster,
+ *    so results appear sooner after the Fuse index is built.
+ *
  * @module config
  * @depends {types.js}
  */
@@ -26,10 +42,15 @@
     keyboardGapMinMs: 300,
     keyboardGapRecoveryMs: 800,
     keyboardIdleTimeMs: 500,
-    conDataServiceWaitMs: 5000,
-    conDataServicePollMs: 30,
-    urlSearchRetryMs: 200,
-    urlSearchMaxRetries: 25,
+    
+    // Reduced from 5000 → 1200ms (preload starts immediately in con-data-service)
+    conDataServiceWaitMs: 1200,
+    // Tighter poll for faster ConDataService detection
+    conDataServicePollMs: 20,
+    
+    // Faster URL-search retry so results after ?q=... appear sooner
+    urlSearchRetryMs: 120,
+    urlSearchMaxRetries: 30,
   });
   
   /** @type {Readonly<Record<string,number>>} */

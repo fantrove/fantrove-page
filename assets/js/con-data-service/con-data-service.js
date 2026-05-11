@@ -1,4 +1,4 @@
-// con-data-service.js  v2.0.0
+// con-data-service.js  v2.1.0
 // =========================================================
 // ระบบศูนย์กลางข้อมูล — Neutral Data Service
 //
@@ -7,6 +7,10 @@
 //  - ระบบอื่นขอข้อมูลในรูปแบบที่ต้องการได้ทันที
 //  - ไม่ต้องรู้ว่าไฟล์อยู่ที่ไหนหรือโครงสร้างเป็นอย่างไร
 //  - รองรับการดึงข้อมูลทุกรูปแบบ
+//
+// v2.1.0 — Auto-preload on module load
+//  เริ่ม fetch data ทันทีที่ module โหลด ไม่รอให้ consumer ถาม
+//  ทำให้ search-ui.js พบข้อมูลพร้อมใช้ทันทีแทนที่จะรอ poll
 //
 // =========================================================
 
@@ -273,7 +277,7 @@ const _loader = {
 // =========================================================
 const ConDataService = {
 
-  version: '2.0.0',
+  version: '2.1.0',
   registry: ConDataRegistry,
 
   // -------------------------------------------------------
@@ -557,7 +561,11 @@ const ConDataService = {
   // CACHE & STATUS
   // -------------------------------------------------------
   invalidateCache() { _loader.invalidate(); },
+
+  // preload() kicks off the full fetch + index pipeline.
+  // Safe to call multiple times — the Promise is deduplicated internally.
   preload()         { return _loader.assemble().catch(() => {}); },
+
   status() {
     return {
       assembled: !!_loader._assembledDb,
@@ -568,7 +576,29 @@ const ConDataService = {
   }
 };
 
-if (typeof window !== 'undefined') window.ConDataService = ConDataService;
+// =========================================================
+// REGISTER & AUTO-PRELOAD
+//
+// WHY auto-preload here?
+//   con-data-service.js loads as <script type="module"> which
+//   is deferred — it executes after the HTML is parsed.
+//   search-ui.js (regular script) loads its own modules, then
+//   polls for window.ConDataService with a timeout.
+//
+//   Without preload: search-ui finishes loading modules (~200ms),
+//   then calls getAssembled() → THEN the first fetch starts.
+//
+//   With preload: the moment this module executes, we kick off
+//   the entire fetch pipeline immediately. By the time search-ui
+//   is ready to ask for data, it's already been fetching for
+//   200-400ms — often enough to be complete on fast connections.
+// =========================================================
+if (typeof window !== 'undefined') {
+  window.ConDataService = ConDataService;
+
+  // Fire-and-forget: start fetching NOW, don't await
+  ConDataService.preload();
+}
 
 export default ConDataService;
 export { ConDataRegistry };
