@@ -51,13 +51,13 @@
         bottom: calc(120px + env(safe-area-inset-bottom, 0px)); 
         left: 50%;
         transform: translateX(-50%);
-        z-index: 15000;
+        z-index: 1500000;
 
         display: inline-flex;
         align-items: center;
         
         /* Fixed Padding สำหรับทุกอุปกรณ์ตามที่คุณต้องการ */
-        padding: 14px 28px 14px 20px;
+        padding: 15px 28px 15px 20px !important;
         border-radius: 9999px;
 
         /* * White-Silk Base: ใช้สีขาวนวลที่ดูสะอาดตา 
@@ -82,7 +82,7 @@
 
         /* Typography */
         font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
-        font-size: 14px;
+        font-size: 14px !important;
         color: #111827;
         white-space: nowrap;
         pointer-events: none;
@@ -95,7 +95,7 @@
 
       /* ── Character / Icon ──────────────────────────────── */
       .cn-char {
-        font-size: 1.4em;
+        font-size: 1.4em !important;
         line-height: 1;
         flex-shrink: 0;
         margin-right: 14px;
@@ -106,7 +106,7 @@
       /* ── Primary Label ─────────────────────────────────── */
       .cn-label {
         font-weight: 700;
-        font-size: 0.95em;
+        font-size: 0.95em !important;
         letter-spacing: 0.02em;
         /* ใช้ Gradient เล็กน้อยเพื่อให้คำว่าคัดลอกดูมีชีวิตชีวา */
         background: linear-gradient(135deg, #00ceb0 0%, #00a892 100%);
@@ -126,7 +126,7 @@
 
       /* ── Secondary Name ────────────────────────────────── */
       .cn-name {
-        font-size: 0.9em;
+        font-size: 0.9em !important;
         font-weight: 500;
         color: #6b7280;
         letter-spacing: 0.01em;
