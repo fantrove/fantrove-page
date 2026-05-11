@@ -14,9 +14,9 @@
   //   DISPLAY_MS 2800 — just over the "read + register" cognitive threshold (~2.5s)
   //   FADE_OUT_MS 400 — exit is deliberately slower than enter: feels more composed
   //
-  const FADE_IN_MS = 260;
-  const DISPLAY_MS = 2800;
-  const FADE_OUT_MS = 400;
+  const FADE_IN_MS = 320;
+  const DISPLAY_MS = 1800;
+  const FADE_OUT_MS = 480;
   
   const STYLE_ID = 'cn-styles-v3';
   
@@ -48,78 +48,90 @@
       /* ── Capsule container ──────────────────────────────── */
       .cn-capsule {
         position: fixed;
-        bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+        bottom: calc(120px + env(safe-area-inset-bottom, 0px)); 
         left: 50%;
         transform: translateX(-50%);
         z-index: 15000;
 
         display: inline-flex;
         align-items: center;
-        gap: 0;
-
-        padding: 10px 22px 10px 16px;
+        
+        /* เพิ่ม Space ให้ดูหรูหราแบบ Minimalist */
+        padding: 14px 28px 14px 20px;
         border-radius: 9999px;
 
-        /*
-         * Off-white: 252/252/253 is marginally warm, avoiding the
-         * clinical harshness of pure white against coloured backgrounds.
-         * 0.97 opacity allows a subtle colour hint from content below.
+        /* * Ultra-Futuristic Glass: 
+         * ใช้ขาวสว่าง 92% ผสมกับความใสเพื่อให้ Background ด้านหลังดู "Radiant"
          */
-        background: rgba(252, 252, 253, 0.97);
-        border: 1px solid rgba(0, 0, 0, 0.07);
-        box-shadow:
-          0 8px 32px rgba(0, 0, 0, 0.10),
-          0 2px  8px rgba(0, 0, 0, 0.06);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
+        background: rgba(255, 255, 255, 0.85);
+        
+        /* * Triple-Layer Border: 
+         * ชั้นแรกคือขอบขาวสว่าง (Top Light) ชั้นที่สองคือขอบบางสีเข้ม (Define)
+         * สร้างมิติเหมือนกระจกเจียระไน
+         */
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        outline: 1px solid rgba(0, 0, 0, 0.04);
+        outline-offset: -1px;
 
-        /* Typography */
-        font-family: inherit;
+        /* Soft Floating Effect */
+        box-shadow: 
+          0 10px 40px -10px rgba(0, 0, 0, 0.12),
+          0 0 20px 0 rgba(255, 255, 255, 0.2);
+
+        /* การเบลอที่ลึกขึ้นและสีที่สดขึ้น (Vivid Glass) */
+        backdrop-filter: blur(20px) saturate(210%);
+        -webkit-backdrop-filter: blur(20px) saturate(210%);
+
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
         font-size: 14px;
-        color: #111827;
+        color: #000;
         white-space: nowrap;
         pointer-events: none;
         user-select: none;
         -webkit-user-select: none;
 
-        /* JS owns opacity — start at 0 so the first rAF fade-in is clean */
         opacity: 0;
-        will-change: opacity;
+        /* เพิ่ม Transition เล็กน้อยเพื่อให้ดูมีชีวิต (Organic feel) */
+        will-change: opacity, transform, backdrop-filter;
       }
 
-      /* ── Emoji / character ──────────────────────────────── */
+      /* ── Emoji / Character ──────────────────────────────── */
       .cn-char {
-        font-size: 1.3em;
+        font-size: 1.4em; /* ใหญ่ขึ้นเล็กน้อยเพื่อความ Energetic */
         line-height: 1;
         flex-shrink: 0;
-        margin-right: 10px;
+        margin-right: 14px;
+        /* เพิ่ม Glow จางๆ ให้อีโมจิ */
+        filter: drop-shadow(0 0 8px rgba(255,255,255,0.8)) drop-shadow(0 2px 4px rgba(0,0,0,0.1));
       }
 
       /* ── "Copied" label ─────────────────────────────────── */
       .cn-label {
-        font-weight: 600;
-        font-size: 0.9em;
-        letter-spacing: 0.01em;
+        font-weight: 700; /* หนาขึ้นเพื่อความหนักแน่นแบบ Modern SaaS */
+        font-size: 0.95em;
+        letter-spacing: 0.04em;
+        text-transform: uppercase; /* ปรับเป็นพิมพ์ใหญ่จางๆ เพื่อความล้ำสมัย (Optional) */
         color: #111827;
         flex-shrink: 0;
       }
 
-      /* ── Divider between label and item name ────────────── */
+      /* ── Divider ────────────────────────────────────────── */
       .cn-divider {
-        width: 1px;
-        height: 13px;
-        background: rgba(0, 0, 0, 0.14);
+        width: 1.5px; /* หนาขึ้นเล็กน้อย */
+        height: 16px;
+        /* ใช้สีเทาที่โปร่งแสงมากๆ ให้ดูเหมือนเงาของรอยแยกกระจก */
+        background: rgba(0, 0, 0, 0.08);
         flex-shrink: 0;
-        margin: 0 12px;
+        margin: 0 18px;
       }
 
-      /* ── Item name (optional) ───────────────────────────── */
+      /* ── Item name ──────────────────────────────────────── */
       .cn-name {
-        font-size: 0.84em;
-        font-weight: 400;
-        color: #6b7280;
-        letter-spacing: 0.01em;
-        max-width: 160px;
+        font-size: 0.92em;
+        font-weight: 500;
+        color: #4b5563; /* ปรับโทนเข้มขึ้นเล็กน้อยให้อ่านง่ายบนกระจก */
+        letter-spacing: 0.02em;
+        max-width: 200px;
         overflow: hidden;
         text-overflow: ellipsis;
       }
@@ -127,14 +139,14 @@
       /* ── Mobile adjustments ─────────────────────────────── */
       @media (max-width: 480px) {
         .cn-capsule {
-          font-size: 13px;
-          padding: 9px 18px 9px 14px;
-          max-width: 92vw;
+          
+          bottom: 120px;
+          max-width: 88vw;
         }
-        .cn-name { max-width: 110px; }
+        .cn-name { max-width: 130px; }
       }
 
-      /* ── Respect reduced-motion preference ──────────────── */
+      /* ── Motion ─────────────────────────────────────────── */
       @media (prefers-reduced-motion: reduce) {
         .cn-capsule { transition: none !important; }
       }
@@ -142,6 +154,7 @@
     
     document.head.appendChild(s);
   }
+
   
   // ── Build the capsule DOM element ─────────────────────────
   function _buildCapsule(text, label, name) {
