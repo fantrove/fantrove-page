@@ -1,4 +1,9 @@
-// con-data-service.js  v2.1.0
+// Path:    assets/js/con-data-service/con-data-service.js
+// Purpose: Neutral data service — single source of truth for all con-data consumers.
+//          No system-specific logic; any consumer can request data in any shape.
+// Used by: home.js, search-ui.js, copyNotification.js, and any future consumer
+
+// con-data-service.js  v2.2.0
 // =========================================================
 // ระบบศูนย์กลางข้อมูล — Neutral Data Service
 //
@@ -11,6 +16,11 @@
 // v2.1.0 — Auto-preload on module load
 //  เริ่ม fetch data ทันทีที่ module โหลด ไม่รอให้ consumer ถาม
 //  ทำให้ search-ui.js พบข้อมูลพร้อมใช้ทันทีแทนที่จะรอ poll
+//
+// v2.2.0 — resolveItem() neutral lookup API
+//  เพิ่ม resolveItem({ text?, api?, lang? }) — lookup item จาก partial context.
+//  ออกแบบเป็น neutral utility ไม่ผูกกับระบบใดระบบหนึ่ง (notification, search, ฯลฯ)
+//  ใช้ได้กับทุก consumer ที่มีข้อมูลบางส่วนและต้องการ full item context.
 //
 // =========================================================
 
@@ -273,11 +283,26 @@ const _loader = {
 };
 
 // =========================================================
+// INTERNAL — Name resolver helper
+// =========================================================
+
+/**
+ * Extract a display name from an item's name object in the given lang.
+ * Falls back: lang → 'en' → 'th' → first available value.
+ * @private
+ */
+function _extractName(nameObj, lang) {
+  if (!nameObj) return '';
+  if (typeof nameObj !== 'object') return String(nameObj);
+  return nameObj[lang] || nameObj.en || nameObj.th || Object.values(nameObj)[0] || '';
+}
+
+// =========================================================
 // PUBLIC API — ConDataService
 // =========================================================
 const ConDataService = {
 
-  version: '2.1.0',
+  version: '2.2.0',
   registry: ConDataRegistry,
 
   // -------------------------------------------------------
@@ -389,6 +414,47 @@ const ConDataService = {
     if (!query) return [];
     await _loader.assemble();
     return _indexEngine.searchByName(query);
+  },
+
+  // -------------------------------------------------------
+  // resolveItem() — v2.2.0
+  //
+  // Neutral lookup: given ANY partial item context, return the
+  // full enriched item (with _typeId, _catId, etc.) or null.
+  //
+  // WHY this is neutral and not notification-specific:
+  //   Any consumer that receives only a character ('😀') or an
+  //   API code ('U+1F600') needs to look up the full item.
+  //   This is a generic "resolve from partial info" operation,
+  //   not tied to any display or notification concern.
+  //
+  // Lookup priority: text → api → null
+  // Returns: enriched item with resolved display name, or null.
+  //
+  // Usage:
+  //   const item = await ConDataService.resolveItem({ text: '😀', lang: 'en' });
+  //   // { text: '😀', api: 'U+1F600', name: { th: '...', en: 'Grinning Face' },
+  //   //   _typeId: 'emoji', _catId: 'smileys_emotion', displayName: 'Grinning Face' }
+  //
+  // @param {Object} descriptor
+  // @param {string} [descriptor.text]  — character/symbol to look up
+  // @param {string} [descriptor.api]   — Unicode API code e.g. 'U+1F600'
+  // @param {string} [descriptor.lang]  — language code for displayName (default: 'en')
+  // @returns {Object|null}
+  // -------------------------------------------------------
+  async resolveItem({ text, api, lang = 'en' } = {}) {
+    await _loader.assemble();
+
+    const raw = (text && _indexEngine.findByText(text))
+             || (api  && _indexEngine.findByApi(api))
+             || null;
+
+    if (!raw) return null;
+
+    // Attach resolved displayName so consumers don't need to know the name schema
+    return Object.assign({}, raw, {
+      displayName: _extractName(raw.name, lang),
+    });
   },
 
   // -------------------------------------------------------
@@ -543,6 +609,8 @@ const ConDataService = {
       case 'findByText':       return this.findByText(params.text);
       case 'findByApiBatch':   return this.findByApiBatch(params.apiCodes || params.apis || []);
       case 'search':           return this.search(params.query, params.lang || null);
+      // v2.2.0 — resolveItem: lookup by text or api with optional lang
+      case 'resolveItem':      return this.resolveItem({ text: params.text, api: params.api, lang: params.lang });
       case 'getFormatted':     return this.getFormatted(params.format || 'assembled', params.options || {});
       case 'paginate':         return this.paginate(params.typeId, params.categoryId, params.page, params.pageSize);
       case 'slice':            return this.slice(params.typeId || null, params.offset || 0, params.limit || 50);
