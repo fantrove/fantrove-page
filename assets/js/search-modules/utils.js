@@ -8,7 +8,7 @@
  *  DOMService         — element creation and event helpers
  *  StringService      — HTML escaping, URL encode/decode
  *  StorageService     — session history read/write
- *  NotificationService — toast messages + clipboard copy
+ *  NotificationService — clipboard copy + showCopyNotification bridge
  *  HighlightService   — character-level match highlighting
  *
  * @module utils
@@ -159,50 +159,59 @@
   };
 
   // ── NotificationService ───────────────────────────────────────────────────
+  //
+  // WHY no toast() here:
+  //   All copy feedback is delegated to the global showCopyNotification()
+  //   (copyNotification.js). That module owns the premium capsule UI,
+  //   timing, i18n, and name resolution — duplicating it here would
+  //   create two competing notification systems on the same page.
+  //
+  // showCopyNotification availability:
+  //   copyNotification.js loads with `defer`, same as search-ui.js.
+  //   Both are guaranteed ready by the time any user interaction fires.
+  //   The optional-chaining call (?.) is a safe belt-and-suspenders guard.
+  //
   const NotificationService = {
     /**
-     * Show a dismissing toast message.
-     * @param {string} msg
-     */
-    toast(msg) {
-      try {
-        const el = DOMService.create('div', null, 'copy-toast-message');
-        el.textContent = msg;
-        (DOMService.get(CONFIG.DOM.copyToastId) || document.body).appendChild(el);
-        const id = setTimeout(() => {
-          try {
-            Object.assign(el.style, { opacity: '0', transform: 'translateX(14px)' });
-            setTimeout(() => DOMService.remove(el), CONFIG.TIMING.toastFadeMs);
-          } catch {}
-        }, CONFIG.TIMING.toastDisplayMs);
-        M.State._timeouts.add(id);
-      } catch {}
-    },
-
-    /**
-     * Copy text to clipboard, then show a toast.
+     * Copy text to clipboard, then fire showCopyNotification.
+     *
+     * name: passed through so the capsule can display
+     *   "Copied  |  Heart Eyes" instead of just "Copied".
+     *   Callers that don't have a name omit it — showCopyNotification
+     *   degrades gracefully (capsule without the name segment).
+     *
      * Falls back to execCommand('copy') for older browsers.
-     * @param {string} text
+     * execCommand return value is unreliable in modern browsers —
+     * assume success if no exception is thrown.
+     *
+     * @param {string}  text
+     * @param {string}  [name]  Human-readable item name for the capsule
      * @returns {Promise<void>}
      */
-    async copyText(text) {
+    async copyText(text, name) {
+      let ok = false;
       try {
         if (navigator.clipboard?.writeText) {
           await navigator.clipboard.writeText(text);
-          this.toast(LanguageService.t('copy') + ' แล้ว');
-          return;
+          ok = true;
+        } else {
+          // Legacy fallback: execCommand('copy') return value intentionally ignored
+          const ta = Object.assign(document.createElement('textarea'), { value: text });
+          Object.assign(ta.style, { position: 'fixed', left: '-9999px', opacity: '0' });
+          document.body.appendChild(ta);
+          ta.focus();
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+          ok = true;
         }
-        // Fallback for older browsers
-        const ta = Object.assign(document.createElement('textarea'), { value: text });
-        Object.assign(ta.style, { position: 'fixed', left: '-9999px' });
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy')
-          ? this.toast(LanguageService.t('copy') + ' แล้ว')
-          : this.toast(LanguageService.t('copy_failed'));
-        document.body.removeChild(ta);
       } catch {
-        this.toast(LanguageService.t('copy_failed'));
+        ok = false;
+      }
+
+      if (ok) {
+        const lang = LanguageService.getLang();
+        window.showCopyNotification?.({ text, name, lang });
       }
     },
   };

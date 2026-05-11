@@ -1,7 +1,17 @@
 // @ts-check
 /**
  * @file rendering.js
- * RenderingService + FilterService (v5.0 — VS for main page, O(1) DOM)
+ * RenderingService + FilterService (v5.1 — VS for main page, O(1) DOM)
+ *
+ * Changes from v5.0:
+ *   - Removed copy-hint / demo animation system entirely.
+ *     Feedback is now handled exclusively by showCopyNotification
+ *     (copyNotification.js) via NotificationService.copyText().
+ *   - _attachCopyHandler now extracts item name from the card's
+ *     data-name attribute and passes it to copyText() so the
+ *     capsule can display "Copied | Heart Eyes".
+ *   - Removed NotificationService.toast() call from _runDemo (gone).
+ *   - Removed window._hintDemoBlocking guard (no longer needed).
  *
  * @module rendering
  * @depends {config.js, state.js, utils.js, virtual-scroll.js}
@@ -16,11 +26,9 @@
   } = M;
 
   // ── Hoisted i18n cache ──────────────────────────────────────────────────
-  let _lbl = { emoji: '', clickToCopy: '', clickToCopyDemo: '' };
+  let _lbl = { emoji: '' };
   function _refreshLabels() {
-    _lbl.emoji           = LanguageService.t('emoji');
-    _lbl.clickToCopy     = LanguageService.t('click_to_copy');
-    _lbl.clickToCopyDemo = LanguageService.t('click_to_copy_demo');
+    _lbl.emoji = LanguageService.t('emoji');
   }
   _refreshLabels();
 
@@ -45,6 +53,10 @@
     /**
      * Build card HTML string.
      * The entire .sc card is the click target — no copy button.
+     *
+     * data-name carries the human-readable item name so
+     * _attachCopyHandler can pass it to showCopyNotification
+     * without re-querying the data layer.
      *
      * @param {SearchResult} item
      * @param {string} lang
@@ -82,7 +94,12 @@
         const tags     = (typeName ? `<span class="tag">${esc(typeName)}</span>` : '')
                        + (catName  ? `<span class="tag">${esc(catName)}</span>`  : '');
 
-        return `<div class="sc${vertical ? ' sv' : ''}" role="button" tabindex="0" aria-label="${esc(nameStr || text)}" data-text="${StringService.encodeUrl(text)}"><div class="scc" aria-hidden="true">${esc(disp)}</div><div class="scb"><div class="sct">${esc(titleStr)}</div><div class="scs">${esc(subStr)}</div>${tags ? `<div class="scg" aria-hidden="true">${tags}</div>` : ''}</div></div>`;
+        // data-name carries the display name for the copy notification capsule.
+        // encodeURIComponent keeps it safe for the attribute even with
+        // emoji/Thai/special chars that would otherwise break the HTML.
+        const encodedName = nameStr ? StringService.encodeUrl(nameStr) : '';
+
+        return `<div class="sc${vertical ? ' sv' : ''}" role="button" tabindex="0" aria-label="${esc(nameStr || text)}" data-text="${StringService.encodeUrl(text)}" data-name="${encodedName}"><div class="scc" aria-hidden="true">${esc(disp)}</div><div class="scb"><div class="sct">${esc(titleStr)}</div><div class="scs">${esc(subStr)}</div>${tags ? `<div class="scg" aria-hidden="true">${tags}</div>` : ''}</div></div>`;
       } catch {
         return '<div class="sc"><div class="scc">-</div></div>';
       }
@@ -113,13 +130,6 @@
     /**
      * Render results using VirtualScrollEngine.
      *
-     * Hint animation logic:
-     *   Check if .copy-hint is already in the container BEFORE clearing.
-     *   - Hint already there  → user is refining an existing search
-     *                         → restore hint without animation (stable UX)
-     *   - Hint not there      → fresh appearance from placeholder/empty state
-     *                         → add .copy-hint--enter to trigger CSS animation
-     *
      * @param {SearchResult[]} results
      * @param {boolean}        [showSuggestionsIfNoResult=false]
      */
@@ -132,10 +142,6 @@
         const filtered = State.selectedCategory !== 'all'
           ? results.filter(r => ((r.category?.name?.[lang] || r.category?.name?.en) || '') === State.selectedCategory)
           : results;
-
-        // Capture hint state BEFORE clearing — this is the critical read.
-        // Must happen before setHTML('') destroys the existing hint element.
-        const hintWasVisible = !!container.querySelector('.copy-hint');
 
         this.disconnectRenderObserver();
         State.currentFilteredResults = filtered;
@@ -154,109 +160,6 @@
         DOMService.setHTML(container, '');
         this._attachCopyHandler(container);
         _refreshLabels();
-
-        // Build hint element.
-        // Inner <span class="copy-hint__text"> is the animated text slot.
-        const hint = document.createElement('div');
-        hint.className = hintWasVisible ? 'copy-hint' : 'copy-hint copy-hint--enter';
-        // Build inner structure: icon comes from ::before, text in a span
-        const _textSpan = document.createElement('span');
-        _textSpan.className   = 'copy-hint__text';
-        _textSpan.textContent = _lbl.clickToCopy;
-        hint.appendChild(_textSpan);
-        container.appendChild(hint);
-
-        // Interactive demo — only set up on fresh appearance
-        if (!hintWasVisible) {
-          let _autoRemoveTimer = null;
-          let _cycleTimer      = null;
-
-          const _texts = [ _lbl.clickToCopy, LanguageService.t('click_to_copy_demo') ];
-          let   _idx   = 0;
-
-          const _exitHint = () => {
-            if (!hint.parentNode) return;
-            clearInterval(_cycleTimer);
-            hint.classList.remove('copy-hint--enter');
-            hint.classList.add('copy-hint--exit');
-            hint.addEventListener('animationend', () => {
-              try { hint.remove(); } catch {}
-            }, { once: true });
-          };
-
-          // Text slot cycle: slide current text down-out, swap, slide new text up-in.
-          const _cycleText = () => {
-            _textSpan.classList.add('copy-hint__text--out');
-            setTimeout(() => {
-              _idx = (_idx + 1) % _texts.length;
-              _textSpan.textContent = _texts[_idx];
-              _textSpan.classList.remove('copy-hint__text--out');
-              _textSpan.classList.add('copy-hint__text--in');
-              setTimeout(() => _textSpan.classList.remove('copy-hint__text--in'), 640);
-            }, 220);  // matches --out transition duration
-          };
-
-          // Demo: flash first card 2× with tap-label overlay — NO clipboard.
-          const _runDemo = () => {
-            const firstCard = container.querySelector('.sc[data-text]');
-            if (!firstCard) return;
-
-            // Ensure card has position:relative for the absolute label
-            const _prevPos = firstCard.style.position;
-            firstCard.style.position = 'relative';
-
-            // Create tap label overlay
-            const _label = document.createElement('span');
-            _label.className   = 'sc--demo-label';
-            _label.textContent = '👆 ' + _lbl.clickToCopy;
-            firstCard.appendChild(_label);
-
-            const _on  = () => {
-              firstCard.classList.remove('sc--demo-active');
-              // force reflow so animation restarts on second flash
-              void firstCard.offsetWidth;
-              firstCard.classList.add('sc--demo-active');
-            };
-            const _off = () => firstCard.classList.remove('sc--demo-active');
-
-            _on();
-            setTimeout(_off, 350);
-            setTimeout(_on,  600);
-            setTimeout(() => {
-              _off();
-              // Fade label out then remove
-              _label.style.transition = 'opacity 250ms ease';
-              _label.style.opacity    = '0';
-              setTimeout(() => {
-                try { _label.remove(); } catch {}
-                firstCard.style.position = _prevPos;
-              }, 260);
-            }, 950);
-
-            NotificationService.toast('👆 ' + _lbl.clickToCopy);
-          };
-
-          // Click handler
-          hint.addEventListener('click', (e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            clearTimeout(_autoRemoveTimer);
-            _runDemo();
-            setTimeout(_exitHint, 2500);
-          });
-
-          // Start cycling after enter animation completes
-          hint.addEventListener('animationend', function onEntered() {
-            if (hint.classList.contains('copy-hint--exit')) return;
-            hint.removeEventListener('animationend', onEntered);
-            // First cycle after 2.5s, then every 3s
-            _cycleTimer = setTimeout(function _tick() {
-              _cycleText();
-              _cycleTimer = setTimeout(_tick, 3000);
-            }, 2500);
-            _autoRemoveTimer = setTimeout(_exitHint, 20000);
-          });
-        }
 
         // Mount VS
         const viewport = document.scrollingElement || document.documentElement;
@@ -306,29 +209,35 @@
     /**
      * Delegated copy handler — whole .sc card is the target.
      * Keyboard: Enter / Space on focused card also copies.
+     *
+     * Name extraction:
+     *   data-name is URI-encoded on write (renderResultItem) so it
+     *   survives any character in the item name. We decode it here
+     *   and pass it to copyText(), which forwards it to
+     *   showCopyNotification for the "Copied | <name>" capsule.
+     *
      * @private
      */
     _attachCopyHandler(container) {
       if (window._copyResultTextHandlerSet) return;
 
+      const _copy = (card) => {
+        if (!card?.hasAttribute('data-text')) return;
+        const text = StringService.decodeUrl(card.getAttribute('data-text'));
+        const name = StringService.decodeUrl(card.getAttribute('data-name') || '');
+        NotificationService.copyText(text, name || undefined);
+      };
+
       Handlers.copyClick = (e) => {
-        // Guard: demo is running — do not copy to clipboard
-        if (window._hintDemoBlocking) return;
         const card = e.target.closest('.sc');
-        if (card?.hasAttribute('data-text')) {
-          e.preventDefault();
-          NotificationService.copyText(StringService.decodeUrl(card.getAttribute('data-text')));
-        }
+        if (card) { e.preventDefault(); _copy(card); }
       };
       DOMService.on(container, 'click', Handlers.copyClick);
 
       DOMService.on(container, 'keydown', (e) => {
         if (e.key !== 'Enter' && e.key !== ' ') return;
         const card = e.target.closest('.sc');
-        if (card?.hasAttribute('data-text')) {
-          e.preventDefault();
-          NotificationService.copyText(StringService.decodeUrl(card.getAttribute('data-text')));
-        }
+        if (card) { e.preventDefault(); _copy(card); }
       });
 
       window._copyResultTextHandlerSet = true;
