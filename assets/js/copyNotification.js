@@ -45,7 +45,7 @@
     const s = document.createElement('style');
     s.id = STYLE_ID;
     s.textContent = `
-      /* ── Capsule container ──────────────────────────────── */
+      /* ── Premium Exclusive Capsule ─────────────────────── */
       .cn-capsule {
         position: fixed;
         bottom: calc(120px + env(safe-area-inset-bottom, 0px)); 
@@ -56,96 +56,88 @@
         display: inline-flex;
         align-items: center;
         
-        /* เพิ่ม Space ให้ดูหรูหราแบบ Minimalist */
+        /* Fixed Padding สำหรับทุกอุปกรณ์ตามที่คุณต้องการ */
         padding: 14px 28px 14px 20px;
         border-radius: 9999px;
 
-        /* * Ultra-Futuristic Glass: 
-         * ใช้ขาวสว่าง 92% ผสมกับความใสเพื่อให้ Background ด้านหลังดู "Radiant"
+        /* * White-Silk Base: ใช้สีขาวนวลที่ดูสะอาดตา 
+         * เพื่อให้เข้ากับเว็บสีขาวได้โดยไม่ดูเป็น "ก้อนเทาๆ" 
          */
-        background: rgba(255, 255, 255, 0.85);
+        background: rgba(255, 255, 255, 0.8);
         
-        /* * Triple-Layer Border: 
-         * ชั้นแรกคือขอบขาวสว่าง (Top Light) ชั้นที่สองคือขอบบางสีเข้ม (Define)
-         * สร้างมิติเหมือนกระจกเจียระไน
+        /* * Dual-Tone Border: เทคนิคที่ทำให้ดู Exclusive 
+         * ใช้ขอบสีขาวสว่างด้านบนเพื่อสร้างมิติ "ตกกระทบของแสง"
          */
-        border: 1px solid rgba(255, 255, 255, 0.8);
-        outline: 1px solid rgba(0, 0, 0, 0.04);
-        outline-offset: -1px;
-
-        /* Soft Floating Effect */
+        border: 1px solid rgba(255, 255, 255, 1);
         box-shadow: 
-          0 10px 40px -10px rgba(0, 0, 0, 0.12),
-          0 0 20px 0 rgba(255, 255, 255, 0.2);
+          0 0 0 1px rgba(0, 206, 176, 0.15), /* เส้นขอบสี Mint บางๆ ชั้นนอกสุด */
+          0 12px 30px -10px rgba(0, 0, 0, 0.08), /* เงาฟุ้งแบบผู้ดี */
+          0 4px 10px -2px rgba(0, 206, 176, 0.05); /* Glow สี Mint จางๆ */
 
-        /* การเบลอที่ลึกขึ้นและสีที่สดขึ้น (Vivid Glass) */
-        backdrop-filter: blur(20px) saturate(210%);
-        -webkit-backdrop-filter: blur(20px) saturate(210%);
+        /* * Crystal Blur: การเบลอระดับพรีเมียม 
+         * ทำให้สิ่งที่อยู่ด้านหลังดูเหมือนถูกมองผ่านคริสตัล
+         */
+        backdrop-filter: blur(24px) saturate(160%);
+        -webkit-backdrop-filter: blur(24px) saturate(160%);
 
-        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+        /* Typography */
+        font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
         font-size: 14px;
-        color: #000;
+        color: #111827;
         white-space: nowrap;
         pointer-events: none;
         user-select: none;
         -webkit-user-select: none;
 
         opacity: 0;
-        /* เพิ่ม Transition เล็กน้อยเพื่อให้ดูมีชีวิต (Organic feel) */
-        will-change: opacity, transform, backdrop-filter;
+        will-change: opacity, transform;
       }
 
-      /* ── Emoji / Character ──────────────────────────────── */
+      /* ── Character / Icon ──────────────────────────────── */
       .cn-char {
-        font-size: 1.4em; /* ใหญ่ขึ้นเล็กน้อยเพื่อความ Energetic */
+        font-size: 1.4em;
         line-height: 1;
         flex-shrink: 0;
         margin-right: 14px;
-        /* เพิ่ม Glow จางๆ ให้อีโมจิ */
-        filter: drop-shadow(0 0 8px rgba(255,255,255,0.8)) drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+        /* เพิ่มเงาให้อีโมจิดู Pop ออกมาจากกระจก */
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
       }
 
-      /* ── "Copied" label ─────────────────────────────────── */
+      /* ── Primary Label ─────────────────────────────────── */
       .cn-label {
-        font-weight: 700; /* หนาขึ้นเพื่อความหนักแน่นแบบ Modern SaaS */
+        font-weight: 700;
         font-size: 0.95em;
-        letter-spacing: 0.04em;
-        text-transform: uppercase; /* ปรับเป็นพิมพ์ใหญ่จางๆ เพื่อความล้ำสมัย (Optional) */
-        color: #111827;
+        letter-spacing: 0.02em;
+        /* ใช้ Gradient เล็กน้อยเพื่อให้คำว่าคัดลอกดูมีชีวิตชีวา */
+        background: linear-gradient(135deg, #00ceb0 0%, #00a892 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
         flex-shrink: 0;
       }
 
-      /* ── Divider ────────────────────────────────────────── */
+      /* ── Minimalist Divider ────────────────────────────── */
       .cn-divider {
-        width: 1.5px; /* หนาขึ้นเล็กน้อย */
+        width: 1px;
         height: 16px;
-        /* ใช้สีเทาที่โปร่งแสงมากๆ ให้ดูเหมือนเงาของรอยแยกกระจก */
-        background: rgba(0, 0, 0, 0.08);
+        background: rgba(0, 0, 0, 0.06);
         flex-shrink: 0;
         margin: 0 18px;
       }
 
-      /* ── Item name ──────────────────────────────────────── */
+      /* ── Secondary Name ────────────────────────────────── */
       .cn-name {
-        font-size: 0.92em;
+        font-size: 0.9em;
         font-weight: 500;
-        color: #4b5563; /* ปรับโทนเข้มขึ้นเล็กน้อยให้อ่านง่ายบนกระจก */
-        letter-spacing: 0.02em;
+        color: #6b7280;
+        letter-spacing: 0.01em;
         max-width: 200px;
         overflow: hidden;
         text-overflow: ellipsis;
       }
 
-      /* ── Mobile adjustments ─────────────────────────────── */
-      @media (max-width: 480px) {
-        .cn-capsule {
-          bottom: 120px;
-          max-width: 88vw;
-        }
-        .cn-name { max-width: 130px; }
-      }
+      /* No Mobile-specific padding overrides as requested */
 
-      /* ── Motion ─────────────────────────────────────────── */
+      /* ── Motion ────────────────────────────────────────── */
       @media (prefers-reduced-motion: reduce) {
         .cn-capsule { transition: none !important; }
       }
@@ -153,6 +145,7 @@
     
     document.head.appendChild(s);
   }
+
   
   // ── Build the capsule DOM element ─────────────────────────
   function _buildCapsule(text, label, name) {
