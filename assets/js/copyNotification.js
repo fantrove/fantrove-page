@@ -56,63 +56,71 @@
         display: inline-flex;
         align-items: center;
         
-        /* Space ที่เน้นความโปร่งและพรีเมียม */
+        /* เพิ่ม Space ให้ดูหรูหราแบบ Minimalist */
         padding: 14px 28px 14px 20px;
         border-radius: 9999px;
 
-        /* * Modern Charcoal Glass:
-         * ใช้สีเทาเข้มเกือบดำ (Dark Charcoal) เพื่อให้ตัดกับเว็บสีขาวชัดเจน
-         * ลด Opacity ลงเหลือ 0.75 เพื่อให้เห็น Effect ของ Backdrop-filter
+        /* * Ultra-Futuristic Glass: 
+         * ใช้ขาวสว่าง 92% ผสมกับความใสเพื่อให้ Background ด้านหลังดู "Radiant"
          */
-        background: rgba(23, 23, 26, 0.78);
+        background: rgba(255, 255, 255, 0.85);
         
-        /* * Futuristic Edge:
-         * ใช้เส้นขอบสีขาวจางๆ เพื่อสร้างเส้นตัด (Hairline) ให้ Capsule ดูคมกริบ
+        /* * Triple-Layer Border: 
+         * ชั้นแรกคือขอบขาวสว่าง (Top Light) ชั้นที่สองคือขอบบางสีเข้ม (Define)
+         * สร้างมิติเหมือนกระจกเจียระไน
          */
-        border: 1px solid rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        outline: 1px solid rgba(0, 0, 0, 0.04);
+        outline-offset: -1px;
+
+        /* Soft Floating Effect */
         box-shadow: 
-          0 20px 40px -12px rgba(0, 0, 0, 0.25),
-          0 0 0 1px rgba(0, 0, 0, 0.1);
+          0 10px 40px -10px rgba(0, 0, 0, 0.12),
+          0 0 20px 0 rgba(255, 255, 255, 0.2);
 
-        /* การเบลอและเร่งสีให้ดูหรูหรา */
-        backdrop-filter: blur(18px) saturate(160%);
-        -webkit-backdrop-filter: blur(18px) saturate(160%);
+        /* การเบลอที่ลึกขึ้นและสีที่สดขึ้น (Vivid Glass) */
+        backdrop-filter: blur(20px) saturate(210%);
+        -webkit-backdrop-filter: blur(20px) saturate(210%);
 
-        /* Typography: เปลี่ยนเป็นสีขาวสว่างเพื่อให้ Contrast กับตัว Capsule */
-        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
         font-size: 14px;
-        color: #ffffff;
+        color: #000;
         white-space: nowrap;
         pointer-events: none;
         user-select: none;
+        -webkit-user-select: none;
 
         opacity: 0;
-        will-change: opacity, transform;
+        /* เพิ่ม Transition เล็กน้อยเพื่อให้ดูมีชีวิต (Organic feel) */
+        will-change: opacity, transform, backdrop-filter;
       }
 
       /* ── Emoji / Character ──────────────────────────────── */
       .cn-char {
-        font-size: 1.4em;
+        font-size: 1.4em; /* ใหญ่ขึ้นเล็กน้อยเพื่อความ Energetic */
         line-height: 1;
         flex-shrink: 0;
         margin-right: 14px;
-        filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
+        /* เพิ่ม Glow จางๆ ให้อีโมจิ */
+        filter: drop-shadow(0 0 8px rgba(255,255,255,0.8)) drop-shadow(0 2px 4px rgba(0,0,0,0.1));
       }
 
       /* ── "Copied" label ─────────────────────────────────── */
       .cn-label {
-        font-weight: 600;
+        font-weight: 700; /* หนาขึ้นเพื่อความหนักแน่นแบบ Modern SaaS */
         font-size: 0.95em;
         letter-spacing: 0.04em;
-        color: #ffffff; /* ขาวบริสุทธิ์เพื่อความอ่านง่าย */
+        text-transform: uppercase; /* ปรับเป็นพิมพ์ใหญ่จางๆ เพื่อความล้ำสมัย (Optional) */
+        color: #111827;
         flex-shrink: 0;
       }
 
-      /* ── Divider: Subtle White Line ─────────────────────── */
+      /* ── Divider ────────────────────────────────────────── */
       .cn-divider {
-        width: 1px;
+        width: 1.5px; /* หนาขึ้นเล็กน้อย */
         height: 16px;
-        background: rgba(255, 255, 255, 0.15);
+        /* ใช้สีเทาที่โปร่งแสงมากๆ ให้ดูเหมือนเงาของรอยแยกกระจก */
+        background: rgba(0, 0, 0, 0.08);
         flex-shrink: 0;
         margin: 0 18px;
       }
@@ -120,9 +128,8 @@
       /* ── Item name ──────────────────────────────────────── */
       .cn-name {
         font-size: 0.92em;
-        font-weight: 400;
-        /* ใช้สีเทาสว่าง (Light Silver) เพื่อแยกความสำคัญออกจากคำหลัก */
-        color: rgba(255, 255, 255, 0.65);
+        font-weight: 500;
+        color: #4b5563; /* ปรับโทนเข้มขึ้นเล็กน้อยให้อ่านง่ายบนกระจก */
         letter-spacing: 0.02em;
         max-width: 200px;
         overflow: hidden;
@@ -134,7 +141,6 @@
         .cn-capsule {
           bottom: 120px;
           max-width: 88vw;
-          background: rgba(28, 28, 30, 0.9); /* บนมือถือปรับให้ทึบขึ้นเล็กน้อยเพื่อความชัดเจน */
         }
         .cn-name { max-width: 130px; }
       }
@@ -147,8 +153,6 @@
     
     document.head.appendChild(s);
   }
-
-
   
   // ── Build the capsule DOM element ─────────────────────────
   function _buildCapsule(text, label, name) {
