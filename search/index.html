@@ -82,6 +82,9 @@
   <script type="module" src="/assets/js/con-data-service/con-data-service.js?v=1.0.0-20250322"></script>
   <script src="/assets/js/render-engine.js?v=1.0.0-20250322"></script>
   <script src="/assets/js/search-engine.js?v=1.0.0-20250322"></script>
+  <!-- URE must load before search-ui.js so window.URE is available when
+       rendering.js calls URE.mount() on the first search result. -->
+  <script src="/assets/js/ure/ure.js?v=1.0.0-20250322"></script>
   <script src="/assets/js/search-ui.js?v=1.0.0-20250322"></script>
   <script defer src="/assets/js/copyNotification.js?v=1.0.0-20250322"></script>
   <script defer src="/assets/js/modern-navigation.js?v=1.0.0-20250322"></script>

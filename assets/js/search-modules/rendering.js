@@ -1,20 +1,25 @@
 // @ts-check
 /**
  * @file rendering.js
- * RenderingService + FilterService (v5.1 — VS for main page, O(1) DOM)
+ * RenderingService + FilterService (v6.0 — URE-backed virtual scroll)
  *
- * Changes from v5.0:
- *   - Removed copy-hint / demo animation system entirely.
- *     Feedback is now handled exclusively by showCopyNotification
- *     (copyNotification.js) via NotificationService.copyText().
- *   - _attachCopyHandler now extracts item name from the card's
- *     data-name attribute and passes it to copyText() so the
- *     capsule can display "Copied | Heart Eyes".
- *   - Removed NotificationService.toast() call from _runDemo (gone).
- *   - Removed window._hintDemoBlocking guard (no longer needed).
+ * Changes from v5.1:
+ *   - VirtualScrollEngine replaced by URE (Universal Render Engine).
+ *     URE handles virtual scroll, DOM pool, diff, lazy assets — zero config.
+ *   - _searchHandle: single URE instance reused across searches.
+ *     First search → URE.mount(). Subsequent searches → handle.setData()
+ *     so URE's diff engine only re-renders what actually changed.
+ *   - disconnectRenderObserver() → destroys the URE instance + clears handle.
+ *   - No other behavioral changes: copy handler, data-name, FilterService
+ *     are identical to v5.1.
+ *
+ * URE dependency:
+ *   ure.js must be loaded before search-ui.js on search/index.html.
+ *   URE exposes window.URE after its own sequential module boot.
  *
  * @module rendering
- * @depends {config.js, state.js, utils.js, virtual-scroll.js}
+ * @depends {config.js, state.js, utils.js}
+ *          window.URE (ure.js — loaded before this module)
  */
 (function (M) {
   'use strict';
@@ -22,8 +27,18 @@
   const {
     CONFIG, State, Handlers,
     DOMService, StringService, LanguageService, NotificationService,
-    VirtualScrollEngine,
   } = M;
+
+  // ── URE instance (one per search session, reused across queries) ──────────
+  //
+  // WHY one instance:
+  //   URE.mount() sets up ResizeObserver, scroll listener, pool, etc.
+  //   Tearing that down and re-creating it on every keystroke is wasteful.
+  //   handle.setData(newResults) runs URE's diff engine instead —
+  //   only nodes whose content changed get a new innerHTML.
+  //
+  /** @type {object|null} */
+  let _searchHandle = null;
 
   // ── Hoisted i18n cache ──────────────────────────────────────────────────
   let _lbl = { emoji: '' };
@@ -51,12 +66,11 @@
     refreshCache() { _refreshLabels(); },
 
     /**
-     * Build card HTML string.
-     * The entire .sc card is the click target — no copy button.
+     * Build card HTML string — passed to URE as the template function.
      *
-     * data-name carries the human-readable item name so
-     * _attachCopyHandler can pass it to showCopyNotification
-     * without re-querying the data layer.
+     * data-name carries the human-readable item name (URI-encoded) so
+     * _attachCopyHandler can pass it to showCopyNotification without
+     * re-querying the data layer.
      *
      * @param {SearchResult} item
      * @param {string} lang
@@ -83,6 +97,7 @@
           || (lang !== 'en' ? data?.name?.en : '')
           || item.itemName
           || '';
+
         const text     = itemText || itemApi || '-';
         const vertical = text.length > 45
           || text.indexOf('\n') !== -1
@@ -93,10 +108,6 @@
         const subStr   = itemApi || typeName || '';
         const tags     = (typeName ? `<span class="tag">${esc(typeName)}</span>` : '')
                        + (catName  ? `<span class="tag">${esc(catName)}</span>`  : '');
-
-        // data-name carries the display name for the copy notification capsule.
-        // encodeURIComponent keeps it safe for the attribute even with
-        // emoji/Thai/special chars that would otherwise break the HTML.
         const encodedName = nameStr ? StringService.encodeUrl(nameStr) : '';
 
         return `<div class="sc${vertical ? ' sv' : ''}" role="button" tabindex="0" aria-label="${esc(nameStr || text)}" data-text="${StringService.encodeUrl(text)}" data-name="${encodedName}"><div class="scc" aria-hidden="true">${esc(disp)}</div><div class="scb"><div class="sct">${esc(titleStr)}</div><div class="scs">${esc(subStr)}</div>${tags ? `<div class="scg" aria-hidden="true">${tags}</div>` : ''}</div></div>`;
@@ -105,8 +116,15 @@
       }
     },
 
+    /**
+     * Destroy the active URE instance.
+     * Called before a full reset (empty query, destroy lifecycle).
+     */
     disconnectRenderObserver() {
-      VirtualScrollEngine.destroy();
+      if (_searchHandle) {
+        try { _searchHandle.destroy(); } catch (_) {}
+        _searchHandle = null;
+      }
       DOMService.remove(DOMService.get(CONFIG.DOM.sentinelId));
     },
 
@@ -128,7 +146,11 @@
     },
 
     /**
-     * Render results using VirtualScrollEngine.
+     * Render results via URE.
+     *
+     * First call: URE.mount() — creates VS instance, attaches copy handler.
+     * Subsequent calls: handle.setData() — diff-aware, only changed nodes repaint.
+     * Empty results: destroy URE instance, show plain empty state HTML.
      *
      * @param {SearchResult[]} results
      * @param {boolean}        [showSuggestionsIfNoResult=false]
@@ -143,10 +165,11 @@
           ? results.filter(r => ((r.category?.name?.[lang] || r.category?.name?.en) || '') === State.selectedCategory)
           : results;
 
-        this.disconnectRenderObserver();
         State.currentFilteredResults = filtered;
 
         if (!filtered.length) {
+          // Tear down URE — empty state needs plain HTML, not a VS container
+          this.disconnectRenderObserver();
           DOMService.setHTML(container, '');
           this._renderEmpty(container, lang, showSuggestionsIfNoResult);
           if (!window.__renderIsRestore) {
@@ -157,19 +180,27 @@
           return;
         }
 
-        DOMService.setHTML(container, '');
-        this._attachCopyHandler(container);
         _refreshLabels();
 
-        // Mount VS
-        const viewport = document.scrollingElement || document.documentElement;
-        VirtualScrollEngine.mount(
-          viewport,
-          container,
-          filtered,
-          (item, l) => this.renderResultItem(item, l),
-          lang
-        );
+        if (_searchHandle) {
+          // Reuse existing URE — diff engine handles what changed
+          _searchHandle.setLang(lang);
+          _searchHandle.setData(filtered);
+        } else {
+          // First render: mount URE fresh
+          DOMService.setHTML(container, '');
+          this._attachCopyHandler(container);
+
+          _searchHandle = window.URE.mount({
+            container,
+            data    : filtered,
+            template: (item, l) => this.renderResultItem(item, l),
+            lang,
+            buffer  : 700,
+            recycling: true,
+            keyField: 'api',
+          });
+        }
 
         if (!window.__renderIsRestore) {
           if (window.SearchModules?.State?.overlayOpen) window.__overlayDidSearch = true;
@@ -207,14 +238,11 @@
     },
 
     /**
-     * Delegated copy handler — whole .sc card is the target.
+     * Delegated copy handler on the results container.
      * Keyboard: Enter / Space on focused card also copies.
      *
-     * Name extraction:
-     *   data-name is URI-encoded on write (renderResultItem) so it
-     *   survives any character in the item name. We decode it here
-     *   and pass it to copyText(), which forwards it to
-     *   showCopyNotification for the "Copied | <name>" capsule.
+     * Attached once on first URE mount — the container element persists
+     * across setData() calls so this listener stays valid for the session.
      *
      * @private
      */
