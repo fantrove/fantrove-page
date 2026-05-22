@@ -102,8 +102,8 @@ section {
   background: var(--fv-surface-card);
   border-radius: var(--fv-radius-lg);
   border: 1.5px solid var(--fv-border-default);
-  box-shadow: inset 0 0 12px 2px var(--fv-border-default);
-  padding: 2rem 2.1rem;
+  box-shadow: inset 0 0 12px 4px var(--fv-border-default);
+  padding: 2.1rem 2.2rem;
   margin-bottom: var(--fv-space-20);
   display: flex;
   flex-direction: column;
@@ -431,7 +431,7 @@ section.o:has(.faq-toggle:checked) { padding-bottom:2.1rem!important; }
   transition: border-color var(--fv-transition-fast), background var(--fv-transition-fast);
   cursor: pointer;
   border: 1.4px solid #e6ecf7;
-  box-shadow: inset 0 0 3px 0 #e6ecf7;
+  box-shadow: inset 0 0 11px 2px #F7FAFF;
   position: relative; text-align:center; font-size:1.05em; gap:0.38rem;
   outline: none; flex-shrink: 0; box-sizing: border-box;
   word-break: break-word; overflow: visible;
@@ -464,7 +464,7 @@ section.o:has(.faq-toggle:checked) { padding-bottom:2.1rem!important; }
   .h2, h2 { font-size:1rem; }
   .h3, h3 { font-size:0.95rem; }
   .lead { font-size:0.9em; }
-  section { font-size:0.9rem; padding:1.05rem 1.15rem; border-radius:var(--fv-radius-xl); }
+  section { font-size:0.9rem; padding:1.15rem 1.25rem; border-radius:var(--fv-radius-xl); }
   .button, .btn { font-size:0.9em; padding:1.5em 1.3em; border-radius:var(--fv-radius-xl); }
   .notice { font-size:1.04em; padding:2.3rem 1.5rem; border-radius:var(--fv-radius-lg); }
   .text-h h1 { font-size:1em; }
