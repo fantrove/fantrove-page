@@ -3,8 +3,8 @@
 :root {
   --nav-radius:      var(--fv-radius-xl);
   --nav-item-radius: var(--fv-radius-sm);
-  --nav-item-w: 50px;
-  --nav-item-h: 40px;
+  --nav-item-w: 52px;
+  --nav-item-h: 42px;
 }
 
 .bottom-nav,
@@ -14,9 +14,10 @@
   position:fixed; inset:auto 0 0 0; z-index:var(--fv-z-nav);
   -webkit-tap-highlight-color:transparent;
   display:flex; justify-content:space-evenly; align-items:center;
-  padding:8px 0 calc(env(safe-area-inset-bottom,0px) + 10px);
+  padding:10px 0 calc(env(safe-area-inset-bottom,0px) + 0px);
   background: var(--fv-surface-page);
-  border-top:1px solid rgba(0,0,0,.04);
+  /*border-top:1px solid rgba(0,0,0,.04);*/
+  box-shadow: inset 0 0 4px 0px rgba(115, 130, 146, 0.14);
   border-radius:var(--nav-radius) var(--nav-radius) 0 0;
   contain:layout paint style;
   transform:translateZ(0);
@@ -24,7 +25,7 @@
 
 .nav-item {
   background:none; border:0; padding:0;
-  display:flex; flex-direction:column; align-items:center; gap:4px;
+  display:flex; flex-direction:column; align-items:center; gap:2px;
   border-radius:var(--nav-item-radius);
   cursor:pointer; user-select:none; text-decoration:none;
   transition:color var(--fv-transition-fast);
@@ -38,17 +39,22 @@
   position:absolute; inset:50% auto auto 50%;
   transform:translate(-50%,-50%); height:22px;
   stroke: var(--fv-text-secondary);
-  stroke-width:1.6; pointer-events:none;
+  stroke-width:1.7; pointer-events:none;
   transition:stroke var(--fv-transition-fast);
 }
 .svg-wrapper::before {
   content:""; position:absolute; inset:0;
   background:rgba(24,228,161,.08);
   border:1px solid rgba(24,228,161,.3);
+  
+  /* ปรับเป็น inset เพื่อให้เงาวิ่งเข้าข้างใน */
+  /* โครงสร้าง: inset X Y Blur Spread Color */
+  box-shadow: inset 0 0 5px 0 rgba(24,228,161, 0.3);
+  
   border-radius:inherit; opacity:0; pointer-events:none;
 }
 .nav-item .label {
-  font-size:11.5px; font-weight:var(--fv-font-semibold); letter-spacing:.01em;
+  font-size:12.5px; letter-spacing:.01em;
   white-space:nowrap; color:var(--fv-text-secondary);
   transition:color var(--fv-transition-fast);
 }

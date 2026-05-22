@@ -617,8 +617,12 @@ function buildTypeSection(typeObj, lang) {
 
   const viewAllBtn = document.createElement('a');
   viewAllBtn.href      = getViewAllUrl(typeObj.id);
-  viewAllBtn.className = 'button button-secondary';
+  viewAllBtn.className = 'button-h';
   viewAllBtn.setAttribute('aria-label', getViewAllLabel(typeObj.id));
+  
+  /* 🔥 เพิ่ม attribute wave เข้าไปตรงนี้ */
+  viewAllBtn.setAttribute('wave', 'c=#D7C7FF'); 
+  
   viewAllBtn.innerHTML = `<span class="btn-content">${getViewAllLabel(typeObj.id)}</span>`;
   header.appendChild(viewAllBtn);
   wrapper.appendChild(header);

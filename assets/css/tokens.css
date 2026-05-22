@@ -64,11 +64,11 @@
   --fv-space-20: 5rem;
   
   /* Border Radius */
-  --fv-radius-xs: 8px;
-  --fv-radius-sm: 12px;
-  --fv-radius-md: 20px;
-  --fv-radius-lg: 30px;
-  --fv-radius-xl: 40px;
+  --fv-radius-xs: 12px;
+  --fv-radius-sm: 15px;
+  --fv-radius-md: 25px;
+  --fv-radius-lg: 35px;
+  --fv-radius-xl: 45px;
   --fv-radius-pill: 999px;
   
   /* Typography */
