@@ -1,12 +1,17 @@
 // @ts-check
 /**
  * @file content.js
- * ContentService — URE-powered content rendering.
+ * ContentService — URE-powered rendering.
+ * Adds horizontal card group support (card-group-h) alongside existing
+ * btn-row split and card-group types.
  *
- * Key optimization: btn-groups are split into fixed-size "row items" so each
- * URE virtual-list entry is small and uniform-height. Card-groups remain as
- * single items. This eliminates per-scroll heavy DOM work and lets the
- * virtual list mark rows as stable after one ResizeObserver measurement.
+ * Layout types emitted to URE:
+ *   btn-row      — 10 buttons per item; --first/mid/last/only position
+ *   card-group   — vertical card grid (normal wrapping)
+ *   card-group-h — horizontal scroll strip (overflow-x; no virtual scroll on X)
+ *
+ * Data spec for horizontal cards:
+ *   { "group": { "categoryId": "...", "type": "card", "layout": "horizontal" } }
  *
  * @module content
  * @depends {config.js, state.js, data.js, loading.js}
@@ -19,11 +24,9 @@
   const _esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const _txt = (v, l) => !v ? '' : typeof v === 'object' ? (v[l] || v.en || '') : String(v);
 
-  // ── Buttons per URE row item ──────────────────────────────────────────────
-  // Each row ≈ 2 visual lines of emoji/symbols → ~130px → highly stable height.
   const BTN_ROW_SIZE = 10;
 
-  // ── One-time CSS injection ────────────────────────────────────────────────
+  // ── CSS (injected once) ───────────────────────────────────────────────────
 
   const _CSS_ID = '_nc_content_css';
   function _ensureCss() {
@@ -31,55 +34,50 @@
     const s = document.createElement('style');
     s.id = _CSS_ID;
     s.textContent = `
-/* Fade-in on first render */
 .cm-group{contain:layout style;isolation:isolate;}
 .cm-in{animation:_nc_fadein 0.12s ease-out both;}
 @keyframes _nc_fadein{from{opacity:0}to{opacity:1}}
 @media(prefers-reduced-motion:reduce){.cm-in{animation:none;}}
 
-/* Row items — replicate button-content-container visually across splits.
-   Uses !important to match specificity of nav-core-ext.css rules. */
+/* btn-row: replicates button-content-container across split URE items */
 .ure-btn-row{
   display:flex!important;flex-wrap:wrap!important;
   background:var(--fv-surface-page);
   justify-content:center!important;align-items:center!important;
+  gap:5px!important;
   contain:layout style;
 }
-.ure-btn-row--only{
-  border-radius:25px!important;
-  padding:1rem 5px!important;
-  margin:0 0 40px!important;
+.ure-btn-row--only {border-radius:25px!important;padding:1rem 5px!important;margin:0 0 40px!important;}
+.ure-btn-row--first{border-radius:25px 25px 0 0!important;padding:1rem 5px 0!important;}
+.ure-btn-row--mid  {border-radius:0!important;padding:2px 5px!important;}
+.ure-btn-row--last {border-radius:0 0 25px 25px!important;padding:0 5px 1rem!important;margin:0 0 40px!important;}
+
+/* horizontal card strip */
+.card-content-container--h{
+  flex-wrap:nowrap!important;
+  overflow-x:auto;
+  justify-content:flex-start!important;
+  padding:1rem 10px!important;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+  overscroll-behavior-x:contain;
+  touch-action:pan-x;
 }
-.ure-btn-row--first{
-  border-radius:25px 25px 0 0!important;
-  padding:1rem 5px 0!important;
-}
-.ure-btn-row--mid{
-  border-radius:0!important;
-  padding:2px 5px!important;
-}
-.ure-btn-row--last{
-  border-radius:0 0 25px 25px!important;
-  padding:0 5px 1rem!important;
-  margin:0 0 40px!important;
-}`;
+.card-content-container--h::-webkit-scrollbar{display:none;}
+.card-content-container--h .card{flex-shrink:0;width:160px;}`;
     document.head.appendChild(s);
   }
 
   // ── URE hard-dependency guard ─────────────────────────────────────────────
-  // No dynamic injection — URE must be declared in HTML.
-  // If absent, renderContent() rejects with an actionable error.
 
   function _ensureURE() {
     if (window.URE) return Promise.resolve();
     return new Promise((resolve, reject) => {
       const t = setTimeout(
         () => reject(new Error(
-          '[NavCore/Content] URE required but not loaded. ' +
+          '[NavCore/Content] URE required. ' +
           'Add <script defer src="/assets/js/ure/ure.js"> before nav-core.js.'
-        )),
-        4000
-      );
+        )), 4000);
       window.addEventListener('ure:ready', () => { clearTimeout(t); resolve(); }, { once: true });
     });
   }
@@ -95,24 +93,16 @@
 
     LOADING_CONTAINER_ID: CONFIG.DOM.CONTENT_LOADING_ID,
 
-    // ── Clear ───────────────────────────────────────────────────────────────
-
     async clearContent() {
       _sess++;
-      if (_ureHandle) {
-        try { _ureHandle.destroy(); } catch (_) {}
-        _ureHandle = null;
-      }
+      if (_ureHandle) { try { _ureHandle.destroy(); } catch (_) {} _ureHandle = null; }
       const ctr = document.getElementById(CONFIG.DOM.CONTENT_LOADING_ID);
       if (ctr) ctr.innerHTML = '';
     },
 
-    // ── Render ──────────────────────────────────────────────────────────────
-
     async renderContent(data) {
       if (!Array.isArray(data)) throw new Error('[Content] data must be array');
       _ensureCss();
-
       const ctr = document.getElementById(CONFIG.DOM.CONTENT_LOADING_ID);
       if (!ctr) return;
 
@@ -136,13 +126,11 @@
           container          : ctr,
           data               : items,
           keyField           : '_ureKey',
-          // btn-rows are ~130px; card-groups ~280px; headers ~60px.
-          // URE's ResizeObserver corrects quickly; 130px minimises initial shift.
           estimatedItemHeight: 130,
           buffer             : 700,
           recycling          : true,
           template           : (item, l) => this._tpl(item, l),
-          onItemClick        : (e, item)  => this._onClick(e, item),
+          onItemClick        : (e)        => this._onClick(e),
         });
 
       } catch (e) {
@@ -151,20 +139,15 @@
       }
     },
 
-    // ── Resolution pipeline ─────────────────────────────────────────────────
+    // ── Resolution ────────────────────────────────────────────────────────────
 
-    /**
-     * Resolve raw ContentItem[] → flat URE item array.
-     * btn-groups are split into row items; card-groups remain single items.
-     */
     async _resolveAll(data, lang) {
       const out = [];
-      const k = { v: 0 };  // shared mutable counter (passed by ref via object)
+      const k   = { v: 0 };
 
       for (const item of data) {
         if (!item) continue;
 
-        // jsonFile reference → recurse
         if (item.jsonFile && !item._fetched) {
           try {
             const res = await M.DataService.fetchWithRetry(item.jsonFile, {}, 3);
@@ -175,17 +158,15 @@
           continue;
         }
 
-        // Group / categoryId
         if (item.group || item.categoryId) {
-          const cfg = item.group || { categoryId: item.categoryId, type: item.type || 'button' };
+          const cfg     = item.group || { categoryId: item.categoryId, type: item.type || 'button' };
           const resolved = await this._resolveGroup(cfg, lang);
           if (resolved) this._emit(resolved, k, out);
           continue;
         }
 
-        // Single item
         const isCard = this._isCard(item);
-        const ri = await this._resolveItem(item, lang, isCard);
+        const ri     = await this._resolveItem(item, lang, isCard);
         if (ri) {
           out.push({
             _ureKey : `k${k.v++}`,
@@ -200,19 +181,25 @@
     },
 
     async _resolveGroup(cfg, lang) {
-      const isCard = cfg.type === 'card';
+      const isCard  = cfg.type === 'card';
+      const isHoriz = isCard && cfg.layout === 'horizontal';
+
+      const _fetchItems = async (data) =>
+        (await Promise.all(data.map(d => this._resolveItem(d, lang, isCard)))).filter(Boolean);
 
       if (cfg.categoryId) {
         try {
           const { data, header } = await M.DataService.fetchCategoryGroup(cfg.categoryId);
-          const items = (await Promise.all(data.map(d => this._resolveItem(d, lang, isCard)))).filter(Boolean);
-          return { _ureType: isCard ? 'card-group' : 'btn-group', header: header || null, items };
+          const items = await _fetchItems(data);
+          const type  = isHoriz ? 'card-group-h' : isCard ? 'card-group' : 'btn-group';
+          return { _ureType: type, header: header || null, items };
         } catch (e) { console.error('[Content] categoryId:', e); return null; }
       }
 
       if (Array.isArray(cfg.items)) {
-        const items = (await Promise.all(cfg.items.map(d => this._resolveItem(d, lang, isCard)))).filter(Boolean);
-        return { _ureType: isCard ? 'card-group' : 'btn-group', header: cfg.header || null, items };
+        const items = await _fetchItems(cfg.items);
+        const type  = isHoriz ? 'card-group-h' : isCard ? 'card-group' : 'btn-group';
+        return { _ureType: type, header: cfg.header || null, items };
       }
       return null;
     },
@@ -220,16 +207,13 @@
     async _resolveItem(item, lang, forceCard = false) {
       if (forceCard || this._isCard(item)) {
         return {
-          _type      : 'card',
-          image      : item.image   || null,
-          imageAlt   : item.imageAlt,
-          title      : item.title   || item.name,
-          description: item.description,
-          link       : item.link    || null,
-          className  : item.className || null,
+          _type: 'card', image: item.image || null, imageAlt: item.imageAlt,
+          title: item.title || item.name, description: item.description,
+          link: item.link || null, className: item.className || null,
         };
       }
-      let text = '', api = item.api || null;
+      const api  = item.api || null;
+      let text = '';
       try {
         text = api
           ? (M.DataService._sharedIndex?.apiMap?.get(api)?.text || api)
@@ -242,40 +226,40 @@
     _isCard: item =>
       item.type === 'card' || item.group?.type === 'card' || (!!item.image && !item.api),
 
-    // ── Emit: splits btn-group into row items, keeps card-group whole ────────
+    // ── Emit ─────────────────────────────────────────────────────────────────
+    // card-group and card-group-h: single URE item.
+    // btn-group: split into row items (same visual appearance, smaller DOM per item).
 
     _emit(group, k, out) {
-      if (group._ureType === 'card-group') {
+      if (group._ureType === 'card-group' || group._ureType === 'card-group-h') {
         out.push({ ...group, _ureKey: `k${k.v++}` });
         return;
       }
-
-      // btn-group → row items
+      // btn-group → rows
       const rows = [];
       for (let i = 0; i < group.items.length; i += BTN_ROW_SIZE)
         rows.push(group.items.slice(i, i + BTN_ROW_SIZE));
 
       rows.forEach((row, ri) => {
-        const only  = rows.length === 1;
-        const first = ri === 0;
-        const last  = ri === rows.length - 1;
+        const only = rows.length === 1, last = ri === rows.length - 1;
         out.push({
           _ureKey : `k${k.v++}`,
           _ureType: 'btn-row',
-          // Header lives in first row so it's inside the rounded container
-          header  : first ? (group.header || null) : null,
+          header  : ri === 0 ? (group.header || null) : null,
           items   : row,
-          _rowPos : only ? 'only' : first ? 'first' : last ? 'last' : 'mid',
+          _rowPos : only ? 'only' : ri === 0 ? 'first' : last ? 'last' : 'mid',
         });
       });
     },
 
-    // ── Templates (sync — called by URE on every render/recycle) ─────────────
+    // ── Templates ─────────────────────────────────────────────────────────────
 
     _tpl(item, lang) {
-      return item._ureType === 'card-group'
-        ? this._tplCardGroup(item, lang)
-        : this._tplBtnRow(item, lang);
+      switch (item._ureType) {
+        case 'card-group':   return this._tplCardGroup(item, lang);
+        case 'card-group-h': return this._tplCardGroupH(item, lang);
+        default:             return this._tplBtnRow(item, lang);   // 'btn-row'
+      }
     },
 
     _tplBtnRow(item, lang) {
@@ -288,6 +272,16 @@
 
     _tplCardGroup(item, lang) {
       let html = `<div class="cm-group cm-in"><div class="card-content-container">`;
+      if (item.header) html += this._tplHeader(item.header, lang);
+      for (const c of item.items) html += this._tplCard(c, lang);
+      return html + '</div></div>';
+    },
+
+    // Horizontal card strip — CSS overflow-x scroll, no X-axis virtual scroll.
+    // Appropriate for carousels with up to ~30 items.
+    // For large horizontal datasets use URE.mount({ horizontal: true }) directly.
+    _tplCardGroupH(item, lang) {
+      let html = `<div class="cm-group cm-in"><div class="card-content-container card-content-container--h">`;
       if (item.header) html += this._tplHeader(item.header, lang);
       for (const c of item.items) html += this._tplCard(c, lang);
       return html + '</div></div>';
@@ -313,7 +307,7 @@
         ? `<img class="card-image" src="${_esc(item.image)}" loading="lazy" decoding="async" fetchpriority="low" alt="${_esc(_txt(item.imageAlt, lang))}">`
         : '';
       return (
-        `<div class="card${cls}"${link}>` + img +
+        `<div class="card${cls}"${link}>${img}` +
         `<div class="card-content">` +
           `<div class="card-title">${_esc(_txt(item.title, lang))}</div>` +
           `<div class="card-description">${_esc(_txt(item.description, lang))}</div>` +
@@ -321,7 +315,7 @@
       );
     },
 
-    // ── Click delegation ─────────────────────────────────────────────────────
+    // ── Click delegation ──────────────────────────────────────────────────────
 
     _onClick(e) {
       const btn = e.target.closest('.button-content');
@@ -336,13 +330,10 @@
       if (card) window.open(card.dataset.link, '_blank', 'noopener,noreferrer');
     },
 
-    // ── Language update ───────────────────────────────────────────────────────
-
     updateCardsLanguage(lang) {
       if (_ureHandle) try { _ureHandle.setLang(lang); } catch (_) {}
     },
 
-    // ── Compat stubs ──────────────────────────────────────────────────────────
     createContainer()        { return document.createElement('div'); },
     async createButton()     { return document.createElement('button'); },
     async createCard()       { return document.createElement('div'); },
