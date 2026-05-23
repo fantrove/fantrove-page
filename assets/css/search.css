@@ -19,10 +19,24 @@ body {
 #cat-spacer { height:0; overflow:hidden; }
 #searchResults { padding:0; margin:0; }
 
+/* ── Placeholder: fills remaining viewport below sticky header ── */
 .search-result-here {
-  text-align:center; color:var(--fv-text-muted);
-  font-size:1.08rem; margin-top:60px; padding:40px 28px;
-  font-weight:550; letter-spacing:0.2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--fv-text-muted);
+  font-size: 1.08rem;
+  padding: 40px 28px;
+  font-weight: 550;
+  letter-spacing: 0.2px;
+  margin-top: 0;
+  box-sizing: border-box;
+  /* --placeholder-h is set by JS (_syncPlaceholderHeight) to
+     window.innerHeight minus the actual sticky header height.
+     Falls back to 60vh when JS hasn't run yet. */
+  min-height: var(--placeholder-h, 60vh);
 }
 
 .vs-container { position:relative; min-height:2px; contain:layout style paint; }
@@ -43,8 +57,8 @@ body {
 .footer-content { max-width:1300px; margin:0 auto; }
 
 @media (max-width:1024px) { .search-main-layout{padding:0 12px;margin:20px auto;} }
-@media (max-width:768px)  { .search-main-layout{padding:10px 10px 0;margin:10px auto 0;} .search-footer{margin-top:44px;padding:16px 11px;border-top-left-radius:40px;border-top-right-radius:40px;} #copyToast{top:14px;right:14px;} .search-result-here{margin-top:44px;padding:28px 20px;} }
-@media (max-width:480px)  { .search-main-layout{padding:9px 9px 0;margin:8px auto 0;} .search-footer{margin-top:36px;padding:12px 9px;border-top-left-radius:32px;border-top-right-radius:32px;} #copyToast{top:11px;right:11px;gap:7px;} .search-result-here{margin-top:36px;padding:20px 16px;font-size:.99rem;} }
+@media (max-width:768px)  { .search-main-layout{padding:10px 10px 0;margin:10px auto 0;} .search-footer{margin-top:44px;padding:16px 11px;border-top-left-radius:40px;border-top-right-radius:40px;} #copyToast{top:14px;right:14px;} }
+@media (max-width:480px)  { .search-main-layout{padding:9px 9px 0;margin:8px auto 0;} .search-footer{margin-top:36px;padding:12px 9px;border-top-left-radius:32px;border-top-right-radius:32px;} #copyToast{top:11px;right:11px;gap:7px;} }
 
 @media (prefers-reduced-motion:reduce) { *{animation:none!important;transition:none!important;transform:none!important;} }
 @media print { #search-sticky,.search-filters-panel,#copyToast,.search-footer{display:none;} .search-main-layout{margin:0;padding:0;} }

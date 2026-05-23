@@ -39,6 +39,34 @@
     VirtualScrollEngine,
   } = M;
 
+  // ── Placeholder height sync ───────────────────────────────────────────────
+  // Measures the actual remaining viewport height below #search-sticky and
+  // writes it as --placeholder-h on <html> so .search-result-here can use it.
+  // Called on first render and on window resize so it stays accurate.
+
+  let _resizeHandlerAttached = false;
+
+  function _syncPlaceholderHeight() {
+    try {
+      const sticky = document.getElementById('search-sticky');
+      const stickyH = sticky ? sticky.getBoundingClientRect().height : 0;
+      const remaining = window.innerHeight - stickyH;
+      document.documentElement.style.setProperty('--placeholder-h', remaining + 'px');
+    } catch {}
+  }
+
+  function _ensureResizeListener() {
+    if (_resizeHandlerAttached) return;
+    _resizeHandlerAttached = true;
+    window.addEventListener('resize', _syncPlaceholderHeight, { passive: true });
+    // Also update when visualViewport changes (mobile keyboard open/close)
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', _syncPlaceholderHeight, { passive: true });
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+
   const SearchService = {
 
     // ── Main search ──────────────────────────────────────────────────────
@@ -215,12 +243,19 @@
     /**
      * Show the "results will appear here" placeholder.
      * Called when the query is cleared.
+     *
+     * Height is controlled by --placeholder-h (CSS variable) which is set
+     * by _syncPlaceholderHeight() to window.innerHeight minus the actual
+     * sticky header height — so the text is truly centred in the visible area.
+     *
      * @private
      */
     _showPlaceholder() {
       const rc = DOMService.get(CONFIG.DOM.searchResultsId);
       if (rc) {
-        rc.innerHTML = `<div class="search-result-here" style="text-align:center;color:#969ca8;font-size:1.05em;margin-top:30px;">${LanguageService.t('search_result_here')}</div>`;
+        rc.innerHTML = `<div class="search-result-here">${LanguageService.t('search_result_here')}</div>`;
+        _syncPlaceholderHeight();
+        _ensureResizeListener();
       }
       VirtualScrollEngine.destroy();
       FilterService.setupCategoryFilter([], 'all');
@@ -232,6 +267,32 @@
       }
     },
   };
+
+  // ── Placeholder height helpers ────────────────────────────────────────────
+
+  /**
+   * Set --placeholder-h to the real remaining viewport height
+   * below the sticky header, so .search-result-here is truly centred.
+   */
+  function _syncPlaceholderHeight() {
+    try {
+      const sticky = document.getElementById('search-sticky');
+      const stickyH = sticky ? sticky.getBoundingClientRect().height : 0;
+      const remaining = window.innerHeight - stickyH;
+      document.documentElement.style.setProperty('--placeholder-h', remaining + 'px');
+    } catch {}
+  }
+
+  /** Attach resize listener once — updates --placeholder-h on viewport change. */
+  let _resizeListenerAttached = false;
+  function _ensureResizeListener() {
+    if (_resizeListenerAttached) return;
+    _resizeListenerAttached = true;
+    window.addEventListener('resize', _syncPlaceholderHeight, { passive: true });
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', _syncPlaceholderHeight, { passive: true });
+    }
+  }
 
   // ── Export ──────────────────────────────────────────────────────────────
   M.SearchService = SearchService;
