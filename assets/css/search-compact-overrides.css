@@ -677,7 +677,7 @@
     padding-block: 1.0em;
     padding-inline: 0.9em;
     border-radius: var(--rp);
-    font-size: .90rem; line-height: 1;
+    font-size: .9rem; line-height: 1;
     font-family: inherit;
     background: transparent;
     border: none;
@@ -694,12 +694,11 @@
 
     /* Active: teal-light color + bg tint + bolder weight */
     &.active {
-      box-shadow: 0 0 0 1.5px var(--fv-brand-teal-light, #00CEB0);
+      box-shadow: 0 0 0 1px rgba(0,206,176,0.51);
       /* Subtle teal-light bg tint */
-      background: rgba(0,206,176,.07);
+      background: var(--fv-surface-teal-hover);
       opacity: 1;
-      color: var(--fv-brand-teal-light, #00CEB0);
-      font-weight: 600;
+      color: var(--fv-brand-teal-light);
     }
   }
 
@@ -832,8 +831,8 @@
     #searchInput { font-size: .98rem; }
 
     .filter-pills-row  { padding-block: 6px; padding-inline: 10px; gap: 3px; }
-    .filter-pill       { font-size: .87rem;  padding-block: 1.0em;  padding-inline: 0.84em; }
-    .filter-pill--cat  { font-size: .80rem;  padding-block: 0.64em; padding-inline: 0.80em; }
+    .filter-pill       { font-size: .9rem;  padding-block: 1em;  padding-inline: 0.85em; }
+    .filter-pill--cat  { font-size: .8rem;  padding-block: 0.64em; padding-inline: 0.80em; }
     .filter-cat-toggle { width: 30px; height: 30px; }
 
     .sc  { padding: 12px 13px; gap: 10px; }

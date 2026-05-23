@@ -7,7 +7,6 @@ body {
   background: var(--fv-surface-subtle);
   font-family: var(--fv-font-stack);
   color: var(--fv-text-primary);
-  font-size:16px; line-height:1.6;
   -webkit-font-smoothing:antialiased;
   overflow-x:hidden; -webkit-tap-highlight-color:transparent;
 }
@@ -45,7 +44,7 @@ body {
 
 @media (max-width:1024px) { .search-main-layout{padding:0 12px;margin:20px auto;} }
 @media (max-width:768px)  { .search-main-layout{padding:10px 10px 0;margin:10px auto 0;} .search-footer{margin-top:44px;padding:16px 11px;border-top-left-radius:40px;border-top-right-radius:40px;} #copyToast{top:14px;right:14px;} .search-result-here{margin-top:44px;padding:28px 20px;} }
-@media (max-width:480px)  { body{font-size:15px;} .search-main-layout{padding:9px 9px 0;margin:8px auto 0;} .search-footer{margin-top:36px;padding:12px 9px;border-top-left-radius:32px;border-top-right-radius:32px;} #copyToast{top:11px;right:11px;gap:7px;} .search-result-here{margin-top:36px;padding:20px 16px;font-size:.99rem;} }
+@media (max-width:480px)  { .search-main-layout{padding:9px 9px 0;margin:8px auto 0;} .search-footer{margin-top:36px;padding:12px 9px;border-top-left-radius:32px;border-top-right-radius:32px;} #copyToast{top:11px;right:11px;gap:7px;} .search-result-here{margin-top:36px;padding:20px 16px;font-size:.99rem;} }
 
 @media (prefers-reduced-motion:reduce) { *{animation:none!important;transition:none!important;transform:none!important;} }
 @media print { #search-sticky,.search-filters-panel,#copyToast,.search-footer{display:none;} .search-main-layout{margin:0;padding:0;} }
