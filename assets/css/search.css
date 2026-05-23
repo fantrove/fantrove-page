@@ -4,7 +4,6 @@
 html, body { margin:0; padding:0; }
 
 body {
-  background: var(--fv-surface-subtle);
   font-family: var(--fv-font-stack);
   color: var(--fv-text-primary);
   -webkit-font-smoothing:antialiased;
@@ -29,9 +28,9 @@ body {
   color: var(--fv-text-muted);
   font-size: 1.08rem;
   padding: 40px 28px;
-  font-weight: 550;
   letter-spacing: 0.2px;
   margin-top: 0;
+  margin-bottom: 150px;
   box-sizing: border-box;
   /* --placeholder-h is set by JS (_syncPlaceholderHeight) to
      window.innerHeight minus the actual sticky header height.
