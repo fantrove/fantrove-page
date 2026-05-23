@@ -65,10 +65,10 @@
   
   /* Border Radius */
   --fv-radius-xs: 12px;
-  --fv-radius-sm: 15px;
-  --fv-radius-md: 25px;
-  --fv-radius-lg: 35px;
-  --fv-radius-xl: 45px;
+  --fv-radius-sm: 17px;
+  --fv-radius-md: 27px;
+  --fv-radius-lg: 37px;
+  --fv-radius-xl: 47px;
   --fv-radius-pill: 999px;
   
   /* Typography */
