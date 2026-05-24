@@ -4,11 +4,7 @@
   font-display: swap;
 }
 
-body { 
-  margin:0; padding:0; 
-  /* ป้องกันการหน่วงสะดุดจังหวะที่นิ้วเริ่มแตะหน้าจอเพื่อสกรอลล์ (Scroll Start Latency) */
-  content-visibility: auto; 
-}
+body { margin:0; padding:0; }
 
 header {
   position:relative; display:flex; flex-direction:column; align-items:flex-start;
@@ -30,12 +26,13 @@ nav { width:100%; margin-top:7px; contain: layout style; }
 nav ul {
   display:flex; list-style:none; margin:0;
   padding:7px 7px 0;
-  overflow-x:auto; white-space:nowrap;
+  overflow-x:auto !important; /* บังคับให้แถบเมนูแนวนอนสกรอลล์ได้เสมอ ไม่ถูกบล็อก */
+  white-space:nowrap;
   scrollbar-width:none;
   border-bottom:0.8px solid rgba(19,180,127,0.3);
   overscroll-behavior-x:contain; touch-action:pan-x;
   -webkit-overflow-scrolling:touch; 
-  contain: layout style;
+  contain: layout style; 
 }
 nav ul::-webkit-scrollbar { display:none; }
 nav ul li { flex:none; }
@@ -46,11 +43,8 @@ nav ul li button {
   font-size:0.9em; background:transparent; border:1px solid transparent;
   color:var(--fv-text-secondary); cursor:pointer; white-space:nowrap;
   user-select:none; -webkit-tap-highlight-color:transparent; 
-  
-  /* บังคับให้บราวเซอร์รู้ว่าปุ่มนี้ใช้สำหรับกดเท่านั้น ไม่ต้องไปคำนวณการสกรอลล์ซ้อนขยาย */
   touch-action: manipulation; 
 }
-/* เปลี่ยนจาก rgba() เป็นรหัสสีทึบหรือถอด transition เพื่อไม่ให้เกิดการ Alpha Blending บนชิปจอ */
 nav ul li button:active { background: #f0f0f0; }
 nav ul li button.active {
   color:var(--fv-brand-teal-light);

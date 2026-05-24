@@ -7,7 +7,6 @@ main { margin-top:30px; margin-bottom:80px; contain: layout style; }
   font-size:0.9em; cursor:pointer;
   -webkit-tap-highlight-color:transparent; user-select:none;
   touch-action:manipulation;
-  /* ถอด transition: color ออก เพื่อกำจัดสภาวะ Interpolation (การคำนวณเฉดสีระหว่างเฟรม) */
 }
 .button-sub:active, .button-sub.active { color:var(--fv-brand-teal-light); }
 .button-sub.active {
@@ -34,28 +33,27 @@ main { margin-top:30px; margin-bottom:80px; contain: layout style; }
   border:1px solid var(--c-teal-border);
   cursor:pointer; text-align:center;
   -webkit-tap-highlight-color:transparent; touch-action:manipulation;
-  /* เอา transition แอนิเมชันออกทั้งหมด เพื่อให้สลับสถานะทันทีแบบ 0 เฟรมเรต */
 }
 :where(.button-content:active) { opacity:0.85; }
 
 :where(.card) {
   display:flex; flex-direction:column; align-items:stretch;
-  width:160px; height:222px; /* ล็อกความสูงตายตัวแทน max-height เพื่อเปิดใช้ฟีเจอร์ Strict Layout */
+  width:160px; height:222px; 
   border-radius:var(--r-card);          /* 30px — เหมือนเดิม */
   overflow:hidden;
   background:var(--fv-surface-page); border:1px solid var(--c-teal-border);
   touch-action:manipulation;
   
-  /* แจ้งบราวเซอร์ว่าขนาดกล่องคงที่แน่นอน 100% บราวเซอร์จะข้ามขั้นตอนการจัดขนาดของลูกๆ ด้านในตอนสกรอลล์เร็ว */
-  contain: strict; 
+  /* [แก้ไขจุดนี้] คลายล็อกชิ้นส่วนการ์ดเล็กน้อย เปลี่ยนจาก strict เป็น layout style */
+  /* ช่วยให้ JavaScript สามารถอ่านพิกเซล ข้อมูลความสูง และสั่งงานการคลิก/ซ่อนการ์ดได้ตามปกติ */
+  contain: layout style; 
 }
 :where(.card:active) { opacity:0.85; }
 
-/* ออปติไมซ์อิมเมจด้วย GPU Decoding Hint */
 .card-image  { 
-  width:100%; height:110px; /* ระบุความสูงรูปให้แน่นอน */
+  width:100%; height:110px; 
   object-fit:cover; display:block; 
-  image-rendering: -webkit-optimize-contrast; /* สั่งให้มือถือประมวลผลพิกเซลรูปภาพแบบด่วนลดการเบลอ */
+  image-rendering: -webkit-optimize-contrast; 
 }
 .card-content { padding:12px; display:flex; flex-direction:column; overflow:hidden; }
 
@@ -71,7 +69,7 @@ main { margin-top:30px; margin-bottom:80px; contain: layout style; }
 }
 
 #main-buttons-container, #sub-buttons-container {
-  display:flex; overflow-x:auto; white-space:nowrap;
+  display:flex !important; overflow-x:auto !important; white-space:nowrap;
   scrollbar-width:none; -ms-overflow-style:none;
   overscroll-behavior-x:contain; touch-action:pan-x; -webkit-overflow-scrolling:touch;
   contain: layout style;
@@ -85,8 +83,7 @@ main { margin-top:30px; margin-bottom:80px; contain: layout style; }
 .group-header-text  { font-size:1.2rem; font-weight:var(--fv-font-semibold); color:#464646; }
 .group-header-description { margin:0.5rem 0 0; font-size:1rem; color:var(--c-heading); } /* #494E59 — เหมือนเดิม */
 
-/* เปลี่ยนมาใช้ CSS Grid แบบคงที่เพื่อกระจายตำแหน่งการ์ดและปุ่มแทน Flex-wrap */
-/* วิธีนี้ CPU จะแทบไม่ต้องคำนวณตำแหน่งใหม่เลยตอนเลื่อน เพราะล็อกพิกัดลงตารางไว้ล่วงหน้าแล้ว */
+/* ปรับ Grid ให้รองรับมิติที่สอดคล้องกับพฤติกรรมเดิมของ JavaScript */
 .button-content-container {
   display: grid !important;
   grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)) !important;
@@ -95,13 +92,12 @@ main { margin-top:30px; margin-bottom:80px; contain: layout style; }
   border-radius:25px;                   /* 25px — เหมือนเดิม */
   gap:5px!important;
   
-  content-visibility: auto;
-  contain-intrinsic-size: auto 120px;
+  /* ปรับเป็นละเว้นการกักบริเวณแบบหักดิบ ปล่อยให้สคริปต์กรองปุ่มเข้าออกทำงานได้ */
+  contain: layout style;
 }
 
 .card-content-container {
   display: grid !important;
-  /* จัดเรียงแบบตารางอัตโนมัติ ขนาดเท่ากันหมด ลื่นไหลและเบาแรง CPU ที่สุดในโลก */
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important; 
   justify-items: center !important;
   margin:0 0 40px!important; padding:1rem 5px!important;
@@ -109,11 +105,10 @@ main { margin-top:30px; margin-bottom:80px; contain: layout style; }
   border-radius:25px;                   /* 25px — เหมือนเดิม */
   gap:12px!important;
   
-  content-visibility: auto;
-  contain-intrinsic-size: auto 600px;
+  /* [จุดสำคัญ] ปล่อยให้เป็น layout style เพื่อให้สคริปต์ Filter หรือสลับแท็บเมนู สามารถค้นหาอินเด็กซ์ของการ์ดได้ */
+  contain: layout style;
 }
 
-/* ลบแอนิเมชัน .hdr-fade (Fade-in) ออกไป เพื่อลดสถานะ Alpha Compositing บนหน้าจอ */
 .hdr-fade { animation: none !important; }
 
 @media (max-width:600px) {
