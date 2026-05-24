@@ -1,4 +1,4 @@
-main { margin-top:30px; margin-bottom:80px; contain:layout style; }
+main { margin-top:30px; margin-bottom:80px; contain: layout style; }
 
 .button-sub {
   margin:0; padding:11px 13px;
@@ -6,52 +6,57 @@ main { margin-top:30px; margin-bottom:80px; contain:layout style; }
   border:1px solid transparent; border-radius:var(--fv-radius-pill);
   font-size:0.9em; cursor:pointer;
   -webkit-tap-highlight-color:transparent; user-select:none;
-  transition:color var(--fv-transition-fast); touch-action:manipulation;
+  touch-action:manipulation;
+  /* ถอด transition: color ออก เพื่อกำจัดสภาวะ Interpolation (การคำนวณเฉดสีระหว่างเฟรม) */
 }
 .button-sub:active, .button-sub.active { color:var(--fv-brand-teal-light); }
 .button-sub.active {
   background:var(--fv-surface-teal-hover);
   border-color:rgba(0,206,176,0.51);
-  
 }
 
 .hi { padding:0 10px; }
 .hj {
   border-radius:var(--fv-radius-xl);    /* 40px — เหมือนเดิม */
   background:var(--fv-surface-page);
-  
   box-shadow: inset 0 0 1px 1px rgba(166, 187, 211, 0.14);
 }
 
-#sub-nav { contain:layout style; }
+#sub-nav { contain: layout style; }
 
 :where(.button-content) {
   box-sizing:border-box; width:auto!important; min-width:60px; max-width:100%;
   padding:13px 17px!important; margin:8px 0; height:60px; min-height:60px;
   display:inline-flex; align-items:center; justify-content:center;
-  border-radius:var(--r-btn);           /* 27px — เหมือนเดิม (alias อยู่ใน tokens) */
+  border-radius:var(--r-btn);           /* 27px — เหมือนเดิม */
   font-size:21px; line-height:1;
   background:var(--fv-surface-page); color:var(--fv-brand-teal-light);
   border:1px solid var(--c-teal-border);
   cursor:pointer; text-align:center;
   -webkit-tap-highlight-color:transparent; touch-action:manipulation;
-  transition:border-color 0.12s; contain:layout style;
+  /* เอา transition แอนิเมชันออกทั้งหมด เพื่อให้สลับสถานะทันทีแบบ 0 เฟรมเรต */
 }
-:where(.button-content:hover)  { border-color:var(--c-teal-strong); }
-:where(.button-content:active) { opacity:0.82; }
+:where(.button-content:active) { opacity:0.85; }
 
 :where(.card) {
   display:flex; flex-direction:column; align-items:stretch;
-  width:160px; max-height:222px; max-width:400px;
+  width:160px; height:222px; /* ล็อกความสูงตายตัวแทน max-height เพื่อเปิดใช้ฟีเจอร์ Strict Layout */
   border-radius:var(--r-card);          /* 30px — เหมือนเดิม */
   overflow:hidden;
   background:var(--fv-surface-page); border:1px solid var(--c-teal-border);
-  transition:border-color 0.12s; contain:layout style paint; touch-action:manipulation;
+  touch-action:manipulation;
+  
+  /* แจ้งบราวเซอร์ว่าขนาดกล่องคงที่แน่นอน 100% บราวเซอร์จะข้ามขั้นตอนการจัดขนาดของลูกๆ ด้านในตอนสกรอลล์เร็ว */
+  contain: strict; 
 }
-:where(.card:hover)  { border-color:var(--c-teal-strong); }
 :where(.card:active) { opacity:0.85; }
 
-.card-image  { width:100%; height:auto; object-fit:cover; display:block; }
+/* ออปติไมซ์อิมเมจด้วย GPU Decoding Hint */
+.card-image  { 
+  width:100%; height:110px; /* ระบุความสูงรูปให้แน่นอน */
+  object-fit:cover; display:block; 
+  image-rendering: -webkit-optimize-contrast; /* สั่งให้มือถือประมวลผลพิกเซลรูปภาพแบบด่วนลดการเบลอ */
+}
 .card-content { padding:12px; display:flex; flex-direction:column; overflow:hidden; }
 
 .card-title {
@@ -69,6 +74,7 @@ main { margin-top:30px; margin-bottom:80px; contain:layout style; }
   display:flex; overflow-x:auto; white-space:nowrap;
   scrollbar-width:none; -ms-overflow-style:none;
   overscroll-behavior-x:contain; touch-action:pan-x; -webkit-overflow-scrolling:touch;
+  contain: layout style;
 }
 #main-buttons-container { gap:8px; padding:4px; }
 #sub-buttons-container  { gap:0; padding:6px; border-radius:25px; } /* 25px — เหมือนเดิม */
@@ -79,24 +85,43 @@ main { margin-top:30px; margin-bottom:80px; contain:layout style; }
 .group-header-text  { font-size:1.2rem; font-weight:var(--fv-font-semibold); color:#464646; }
 .group-header-description { margin:0.5rem 0 0; font-size:1rem; color:var(--c-heading); } /* #494E59 — เหมือนเดิม */
 
-.card-content-container, .button-content-container {
-  display:flex!important; flex-wrap:wrap!important;
+/* เปลี่ยนมาใช้ CSS Grid แบบคงที่เพื่อกระจายตำแหน่งการ์ดและปุ่มแทน Flex-wrap */
+/* วิธีนี้ CPU จะแทบไม่ต้องคำนวณตำแหน่งใหม่เลยตอนเลื่อน เพราะล็อกพิกัดลงตารางไว้ล่วงหน้าแล้ว */
+.button-content-container {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)) !important;
   margin:0 0 40px!important; padding:1rem 5px!important;
-  background:var(--fv-surface-page); justify-content:center!important;
-  align-items:center!important;
+  background:var(--fv-surface-page); 
   border-radius:25px;                   /* 25px — เหมือนเดิม */
-  contain:layout style;
+  gap:5px!important;
+  
+  content-visibility: auto;
+  contain-intrinsic-size: auto 120px;
 }
-.button-content-container { gap:5px!important; }
-.card-content-container   { gap:6px!important; }
 
-.hdr-fade { animation:_hdr_fadeIn 0.15s ease-out both; }
-@keyframes _hdr_fadeIn { from{opacity:0;} to{opacity:1;} }
+.card-content-container {
+  display: grid !important;
+  /* จัดเรียงแบบตารางอัตโนมัติ ขนาดเท่ากันหมด ลื่นไหลและเบาแรง CPU ที่สุดในโลก */
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important; 
+  justify-items: center !important;
+  margin:0 0 40px!important; padding:1rem 5px!important;
+  background:var(--fv-surface-page); 
+  border-radius:25px;                   /* 25px — เหมือนเดิม */
+  gap:12px!important;
+  
+  content-visibility: auto;
+  contain-intrinsic-size: auto 600px;
+}
+
+/* ลบแอนิเมชัน .hdr-fade (Fade-in) ออกไป เพื่อลดสถานะ Alpha Compositing บนหน้าจอ */
+.hdr-fade { animation: none !important; }
 
 @media (max-width:600px) {
-  .card-content-container { gap:12px; }
-  .card { margin:8px 4px; }
-  .card-content { padding-left:10px; }
+  .card-content-container { 
+    grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)) !important;
+    gap:8px; 
+  }
+  .card { width: 145px; height: 210px; }
 }
 @media (max-width:450px) {
   .container { padding-left:0.7rem; padding-right:0.7rem; border-radius:var(--fv-radius-md); }
@@ -110,6 +135,6 @@ main { margin-top:30px; margin-bottom:80px; contain:layout style; }
 .img-d1 img { width:100%; border-radius:var(--fv-radius-md); }
 
 @media (prefers-reduced-motion:reduce) {
-  .hdr-fade, .cm-in, .cm-in.cm-done { animation:none; will-change:auto; }
+  .cm-in, .cm-in.cm-done { animation:none; }
   :where(.button-content), :where(.card), .button-sub { transition:none; }
 }
