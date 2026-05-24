@@ -46,6 +46,7 @@ nav ul li button.active {
   color:var(--fv-brand-teal-light);
   background:var(--fv-surface-teal-hover);
   border-color:rgba(0,206,176,0.51);
+  
 }
 nav ul li button.active::after {
   content:''; position:absolute; left:50%; bottom:0;

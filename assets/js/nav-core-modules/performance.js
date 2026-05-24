@@ -39,7 +39,7 @@ header{position:relative;z-index:${hz};contain:layout style;}
 #sub-nav.fx{background:rgba(255,255,255,1);border-bottom:0.5px solid rgba(19,180,127,0.18);border-radius:0 0 30px 30px;}
 #sub-nav.fx #sub-buttons-container{padding:6px 16px!important;border-radius:0 0 30px 30px;}
 #sub-nav.fx.hi{padding:0!important;}
-#sub-nav.fx .hj{border-color:rgba(0,0,0,0);background:transparent;}`;
+#sub-nav.fx .hj{box-shadow: inset 0 0 1px 1px rgba(166, 187, 211, 0);background:transparent;}`;
       document.head.appendChild(s);
     },
 

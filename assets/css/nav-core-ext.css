@@ -12,13 +12,15 @@ main { margin-top:30px; margin-bottom:80px; contain:layout style; }
 .button-sub.active {
   background:var(--fv-surface-teal-hover);
   border-color:rgba(0,206,176,0.51);
+  
 }
 
 .hi { padding:0 10px; }
 .hj {
   border-radius:var(--fv-radius-xl);    /* 40px — เหมือนเดิม */
   background:var(--fv-surface-page);
-  border:0.5px solid rgba(0,0,0,0.1);
+  
+  box-shadow: inset 0 0 1px 1px rgba(166, 187, 211, 0.14);
 }
 
 #sub-nav { contain:layout style; }
