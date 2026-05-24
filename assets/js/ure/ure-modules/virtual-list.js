@@ -1,13 +1,14 @@
 // Path:    assets/js/ure/ure-modules/virtual-list.js
-// Purpose: Virtual scroll — premium rendering: idle pre-cache, first-render
-//          stagger, velocity-aware buffer, partial offset rebuild.
+// Purpose: Virtual scroll — scroll-guard coOff invalidation prevents
+//          getBoundingClientRect mid-scroll (nav show/hide jank fix).
+//          Also gates height corrections during fast scroll.
 
 (function (M) {
   'use strict';
 
   const { CONFIG, Scheduler, ObserverFactory, createPool } = M;
 
-  // ── One-time CSS for ure-new (first-render fade + stagger) ────────────────
+  // ── One-time CSS ──────────────────────────────────────────────────────────
   const _VL_CSS_ID = '_ure_vl_css';
   function _ensureVLCss() {
     if (document.getElementById(_VL_CSS_ID)) return;
@@ -44,8 +45,8 @@
     let _hgt      = new Float32Array(_items.length).fill(CONFIG.RENDER.DEFAULT_ITEM_HEIGHT);
     let _off      = new Float64Array(_items.length + 1);
     let _totalH   = 0;
-    let _measured = new Uint8Array(_items.length); // height confirmed stable
-    let _seenIdx  = new Uint8Array(_items.length); // ever rendered → no re-animation
+    let _measured = new Uint8Array(_items.length);
+    let _seenIdx  = new Uint8Array(_items.length);
     let _minCorrIdx = Infinity;
 
     const _T = (() => {
@@ -54,12 +55,12 @@
       if ((m && m <= 2) || c <= 4) return 1;
       return 2;
     })();
-    const _MOUNT_CAP    = [4, 8, 16][_T];
-    const _PRE_CAP      = _MOUNT_CAP * 3;  // max idle pre-cached items
+    const _MOUNT_CAP = [4, 8, 16][_T];
+    const _PRE_CAP   = _MOUNT_CAP * 3;
 
     const _vis    = new Map();
     const _elIdx  = new WeakMap();
-    const _preCache = new Map(); // index → pre-built innerHTML string
+    const _preCache = new Map();
     let   _preRafId = null;
 
     const pool = recycling ? createPool(poolCap) : null;
@@ -85,12 +86,18 @@
     _spacer.style.cssText = _ax.spacerBase;
     container.appendChild(_spacer);
 
-    // ── Scroll velocity ───────────────────────────────────────────────────────
+    // ── Scroll velocity + state ───────────────────────────────────────────────
     let _vel = 0, _velPos = 0, _velTime = 0;
     let _scrolling = false, _scrollTimer = null, _scrollRAF = null;
 
     // ── Container offset cache ────────────────────────────────────────────────
-    let _coOff = 0, _coOffDirty = true;
+    // WHY _coOffPending:
+    //   When nav bar shows/hides via CSS transform, ResizeObserver on body fires.
+    //   Setting _coOffDirty=true MID-SCROLL forces getBoundingClientRect() on the
+    //   next rAF, which causes a synchronous layout pass = jank during scroll.
+    //   Fix: queue the invalidation, flush it only after scroll comes to rest.
+    let _coOff = 0, _coOffDirty = true, _coOffPending = false;
+
     function _getContainerOffset() {
       if (!_coOffDirty) return _coOff;
       if (_winMode) {
@@ -135,7 +142,6 @@
     }
 
     // ── Idle pre-render ───────────────────────────────────────────────────────
-    // Builds innerHTML strings during browser idle time so mount cost ≈ 0.
     function _schedulePreRender(lastVisible) {
       if (_preRafId) return;
       const start = lastVisible + 1;
@@ -205,15 +211,12 @@
         el.style.cssText = `${_ax.itemBase}transform:${_ax.translate(_off[i])};`;
         el.setAttribute(CONFIG.DOM.ITEM_ATTR, i);
 
-        // Use pre-cached HTML if available (idle-built) — zero parse cost
         el.innerHTML = _preCache.get(i) ?? renderFn(_items[i], _lang);
         _preCache.delete(i);
 
-        // Premium fade-in: only for first-ever render, not recycled items
         if (!_seenIdx[i]) {
           _seenIdx[i] = 1;
           el.classList.add('ure-new');
-          // Stagger only on slow scroll, max 5 items, 18ms apart
           if (slowScroll && staggerCount < 5) {
             el.style.animationDelay = staggerCount > 0 ? `${staggerCount * 18}ms` : '';
             staggerCount++;
@@ -237,7 +240,6 @@
 
       if (frag.hasChildNodes()) _spacer.appendChild(frag);
 
-      // Schedule idle pre-render for items just past the visible range
       _schedulePreRender(ei);
     }
 
@@ -268,7 +270,17 @@
     }
 
     function _applyCorrection() {
-      _corrTimer = null; _lastCorr = performance.now();
+      _corrTimer = null;
+
+      // WHY: Don't correct offsets during fast scroll — scrollTop adjustment
+      // fights momentum scrolling and causes visible jumps. Reschedule for
+      // when scroll has slowed or stopped.
+      if (Math.abs(_vel) > 1.0) {
+        _corrTimer = setTimeout(_applyCorrection, CONFIG.TIMING.HEIGHT_CORRECTION_RATE_MS * 2);
+        return;
+      }
+
+      _lastCorr = performance.now();
       const st     = _ax.scrollPos();
       const vTop   = Math.max(0, st - _getContainerOffset());
       const ref    = _find(vTop);
@@ -296,7 +308,18 @@
       _velPos = pos; _velTime = now;
       _scrolling = true;
       clearTimeout(_scrollTimer);
-      _scrollTimer = setTimeout(() => { _scrolling = false; _vel = 0; }, CONFIG.TIMING.SCROLL_IDLE_MS);
+      _scrollTimer = setTimeout(() => {
+        _scrolling = false;
+        _vel = 0;
+        // Flush deferred coOff invalidation — safe to do getBoundingClientRect
+        // now that scroll has stopped and nav animation has settled.
+        if (_coOffPending) {
+          _coOffPending = false;
+          _coOffDirty = true;
+          Scheduler.schedule(_render, 'vl-cooff-flush');
+        }
+      }, CONFIG.TIMING.SCROLL_IDLE_MS);
+
       if (_scrollRAF) return;
       _scrollRAF = requestAnimationFrame(() => { _scrollRAF = null; _render(); });
     }
@@ -322,7 +345,22 @@
         if (_rendered) return; _rendered = true;
         _buildOffsets();
         _cardRO = ObserverFactory.createRO(_onCardsResized);
-        _vpRO   = ObserverFactory.createRO(() => { _coOffDirty = true; Scheduler.schedule(_render, 'vl-resize'); });
+
+        // WHY scroll-guard in vpRO:
+        //   Nav bar show/hide (CSS transform) triggers body ResizeObserver.
+        //   Setting _coOffDirty during active scroll forces getBoundingClientRect()
+        //   on the next rAF which stalls the compositor = jank.
+        //   Instead: set _coOffPending flag, flush after scroll idle timer fires.
+        _vpRO = ObserverFactory.createRO(() => {
+          if (_scrolling) {
+            // Queue until scroll stops — nav is probably mid-animation right now
+            _coOffPending = true;
+          } else {
+            _coOffDirty = true;
+            Scheduler.schedule(_render, 'vl-resize');
+          }
+        });
+
         if (_vpRO) _vpRO.observe(_winMode ? document.body : viewport);
         _scrollTarget.addEventListener('scroll', _onScroll, { passive: true });
         Scheduler.schedule(_render, 'vl-initial');
