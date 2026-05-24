@@ -219,7 +219,7 @@
           a.setAttribute('wave-delegate', `.${this.svgWrapperClass}`);
           if (item.icon) {
             const tmp = document.createElement('div'); tmp.innerHTML = item.icon;
-            const wrap = document.createElement('span'); wrap.className = this.svgWrapperClass; wrap.setAttribute('wave', '');
+            const wrap = document.createElement('span'); wrap.className = this.svgWrapperClass; wrap.setAttribute('wave', 'c=#90969F');
             while (tmp.firstChild) wrap.appendChild(tmp.firstChild);
             a.appendChild(wrap);
           }

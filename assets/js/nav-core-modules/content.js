@@ -35,9 +35,9 @@
     s.id = _CSS_ID;
     s.textContent = `
 .cm-group{contain:layout style;isolation:isolate;}
-.cm-in{animation:_nc_fadein 0.12s ease-out both;}
-@keyframes _nc_fadein{from{opacity:0}to{opacity:1}}
-@media(prefers-reduced-motion:reduce){.cm-in{animation:none;}}
+/* fade-in moved to ure-new in virtual-list.js */
+
+
 
 /* btn-row: replicates button-content-container across split URE items */
 .ure-btn-row{
@@ -264,14 +264,14 @@
 
     _tplBtnRow(item, lang) {
       const pos = item._rowPos || 'only';
-      let html = `<div class="cm-group cm-in"><div class="ure-btn-row ure-btn-row--${pos}">`;
+      let html = `<div class="cm-group"><div class="ure-btn-row ure-btn-row--${pos}">`;
       if (item.header) html += this._tplHeader(item.header, lang);
       for (const b of item.items) html += this._tplBtn(b);
       return html + '</div></div>';
     },
 
     _tplCardGroup(item, lang) {
-      let html = `<div class="cm-group cm-in"><div class="card-content-container">`;
+      let html = `<div class="cm-group"><div class="card-content-container">`;
       if (item.header) html += this._tplHeader(item.header, lang);
       for (const c of item.items) html += this._tplCard(c, lang);
       return html + '</div></div>';
@@ -281,7 +281,7 @@
     // Appropriate for carousels with up to ~30 items.
     // For large horizontal datasets use URE.mount({ horizontal: true }) directly.
     _tplCardGroupH(item, lang) {
-      let html = `<div class="cm-group cm-in"><div class="card-content-container card-content-container--h">`;
+      let html = `<div class="cm-group"><div class="card-content-container card-content-container--h">`;
       if (item.header) html += this._tplHeader(item.header, lang);
       for (const c of item.items) html += this._tplCard(c, lang);
       return html + '</div></div>';
