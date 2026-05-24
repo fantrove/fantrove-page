@@ -1,7 +1,22 @@
 // Path:    assets/js/ure/ure-modules/virtual-list.js
-// Purpose: Virtual scroll — scroll-guard coOff invalidation prevents
-//          getBoundingClientRect mid-scroll (nav show/hide jank fix).
-//          Also gates height corrections during fast scroll.
+// Purpose: Virtual scroll — two-tier mounting (viewport uncapped, buffer capped)
+//          eliminates gaps and overlaps during fast scroll. Partial correction
+//          at high velocity prevents overlapping without fighting scroll momentum.
+//          Snap-correct on scroll-end removes post-scroll content jumps.
+//
+// Changes from v1.1.0:
+//   [FIX] Two-tier mounting — strict-viewport items always mount, no cap.
+//         Buffer-zone items remain capped by _MOUNT_CAP per frame. Eliminates
+//         gaps when fast-flinging to a new section.
+//   [FIX] Partial fast-scroll correction — _applyCorrection() now always rebuilds
+//         offsets and updates visible transforms even at vel > 1.0. Only the
+//         scroll-anchor scrollBy() is skipped at high velocity (that's what
+//         fought momentum). Eliminates overlapping elements during fast scroll.
+//   [FIX] Snap-correct on scroll-end — pending corrections are flushed the
+//         moment the scroll-idle timer fires. Eliminates the "content snaps into
+//         place after stopping" artifact.
+//   [PERF] _mountNode() extracted as shared helper — no code duplication between
+//          viewport-tier and buffer-tier loops.
 
 (function (M) {
   'use strict';
@@ -92,10 +107,9 @@
 
     // ── Container offset cache ────────────────────────────────────────────────
     // WHY _coOffPending:
-    //   When nav bar shows/hides via CSS transform, ResizeObserver on body fires.
-    //   Setting _coOffDirty=true MID-SCROLL forces getBoundingClientRect() on the
-    //   next rAF, which causes a synchronous layout pass = jank during scroll.
-    //   Fix: queue the invalidation, flush it only after scroll comes to rest.
+    //   Nav bar show/hide (CSS transform) triggers body ResizeObserver.
+    //   Setting _coOffDirty mid-scroll forces getBoundingClientRect() on the
+    //   next rAF — synchronous layout pass = jank. Queue it, flush after idle.
     let _coOff = 0, _coOffDirty = true, _coOffPending = false;
 
     function _getContainerOffset() {
@@ -163,6 +177,40 @@
       });
     }
 
+    // ── Mount helper ──────────────────────────────────────────────────────────
+    // WHY extracted: used in two separate loops (_render pass-1 and pass-2)
+    // without duplication. applyStagger=false for buffer items (not visible yet).
+    function _mountNode(i, frag, applyStagger, staggerIndex) {
+      const el = pool ? pool.acquire(_getType(i)) : document.createElement('div');
+      el.className   = CONFIG.DOM.VISIBLE_CLASS;
+      el.style.cssText = `${_ax.itemBase}transform:${_ax.translate(_off[i])};`;
+      el.setAttribute(CONFIG.DOM.ITEM_ATTR, i);
+
+      el.innerHTML = _preCache.get(i) ?? renderFn(_items[i], _lang);
+      _preCache.delete(i);
+
+      if (!_seenIdx[i]) {
+        _seenIdx[i] = 1;
+        el.classList.add('ure-new');
+        if (applyStagger && staggerIndex >= 0) {
+          el.style.animationDelay = staggerIndex > 0 ? `${staggerIndex * 18}ms` : '';
+        } else {
+          el.style.animationDelay = '';
+        }
+        el.addEventListener('animationend', () => {
+          el.classList.remove('ure-new');
+          el.classList.add('ure-done');
+          el.style.animationDelay = '';
+        }, { once: true, passive: true });
+      }
+
+      frag.appendChild(el);
+      _vis.set(i, el);
+      _elIdx.set(el, i);
+      if (_cardRO && !_measured[i]) _cardRO.observe(el);
+      if (onVisible) try { onVisible(_items[i], el); } catch (_) {}
+    }
+
     // ── Render ────────────────────────────────────────────────────────────────
     function _render() {
       if (!_spacer.isConnected) return;
@@ -175,12 +223,22 @@
       const fast      = Math.abs(vel) > 0.3;
       const bufAhead  = fast ? buffer * 1.6 : buffer;
       const bufBehind = fast ? buffer * 0.4 : buffer;
+
+      // ── Strict viewport range (items the user sees RIGHT NOW) ─────────────
+      // WHY separate: these must never show as gaps regardless of device tier.
+      // Mounting 5–12 items is cheap; the cost of visible gaps is UX-breaking.
+      const vpFrom = Math.max(0, st - co);
+      const vpTo   = Math.max(0, st - co + vh);
+      const vsi    = _find(vpFrom);
+      const vei    = Math.min(_items.length - 1, _find(vpTo) + 1);
+
+      // ── Full render range including buffer zones ──────────────────────────
       const from = Math.max(0, st - co - (vel >= 0 ? bufBehind : bufAhead));
       const to   = Math.max(0, st - co + vh + (vel >= 0 ? bufAhead : bufBehind));
       const si   = _find(from);
       const ei   = Math.min(_items.length - 1, _find(to) + 1);
 
-      // Recycle
+      // ── Recycle items outside full range ──────────────────────────────────
       const toRecycle = [];
       for (const [idx, el] of _vis) {
         if (idx < si || idx > ei) toRecycle.push([idx, el]);
@@ -193,53 +251,34 @@
         else if (el.parentNode) el.parentNode.removeChild(el);
       }
 
-      // Mount (capped per frame)
       const frag       = document.createDocumentFragment();
-      let newMounts    = 0;
-      let staggerCount = 0;
       const slowScroll = Math.abs(vel) < 0.5;
+      let staggerCount = 0;
 
-      for (let i = si; i <= ei; i++) {
+      // ── Pass 1: Strict-viewport items — mount ALL, no cap ─────────────────
+      // WHY: a gap in the visible viewport is always wrong. The cost is bounded
+      // by how many items physically fit on screen (typically 5–12). Never skip.
+      for (let i = vsi; i <= vei; i++) {
         if (_vis.has(i)) continue;
-        if (newMounts >= _MOUNT_CAP) {
+        _mountNode(i, frag, slowScroll, staggerCount < 5 ? staggerCount++ : -1);
+      }
+
+      // ── Pass 2: Buffer-zone items — capped per frame ──────────────────────
+      // WHY: buffer items aren't visible yet, so deferring some to next frame
+      // has no visible impact. Cap prevents long frames on low-end devices.
+      let bufMounts = 0;
+      for (let i = si; i <= ei; i++) {
+        if (_vis.has(i)) continue; // already mounted in pass 1 or a prior frame
+        if (bufMounts >= _MOUNT_CAP) {
+          // Schedule remaining buffer items for next frame
           if (!_scrollRAF) _scrollRAF = requestAnimationFrame(() => { _scrollRAF = null; _render(); });
           break;
         }
-
-        const el = pool ? pool.acquire(_getType(i)) : document.createElement('div');
-        el.className   = CONFIG.DOM.VISIBLE_CLASS;
-        el.style.cssText = `${_ax.itemBase}transform:${_ax.translate(_off[i])};`;
-        el.setAttribute(CONFIG.DOM.ITEM_ATTR, i);
-
-        el.innerHTML = _preCache.get(i) ?? renderFn(_items[i], _lang);
-        _preCache.delete(i);
-
-        if (!_seenIdx[i]) {
-          _seenIdx[i] = 1;
-          el.classList.add('ure-new');
-          if (slowScroll && staggerCount < 5) {
-            el.style.animationDelay = staggerCount > 0 ? `${staggerCount * 18}ms` : '';
-            staggerCount++;
-          } else {
-            el.style.animationDelay = '';
-          }
-          el.addEventListener('animationend', () => {
-            el.classList.remove('ure-new');
-            el.classList.add('ure-done');
-            el.style.animationDelay = '';
-          }, { once: true, passive: true });
-        }
-
-        frag.appendChild(el);
-        _vis.set(i, el);
-        _elIdx.set(el, i);
-        if (_cardRO && !_measured[i]) _cardRO.observe(el);
-        if (onVisible) try { onVisible(_items[i], el); } catch (_) {}
-        newMounts++;
+        _mountNode(i, frag, false, -1); // no stagger — not yet visible
+        bufMounts++;
       }
 
       if (frag.hasChildNodes()) _spacer.appendChild(frag);
-
       _schedulePreRender(ei);
     }
 
@@ -271,34 +310,45 @@
 
     function _applyCorrection() {
       _corrTimer = null;
+      _lastCorr  = performance.now();
 
-      // WHY: Don't correct offsets during fast scroll — scrollTop adjustment
-      // fights momentum scrolling and causes visible jumps. Reschedule for
-      // when scroll has slowed or stopped.
-      if (Math.abs(_vel) > 1.0) {
-        _corrTimer = setTimeout(_applyCorrection, CONFIG.TIMING.HEIGHT_CORRECTION_RATE_MS * 2);
-        return;
-      }
-
-      _lastCorr = performance.now();
+      const absVel = Math.abs(_vel);
       const st     = _ax.scrollPos();
       const vTop   = Math.max(0, st - _getContainerOffset());
       const ref    = _find(vTop);
       const oldOff = _off[ref];
+
+      // WHY always rebuild here (even during fast scroll):
+      //   The original code bailed entirely at vel > 1.0. That prevented the
+      //   scroll-anchor scrollBy() from fighting momentum — correct. But it
+      //   also left _off[] stale, so items rendered at estimated positions and
+      //   visually overlapped when real heights differed. Rebuilding the offset
+      //   array is O(n-i) and pure computation — no layout, no scrollBy. Safe.
       _rebuildFrom(Math.min(_minCorrIdx, ref));
-      _minCorrIdx  = Infinity;
+      _minCorrIdx = Infinity;
+
+      // Update transforms for all visible items immediately
       for (const [idx, el] of _vis) {
         const t = _ax.translate(_off[idx]);
         if (el.style.transform !== t) el.style.transform = t;
       }
-      if (!_scrolling) {
+
+      // WHY gate scrollBy on velocity + scroll state:
+      //   scrollBy() fights browser momentum scrolling at high velocity and
+      //   causes visible position jumps. Only apply the scroll-anchor correction
+      //   once the user has slowed down or stopped.
+      if (!_scrolling && absVel <= 1.0) {
         const adj = _off[ref] - oldOff;
         if (Math.abs(adj) > 0.5) {
           if (_winMode) { _H ? window.scrollBy(adj, 0) : window.scrollBy(0, adj); }
           else { if (_H) viewport.scrollLeft = st + adj; else viewport.scrollTop = st + adj; }
         }
+        Scheduler.schedule(_render, 'vl-post-correction');
+      } else {
+        // Still scrolling fast — schedule another correction pass for when
+        // velocity drops. Transforms are already updated above so no overlap.
+        _corrTimer = setTimeout(_applyCorrection, CONFIG.TIMING.HEIGHT_CORRECTION_RATE_MS * 2);
       }
-      Scheduler.schedule(_render, 'vl-post-correction');
     }
 
     // ── Scroll ────────────────────────────────────────────────────────────────
@@ -311,12 +361,22 @@
       _scrollTimer = setTimeout(() => {
         _scrolling = false;
         _vel = 0;
-        // Flush deferred coOff invalidation — safe to do getBoundingClientRect
-        // now that scroll has stopped and nav animation has settled.
+
+        // Flush deferred coOff — safe now that scroll has stopped and nav animation settled
         if (_coOffPending) {
           _coOffPending = false;
           _coOffDirty = true;
-          Scheduler.schedule(_render, 'vl-cooff-flush');
+        }
+
+        // WHY snap-correct immediately on scroll-end:
+        //   Without this, _corrTimer might still have a 200ms delay pending from
+        //   the last RO callback. The user would see items snap into place
+        //   200ms after they stopped scrolling. Flushing now eliminates that jump.
+        if (_minCorrIdx < Infinity) {
+          if (_corrTimer) { clearTimeout(_corrTimer); _corrTimer = null; }
+          _applyCorrection();
+        } else {
+          Scheduler.schedule(_render, 'vl-scroll-end');
         }
       }, CONFIG.TIMING.SCROLL_IDLE_MS);
 
@@ -353,7 +413,6 @@
         //   Instead: set _coOffPending flag, flush after scroll idle timer fires.
         _vpRO = ObserverFactory.createRO(() => {
           if (_scrolling) {
-            // Queue until scroll stops — nav is probably mid-animation right now
             _coOffPending = true;
           } else {
             _coOffDirty = true;
