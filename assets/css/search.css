@@ -35,7 +35,7 @@ body {
   /* --placeholder-h is set by JS (_syncPlaceholderHeight) to
      window.innerHeight minus the actual sticky header height.
      Falls back to 60vh when JS hasn't run yet. */
-  min-height: var(--placeholder-h, 60vh);
+  min-height: var(--placeholder-h, 60svh);
 }
 
 .vs-container { position:relative; min-height:2px; contain:layout style paint; }
