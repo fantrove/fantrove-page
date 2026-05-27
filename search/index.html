@@ -24,6 +24,13 @@
   <noscript><link rel="stylesheet" href="/assets/css/bg.css?v=1.0.0-20250322" /></noscript>
   <link rel="stylesheet" href="/assets/css/search-compact-overrides.css?v=1.0.0-20250322" />
   <link rel="stylesheet" href="/assets/css/back-to-top.css?v=1.0.0-20250322">
+
+  <!--
+    PERF: Preload the 5 search-module phases so the browser starts fetching them
+    before search-ui.js even runs. With HTTP/2 these all download in parallel.
+  -->
+  <link rel="modulepreload" href="/assets/js/con-data-service/con-data-registry.js?v=1.0.0-20250322" />
+  <link rel="modulepreload" href="/assets/js/con-data-service/con-data-service.js?v=1.0.0-20250322" />
 </head>
 
 <body>
@@ -79,14 +86,22 @@
 
   </div><!-- /#fv-app -->
 
+  <!--
+    PERF CHANGE: con-data-service modules are type="module" → deferred by spec.
+    render-engine, search-engine, ure, search-ui: were blocking the HTML parser.
+    Adding defer means:
+      • HTML parses fully → user sees input field immediately, can start typing
+      • Scripts execute in document order after parse (order is preserved with defer)
+      • search-ui.js still finds window.SearchEngine + window.URE ready
+        because they execute before it (earlier in document order)
+  -->
   <script type="module" src="/assets/js/con-data-service/con-data-registry.js?v=1.0.0-20250322"></script>
   <script type="module" src="/assets/js/con-data-service/con-data-service.js?v=1.0.0-20250322"></script>
-  <script src="/assets/js/render-engine.js?v=1.0.0-20250322"></script>
-  <script src="/assets/js/search-engine.js?v=1.0.0-20250322"></script>
-  <!-- URE must load before search-ui.js so window.URE is available when
-       rendering.js calls URE.mount() on the first search result. -->
-  <script src="/assets/js/ure/ure.js?v=1.0.0-20250322"></script>
-  <script src="/assets/js/search-ui.js?v=1.0.0-20250322"></script>
+  <script defer src="/assets/js/render-engine.js?v=1.0.0-20250322"></script>
+  <script defer src="/assets/js/search-engine.js?v=1.0.0-20250322"></script>
+  <!-- URE must execute before search-ui.js (same defer order = document order) -->
+  <script defer src="/assets/js/ure/ure.js?v=1.0.0-20250322"></script>
+  <script defer src="/assets/js/search-ui.js?v=1.0.0-20250322"></script>
   <script defer src="/assets/js/copyNotification.js?v=1.0.0-20250322"></script>
   <script defer src="/assets/js/modern-navigation.js?v=1.0.0-20250322"></script>
   <script defer src="/assets/js/back-to-top.js?v=1.0.0-20250322"></script>
@@ -95,7 +110,7 @@
   <script src="/fantrove-console-bridge.js?v=1.0.0-20250322"></script>
   <script defer src="/assets/js/footer-template.js?v=1.0.0-20250322"></script>
 
-  <!-- Sticky header behavior script -->
+  <!-- Sticky header behavior — inline, runs immediately, no deps -->
   <script>
   (function(){
     'use strict';

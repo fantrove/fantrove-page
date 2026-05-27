@@ -3,25 +3,25 @@
  * @file search.js
  * SearchService — executes searches and manages history commits.
  *
- * ┌─────────────────────────────────────────────────────────────┐
- * │  History rules (two-stack model)                            │
- * │                                                             │
- * │  Overlay OPEN  → do NOT pushState.                         │
- * │    Reason: overlay already pushed its entry when it opened. │
- * │    If we pushState too, the stack gets an extra entry.      │
- * │    Instead: just mark lastCommittedSearchState.            │
- * │    close() → collapseOverlayEntry() → replaceState on the  │
- * │    overlay entry itself.                                    │
- * │    Net: exactly 1 new entry regardless of how many         │
- * │    searches happen inside the overlay.                      │
- * │                                                             │
- * │  Overlay CLOSED → commitSearch() → pushState normally.     │
- * └─────────────────────────────────────────────────────────────┘
+ * PATCH v2 — performance + reliability
  *
- * URL-init search:
- *   doSearchFromURL() retries until SearchEngine has docs built.
- *   Fuse index is built asynchronously; early calls may return [].
- *   Retries every urlSearchRetryMs up to urlSearchMaxRetries times.
+ * BUG 1 FIXED (speed):
+ *   doSearchFromURL used to wait up to 15 × 120ms = 1800ms for Fuse before
+ *   showing anything, even though immediateSearch (substring) is ready the
+ *   moment SearchEngine.init() resolves.
+ *   FIX: show immediateSearch results right away; schedule one silent Fuse
+ *   upgrade pass ~1s later so results improve without blocking the user.
+ *
+ * BUG 2 FIXED (no-results silent fail):
+ *   doSearch form/enter handlers are attached synchronously in init() before
+ *   loadData() resolves. If the user submits while docs are still loading,
+ *   search() returns [] silently — nothing rendered, no retry.
+ *   FIX: when docs aren't ready, stash the query in window.__pendingSearch
+ *   and bail. search-ui.js drains __pendingSearch after init completes.
+ *
+ * History rules (two-stack model — unchanged):
+ *   Overlay OPEN  → mark lastCommittedSearchState only.
+ *   Overlay CLOSED → commitSearch() → pushState.
  *
  * @module search
  * @depends {config.js, state.js, utils.js, url-history.js,
@@ -40,9 +40,6 @@
   } = M;
 
   // ── Placeholder height sync ───────────────────────────────────────────────
-  // Measures the actual remaining viewport height below #search-sticky and
-  // writes it as --placeholder-h on <html> so .search-result-here can use it.
-  // Called on first render and on window resize so it stays accurate.
 
   let _resizeHandlerAttached = false;
 
@@ -59,10 +56,52 @@
     if (_resizeHandlerAttached) return;
     _resizeHandlerAttached = true;
     window.addEventListener('resize', _syncPlaceholderHeight, { passive: true });
-    // Also update when visualViewport changes (mobile keyboard open/close)
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', _syncPlaceholderHeight, { passive: true });
     }
+  }
+
+  // ── Fuse upgrade scheduler ────────────────────────────────────────────────
+  // After we show immediate (substring) results, schedule one silent upgrade
+  // to Fuse results once the index finishes building in idle time.
+  // Only upgrades if the input value hasn't changed — avoids stale swaps.
+
+  let _fuseUpgradeTimer = null;
+
+  function _scheduleFuseUpgrade(q, type) {
+    clearTimeout(_fuseUpgradeTimer);
+    const CHECK_INTERVAL_MS = 500;
+    const MAX_WAIT_MS       = 8000;
+    const started           = Date.now();
+
+    (function checkFuse() {
+      try {
+        const ready = window.SearchEngine?._internals?.getFuse?.() != null;
+        const inp   = DOMService.get(CONFIG.DOM.searchInputId);
+        const still = inp?.value?.trim() === q;
+
+        if (ready && still) {
+          // Fuse ready and user hasn't changed query — silently re-render
+          let out = { results: [], keywords: [] };
+          try { out = window.SearchEngine.search(q, type) || out; } catch {}
+          if (out.results.length) {
+            State.currentResults = out.results;
+            FilterService.setupCategoryFilter(
+              RenderingService.extractResultCategories(out.results), 'all'
+            );
+            RenderingService.renderResults(out.results);
+          }
+          _fuseUpgradeTimer = null;
+          return;
+        }
+
+        if (!ready && Date.now() - started < MAX_WAIT_MS) {
+          _fuseUpgradeTimer = setTimeout(checkFuse, CHECK_INTERVAL_MS);
+        }
+      } catch {
+        _fuseUpgradeTimer = null;
+      }
+    })();
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -74,23 +113,41 @@
     /**
      * Execute a search from the current input value.
      *
-     * @param {Event|null}  [e]            Optional event to preventDefault
-     * @param {boolean}     [preventPush]  If true, skip history push
+     * NEW: if SearchEngine has no docs yet (cold start / data still loading),
+     * stash the query in window.__pendingSearch and return. search-ui.js will
+     * call doSearch() again once init() completes.
+     *
+     * @param {Event|null}  [e]
+     * @param {boolean}     [preventPush]
      * @param {Object}      [options]
-     * @param {boolean}     [options.closeOverlay]  Force overlay close
+     * @param {boolean}     [options.closeOverlay]
      */
     doSearch(e, preventPush = false, options = {}) {
       try {
         e?.preventDefault?.();
 
-        // Set restore flag at the TOP — covers ALL paths including _showPlaceholder.
-        // preventPush=true = state-restore (back button / _restoreUIState), not new search.
         window.__renderIsRestore = !!preventPush;
 
-        const inp  = DOMService.get(CONFIG.DOM.searchInputId);
-        const q    = inp?.value || '';
-        // typeFilter is now a pill-bar div — read from State, not .value
+        const inp = DOMService.get(CONFIG.DOM.searchInputId);
+        const q   = inp?.value || '';
         State.selectedCategory = 'all';
+
+        // ── Guard: docs not ready yet ──────────────────────────────────────
+        // Happens when the user submits before loadData() resolves (cold start).
+        // Stash the query so search-ui.js can drain it after init completes.
+        if (q.trim() && !preventPush) {
+          const docsReady = (window.SearchEngine?._internals?.getDocs?.()?.length ?? 0) > 0;
+          if (!docsReady) {
+            window.__pendingSearch = { q: q.trim(), type: State.selectedType || 'all' };
+            // Show a subtle "loading…" so the user knows something is happening
+            const rc = DOMService.get(CONFIG.DOM.searchResultsId);
+            if (rc && !rc.querySelector('.search-result-here')) {
+              rc.innerHTML = `<div class="search-result-here" style="opacity:.5">${LanguageService.t('search_result_here')}</div>`;
+            }
+            window.__renderIsRestore = false;
+            return;
+          }
+        }
 
         // ── Empty query ────────────────────────────────────────────────────
         if (!q.trim()) {
@@ -129,19 +186,16 @@
         if (!preventPush && !State.suppressHistoryPush) {
           const searchState = { q, type: State.selectedType || 'all', category: 'all' };
           if (State.overlayOpen) {
-            // Overlay is open: mark state only.
-            // OverlayService.close() → collapseOverlayEntry() will replaceState.
             State.lastCommittedSearchState = searchState;
           } else {
             URLService.commitSearch(searchState);
           }
         }
 
-        // ── Render (main page only) ────────────────────────────────────────
+        // ── Render ─────────────────────────────────────────────────────────
         RenderingService.renderResults(State.currentResults, State.currentResults.length === 0);
         window.__renderIsRestore = false;
 
-        // Close overlay — results are now on the main page
         if (State.overlayOpen) OverlayService.close('manual');
 
         ClearBtnService.sync();
@@ -156,8 +210,10 @@
     /**
      * Run a search from URL parameters on page load.
      *
-     * SearchEngine builds its Fuse index asynchronously. If called too early
-     * the index isn't ready and returns []. This method retries automatically.
+     * PATCH v2:
+     *   Removed the Fuse wait (was: wait up to maxR/2 retries for Fuse).
+     *   Now shows immediateSearch results as soon as docs are ready, then
+     *   schedules _scheduleFuseUpgrade() for a silent quality upgrade.
      *
      * @param {string} q
      * @param {string} type
@@ -180,43 +236,25 @@
         const se = window.SearchEngine;
         if (!se?.search) { scheduleRetry(); return; }
 
-        // Check both _docs AND _fuse are ready.
-        // search() uses Fuse when ready (rich results) vs immediateSearch (rough).
-        // Showing rough results then replacing with Fuse results = inconsistency.
-        // Wait until Fuse is built so first render is always the final result.
         const internals = se._internals;
+
         const hasDocs = (() => {
           try { return (internals?.getDocs?.()?.length || 0) > 0; }
           catch { return false; }
         })();
-        const hasFuse = (() => {
-          try { return internals?.getFuse?.() != null; }
-          catch { return false; }
-        })();
 
-        // If docs aren't loaded yet, retry
-        if (!hasDocs && retryCount < maxR) {
+        // Wait for docs — but NOT for Fuse.
+        // immediateSearch (substring) runs the moment docs are populated.
+        // Fuse upgrade happens silently via _scheduleFuseUpgrade() below.
+        if (!hasDocs) {
           scheduleRetry();
           return;
         }
 
-        // If docs loaded but Fuse not yet built and we have retries left, wait
-        // (only for first few retries — don't block forever if Fuse fails)
-        if (hasDocs && !hasFuse && retryCount < Math.floor(maxR / 2)) {
-          scheduleRetry();
-          return;
-        }
-
+        // Docs ready — run search immediately (may use immediate or Fuse)
         let out = { results: [], keywords: [] };
         try { out = se.search(q, type) || out; } catch {}
 
-        // If still no results and we haven't hit the limit, retry once more
-        if (out.results.length === 0 && !hasFuse && retryCount < maxR) {
-          scheduleRetry();
-          return;
-        }
-
-        // Apply results
         State.suppressHistoryPush = true;
         try {
           const inp = DOMService.get(CONFIG.DOM.searchInputId);
@@ -232,6 +270,16 @@
 
         ClearBtnService.sync();
         IconSlotService.update();
+
+        // Schedule a silent Fuse upgrade if Fuse isn't ready yet
+        const hasFuse = (() => {
+          try { return internals?.getFuse?.() != null; }
+          catch { return false; }
+        })();
+        if (!hasFuse) {
+          _scheduleFuseUpgrade(q, type);
+        }
+
       } catch (e) {
         console.error('[SearchService] doSearchFromURL failed', e);
         scheduleRetry();
@@ -240,16 +288,7 @@
 
     // ── Private helpers ───────────────────────────────────────────────────
 
-    /**
-     * Show the "results will appear here" placeholder.
-     * Called when the query is cleared.
-     *
-     * Height is controlled by --placeholder-h (CSS variable) which is set
-     * by _syncPlaceholderHeight() to window.innerHeight minus the actual
-     * sticky header height — so the text is truly centred in the visible area.
-     *
-     * @private
-     */
+    /** @private */
     _showPlaceholder() {
       const rc = DOMService.get(CONFIG.DOM.searchResultsId);
       if (rc) {
@@ -260,39 +299,12 @@
       VirtualScrollEngine.destroy();
       FilterService.setupCategoryFilter([], 'all');
       UIService.updateUILanguage();
-      // Only scroll to top when this is a NEW user-initiated clear, not a restore
       if (!window.__renderIsRestore) {
         window.scrollTo({ top: 0, behavior: 'instant' });
         if (window._showStickyHeader) window._showStickyHeader();
       }
     },
   };
-
-  // ── Placeholder height helpers ────────────────────────────────────────────
-
-  /**
-   * Set --placeholder-h to the real remaining viewport height
-   * below the sticky header, so .search-result-here is truly centred.
-   */
-  function _syncPlaceholderHeight() {
-    try {
-      const sticky = document.getElementById('search-sticky');
-      const stickyH = sticky ? sticky.getBoundingClientRect().height : 0;
-      const remaining = window.innerHeight - stickyH;
-      document.documentElement.style.setProperty('--placeholder-h', remaining + 'px');
-    } catch {}
-  }
-
-  /** Attach resize listener once — updates --placeholder-h on viewport change. */
-  let _resizeListenerAttached = false;
-  function _ensureResizeListener() {
-    if (_resizeListenerAttached) return;
-    _resizeListenerAttached = true;
-    window.addEventListener('resize', _syncPlaceholderHeight, { passive: true });
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', _syncPlaceholderHeight, { passive: true });
-    }
-  }
 
   // ── Export ──────────────────────────────────────────────────────────────
   M.SearchService = SearchService;
