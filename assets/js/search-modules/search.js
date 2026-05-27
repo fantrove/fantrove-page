@@ -19,9 +19,14 @@
  *   FIX: when docs aren't ready, stash the query in window.__pendingSearch
  *   and bail. search-ui.js drains __pendingSearch after init completes.
  *
- * History rules (two-stack model — unchanged):
- *   Overlay OPEN  → mark lastCommittedSearchState only.
- *   Overlay CLOSED → commitSearch() → pushState.
+ * BUG 3 FIXED (placeholder clipped when browser nav bar hides):
+ *   _showPlaceholder() was calling _syncPlaceholderHeight() which sets
+ *   --placeholder-h to a px snapshot of window.innerHeight. When the browser
+ *   nav bar hides, innerHeight grows but --placeholder-h stays stale, so
+ *   .search-result-here is clipped at the bottom.
+ *   FIX: removed _syncPlaceholderHeight() and _ensureResizeListener() entirely.
+ *   CSS already handles .search-result-here height correctly on its own.
+ *   JS does not set --placeholder-h at all.
  *
  * @module search
  * @depends {config.js, state.js, utils.js, url-history.js,
@@ -38,28 +43,6 @@
     UIService, IconSlotService, ClearBtnService,
     VirtualScrollEngine,
   } = M;
-
-  // ── Placeholder height sync ───────────────────────────────────────────────
-
-  let _resizeHandlerAttached = false;
-
-  function _syncPlaceholderHeight() {
-    try {
-      const sticky = document.getElementById('search-sticky');
-      const stickyH = sticky ? sticky.getBoundingClientRect().height : 0;
-      const remaining = window.innerHeight - stickyH;
-      document.documentElement.style.setProperty('--placeholder-h', remaining + 'px');
-    } catch {}
-  }
-
-  function _ensureResizeListener() {
-    if (_resizeHandlerAttached) return;
-    _resizeHandlerAttached = true;
-    window.addEventListener('resize', _syncPlaceholderHeight, { passive: true });
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', _syncPlaceholderHeight, { passive: true });
-    }
-  }
 
   // ── Fuse upgrade scheduler ────────────────────────────────────────────────
   // After we show immediate (substring) results, schedule one silent upgrade
@@ -81,7 +64,6 @@
         const still = inp?.value?.trim() === q;
 
         if (ready && still) {
-          // Fuse ready and user hasn't changed query — silently re-render
           let out = { results: [], keywords: [] };
           try { out = window.SearchEngine.search(q, type) || out; } catch {}
           if (out.results.length) {
@@ -104,7 +86,7 @@
     })();
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // ── SearchService ─────────────────────────────────────────────────────────
 
   const SearchService = {
 
@@ -112,10 +94,6 @@
 
     /**
      * Execute a search from the current input value.
-     *
-     * NEW: if SearchEngine has no docs yet (cold start / data still loading),
-     * stash the query in window.__pendingSearch and return. search-ui.js will
-     * call doSearch() again once init() completes.
      *
      * @param {Event|null}  [e]
      * @param {boolean}     [preventPush]
@@ -133,13 +111,10 @@
         State.selectedCategory = 'all';
 
         // ── Guard: docs not ready yet ──────────────────────────────────────
-        // Happens when the user submits before loadData() resolves (cold start).
-        // Stash the query so search-ui.js can drain it after init completes.
         if (q.trim() && !preventPush) {
           const docsReady = (window.SearchEngine?._internals?.getDocs?.()?.length ?? 0) > 0;
           if (!docsReady) {
             window.__pendingSearch = { q: q.trim(), type: State.selectedType || 'all' };
-            // Show a subtle "loading…" so the user knows something is happening
             const rc = DOMService.get(CONFIG.DOM.searchResultsId);
             if (rc && !rc.querySelector('.search-result-here')) {
               rc.innerHTML = `<div class="search-result-here" style="opacity:.5">${LanguageService.t('search_result_here')}</div>`;
@@ -205,15 +180,11 @@
       }
     },
 
-    // ── URL-init search with retry ────────────────────────────────────────
+    // ── URL-init search ───────────────────────────────────────────────────
 
     /**
      * Run a search from URL parameters on page load.
-     *
-     * PATCH v2:
-     *   Removed the Fuse wait (was: wait up to maxR/2 retries for Fuse).
-     *   Now shows immediateSearch results as soon as docs are ready, then
-     *   schedules _scheduleFuseUpgrade() for a silent quality upgrade.
+     * Shows immediateSearch results right away; Fuse upgrade runs silently later.
      *
      * @param {string} q
      * @param {string} type
@@ -237,21 +208,13 @@
         if (!se?.search) { scheduleRetry(); return; }
 
         const internals = se._internals;
-
         const hasDocs = (() => {
           try { return (internals?.getDocs?.()?.length || 0) > 0; }
           catch { return false; }
         })();
 
-        // Wait for docs — but NOT for Fuse.
-        // immediateSearch (substring) runs the moment docs are populated.
-        // Fuse upgrade happens silently via _scheduleFuseUpgrade() below.
-        if (!hasDocs) {
-          scheduleRetry();
-          return;
-        }
+        if (!hasDocs) { scheduleRetry(); return; }
 
-        // Docs ready — run search immediately (may use immediate or Fuse)
         let out = { results: [], keywords: [] };
         try { out = se.search(q, type) || out; } catch {}
 
@@ -271,14 +234,12 @@
         ClearBtnService.sync();
         IconSlotService.update();
 
-        // Schedule a silent Fuse upgrade if Fuse isn't ready yet
+        // Schedule silent Fuse upgrade if not ready yet
         const hasFuse = (() => {
           try { return internals?.getFuse?.() != null; }
           catch { return false; }
         })();
-        if (!hasFuse) {
-          _scheduleFuseUpgrade(q, type);
-        }
+        if (!hasFuse) _scheduleFuseUpgrade(q, type);
 
       } catch (e) {
         console.error('[SearchService] doSearchFromURL failed', e);
@@ -288,13 +249,20 @@
 
     // ── Private helpers ───────────────────────────────────────────────────
 
-    /** @private */
+    /**
+     * Show the "results will appear here" placeholder.
+     *
+     * BUG FIX: Removed _syncPlaceholderHeight() and _ensureResizeListener().
+     * Those functions set --placeholder-h to a px snapshot of window.innerHeight,
+     * which becomes stale when the browser nav bar shows/hides (innerHeight changes).
+     * CSS already handles .search-result-here height correctly without any JS.
+     *
+     * @private
+     */
     _showPlaceholder() {
       const rc = DOMService.get(CONFIG.DOM.searchResultsId);
       if (rc) {
         rc.innerHTML = `<div class="search-result-here">${LanguageService.t('search_result_here')}</div>`;
-        _syncPlaceholderHeight();
-        _ensureResizeListener();
       }
       VirtualScrollEngine.destroy();
       FilterService.setupCategoryFilter([], 'all');
