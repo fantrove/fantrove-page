@@ -27,14 +27,26 @@ main { margin-top:30px; margin-bottom:80px; contain: layout style; }
   box-sizing:border-box; width:auto!important; min-width:60px; max-width:100%;
   padding:13px 17px!important; margin:8px 0; height:60px; min-height:60px;
   display:inline-flex; align-items:center; justify-content:center;
-  border-radius:var(--r-btn);           /* 27px — เหมือนเดิม */
+  border-radius:var(--r-btn);
   font-size:21px; line-height:1;
   background:var(--fv-surface-page); color:var(--fv-brand-teal-light);
   border:1px solid var(--c-teal-border);
   cursor:pointer; text-align:center;
   -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+
+  will-change: transform;
+  /* ปรับค่าน้ำหนักสปริงให้เด้งสะใจขึ้น (0.5s บวกรหัสเบอร์เซียร์ที่ตวัดปลายแรงขึ้น) */
+  transition: transform 0.5s cubic-bezier(0.25, 1.4, 0.42, 1.15), opacity 0.2s ease;
 }
-:where(.button-content:active) { opacity:0.85; }
+
+:where(.button-content:active) { 
+  /* ย่อขนาดลงอีกเล็กน้อยตามที่ต้องการ (ยุบลง 8%) */
+  transform: scale(0.93); 
+  opacity: 1;
+  
+  /* จังหวะกดให้ยุบฮวบลงไปทันทีเหมือนโดนกดสปริง */
+  transition: transform 0.08s cubic-bezier(0, 0, 0.1, 1), opacity 0.08s ease;
+}
 
 :where(.card) {
   display:flex; flex-direction:column; align-items:stretch;
