@@ -68,7 +68,7 @@
     --rl  : 20px;
     --rm  : 16px;
     --rs  : 10px;
-    --tf  : 140ms ease;
+    --tf  : 250ms ease;
 
     color-scheme: light;
     overscroll-behavior-y: contain;
@@ -252,7 +252,7 @@
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
 
-    &:active { background: rgba(14,95,153,.03); }
+    &:active { background: rgba(103, 115, 135, 0.08); }
   }
 
   .suggestion-body {
