@@ -7,11 +7,68 @@
   "categories": [
     {
       "id": "arrows",
-      "name": {
-        "th": "ลูกศร",
-        "en": "Arrows"
-      },
+      "name": { "th": "ลูกศร", "en": "Arrows" },
       "file": "/assets/db/con-data/symbol/arrows.json"
+    },
+    {
+      "id": "math",
+      "name": { "th": "คณิตศาสตร์", "en": "Math" },
+      "file": "/assets/db/con-data/symbol/math.json"
+    },
+    {
+      "id": "currency",
+      "name": { "th": "สกุลเงิน", "en": "Currency" },
+      "file": "/assets/db/con-data/symbol/currency.json"
+    },
+    {
+      "id": "punctuation",
+      "name": { "th": "เครื่องหมายวรรคตอน", "en": "Punctuation" },
+      "file": "/assets/db/con-data/symbol/punctuation.json"
+    },
+    {
+      "id": "latin_extended",
+      "name": { "th": "ตัวอักษรละตินพิเศษ", "en": "Latin Extended" },
+      "file": "/assets/db/con-data/symbol/latin_extended.json"
+    },
+    {
+      "id": "greek",
+      "name": { "th": "กรีก", "en": "Greek" },
+      "file": "/assets/db/con-data/symbol/greek.json"
+    },
+    {
+      "id": "cyrillic",
+      "name": { "th": "ซีริลลิก", "en": "Cyrillic" },
+      "file": "/assets/db/con-data/symbol/cyrillic.json"
+    },
+    {
+      "id": "geometric",
+      "name": { "th": "รูปทรงเรขาคณิต", "en": "Geometric Shapes" },
+      "file": "/assets/db/con-data/symbol/geometric.json"
+    },
+    {
+      "id": "box_drawing",
+      "name": { "th": "เส้นกรอบ", "en": "Box Drawing" },
+      "file": "/assets/db/con-data/symbol/box_drawing.json"
+    },
+    {
+      "id": "misc_technical",
+      "name": { "th": "สัญลักษณ์เทคนิค", "en": "Misc Technical" },
+      "file": "/assets/db/con-data/symbol/misc_technical.json"
+    },
+    {
+      "id": "letterlike",
+      "name": { "th": "สัญลักษณ์คล้ายตัวอักษร", "en": "Letterlike Symbols" },
+      "file": "/assets/db/con-data/symbol/letterlike.json"
+    },
+    {
+      "id": "dingbats",
+      "name": { "th": "ดิงแบต", "en": "Dingbats" },
+      "file": "/assets/db/con-data/symbol/dingbats.json"
+    },
+    {
+      "id": "braille",
+      "name": { "th": "เบรลล์", "en": "Braille" },
+      "file": "/assets/db/con-data/symbol/braille.json"
     }
   ]
 }
