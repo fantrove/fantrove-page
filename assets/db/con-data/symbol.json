@@ -7,68 +7,219 @@
   "categories": [
     {
       "id": "arrows",
-      "name": { "th": "ลูกศร", "en": "Arrows" },
+      "name": {
+        "th": "ลูกศร",
+        "en": "Arrows"
+      },
       "file": "/assets/db/con-data/symbol/arrows.json"
     },
     {
       "id": "math",
-      "name": { "th": "คณิตศาสตร์", "en": "Math" },
+      "name": {
+        "th": "คณิตศาสตร์",
+        "en": "Math"
+      },
       "file": "/assets/db/con-data/symbol/math.json"
     },
     {
       "id": "currency",
-      "name": { "th": "สกุลเงิน", "en": "Currency" },
+      "name": {
+        "th": "สกุลเงิน",
+        "en": "Currency"
+      },
       "file": "/assets/db/con-data/symbol/currency.json"
     },
     {
       "id": "punctuation",
-      "name": { "th": "เครื่องหมายวรรคตอน", "en": "Punctuation" },
+      "name": {
+        "th": "เครื่องหมายวรรคตอน",
+        "en": "Punctuation"
+      },
       "file": "/assets/db/con-data/symbol/punctuation.json"
     },
     {
       "id": "latin_extended",
-      "name": { "th": "ตัวอักษรละตินพิเศษ", "en": "Latin Extended" },
+      "name": {
+        "th": "ตัวอักษรละตินพิเศษ",
+        "en": "Latin Extended"
+      },
       "file": "/assets/db/con-data/symbol/latin_extended.json"
     },
     {
       "id": "greek",
-      "name": { "th": "กรีก", "en": "Greek" },
+      "name": {
+        "th": "กรีก",
+        "en": "Greek"
+      },
       "file": "/assets/db/con-data/symbol/greek.json"
     },
     {
       "id": "cyrillic",
-      "name": { "th": "ซีริลลิก", "en": "Cyrillic" },
+      "name": {
+        "th": "ซีริลลิก",
+        "en": "Cyrillic"
+      },
       "file": "/assets/db/con-data/symbol/cyrillic.json"
     },
     {
       "id": "geometric",
-      "name": { "th": "รูปทรงเรขาคณิต", "en": "Geometric Shapes" },
+      "name": {
+        "th": "รูปทรงเรขาคณิต",
+        "en": "Geometric Shapes"
+      },
       "file": "/assets/db/con-data/symbol/geometric.json"
     },
     {
       "id": "box_drawing",
-      "name": { "th": "เส้นกรอบ", "en": "Box Drawing" },
+      "name": {
+        "th": "เส้นกรอบ",
+        "en": "Box Drawing"
+      },
       "file": "/assets/db/con-data/symbol/box_drawing.json"
     },
     {
       "id": "misc_technical",
-      "name": { "th": "สัญลักษณ์เทคนิค", "en": "Misc Technical" },
+      "name": {
+        "th": "สัญลักษณ์เทคนิค",
+        "en": "Misc Technical"
+      },
       "file": "/assets/db/con-data/symbol/misc_technical.json"
     },
     {
       "id": "letterlike",
-      "name": { "th": "สัญลักษณ์คล้ายตัวอักษร", "en": "Letterlike Symbols" },
+      "name": {
+        "th": "สัญลักษณ์คล้ายตัวอักษร",
+        "en": "Letterlike Symbols"
+      },
       "file": "/assets/db/con-data/symbol/letterlike.json"
     },
     {
       "id": "dingbats",
-      "name": { "th": "ดิงแบต", "en": "Dingbats" },
+      "name": {
+        "th": "ดิงแบต",
+        "en": "Dingbats"
+      },
       "file": "/assets/db/con-data/symbol/dingbats.json"
     },
     {
       "id": "braille",
-      "name": { "th": "เบรลล์", "en": "Braille" },
+      "name": {
+        "th": "เบรลล์",
+        "en": "Braille"
+      },
       "file": "/assets/db/con-data/symbol/braille.json"
+    },
+    {
+      "id": "enclosed_alphanumeric",
+      "name": {
+        "th": "ตัวเลข/ตัวอักษรในวงกลม",
+        "en": "Enclosed Alphanumerics"
+      },
+      "file": "/assets/db/con-data/symbol/enclosed_alphanumeric.json"
+    },
+    {
+      "id": "number_forms",
+      "name": {
+        "th": "รูปแบบตัวเลข (โรมัน)",
+        "en": "Number Forms (Roman)"
+      },
+      "file": "/assets/db/con-data/symbol/number_forms.json"
+    },
+    {
+      "id": "superscript_subscript",
+      "name": {
+        "th": "ตัวยกและตัวห้อยเพิ่มเติม",
+        "en": "Superscript & Subscript Extended"
+      },
+      "file": "/assets/db/con-data/symbol/superscript_subscript.json"
+    },
+    {
+      "id": "phonetic",
+      "name": {
+        "th": "สัทอักษร (IPA)",
+        "en": "Phonetic (IPA)"
+      },
+      "file": "/assets/db/con-data/symbol/phonetic.json"
+    },
+    {
+      "id": "combining",
+      "name": {
+        "th": "อักขระรวม (Combining)",
+        "en": "Combining Characters"
+      },
+      "file": "/assets/db/con-data/symbol/combining.json"
+    },
+    {
+      "id": "general_punctuation_ext",
+      "name": {
+        "th": "เครื่องหมายทั่วไปเพิ่มเติม",
+        "en": "General Punctuation Extended"
+      },
+      "file": "/assets/db/con-data/symbol/general_punctuation_ext.json"
+    },
+    {
+      "id": "cjk_symbols",
+      "name": {
+        "th": "สัญลักษณ์ CJK และเครื่องหมายญี่ปุ่น",
+        "en": "CJK Symbols & Japanese"
+      },
+      "file": "/assets/db/con-data/symbol/cjk_symbols.json"
+    },
+    {
+      "id": "musical",
+      "name": {
+        "th": "สัญลักษณ์ดนตรี",
+        "en": "Musical Symbols"
+      },
+      "file": "/assets/db/con-data/symbol/musical.json"
+    },
+    {
+      "id": "chess_games",
+      "name": {
+        "th": "หมากรุกและเกม",
+        "en": "Chess & Games"
+      },
+      "file": "/assets/db/con-data/symbol/chess_games.json"
+    },
+    {
+      "id": "alchemical",
+      "name": {
+        "th": "สัญลักษณ์เล่นแร่แปรธาตุ",
+        "en": "Alchemical Symbols"
+      },
+      "file": "/assets/db/con-data/symbol/alchemical.json"
+    },
+    {
+      "id": "ancient_scripts",
+      "name": {
+        "th": "อักษรโบราณ",
+        "en": "Ancient Scripts"
+      },
+      "file": "/assets/db/con-data/symbol/ancient_scripts.json"
+    },
+    {
+      "id": "mahjong_domino",
+      "name": {
+        "th": "ไพ่นกกระจอกและโดมิโน",
+        "en": "Mahjong & Domino"
+      },
+      "file": "/assets/db/con-data/symbol/mahjong_domino.json"
+    },
+    {
+      "id": "playing_cards",
+      "name": {
+        "th": "ไพ่",
+        "en": "Playing Cards"
+      },
+      "file": "/assets/db/con-data/symbol/playing_cards.json"
+    },
+    {
+      "id": "miscellaneous",
+      "name": {
+        "th": "สัญลักษณ์เบ็ดเตล็ด",
+        "en": "Miscellaneous Symbols"
+      },
+      "file": "/assets/db/con-data/symbol/miscellaneous.json"
     }
   ]
 }
