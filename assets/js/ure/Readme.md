@@ -1,4 +1,4 @@
-# URE — Universal Render Engine v1.5.0
+# URE — Universal Render Engine v1.6.0
 
 **Zero-config virtual scroll + lazy loading + diff-aware updates for Fantrove.**  
 ใช้กับทุกหน้า (home, discover, search, setting) โดยไม่ต้อง optimize ซ้ำทุกครั้ง
@@ -84,6 +84,7 @@ handle.append(items)
 handle.prepend(items)
 handle.removeByKey(keyValue)
 handle.updateMany(items)          // batch update by key
+await handle.loadChunked(source, chunkSize?)  // v1.6.0 progressive loading
 
 // Async Worker
 await handle.filter(predicates)
@@ -194,6 +195,30 @@ handle.updateMany([
 ]);
 ```
 
+### loadChunked — progressive loading (v1.6.0)
+
+ใช้เมื่อมีข้อมูลจำนวนมากและต้องการให้หน้าเว็บ responsive ระหว่าง load:
+
+```js
+// Plain array — แบ่งเป็น chunk อัตโนมัติ, yield ระหว่าง chunk
+await handle.loadChunked(allItems);             // chunk = 5,000 (default)
+await handle.loadChunked(allItems, 1000);       // chunk = 1,000
+
+// Async generator — รองรับ streaming จาก API
+async function* streamItems() {
+  let page = 1;
+  while (true) {
+    const res = await fetch(`/api/items?page=${page++}`);
+    const data = await res.json();
+    if (!data.length) break;
+    yield data;
+  }
+}
+await handle.loadChunked(streamItems());
+```
+
+> `worker.loadData()` จะถูกเรียกอัตโนมัติเมื่อ load เสร็จ ถ้า `n ≥ WORKER_PERSIST_N`
+
 ### scrollToKey
 
 ```js
@@ -236,12 +261,14 @@ handle.stats()
 //   items: 1200, visible: 12, totalSize: 115200,
 //   stable: 1180, unstable: 20,
 //   preCached: 8,
+//   tmplCached: 340,             ← v1.6.0: entries ใน template HTML cache
 //   pendingSettled: 3,
 //   mountCap: 8,
 //   isGrid: false, columns: 1, gap: 0,
 //   typeAvgCount: 2,
-//   cachedHeights: 980,          ← v1.5.0: จำนวน entries ใน height cache
-//   pool: { cap: 60, buckets: { item: 8 } }
+//   cachedHeights: 980,          ← v1.5.0: entries ใน height cache
+//   pool: { cap: 60, buckets: { item: 8 } },
+//   worker: { workerMode: true, dataLoaded: true }  ← v1.6.0
 // }
 ```
 
@@ -303,6 +330,20 @@ Velocity gate: `vel > 1.5 px/ms` → skip scrollBy, defer ไป scroll-idle sna
 - Auto item width = `(containerWidth - gap × (columns−1)) / columns`
 - ResizeObserver อัพเดท item width อัตโนมัติเมื่อ container resize
 
+### Template Cache *(v1.6.0)*
+
+- Rendered HTML per item key cached in `Map<key, {html, lang, item}>`
+- Cache hit condition: `item === cached.item && lang === cached.lang` (strict reference equality)
+- Eviction: oldest insertion-order entry at `TEMPLATE_CACHE_CAP = 2,000`
+- Miss: any data mutation (`updateItem`, `updateMany`) or lang change → fresh render
+
+### Worker Persistence *(v1.6.0)*
+
+- Above `WORKER_PERSIST_N = 10,000` items: `loadData(items)` transfers the array to the worker once
+- `filter()` and `paginate()` send only predicates / page params — zero item serialization on repeated calls
+- `sort()` still sends the current view (could be a filtered subset — worker doesn't track view state)
+- `loadChunked()` reloads worker data automatically after progressive load completes
+
 ### Diffing
 
 - 2-pass O(n+m), shallow equality
@@ -363,6 +404,43 @@ Velocity gate: `vel > 1.5 px/ms` → skip scrollBy, defer ไป scroll-idle sna
 ---
 
 ## 📋 Changelog
+
+### v1.6.0 — Large-Dataset Complexity Control
+
+**Root causes addressed (3 fixes + 1 constant):**
+
+**[FIX-D] Template HTML Cache** (`virtual-list.js`)
+- `_renderWithCache()` wraps `renderFn` — caches rendered HTML string per item key + lang
+- Cache hit: same item object reference + same lang → `renderFn` never called
+- Recycled nodes scrolling back into view skip template evaluation entirely
+- Eviction: oldest entry dropped at `LARGE_DATASET.TEMPLATE_CACHE_CAP = 2,000` entries
+- Invalidated automatically on `setLang()` (full clear) and `updateItem()` (single key)
+- `stats()` now reports `tmplCached` count
+
+**[FIX-E] Chunked Height-Cache Init** (`virtual-list.js`)
+- `setItems()` always uses `Float32Array.fill(DEFAULT_ITEM_HEIGHT)` for initial alloc (bulk typed-array op, near-instant even at 1M)
+- `n ≤ 50k`: applies height cache synchronously — O(n) Map.get loop, ~5ms
+- `n > 50k`: renders immediately with defaults, then `_applyHeightCacheChunked()` refines in `requestIdleCallback` slices of 5,000 items — main thread never blocked
+- Accumulated corrections applied in one batch when chunking completes
+
+**[FIX-F] Worker Data Persistence** (`worker.js` + `engine.js`)
+- `n ≥ 10k`: engine calls `worker.loadData(items)` once after mount / setData
+- Worker stores items internally; `filter()` and `paginate()` omit items from the message payload → structured-clone cost eliminated for all subsequent calls
+- `sort()` still passes items (operates on current filtered view, not original data)
+- `worker.stats()` reports `dataLoaded` flag
+- Sync fallback unaffected — still receives items per-call
+
+**New handle method:** `handle.loadChunked(source, chunkSize?)` — progressive loading for large arrays or async iterables; yields to browser between chunks via `requestIdleCallback`
+
+**New constants** in `config.js` `LARGE_DATASET`:
+```js
+WORKER_PERSIST_N   : 10_000  // auto-load worker above this count
+CHUNK_INIT_N       : 50_000  // chunked height init above this count
+INIT_CHUNK_SIZE    : 5_000   // items per idle chunk
+TEMPLATE_CACHE_CAP : 2_000   // template HTML cache cap
+```
+
+---
 
 ### v1.5.0 — Social-App Grade Scroll Quality
 
