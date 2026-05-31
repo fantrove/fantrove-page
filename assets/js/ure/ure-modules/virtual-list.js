@@ -3,44 +3,53 @@
 //
 // v1.2.0  Fast-scroll fixes (two-tier mount, partial correction, snap-correct).
 // v1.3.0  Grid layout, type-avg heights, overscan, bidirectional pre-render,
-//          will-change lifecycle, first-render boost, onScrollEnd, getVisibleRange.
-// v1.4.0  Jank regression fixes — three root causes identified vs v1.3.0:
+//          will-change lifecycle, onScrollEnd, getVisibleRange.
+// v1.4.0  Jank regression fixes — deferred will-change, inline range calc,
+//          removed first-render cap boost.
+// v1.5.0  Social-app grade scroll quality — three root causes addressed:
 //
-//  [FIX-1] Deferred will-change lifecycle (_pendingSettled)
-//          v1.3.0 called classList.add('ure-settled') inside _onCardsResized,
-//          which fires on the main thread during active scroll. Changing
-//          will-change:transform → will-change:auto triggers compositor layer
-//          demotion synchronously, causing multi-item cascaded jank every time
-//          a batch of items stabilised.
-//          Fix: collect stable element refs in _pendingSettled Set.
-//          Flush the set in a single rAF AFTER scroll comes to rest (scroll-idle
-//          timer fires). Zero compositor layer changes during scroll.
-//          Recycle loop calls _pendingSettled.delete(el) so orphaned refs never
-//          get the class applied to a recycled node showing different content.
+//  [FIX-A] Height Cache (heightCache + keyExtractor params)
+//    _estimatedH() checks the Map<key,height> passed from engine.js before
+//    falling back to type-average or DEFAULT_ITEM_HEIGHT. On SPA nav back,
+//    heights from the previous session are available immediately, so the
+//    virtual list builds correct offsets from mount — no correction storm
+//    when scrolling through previously-seen items.
+//    _onCardsResized() writes newly measured heights back into the cache.
 //
-//  [FIX-2] Inline range calculations in _render() — no object allocation
-//          v1.3.0 called _computeRange() twice per frame, each returning a new
-//          {si, ei} object. At 60 fps that's 120 tiny allocations/second.
-//          On low-end devices GC pauses are observable (~1-2 ms spikes).
-//          Fix: inline the four binary-search results as local variables.
-//          _computeRange() removed; grid range computation also inlined.
+//  [FIX-B] Scroll Anchor Protocol (_captureAnchor / _restoreAnchor)
+//    Replaces the position-based "ref / oldOff / adj" approach in
+//    _applyCorrection() with an anchor-based approach used by Twitter,
+//    Linear, and most modern virtual lists:
+//      1. Before rebuilding offsets: _captureAnchor() records the first
+//         item at-or-after viewport top plus its current offset (prevTop).
+//      2. Rebuild offsets from the first dirty index.
+//      3. _restoreAnchor() computes delta = newTop - prevTop and calls
+//         scrollBy(0, delta) synchronously.
+//    Key differences from v1.4.0:
+//      - Works for both list AND grid mode (single code path).
+//      - Applies correction during slow/medium scroll (vel ≤ APPLY_VEL_THRESHOLD),
+//        not just when scroll is idle. Fast scroll (vel > threshold) defers to
+//        the scroll-idle snap-correct, same as before — avoids interrupting
+//        browser momentum on mobile.
+//      - Removed the `else { setTimeout(_applyCorrection, ...) }` re-queue
+//        branch; the scroll-idle handler already calls _applyCorrection() as
+//        a snap-correct when _minCorrIdx < Infinity.
 //
-//  [FIX-3] Removed first-render cap boost (_firstRenderDone / _INITIAL_CAP)
-//          v1.3.0 used _MOUNT_CAP × INITIAL_MOUNT_MULTIPLIER (×3) on the first
-//          render frame. A low-end device has _MOUNT_CAP=4, boost=12. Combined
-//          with pass-1 (viewport uncapped, ~8 items) that could reach 20 DOM
-//          mounts in one frame — enough to bust the 16.7 ms frame budget and
-//          cause a visible stutter on the very first scroll interaction.
-//          Fix: revert to uniform _MOUNT_CAP for all frames (same as v1.2.0).
-//
-//  All v1.3.0 features are retained: grid layout (columns + gap), type-average
-//  height tracking, overscan option, bidirectional pre-render, onScrollEnd
-//  callback, getVisibleRange() method, itemKey function support.
+//  [FIX-C] Warm Start (scrollRestorePos param)
+//    When engine.js passes a saved scroll position (from sessionStorage),
+//    mount() sets window.scrollTo(pos, 'instant') synchronously before the
+//    first render frame so _render() reads the correct scroll position on its
+//    very first call — rendering the right items without a flash or jump.
 
 (function (M) {
   'use strict';
 
   const { CONFIG, Scheduler, ObserverFactory, createPool } = M;
+
+  // Velocity threshold above which _restoreAnchor defers the scrollBy to
+  // the scroll-idle flush. Prevents interrupting browser momentum on iOS.
+  // Value in px/ms.
+  const ANCHOR_APPLY_VEL = CONFIG.ANCHOR.APPLY_VEL_THRESHOLD;
 
   // ── One-time CSS ──────────────────────────────────────────────────────────
   const _VL_CSS_ID = '_ure_vl_css';
@@ -59,28 +68,32 @@
   function createVirtualList(opts) {
     const {
       container, viewport,
-      items     = [],
+      items           = [],
       renderFn,
-      lang      = 'en',
-      buffer    = CONFIG.RENDER.DEFAULT_BUFFER_PX,
-      recycling = true,
-      poolCap   = CONFIG.RENDER.DEFAULT_POOL_CAP,
-      horizontal = false,
-      columns   = CONFIG.GRID.DEFAULT_COLUMNS,
-      gap       = CONFIG.GRID.DEFAULT_GAP_PX,
-      overscan  = CONFIG.RENDER.DEFAULT_OVERSCAN,
+      lang            = 'en',
+      buffer          = CONFIG.RENDER.DEFAULT_BUFFER_PX,
+      recycling       = true,
+      poolCap         = CONFIG.RENDER.DEFAULT_POOL_CAP,
+      horizontal      = false,
+      columns         = CONFIG.GRID.DEFAULT_COLUMNS,
+      gap             = CONFIG.GRID.DEFAULT_GAP_PX,
+      overscan        = CONFIG.RENDER.DEFAULT_OVERSCAN,
+      // v1.5.0 — height persistence
+      heightCache     = null,   // Map<string, number> — loaded by engine.js
+      keyExtractor    = null,   // (item, idx) => string|null — provided by engine.js
+      scrollRestorePos = 0,     // px — saved position from sessionStorage
       onVisible, onHidden, onScrollEnd,
     } = opts;
 
     _ensureVLCss();
 
-    const _H       = !!horizontal;
-    const _columns = (!_H && columns > 1) ? (columns | 0) : 1;
-    const _gap     = Math.max(0, gap | 0);
-    const _isGrid  = _columns > 1;
+    const _H        = !!horizontal;
+    const _columns  = (!_H && columns > 1) ? (columns | 0) : 1;
+    const _gap      = Math.max(0, gap | 0);
+    const _isGrid   = _columns > 1;
     const _overscan = Math.max(0, overscan | 0);
 
-    // ── State ────────────────────────────────────────────────────────────────
+    // ── State ─────────────────────────────────────────────────────────────
     let _items    = items.slice();
     let _lang     = lang;
     let _rendered = false;
@@ -92,17 +105,13 @@
     let _off    = new Float64Array(_items.length + 1);
     let _totalH = 0;
 
-    // Grid-mode row arrays
     let _rHgt = _isGrid ? new Float32Array(Math.max(1, Math.ceil(_items.length / _columns))) : null;
     let _rOff = _isGrid ? new Float64Array(Math.max(2, Math.ceil(_items.length / _columns) + 1)) : null;
 
-    let _cw = 0, _itemW = 0; // grid container/item width
-
+    let _cw = 0, _itemW = 0;
     let _minCorrIdx = Infinity;
 
-    // ── Type-average height system ────────────────────────────────────────────
-    // Running average per item type → better initial height estimates for
-    // unmeasured items → fewer offset corrections after first screenful.
+    // ── Type-average height system ────────────────────────────────────────
     /** @type {Map<string, {sum:number, count:number, avg:number}>} */
     const _typeAvgHgt = new Map();
 
@@ -112,25 +121,31 @@
       e.sum += h; e.count++; e.avg = e.sum / e.count;
     }
 
+    /**
+     * Best height estimate for an item at idx.
+     * Priority: height cache (real measured) > type average > default.
+     * [FIX-A] Height cache check eliminates correction storms on remount.
+     */
     function _estimatedH(idx) {
+      if (heightCache && keyExtractor) {
+        const key = keyExtractor(_items[idx], idx);
+        if (key !== null && heightCache.has(key)) return heightCache.get(key);
+      }
       const type = _getType(idx);
       return _typeAvgHgt.get(type)?.avg || CONFIG.RENDER.DEFAULT_ITEM_HEIGHT;
     }
 
-    // ── Deferred settled set (FIX-1) ──────────────────────────────────────────
-    // Collect elements that have stable measured heights. Applied to DOM only
-    // after scroll comes to rest (inside the scroll-idle timer), so zero
-    // compositor layer changes happen during active scroll.
+    // ── Deferred settled set (v1.4.0 FIX-1) ──────────────────────────────
     const _pendingSettled = new Set();
 
-    // ── Device tier ───────────────────────────────────────────────────────────
+    // ── Device tier ───────────────────────────────────────────────────────
     const _T = (() => {
       const m = navigator.deviceMemory, c = navigator.hardwareConcurrency || 2;
       if ((m && m <= 1) || c <= 2) return 0;
       if ((m && m <= 2) || c <= 4) return 1;
       return 2;
     })();
-    const _MOUNT_CAP = [4,  8,  16][_T];
+    const _MOUNT_CAP = [4, 8, 16][_T];
     const _PRE_CAP   = _MOUNT_CAP * 3;
 
     const _vis      = new Map();
@@ -140,7 +155,7 @@
 
     const pool = recycling ? createPool(poolCap) : null;
 
-    // ── Axis abstraction ──────────────────────────────────────────────────────
+    // ── Axis abstraction ──────────────────────────────────────────────────
     const _scrollEl     = document.scrollingElement || document.documentElement;
     const _winMode      = (viewport === _scrollEl || viewport === document.body || viewport === window);
     const _scrollTarget = _winMode ? window : viewport;
@@ -155,17 +170,17 @@
       roSize(e)  { return _H ? (e.borderBoxSize?.[0]?.inlineSize ?? e.contentRect.width) : (e.borderBoxSize?.[0]?.blockSize ?? e.contentRect.height); },
     };
 
-    // ── Spacer ────────────────────────────────────────────────────────────────
+    // ── Spacer ────────────────────────────────────────────────────────────
     const _spacer = document.createElement('div');
     _spacer.className   = CONFIG.DOM.SPACER_CLASS;
     _spacer.style.cssText = _ax.spacerBase;
     container.appendChild(_spacer);
 
-    // ── Scroll velocity + state ───────────────────────────────────────────────
+    // ── Scroll velocity + state ───────────────────────────────────────────
     let _vel = 0, _velPos = 0, _velTime = 0;
     let _scrolling = false, _scrollTimer = null, _scrollRAF = null;
 
-    // ── Container offset cache ────────────────────────────────────────────────
+    // ── Container offset cache ────────────────────────────────────────────
     let _coOff = 0, _coOffDirty = true, _coOffPending = false;
 
     function _getContainerOffset() {
@@ -183,14 +198,14 @@
       return _coOff;
     }
 
-    // ── Grid width ────────────────────────────────────────────────────────────
+    // ── Grid width ────────────────────────────────────────────────────────
     function _updateGridWidth() {
       if (!_isGrid) return;
       _cw    = container.clientWidth || window.innerWidth;
       _itemW = Math.max(1, (_cw - _gap * (_columns - 1)) / _columns);
     }
 
-    // ── Offset system — list mode ─────────────────────────────────────────────
+    // ── Offset system — list mode ─────────────────────────────────────────
     function _buildListOffsets() {
       const n = _items.length;
       if (_off.length !== n + 1) _off = new Float64Array(n + 1);
@@ -218,7 +233,7 @@
       return lo;
     }
 
-    // ── Offset system — grid mode ─────────────────────────────────────────────
+    // ── Offset system — grid mode ─────────────────────────────────────────
     function _numRows() { return _items.length > 0 ? Math.ceil(_items.length / _columns) : 0; }
 
     function _buildGridOffsets() {
@@ -277,16 +292,14 @@
       return lo;
     }
 
-    // ── Unified delegates ─────────────────────────────────────────────────────
-    function _buildOffsets() {
-      _isGrid ? _buildGridOffsets() : _buildListOffsets();
-    }
+    // ── Unified delegates ─────────────────────────────────────────────────
+    function _buildOffsets() { _isGrid ? _buildGridOffsets() : _buildListOffsets(); }
 
     function _rebuildFrom(startIdxOrRow) {
       _isGrid ? _rebuildGridFrom(startIdxOrRow) : _rebuildListFrom(startIdxOrRow);
     }
 
-    // Grid-only transform helpers (used in mountNode + correction for grid mode)
+    // ── Grid transform ────────────────────────────────────────────────────
     function _gridTransform(i) {
       const row = (i / _columns) | 0;
       const y   = (_rOff && _rOff[row]) || 0;
@@ -305,9 +318,7 @@
       }
     }
 
-    // ── Effective buffer (overscan → px) ──────────────────────────────────────
-    // Only iterates _typeAvgHgt when overscan > 0 (almost never in most setups).
-    // For the common case overscan=0 this is a single comparison — no Map loop.
+    // ── Effective buffer ──────────────────────────────────────────────────
     function _effectiveBuf() {
       if (_overscan < 1) return buffer;
       let sum = 0, cnt = 0;
@@ -316,17 +327,17 @@
       return Math.max(buffer, _overscan * avgH);
     }
 
-    // ── Idle pre-render — bidirectional, velocity-aware ───────────────────────
+    // ── Idle pre-render — bidirectional, velocity-aware ───────────────────
     function _schedulePreRender(si, ei) {
       if (_preRafId) return;
       const vel      = _vel;
       const goingFwd = vel >= 0;
       const half     = Math.ceil(_PRE_CAP / 2);
 
-      const aheadS = goingFwd ? ei + 1              : Math.max(0, si - _PRE_CAP);
+      const aheadS = goingFwd ? ei + 1                              : Math.max(0, si - _PRE_CAP);
       const aheadE = goingFwd ? Math.min(_items.length - 1, ei + _PRE_CAP) : si - 1;
-      const behinS = goingFwd ? Math.max(0, si - half) : ei + 1;
-      const behinE = goingFwd ? si - 1 : Math.min(_items.length - 1, ei + half);
+      const behinS = goingFwd ? Math.max(0, si - half)              : ei + 1;
+      const behinE = goingFwd ? si - 1                              : Math.min(_items.length - 1, ei + half);
 
       const doIdle = typeof requestIdleCallback !== 'undefined'
         ? fn => { _preRafId = requestIdleCallback(fn, { timeout: 300 }); }
@@ -347,18 +358,63 @@
       });
     }
 
-    // ── Mount node ────────────────────────────────────────────────────────────
+    // ── Scroll anchor protocol (v1.5.0 FIX-B) ────────────────────────────
+
+    /**
+     * Capture the "scroll anchor" — the first item at-or-after viewport top
+     * and its current offset — BEFORE rebuilding offsets.
+     *
+     * Both list and grid mode are handled. Returns null when the list is empty.
+     * @returns {{ idx: number, row: number, prevTop: number } | null}
+     */
+    function _captureAnchor() {
+      if (_items.length === 0) return null;
+      const st   = _ax.scrollPos();
+      const co   = _getContainerOffset();
+      const vTop = Math.max(0, st - co);
+
+      if (_isGrid) {
+        const row = _findRow(vTop);
+        const idx = Math.min(row * _columns, _items.length - 1);
+        return { idx, row, prevTop: (_rOff && _rOff[row]) || 0 };
+      }
+      const idx = Math.min(_find(vTop), _items.length - 1);
+      return { idx, row: 0, prevTop: (_off && _off[idx]) || 0 };
+    }
+
+    /**
+     * Restore scroll position after a height correction by computing the
+     * delta between the anchor's old and new offset and calling scrollBy.
+     *
+     * Skips the scrollBy when velocity exceeds ANCHOR_APPLY_VEL to avoid
+     * interrupting browser momentum scroll on iOS. The scroll-idle snap-correct
+     * will flush any deferred correction when the user stops scrolling.
+     * @param {{ idx: number, row: number, prevTop: number } | null} anchor
+     */
+    function _restoreAnchor(anchor) {
+      if (!anchor) return;
+      const newTop = _isGrid
+        ? ((_rOff && _rOff[anchor.row]) || 0)
+        : ((_off  && _off[anchor.idx])  || 0);
+      const delta = newTop - anchor.prevTop;
+      if (Math.abs(delta) < 0.5) return;
+      // Defer during fast scroll — momentum must not be interrupted
+      if (Math.abs(_vel) > ANCHOR_APPLY_VEL) return;
+      if (_winMode) {
+        _H ? window.scrollBy(delta, 0) : window.scrollBy(0, delta);
+      } else {
+        if (_H) viewport.scrollLeft += delta;
+        else    viewport.scrollTop  += delta;
+      }
+    }
+
+    // ── Mount node ────────────────────────────────────────────────────────
     function _mountNode(i, frag, applyStagger, staggerIndex) {
       const el = pool ? pool.acquire(_getType(i)) : document.createElement('div');
       el.className = CONFIG.DOM.VISIBLE_CLASS;
-
-      // [FIX-2] Inline CSS string — avoids _getItemCss() + _getItemTransform()
-      // function call overhead on every mount (hot path at 60fps).
-      // Grid mode uses a separate helper since it needs two-axis transform + width.
       el.style.cssText = _isGrid
         ? `position:absolute;top:0;left:0;width:${_itemW}px;contain:layout style paint;transform:${_gridTransform(i)};`
         : `${_ax.itemBase}transform:${_ax.translate(_off[i])};`;
-
       el.setAttribute(CONFIG.DOM.ITEM_ATTR, i);
       el.innerHTML = _preCache.get(i) ?? renderFn(_items[i], _lang);
       _preCache.delete(i);
@@ -381,7 +437,7 @@
       if (onVisible) try { onVisible(_items[i], el); } catch (_) {}
     }
 
-    // ── Render ────────────────────────────────────────────────────────────────
+    // ── Render ────────────────────────────────────────────────────────────
     function _render() {
       if (!_spacer.isConnected) return;
 
@@ -400,12 +456,10 @@
       const from   = vpFrom - (vel >= 0 ? bufBehind : bufAhead);
       const to     = vpTo   + (vel >= 0 ? bufAhead  : bufBehind);
 
-      // [FIX-2] Inline range calculations as local variables.
-      // v1.3.0 used _computeRange() which created {si,ei} objects on every frame.
-      // Local variables are stack-allocated — zero GC pressure.
+      // [v1.4.0 FIX-2] Inline range calculations — no object allocation per frame
       let vsi, vei, si, ei;
       if (_isGrid) {
-        const nr = _numRows();
+        const nr  = _numRows();
         const vr1 = _findRow(Math.max(0, vpFrom));
         const vr2 = Math.min(nr - 1, _findRow(Math.max(0, vpTo)) + 1);
         vsi = vr1 * _columns;
@@ -421,7 +475,7 @@
         ei  = Math.min(_items.length - 1, _find(Math.max(0, to)) + 1);
       }
 
-      // ── Recycle out-of-range items ────────────────────────────────────────
+      // ── Recycle out-of-range items ──────────────────────────────────────
       const toRecycle = [];
       for (const [idx, el] of _vis) {
         if (idx < si || idx > ei) toRecycle.push([idx, el]);
@@ -430,11 +484,7 @@
         _vis.delete(idx); _elIdx.delete(el);
         if (_cardRO) _cardRO.unobserve(el);
         if (onHidden) try { onHidden(_items[idx]); } catch (_) {}
-        // [FIX-1] If this element was pending a settled flush, remove it.
-        // Without this, a recycled+reused node could receive .ure-settled
-        // after the flush fires, incorrectly removing will-change on what
-        // is now a different item rendered at a different position.
-        _pendingSettled.delete(el);
+        _pendingSettled.delete(el); // [v1.4.0 FIX-1]
         if (pool) pool.release(el, _getType(idx));
         else if (el.parentNode) el.parentNode.removeChild(el);
       }
@@ -443,16 +493,13 @@
       const slowScroll = Math.abs(vel) < 0.5;
       let staggerCount = 0;
 
-      // ── Pass 1: strict viewport — mount all, no cap ──────────────────────
+      // Pass 1: viewport — mount all, no cap
       for (let i = vsi; i <= vei; i++) {
         if (_vis.has(i)) continue;
         _mountNode(i, frag, slowScroll, staggerCount < 5 ? staggerCount++ : -1);
       }
 
-      // ── Pass 2: buffer zone — capped per frame ───────────────────────────
-      // [FIX-3] Uniform _MOUNT_CAP for all frames (removed _INITIAL_CAP boost).
-      // The boost caused up to 20 DOM mounts on the first frame of a low-end
-      // device, busting the 16.7 ms frame budget and causing initial-scroll jank.
+      // Pass 2: buffer zone — capped per frame [v1.4.0 FIX-3]
       let bufMounts = 0;
       for (let i = si; i <= ei; i++) {
         if (_vis.has(i)) continue;
@@ -468,7 +515,7 @@
       _schedulePreRender(si, ei);
     }
 
-    // ── ResizeObserver callbacks ──────────────────────────────────────────────
+    // ── ResizeObserver callbacks ──────────────────────────────────────────
     let _cardRO = null, _vpRO = null, _corrTimer = null, _lastCorr = 0;
 
     function _onCardsResized(entries) {
@@ -487,10 +534,15 @@
           _measured[idx] = 1;
           _updateTypeAvg(_getType(idx), h);
           if (_cardRO) try { _cardRO.unobserve(entry.target); } catch (_) {}
-          // [FIX-1] Do NOT call classList.add here. The class change triggers
-          // compositor layer demotion synchronously on the main thread.
-          // Instead, queue the element for a deferred batch flush after scroll
-          // comes to rest — see _onScroll idle timer for the flush.
+
+          // [v1.5.0 FIX-A] Write measured height to persistent cache so it's
+          // available on the next remount without needing another correction.
+          if (heightCache && keyExtractor) {
+            const key = keyExtractor(_items[idx], idx);
+            if (key !== null) heightCache.set(key, h);
+          }
+
+          // [v1.4.0 FIX-1] Defer will-change removal to after scroll idle
           _pendingSettled.add(entry.target);
         }
       }
@@ -501,67 +553,57 @@
       _corrTimer = setTimeout(_applyCorrection, wait);
     }
 
-    // ── Height correction ─────────────────────────────────────────────────────
+    // ── Height correction (v1.5.0 FIX-B) ─────────────────────────────────
+    //
+    // Rewritten to use the anchor protocol:
+    //   1. Capture anchor (first item at-or-after viewport top + its offset)
+    //   2. Rebuild offsets from the first dirty index
+    //   3. Update transforms for all visible items
+    //   4. Restore scroll via scrollBy(delta) — velocity-gated
+    //
+    // Removed: the `else { setTimeout(_applyCorrection, ...) }` re-queue
+    // branch. The scroll-idle handler already performs a snap-correct flush
+    // when _minCorrIdx < Infinity, so pending corrections are never lost.
     function _applyCorrection() {
       _corrTimer = null;
       _lastCorr  = performance.now();
 
-      const absVel = Math.abs(_vel);
-      const st     = _ax.scrollPos();
-      const vTop   = Math.max(0, st - _getContainerOffset());
+      // 1. Capture anchor BEFORE rebuilding (reads current offsets)
+      const anchor = _captureAnchor();
 
+      // 2. Rebuild from first dirty index
       if (_isGrid) {
-        const refRow = _findRow(vTop);
-        const oldOff = (_rOff && _rOff[refRow]) || 0;
-        const minRow = _minCorrIdx === Infinity ? refRow : ((_minCorrIdx / _columns) | 0);
-        _rebuildGridFrom(Math.min(minRow, refRow));
-        _minCorrIdx = Infinity;
-        for (const [idx, el] of _vis) _updateItemTransform(idx, el);
-        if (!_scrolling && absVel <= 1.0) {
-          const adj = ((_rOff && _rOff[refRow]) || 0) - oldOff;
-          if (Math.abs(adj) > 0.5) { if (_winMode) window.scrollBy(0, adj); else viewport.scrollTop = st + adj; }
-          Scheduler.schedule(_render, 'vl-post-correction');
-        } else {
-          _corrTimer = setTimeout(_applyCorrection, CONFIG.TIMING.HEIGHT_CORRECTION_RATE_MS * 2);
-        }
-        return;
-      }
-
-      const ref    = _find(vTop);
-      const oldOff = _off[ref];
-      _rebuildListFrom(Math.min(_minCorrIdx, ref));
-      _minCorrIdx = Infinity;
-      // Inline transform updates — no function call overhead in this batch loop
-      for (const [idx, el] of _vis) {
-        const t = _ax.translate(_off[idx]);
-        if (el.style.transform !== t) el.style.transform = t;
-      }
-      if (!_scrolling && absVel <= 1.0) {
-        const adj = _off[ref] - oldOff;
-        if (Math.abs(adj) > 0.5) {
-          if (_winMode) { _H ? window.scrollBy(adj, 0) : window.scrollBy(0, adj); }
-          else { if (_H) viewport.scrollLeft = st + adj; else viewport.scrollTop = st + adj; }
-        }
-        Scheduler.schedule(_render, 'vl-post-correction');
+        const dirtyRow = _minCorrIdx === Infinity ? 0 : (_minCorrIdx / _columns | 0);
+        _rebuildGridFrom(dirtyRow);
       } else {
-        _corrTimer = setTimeout(_applyCorrection, CONFIG.TIMING.HEIGHT_CORRECTION_RATE_MS * 2);
+        _rebuildListFrom(_minCorrIdx === Infinity ? 0 : _minCorrIdx);
       }
+      _minCorrIdx = Infinity;
+
+      // 3. Update all visible transforms
+      for (const [idx, el] of _vis) _updateItemTransform(idx, el);
+
+      // 4. Restore scroll (velocity-gated — deferred by _restoreAnchor when fast)
+      _restoreAnchor(anchor);
+
+      Scheduler.schedule(_render, 'vl-post-correction');
     }
 
-    // ── Scroll handler ────────────────────────────────────────────────────────
+    // ── Scroll handler ────────────────────────────────────────────────────
     function _onScroll() {
       const now = performance.now(), pos = _ax.scrollPos(), dt = now - _velTime;
       if (dt > 0 && dt < 150) _vel = (pos - _velPos) / dt;
       _velPos = pos; _velTime = now;
       _scrolling = true;
       clearTimeout(_scrollTimer);
+
       _scrollTimer = setTimeout(() => {
         _scrolling = false;
         _vel = 0;
 
         if (_coOffPending) { _coOffPending = false; _coOffDirty = true; }
 
-        // Snap-correct: flush pending corrections immediately
+        // Snap-correct: flush any corrections deferred during fast scroll
         if (_minCorrIdx < Infinity) {
           if (_corrTimer) { clearTimeout(_corrTimer); _corrTimer = null; }
           _applyCorrection();
@@ -569,16 +611,10 @@
           Scheduler.schedule(_render, 'vl-scroll-end');
         }
 
-        // [FIX-1] Deferred will-change lifecycle flush.
-        // Items that stabilised during scroll are queued in _pendingSettled.
-        // We apply .ure-settled here, in a single rAF after scroll is idle,
-        // so ALL compositor layer demotions happen in one batch, off the
-        // scroll hot path. This is the correct point: scroll has stopped,
-        // nav animations have settled, no frame budget pressure.
+        // [v1.4.0 FIX-1] Deferred will-change lifecycle flush
         if (_pendingSettled.size > 0) {
           Scheduler.schedule(() => {
             for (const el of _pendingSettled) {
-              // Guard: only apply if the element is still mounted and visible
               if (_vis.has(_elIdx.get(el) ?? -1)) {
                 el.classList.add(CONFIG.DOM.SETTLED_CLASS);
               }
@@ -594,7 +630,7 @@
       _scrollRAF = requestAnimationFrame(() => { _scrollRAF = null; _render(); });
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // ── Helpers ───────────────────────────────────────────────────────────
     function _getType(idx) {
       const item = _items[idx];
       if (!item || typeof item !== 'object') return 'item';
@@ -611,13 +647,18 @@
       const s2 = new Uint8Array(n); s2.set(_seenIdx);  _seenIdx  = s2;
     }
 
-    // ── Public ────────────────────────────────────────────────────────────────
+    // ── Public ────────────────────────────────────────────────────────────
     const VL = {
 
       mount() {
-        if (_rendered) return; _rendered = true;
+        if (_rendered) return;
+        _rendered = true;
         if (_isGrid) _updateGridWidth();
+
+        // [FIX-A] _buildOffsets() now uses heightCache via _estimatedH(),
+        // so the spacer starts at approximately the correct total height.
         _buildOffsets();
+
         _cardRO = ObserverFactory.createRO(_onCardsResized);
 
         _vpRO = ObserverFactory.createRO(() => {
@@ -635,6 +676,22 @@
         });
 
         if (_vpRO) _vpRO.observe(_winMode ? document.body : viewport);
+
+        // [FIX-C] Warm start: set scroll synchronously before the first rAF
+        // so _render() reads the correct scroll position on its first call,
+        // rendering the right items without a cold-start flash.
+        // scrollTo with 'instant' updates window.scrollY synchronously.
+        if (scrollRestorePos > 0) {
+          if (_winMode) {
+            _H
+              ? window.scrollTo({ left: scrollRestorePos, behavior: 'instant' })
+              : window.scrollTo({ top : scrollRestorePos, behavior: 'instant' });
+          } else {
+            if (_H) viewport.scrollLeft = scrollRestorePos;
+            else    viewport.scrollTop  = scrollRestorePos;
+          }
+        }
+
         _scrollTarget.addEventListener('scroll', _onScroll, { passive: true });
         Scheduler.schedule(_render, 'vl-initial');
       },
@@ -643,6 +700,7 @@
         _items = newItems.slice();
         const n = _items.length;
         _hgt = new Float32Array(n);
+        // [FIX-A] Use cached heights for newly set items where available
         for (let i = 0; i < n; i++) _hgt[i] = _estimatedH(i);
         _measured   = new Uint8Array(n);
         _seenIdx    = new Uint8Array(n);
@@ -669,6 +727,7 @@
         _items.splice(index, 0, ...newItems);
         const len = newItems.length;
         const xh  = new Float32Array(len);
+        // [FIX-A] Use cached heights for inserted items where available
         for (let i = 0; i < len; i++) xh[i] = _estimatedH(index + i);
         const mh = new Float32Array(_hgt.length + len);
         mh.set(_hgt.slice(0, index)); mh.set(xh, index); mh.set(_hgt.slice(index), index + len);
@@ -746,6 +805,7 @@
           mountCap: _MOUNT_CAP, horizontal: _H,
           isGrid: _isGrid, columns: _columns, gap: _gap,
           typeAvgCount: _typeAvgHgt.size,
+          cachedHeights: heightCache ? heightCache.size : 0,
           pool: pool ? pool.stats() : null,
         };
       },

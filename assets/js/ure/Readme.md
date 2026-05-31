@@ -1,4 +1,4 @@
-# URE — Universal Render Engine v1.4.0
+# URE — Universal Render Engine v1.5.0
 
 **Zero-config virtual scroll + lazy loading + diff-aware updates for Fantrove.**  
 ใช้กับทุกหน้า (home, discover, search, setting) โดยไม่ต้อง optimize ซ้ำทุกครั้ง
@@ -14,7 +14,7 @@ assets/js/ure/
 ├── ure-examples.js           ← Reference code — ห้ามโหลดใน production
 └── ure-modules/
     ├── types.js
-    ├── config.js             ← Constants + device tier + GRID defaults
+    ├── config.js             ← Constants + device tier + GRID + CACHE + ANCHOR defaults
     ├── scheduler.js
     ├── pool.js
     ├── observer.js
@@ -22,8 +22,8 @@ assets/js/ure/
     ├── state.js
     ├── worker.js
     ├── lazy-assets.js
-    ├── virtual-list.js       ← Core virtual scroll (list + grid)
-    └── engine.js             ← Orchestrator + public API
+    ├── virtual-list.js       ← Core virtual scroll (list + grid) + anchor protocol + height cache
+    └── engine.js             ← Orchestrator + public API + persistence lifecycle
 ```
 
 ---
@@ -57,7 +57,7 @@ window.addEventListener('ure:ready', () => {
 | `template` | `(item, lang) => string` | **required** | HTML string สำหรับแต่ละ item |
 | `buffer` | `number` | `600` | px ที่ pre-render ไว้นอก viewport |
 | `overscan` | `number` | `0` | จำนวน items นอก viewport ที่จะ pre-render (override buffer px) |
-| `columns` | `number` | `1` | Grid layout columns (>1 = grid mode, vertical scroll เท่านั้น) |
+| `columns` | `number` | `1` | Grid layout columns (>1 = grid mode) |
 | `gap` | `number` | `0` | ระยะห่างระหว่าง item/row ใน px |
 | `recycling` | `boolean` | `true` | เปิด DOM node pool |
 | `diffing` | `boolean` | `true` | เปิด diff — re-render เฉพาะ item ที่เปลี่ยน |
@@ -66,6 +66,7 @@ window.addEventListener('ure:ready', () => {
 | `lang` | `string` | `localStorage.selectedLang \|\| 'en'` | ภาษาเริ่มต้น |
 | `poolCap` | `number` | `60` | จำนวน node สูงสุดใน pool |
 | `horizontal` | `boolean` | `false` | Horizontal scroll mode |
+| `cacheKey` | `string` | `container.id + '_' + keyField` | **v1.5.0** Key สำหรับ sessionStorage — ตั้งเองเมื่อ container ไม่มี id หรือมีหลาย instance ในหน้าเดียวกัน |
 | `onVisible` | `(item, el) => void` | - | Callback เมื่อ item เข้า viewport |
 | `onHidden` | `(item) => void` | - | Callback เมื่อ item ออก viewport |
 | `onUpdate` | `({added, removed, changed}) => void` | - | หลัง data update |
@@ -93,14 +94,14 @@ await handle.paginate(page, size)
 // UI
 handle.setLang(lang)
 handle.scrollTo(index, behavior)
-handle.scrollToKey(keyValue, bhv)  // scroll to item by key
+handle.scrollToKey(keyValue, bhv)
 handle.refresh()
 
 // Visibility
-handle.getVisibleRange()           // → { startIndex, endIndex }
+handle.getVisibleRange()          // → { startIndex, endIndex }
 
 // State
-handle.on('lang', fn)              // → unsubscribe fn
+handle.on('lang', fn)             // → unsubscribe fn
 handle.onAny(fn)
 
 // Read-only
@@ -109,7 +110,7 @@ handle.lang
 handle.loading
 
 // Debug
-handle.stats()
+handle.stats()                    // เพิ่ม cache.heightEntries ใน v1.5.0
 handle.destroy()
 ```
 
@@ -142,9 +143,9 @@ const handle = URE.mount({
       <p>${item.name?.[lang] || item.name?.en}</p>
     </div>
   `,
-  columns   : 2,
-  gap       : 12,
-  keyField  : 'id',
+  columns  : 2,
+  gap      : 12,
+  keyField : 'id',
 });
 ```
 
@@ -161,10 +162,21 @@ const handle = URE.mount({
 });
 ```
 
+### Height cache key (v1.5.0)
+
+ตั้ง `cacheKey` เมื่อหน้าเดียวมีหลาย URE instance หรือ container ไม่มี `id`:
+
+```js
+// instance A
+URE.mount({ container: '#feed-emoji',  data, template, cacheKey: 'feed-emoji' });
+
+// instance B
+URE.mount({ container: '#feed-symbol', data, template, cacheKey: 'feed-symbol' });
+```
+
 ### Overscan (item-count buffer)
 
 ```js
-// pre-render 8 items นอก viewport ในแต่ละทิศ
 const handle = URE.mount({
   container : '#app',
   data      : items,
@@ -210,6 +222,8 @@ const handle = URE.mount({
 window.addEventListener('routeChanged', () => URE.destroyAll());
 ```
 
+> `destroyAll()` เรียก `destroy()` บนทุก instance — ซึ่งจะ persist height cache และ scroll position ก่อน teardown โดยอัตโนมัติ
+
 ---
 
 ## 🐛 Debug
@@ -222,10 +236,11 @@ handle.stats()
 //   items: 1200, visible: 12, totalSize: 115200,
 //   stable: 1180, unstable: 20,
 //   preCached: 8,
-//   pendingSettled: 3,   // items queued for will-change flush (post-scroll)
+//   pendingSettled: 3,
 //   mountCap: 8,
 //   isGrid: false, columns: 1, gap: 0,
 //   typeAvgCount: 2,
+//   cachedHeights: 980,          ← v1.5.0: จำนวน entries ใน height cache
 //   pool: { cap: 60, buckets: { item: 8 } }
 // }
 ```
@@ -237,7 +252,7 @@ handle.stats()
 ```
 URE.mount()
   └── engine.js
-       ├── virtual-list.js  (list + grid virtual scroll, all perf systems)
+       ├── virtual-list.js  (list + grid virtual scroll, anchor protocol, height cache)
        │    ├── pool.js
        │    └── observer.js
        ├── diffing.js        (2-pass O(n+m) diff, keyFn support)
@@ -256,22 +271,37 @@ URE.mount()
 - **Float64Array prefix sums** — O(log n) binary search สำหรับ list; row-based สำหรับ grid
 - **transform: translateY / translate(x,y)** — no layout trigger, GPU composite only
 - **Two-tier mounting** — viewport items uncapped; buffer zone ≤ `_MOUNT_CAP` per frame
-- **Type-average height tracking** *(v1.3.0)* — running average per item type; ลด correction frequency ~70-90% หลัง screenful แรก
-- **Deferred will-change lifecycle** *(v1.4.0)* — `.ure-settled` ถูก batch-apply ใน rAF เดียว หลัง scroll หยุด — ไม่มี compositor layer changes ระหว่าง scroll เลย
-- **Inlined range calculations** *(v1.4.0)* — ไม่สร้าง `{si, ei}` object ทุก frame → zero GC pressure ใน hot path
+- **Type-average height tracking** *(v1.3.0)* — running average per item type
+- **Deferred will-change lifecycle** *(v1.4.0)* — `.ure-settled` batch-apply ใน rAF หลัง scroll หยุด
+- **Inlined range calculations** *(v1.4.0)* — zero GC pressure ใน hot path
 - **Snap-correct on scroll-end** — flush pending corrections ทันทีที่ scroll idle
-- **Partial fast-scroll correction** — rebuild offsets + update transforms ทุก velocity; scrollBy anchor skip เมื่อ vel > 1.0
 - **Bidirectional pre-render** — pre-cache ทั้ง 2 ทิศตาม velocity direction
-- **Scroll-anchor correction** — ปรับ scrollTop หลัง height correction (vel ≤ 1.0 เท่านั้น)
 - **DOM pool** — node reuse ผ่าน innerHTML wipe
 - **rAF gating** — viewport uncapped; buffer ≤ `_MOUNT_CAP` per frame
+
+### Height Cache *(v1.5.0)*
+
+- Measured heights บันทึกลง `sessionStorage` keyed by item identity (`keyField` / `itemKey`)
+- `_estimatedH()` ตรวจ cache ก่อน → remount ได้ real heights ทันที → ไม่มี correction storm
+- บันทึกอัตโนมัติเมื่อ: `pagehide`, `visibilitychange:hidden`, `destroy()`
+- Invalidate อัตโนมัติเมื่อ orientation เปลี่ยน (width เปลี่ยน → heights เก่าใช้ไม่ได้)
+- Cap: 5,000 entries per instance; versioned (stale format discarded automatically)
+- Items ที่ไม่มี stable key (`keyField`/`itemKey`) จะไม่ถูก cache
+
+### Scroll Anchor Protocol *(v1.5.0)*
+
+ทุก height correction ใช้ pattern เดียวกัน (list + grid):
+1. **`_captureAnchor()`** — บันทึก first item at-or-after viewport top + offset ปัจจุบัน
+2. Rebuild offsets จาก first dirty index
+3. **`_restoreAnchor(anchor)`** — `delta = newTop - prevTop` → `scrollBy(0, delta)` synchronous
+
+Velocity gate: `vel > 1.5 px/ms` → skip scrollBy, defer ไป scroll-idle snap-correct (ป้องกัน interrupt iOS momentum scroll)
 
 ### Grid Layout *(v1.3.0+)*
 
 - Row-based offset prefix sums (`_rHgt[]`, `_rOff[]`)
 - Auto item width = `(containerWidth - gap × (columns−1)) / columns`
 - ResizeObserver อัพเดท item width อัตโนมัติเมื่อ container resize
-- `translate(x, y)` สำหรับ 2-axis positioning
 
 ### Diffing
 
@@ -307,6 +337,7 @@ URE.mount()
 > **ต้องมีใน `ure.css`:**
 > ```css
 > .ure-visible.ure-settled { will-change: auto; }
+> [data-ure-container] { overflow-anchor: none; }  /* v1.5.0 — required */
 > ```
 
 ---
@@ -317,11 +348,15 @@ URE.mount()
 
 **อย่าใส่ event listener ใน innerHTML** — ใช้ `onItemClick` แทน
 
-**`keyField` / `itemKey` ต้อง unique** — key ซ้ำทำให้ diff ผิดพลาด
+**`keyField` / `itemKey` ต้อง unique** — key ซ้ำทำให้ diff ผิดพลาด และ height cache เก็บค่าผิด
 
 **Grid mode + horizontal ใช้ร่วมกันไม่ได้** — ถ้า `horizontal: true` ค่า `columns` จะถูก force = 1
 
 **Grid mode: ไม่ต้องกำหนด width ใน CSS ของ item** — engine set `style.width` อัตโนมัติ
+
+**`cacheKey` ต้อง unique ต่อ instance** — หน้าที่มีหลาย URE instance ต้องตั้ง `cacheKey` ทุกตัว ไม่เช่นนั้น cache จะ overwrite กัน
+
+**Height cache ผูกกับ item key เท่านั้น** — items ที่ไม่มี `keyField`/`itemKey` (fallback เป็น `__idx_N`) จะไม่ถูก cache
 
 **Worker bridge lazy-init** — Worker ถูกสร้างครั้งแรกที่เรียก `filter()` / `sort()` / `paginate()`
 
@@ -329,35 +364,50 @@ URE.mount()
 
 ## 📋 Changelog
 
+### v1.5.0 — Social-App Grade Scroll Quality
+
+**Root causes addressed (3 fixes):**
+
+**[FIX-A] Height Cache** (`engine.js` + `virtual-list.js`)
+- Measured item heights บันทึกลง `sessionStorage` per item key
+- `_estimatedH()` ตรวจ cache ก่อน type-average และ default — remount ครั้งถัดไปได้ real heights ทันที
+- Eliminates correction storm เมื่อ scroll ขึ้นผ่าน items ที่เคยเห็นแล้วในรอบก่อน
+- Auto-save: `pagehide`, `visibilitychange:hidden`, `destroy()` — Auto-invalidate: orientation change
+
+**[FIX-B] Scroll Anchor Protocol** (`virtual-list.js`)
+- `_captureAnchor()` + `_restoreAnchor()` แทน `ref/oldOff/adj` pattern เดิม
+- ทำงานระหว่าง scroll (ไม่ต้อง idle) เมื่อ vel ≤ 1.5 px/ms
+- vel > 1.5 px/ms → defer to scroll-idle snap-correct → ป้องกัน interrupt iOS momentum
+- Removed: `else { setTimeout(_applyCorrection, ...) }` re-queue branch
+
+**[FIX-C] Warm Start** (`virtual-list.js`)
+- `mount()` calls `window.scrollTo(savedPos, 'instant')` synchronously ก่อน first rAF
+- First `_render()` frame เห็น scroll position ที่ถูกต้อง → render items ถูกกลุ่มทันที
+
+**[CSS] `overflow-anchor: none`** (`ure.css`)
+- เพิ่มบน `[data-ure-container]` และ `.ure-spacer`
+- Browser auto-anchor ขัด URE manual anchor → double-correction jump — ปิดทันที
+
+**New mount option:** `cacheKey: string` — stable key สำหรับ sessionStorage
+
+---
+
 ### v1.4.0 — Jank Regression Fix
 
-**Root-cause analysis vs v1.2.0 (all fixes in `virtual-list.js`):**
-
-**[FIX-1] Deferred will-change lifecycle (`_pendingSettled`)**
-- v1.3.0 `_onCardsResized` called `classList.add('ure-settled')` synchronously on the main thread. Changing `will-change:transform → auto` triggers compositor layer demotion — expensive GPU work cascading across multiple items during scroll = constant jank.
-- Fix: collect stable elements in `_pendingSettled` Set. Apply the class in a single `Scheduler.schedule` rAF inside the scroll-idle timer, after scroll stops completely. Zero compositor changes during active scroll.
-- Recycle loop calls `_pendingSettled.delete(el)` to prevent stale refs from applying the class to reused nodes.
-
-**[FIX-2] Inlined range calculations — no object allocation in render loop**
-- v1.3.0 called `_computeRange()` twice per `_render()` frame, each returning `{si, ei}`. At 60fps = 120 allocations/second → GC pressure, observable as ~1–2 ms micro-pauses on low-end devices.
-- Fix: inline four binary-search results as local `let` variables. `_computeRange()` function removed.
-
-**[FIX-3] Removed first-render cap boost**
-- v1.3.0 used `_MOUNT_CAP × 3` on the first render frame. Low-end device: cap=4 → boost=12, plus ~8 viewport items (uncapped) = up to 20 DOM mounts in one frame. Exceeds the 16.7 ms budget → initial-scroll stutter.
-- Fix: uniform `_MOUNT_CAP` for all frames, same as v1.2.0.
-
-All v1.3.0 features retained: grid layout, type-average heights, overscan, bidirectional pre-render, onScrollEnd, getVisibleRange, itemKey function, updateMany, scrollToKey.
+**[FIX-1]** Deferred will-change lifecycle (`_pendingSettled`) — zero compositor changes during scroll  
+**[FIX-2]** Inlined range calculations — no object allocation in render loop  
+**[FIX-3]** Removed first-render cap boost — uniform `_MOUNT_CAP` all frames
 
 ---
 
 ### v1.3.0 — Performance Deep-Dive + Grid Layout + API Expansion
-- Type-average height tracking, will-change lifecycle (deferred in v1.4.0), grid layout, overscan, itemKey function, updateMany, scrollToKey, getVisibleRange, onScrollEnd, bidirectional pre-render.
+Type-average height tracking, grid layout, overscan, itemKey function, updateMany, scrollToKey, getVisibleRange, onScrollEnd, bidirectional pre-render.
 
 ### v1.2.0 — Fast-Scroll Rendering Fix
-- Two-tier mounting, partial fast-scroll correction, snap-correct on scroll-end.
+Two-tier mounting, partial fast-scroll correction, snap-correct on scroll-end.
 
 ### v1.1.0 — Horizontal Mode + Scroll-Guard
-- `horizontal` option, `_coOffPending` scroll-guard, partial offset rebuild.
+`horizontal` option, `_coOffPending` scroll-guard, partial offset rebuild.
 
 ### v1.0.0 — Initial Release
-- Virtual scroll, DOM pool, 2-pass diff, Web Worker bridge, lazy assets, device tier.
+Virtual scroll, DOM pool, 2-pass diff, Web Worker bridge, lazy assets, device tier.

@@ -4,6 +4,13 @@
  *          No visual opinions — only structural styles needed for
  *          correct positioning, compositing, and CLS prevention.
  *          Pages add their own card/button CSS on top of this.
+ *
+ * v1.5.0:
+ *   [data-ure-container] — overflow-anchor: none (required — browser scroll
+ *     anchoring conflicts with URE's manual anchor protocol and causes
+ *     double-correction jumps; all known virtual-scroll libraries disable it).
+ *   scroll-behavior: auto — prevents CSS smooth-scroll interfering with
+ *     virtual scroll's synchronous scrollBy/scrollTo corrections.
  */
 
 /* ── Container ─────────────────────────────────────────────────────────────── */
@@ -14,6 +21,13 @@
   isolation: isolate;
   /* Prevent content from leaking outside the container */
   overflow: hidden;
+  /* CRITICAL: disable browser scroll anchoring — URE manages its own anchor
+   * protocol in _captureAnchor/_restoreAnchor. Without this, Chrome applies a
+   * second correction on top of URE's, causing double-jump layout shift. */
+  overflow-anchor: none;
+  /* Prevent CSS smooth-scroll (if set on :root or html) from fighting with
+   * the synchronous scrollBy() calls in _restoreAnchor(). */
+  scroll-behavior: auto;
 }
 
 /* ── Spacer box (sets virtual list height) ─────────────────────────────────── */
@@ -24,6 +38,9 @@
   min-height: 2px;
   /* Layout containment: spacer size changes don't trigger ancestor relayout */
   contain: layout style;
+  /* Spacer must also opt out — it's inside the container but Chrome still
+   * considers it a candidate for scroll anchoring in some cases. */
+  overflow-anchor: none;
 }
 
 /* ── Virtual item wrappers ─────────────────────────────────────────────────── */
@@ -41,6 +58,8 @@
    * without waiting for a JS property assignment.
    */
   will-change: transform;
+  /* Each item opts out individually — belt-and-suspenders with the container */
+  overflow-anchor: none;
 }
 
 /* Remove compositing hint once item is fully settled (class toggled by JS) */
@@ -61,8 +80,10 @@
 img.ure-img-loading {
   /* Reserve space while image loads — prevents CLS */
   background: #f0f0f0;
-  /* Animate only if user hasn't opted out of motion */
-  @media (prefers-reduced-motion: no-preference) {
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  img.ure-img-loading {
     animation: ure-shimmer 1.4s linear infinite;
   }
 }
@@ -72,7 +93,6 @@ img.ure-img-loaded {
 }
 
 img.ure-img-error {
-  /* Distinct colour so broken images are obvious during development */
   background: #ffeaea;
   border: 1px solid #f5c6c6;
 }
@@ -118,11 +138,7 @@ img.ure-img-loading {
 }
 
 /* ── content-visibility auto hint (modern browsers) ────────────────────────── */
-/*
- * Applied to list groups when engine uses "grouped" rendering mode.
- * Individual .ure-visible nodes use contain:paint instead — content-visibility
- * is not applied to absolutely-positioned elements.
- */
+
 .ure-group {
   content-visibility: auto;
   contain-intrinsic-size: auto 260px;

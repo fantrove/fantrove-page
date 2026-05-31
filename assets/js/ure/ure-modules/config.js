@@ -2,11 +2,9 @@
 // Purpose: All compile-time constants for URE. Nothing mutates.
 // Used by: Every URE module
 //
-// Changes v1.3.0:
-//   DOM.SETTLED_CLASS      — class applied when item height stabilises (removes will-change)
-//   RENDER.DEFAULT_OVERSCAN        — item-count buffer (0 = use buffer px)
-//   RENDER.INITIAL_MOUNT_MULTIPLIER — caps are relaxed on the first render frame
-//   GRID section           — multi-column layout defaults
+// v1.5.0 changes:
+//   CACHE section — height persistence + scroll position storage keys/limits
+//   ANCHOR_APPLY_VEL — velocity threshold above which anchor restore is deferred
 
 (function(M) {
   'use strict';
@@ -21,10 +19,32 @@
     SENTINEL_MARGIN: '700px',
     // 0 = use DEFAULT_BUFFER_PX; >0 = number of items to pre-render beyond visible range
     DEFAULT_OVERSCAN: 0,
-    // On the very first render frame the buffer-zone mount cap is multiplied by
-    // this value so the area just outside the viewport fills without waiting
-    // for multiple rAF cycles (still capped — viewport items are always uncapped).
-    INITIAL_MOUNT_MULTIPLIER: 3,
+    // v1.3.0: first-frame mount multiplier — removed in v1.4.0 (caused initial jank).
+    // Kept as a named constant (= 1) to document the intentional revert.
+    INITIAL_MOUNT_MULTIPLIER: 1,
+  });
+  
+  // ── Scroll anchor ─────────────────────────────────────────────────────────
+  
+  const ANCHOR = Object.freeze({
+    // px/ms — below this velocity the anchor scrollBy is applied immediately.
+    // Above it we skip the scrollBy and let the scroll-idle flush handle it,
+    // to avoid interrupting browser momentum scrolling on mobile.
+    APPLY_VEL_THRESHOLD: 1.5,
+  });
+  
+  // ── Height + scroll-position persistence (v1.5.0) ────────────────────────
+  // Heights are cached per item key in sessionStorage so remounts (SPA
+  // navigation back) use real heights instead of estimates, eliminating
+  // the correction storm that caused layout shift during scroll-up.
+  
+  const CACHE = Object.freeze({
+    HEIGHT_PREFIX: 'ure_h_', // sessionStorage key prefix for height maps
+    SCROLL_PREFIX: 'ure_sp_', // sessionStorage key prefix for scroll position
+    MAX_ENTRIES: 5000, // prune oldest entries beyond this limit
+    // Schema version — bump whenever the stored format changes so stale
+    // data in sessionStorage is discarded rather than mis-parsed.
+    VERSION: 1,
   });
   
   // ── Scheduler timing ──────────────────────────────────────────────────────
@@ -52,17 +72,16 @@
     PLACEHOLDER_CLASS: 'ure-placeholder',
     SPACER_CLASS: 'ure-spacer',
     VISIBLE_CLASS: 'ure-visible',
-    // Added once ResizeObserver confirms an item's height is stable.
+    // Applied once ResizeObserver confirms an item's height is stable.
     // CSS rule: .ure-visible.ure-settled { will-change: auto; }
-    // Releasing compositing layers reduces GPU memory on long lists.
     SETTLED_CLASS: 'ure-settled',
   });
   
-  // ── Grid layout defaults (NEW v1.3.0) ─────────────────────────────────────
+  // ── Grid layout defaults ──────────────────────────────────────────────────
   
   const GRID = Object.freeze({
-    DEFAULT_COLUMNS: 1, // 1 = normal list; >1 = multi-column grid
-    DEFAULT_GAP_PX: 0, // gap between columns and between rows
+    DEFAULT_COLUMNS: 1,
+    DEFAULT_GAP_PX: 0,
   });
   
   // ── Device tier (set once at module load) ─────────────────────────────────
@@ -79,6 +98,6 @@
   
   // ── Export ────────────────────────────────────────────────────────────────
   
-  M.CONFIG = Object.freeze({ RENDER, TIMING, DIFF, DOM, GRID, DEVICE_TIER, BATCH });
+  M.CONFIG = Object.freeze({ RENDER, ANCHOR, CACHE, TIMING, DIFF, DOM, GRID, DEVICE_TIER, BATCH });
   
 })(window.UREModules = window.UREModules || {});
