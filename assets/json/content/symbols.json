@@ -1,15 +1,1 @@
-[
-  { "group": {"categoryId": "arrows", "type": "button"}},
-  { "group": {"categoryId": "math", "type": "button"}},
-  { "group": {"categoryId": "currency", "type": "button"}},
-  { "group": {"categoryId": "punctuation", "type": "button"}},
-  { "group": {"categoryId": "latin_extended", "type": "button"}},
-  { "group": {"categoryId": "greek", "type": "button"}},
-  { "group": {"categoryId": "cyrillic", "type": "button"}},
-  { "group": {"categoryId": "geometric", "type": "button"}},
-  { "group": {"categoryId": "box_drawing", "type": "button"}},
-  { "group": {"categoryId": "misc_technical", "type": "button"}},
-  { "group": {"categoryId": "letterlike", "type": "button"}},
-  { "group": {"categoryId": "dingbats", "type": "button"}},
-  { "group": {"categoryId": "braille", "type": "button"}}
-]
+[{ "source": "symbol" }]

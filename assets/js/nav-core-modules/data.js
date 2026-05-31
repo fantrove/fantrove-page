@@ -1,8 +1,22 @@
+// Path:    assets/js/nav-core-modules/data.js
+// Purpose: DataService — fetch, cache, and index all con-data; bridges NavCore to ConDataService
+// Used by: content.js (_resolveSource, fetchCategoryGroup), copy.js (apiMap lookup), router.js (fetchWithRetry), init.js (_warmup)
+
 // @ts-check
 /**
  * @file data.js
  * DataService — data fetching, caching, and shared index management.
+ *
+ * v2.1 — เพิ่ม getTypeCategories(typeId)
+ *   Public method สำหรับ ContentService._resolveSource() —
+ *   ดึงรายการ [{id, name}] ของ categories ทั้งหมดใน type นั้น
+ *   โดยใช้ cache จาก _loadCategoryIndex ที่มีอยู่แล้ว (ไม่ fetch ซ้ำ)
+ *
  * (patched: _performFetch has real retry, _buildSharedIndex clears rejected promise)
+ *
+ * @module data
+ * @depends {config.js, state.js, utils.js}
+ * @used-by content.js, copy.js, router.js
  */
 (function (M) {
   'use strict';
@@ -359,6 +373,20 @@
       };
 
       return { id: foundCat.id, name: foundCat.name, data: foundCat.data || [], header };
+    },
+
+    // ── getTypeCategories ───────────────────────────────────────────────────────
+    //
+    // WHY public: ContentService._resolveSource() ต้องการรายการ categories
+    //             โดยไม่ต้อง fetch item data — เบากว่า fetchCategoryGroup (ไม่ดึง data[])
+    //
+    // @param {string} typeId  — เช่น 'emoji', 'symbol'
+    // @returns {Promise<Array<{id:string,name:object}>|null>}
+
+    async getTypeCategories(typeId) {
+      if (!typeId) return null;
+      const idx = await this._loadCategoryIndex(typeId);
+      return idx ? idx.categories : null;
     },
 
     prefetchTopCategories() {

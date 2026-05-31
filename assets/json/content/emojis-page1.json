@@ -1,11 +1,1 @@
-[
-   { "group": {"categoryId": "smileys_emotion", "type": "button"}},
-   { "group": {"categoryId": "people_body", "type": "button"}},
-   { "group": {"categoryId": "animal_nature", "type": "button"}},
-   { "group": {"categoryId": "food_drink", "type": "button"}},
-   { "group": {"categoryId": "travel_places", "type": "button"}},
-   { "group": {"categoryId": "activities", "type": "button"}},
-   { "group": {"categoryId": "objects", "type": "button"}},
-   { "group": {"categoryId": "symbols", "type": "button"}},
-   { "group": {"categoryId": "flags", "type": "button"}}
-]
+[{ "source": "emoji" }]

@@ -1,3 +1,7 @@
+// Path:    assets/js/nav-core-modules/content.js
+// Purpose: ContentService — renders content items (buttons, cards, source groups) via URE
+// Used by: router.js (M.ContentService.renderContent), init.js (M.ContentService.updateCardsLanguage)
+
 // @ts-check
 /**
  * @file content.js
@@ -9,6 +13,11 @@
  *   btn-row      — 10 buttons per item; --first/mid/last/only position
  *   card-group   — vertical card grid (normal wrapping)
  *   card-group-h — horizontal scroll strip (overflow-x; no virtual scroll on X)
+ *
+ * Data spec for source descriptor (v2 — pulls entire type from con-data):
+ *   { "source": "emoji" }
+ *   { "source": "symbol", "layout": "button" }
+ *   { "source": "emoji", "only": ["smileys_emotion", "activities"] }
  *
  * Data spec for horizontal cards:
  *   { "group": { "categoryId": "...", "type": "card", "layout": "horizontal" } }
@@ -25,6 +34,9 @@
   const _txt = (v, l) => !v ? '' : typeof v === 'object' ? (v[l] || v.en || '') : String(v);
 
   const BTN_ROW_SIZE = 10;
+
+  // WHY: กำหนด constant เพื่อป้องกัน magic string ใน _resolveSource / _fetchSourceGroup
+  const LAYOUT = Object.freeze({ BUTTON: 'button', CARD: 'card' });
 
   // ── CSS (injected once) ───────────────────────────────────────────────────
 
@@ -95,7 +107,7 @@
 
     async clearContent() {
       _sess++;
-      if (_ureHandle) { try { _ureHandle.destroy(); } catch (_) {} _ureHandle = null; }
+      if (_ureHandle) { try { _ureHandle.destroy(); } catch (err) { console.warn('[Content] URE destroy failed:', err); } _ureHandle = null; }
       const ctr = document.getElementById(CONFIG.DOM.CONTENT_LOADING_ID);
       if (ctr) ctr.innerHTML = '';
     },
@@ -114,13 +126,13 @@
         if (sess !== _sess) return;
 
         const lang = localStorage.getItem('selectedLang') || 'en';
-        await M.DataService.loadApiDatabase().catch(() => {});
+        await M.DataService.loadApiDatabase().catch(err => { console.warn('[Content] loadApiDatabase failed, continuing:', err); });
         if (sess !== _sess) return;
 
         const items = await this._resolveAll(data, lang);
         if (sess !== _sess) return;
 
-        try { M.LoadingService?.hide(); } catch (_) {}
+        try { M.LoadingService?.hide(); } catch (err) { console.warn('[Content] LoadingService.hide failed:', err); }
 
         _ureHandle = window.URE.mount({
           container          : ctr,
@@ -135,7 +147,7 @@
 
       } catch (e) {
         console.error('[NavCore/Content] renderContent error:', e);
-        try { M.LoadingService?.hide(); } catch (_) {}
+        try { M.LoadingService?.hide(); } catch (err) { console.warn('[Content] LoadingService.hide failed in catch:', err); }
       }
     },
 
@@ -148,6 +160,7 @@
       for (const item of data) {
         if (!item) continue;
 
+        // jsonFile: fetch then recurse
         if (item.jsonFile && !item._fetched) {
           try {
             const res = await M.DataService.fetchWithRetry(item.jsonFile, {}, 3);
@@ -158,13 +171,22 @@
           continue;
         }
 
+        // source: ดึงทั้ง type จาก con-data ด้วย descriptor เดียว
+        if (item.source) {
+          const groups = await this._resolveSource(item, lang);
+          groups.forEach(g => this._emit(g, k, out));
+          continue;
+        }
+
+        // group / categoryId: existing path — ไม่เปลี่ยน
         if (item.group || item.categoryId) {
-          const cfg     = item.group || { categoryId: item.categoryId, type: item.type || 'button' };
+          const cfg      = item.group || { categoryId: item.categoryId, type: item.type || 'button' };
           const resolved = await this._resolveGroup(cfg, lang);
           if (resolved) this._emit(resolved, k, out);
           continue;
         }
 
+        // single item
         const isCard = this._isCard(item);
         const ri     = await this._resolveItem(item, lang, isCard);
         if (ri) {
@@ -178,6 +200,57 @@
         }
       }
       return out;
+    },
+
+    // ── _resolveSource ────────────────────────────────────────────────────────
+    //
+    // WHY: แทนที่การเขียน categoryId ทีละตัวใน content JSON
+    //      ด้วย { "source": "emoji" } ตัวเดียว — ระบบดึงทุก category ของ type นั้นเอง
+    //
+    // @param {{ source: string, layout?: string, only?: string[] }} item
+    // @param {string} lang
+    // @returns {Promise<Array>}
+
+    async _resolveSource(item, lang) {
+      const { source, layout = LAYOUT.BUTTON, only: filter = null } = item;
+      if (!source) return [];
+
+      const cats = await M.DataService.getTypeCategories(source);
+      if (!cats || !cats.length) return [];
+
+      // WHY filter หลัง fetch cats: ไม่ต้อง fetch ทีละ cat ก่อน — cats มาจาก index แล้ว
+      const filtered = filter
+        ? cats.filter(c => filter.includes(c.id))
+        : cats;
+
+      const groups = await Promise.all(
+        filtered.map(cat => this._fetchSourceGroup(cat, layout, lang))
+      );
+      return groups.filter(Boolean);
+    },
+
+    // ── _fetchSourceGroup ─────────────────────────────────────────────────────
+    //
+    // WHY แยกจาก _resolveSource: แต่ละ category resolve อิสระ
+    //     category เดียวพังไม่ทำให้ทั้ง type พัง
+    //
+    // @param {{ id: string, name: object }} cat
+    // @param {string} layout
+    // @param {string} lang
+    // @returns {Promise<Object|null>}
+
+    async _fetchSourceGroup(cat, layout, lang) {
+      try {
+        const { data, header } = await M.DataService.fetchCategoryGroup(cat.id);
+        const isCard  = layout === LAYOUT.CARD;
+        const items   = (await Promise.all(
+          data.map(d => this._resolveItem(d, lang, isCard))
+        )).filter(Boolean);
+        return { _ureType: isCard ? 'card-group' : 'btn-group', header, items };
+      } catch (err) {
+        console.warn('[Content] _fetchSourceGroup failed:', cat.id, err.message);
+        return null;
+      }
     },
 
     async _resolveGroup(cfg, lang) {
@@ -323,7 +396,7 @@
         try {
           window.unifiedCopyToClipboard?.({ text: btn.dataset.text, api: btn.dataset.api || null, type: 'button', name: btn.dataset.api || '' })
             ?.catch?.(() => M.Utils?.showNotification('Copy failed', 'error'));
-        } catch (_) {}
+        } catch (err) { console.warn('[Content] copy failed:', err); }
         return;
       }
       const card = e.target.closest('.card[data-link]');
@@ -331,7 +404,7 @@
     },
 
     updateCardsLanguage(lang) {
-      if (_ureHandle) try { _ureHandle.setLang(lang); } catch (_) {}
+      if (_ureHandle) try { _ureHandle.setLang(lang); } catch (err) { console.warn('[Content] setLang failed:', err); }
     },
 
     createContainer()        { return document.createElement('div'); },
