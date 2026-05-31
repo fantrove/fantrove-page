@@ -171,14 +171,30 @@
           continue;
         }
 
-        // source: ดึงทั้ง type จาก con-data ด้วย descriptor เดียว
+        // source: ดึงทั้ง type จาก con-data
+        // WHY: remap 'as' → 'layout' ที่นี่เพื่อไม่ต้องแก้ _resolveSource signature
         if (item.source) {
-          const groups = await this._resolveSource(item, lang);
+          const descriptor = item.as ? { ...item, layout: item.as } : item;
+          const groups = await this._resolveSource(descriptor, lang);
           groups.forEach(g => this._emit(g, k, out));
           continue;
         }
 
-        // group / categoryId: existing path — ไม่เปลี่ยน
+        // category: ดึง subcategory เดียวจาก con-data — ข้อมูลดิบอยู่ใน con-data เท่านั้น
+        // WHY: แยกจาก 'source' เพื่อระบุ subcategory เดียวได้โดยไม่ fetch ทั้ง type
+        if (item.category) {
+          const asLayout = item.as || item.layout || LAYOUT.BUTTON;
+          const cfg = {
+            categoryId: item.category,
+            type:       asLayout === LAYOUT.CARD ? 'card' : 'button',
+            layout:     item.horizontal ? 'horizontal' : undefined,
+          };
+          const resolved = await this._resolveGroup(cfg, lang);
+          if (resolved) this._emit(resolved, k, out);
+          continue;
+        }
+
+        // group / categoryId: legacy path — รองรับ format เดิม ไม่เปลี่ยน
         if (item.group || item.categoryId) {
           const cfg      = item.group || { categoryId: item.categoryId, type: item.type || 'button' };
           const resolved = await this._resolveGroup(cfg, lang);

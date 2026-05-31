@@ -1,3 +1,7 @@
+// Path:    assets/js/con-data-service/con-data-registry.js
+// Purpose: Schema registry — แผนที่โครงสร้าง con-data ทั้งหมด, path resolver, validator, normalizer
+// Used by: con-data-service.js (ทุก method), data.js (resolvePath)
+
 // con-data-registry.js
 // =========================================================
 // Schema registry สำหรับ con-data database
@@ -38,11 +42,14 @@ const ConDataRegistry = {
     },
     
     // Layer 3: {subcategory}.json
+    // WHY: data items มี required fields (api, text, name) และ optional card fields
+    //      optional fields ไม่กระทบ button rendering — ContentService ใช้ forceCard flag แทน
     dataFile: {
       required: ['id', 'name', 'data'],
       data: {
         required: ['api', 'text', 'name'],
-        name: { required: ['en'] }
+        name: { required: ['en'] },
+        optional: ['description', 'image', 'link', 'className']
       }
     }
   },
@@ -61,7 +68,7 @@ const ConDataRegistry = {
   // =========================================================
   // KNOWN TYPES (fallback ถ้า index.json โหลดไม่ได้)
   // =========================================================
-  knownTypes: ['emoji', 'symbol', 'unicode'],
+  knownTypes: ['emoji', 'symbol', 'unicode', 'cards'],
   
   // =========================================================
   // QUERY BUILDERS
@@ -132,13 +139,21 @@ const ConDataRegistry = {
     },
     
     // แปลง item ให้ชัดเจน
+    // WHY: preserve optional card fields (description, image, link, className)
+    //      field เหล่านี้ไม่กระทบ button rendering เพราะ ContentService._resolveItem()
+    //      ใช้ forceCard flag เป็นตัวตัดสิน ไม่ใช่การตรวจสอบว่า field มีอยู่หรือไม่
     item(raw) {
       if (!raw) return null;
-      return {
+      const base = {
         api: raw.api || '',
         text: raw.text || '',
         name: raw.name || {}
       };
+      if (raw.description !== undefined) base.description = raw.description;
+      if (raw.image !== undefined) base.image = raw.image;
+      if (raw.link !== undefined) base.link = raw.link;
+      if (raw.className !== undefined) base.className = raw.className;
+      return base;
     }
   },
   
@@ -156,7 +171,7 @@ const ConDataRegistry = {
   // อธิบายว่า query แต่ละประเภทคืออะไร (สำหรับ documentation/training)
   // =========================================================
   queryTypes: {
-    GET_ALL_TYPES: 'ดึงรายการ type ทั้งหมด (emoji, symbol, ...)',
+    GET_ALL_TYPES: 'ดึงรายการ type ทั้งหมด (emoji, symbol, cards, ...)',
     GET_CATEGORIES: 'ดึงรายการ subcategory ของ type ที่ระบุ',
     GET_ITEMS: 'ดึงรายการ item ทั้งหมดใน subcategory',
     GET_ALL_ITEMS: 'ดึง item ทั้งหมดของ type ที่ระบุ (ทุก subcategory)',

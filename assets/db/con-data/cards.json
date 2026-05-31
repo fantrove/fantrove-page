@@ -1,0 +1,14 @@
+{
+  "id": "cards",
+  "name": {
+    "th": "คอลเลกชัน",
+    "en": "Collections"
+  },
+  "categories": [
+    {
+      "id": "ai_tools",
+      "name": { "th": "เครื่องมือ AI", "en": "AI Tools" },
+      "file": "/assets/db/con-data/cards/ai_tools.json"
+    }
+  ]
+}
