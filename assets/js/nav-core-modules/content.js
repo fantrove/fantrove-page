@@ -38,6 +38,13 @@
   // WHY: กำหนด constant เพื่อป้องกัน magic string ใน _resolveSource / _fetchSourceGroup
   const LAYOUT = Object.freeze({ BUTTON: 'button', CARD: 'card' });
 
+  // WHY: content JSON ใช้ plural ('cards', 'buttons') เพื่อความอ่านง่าย
+  //      แต่ LAYOUT constant ใช้ singular — normalize ที่ entry point เดียว
+  function _toLayout(val) {
+    if (val === 'cards' || val === 'card') return LAYOUT.CARD;
+    return LAYOUT.BUTTON;
+  }
+
   // ── CSS (injected once) ───────────────────────────────────────────────────
 
   const _CSS_ID = '_nc_content_css';
@@ -174,7 +181,7 @@
         // source: ดึงทั้ง type จาก con-data
         // WHY: remap 'as' → 'layout' ที่นี่เพื่อไม่ต้องแก้ _resolveSource signature
         if (item.source) {
-          const descriptor = item.as ? { ...item, layout: item.as } : item;
+          const descriptor = item.as ? { ...item, layout: _toLayout(item.as) } : item;
           const groups = await this._resolveSource(descriptor, lang);
           groups.forEach(g => this._emit(g, k, out));
           continue;
@@ -183,7 +190,7 @@
         // category: ดึง subcategory เดียวจาก con-data — ข้อมูลดิบอยู่ใน con-data เท่านั้น
         // WHY: แยกจาก 'source' เพื่อระบุ subcategory เดียวได้โดยไม่ fetch ทั้ง type
         if (item.category) {
-          const asLayout = item.as || item.layout || LAYOUT.BUTTON;
+          const asLayout = _toLayout(item.as || item.layout);
           const cfg = {
             categoryId: item.category,
             type:       asLayout === LAYOUT.CARD ? 'card' : 'button',

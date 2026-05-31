@@ -4,7 +4,7 @@
       "en_label": "Symbols",
       "th_label": "สัญลักษณ์",
       "isDefault": true,
-      "jsonFile": "/assets/json/content/symbols.json",
+      "jsonFile": "/assets/json/content/packages.json",
       "url": "symbols"
     },
     {
