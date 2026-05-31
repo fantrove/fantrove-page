@@ -9,6 +9,11 @@
       "id": "symbol",
       "name": { "th": "อักษรพิเศษ", "en": "Symbol" },
       "file": "symbol.json"
+    },
+    {
+      "id": "cards",
+      "name": { "th": "คอลเลกชัน", "en": "Collections" },
+      "file": "cards.json"
     }
   ]
 }
