@@ -3,104 +3,219 @@
 .footer-minimal,
 .footer-minimal *,
 .footer-minimal *::before,
-.footer-minimal *::after { box-sizing:border-box!important; }
+.footer-minimal *::after { 
+  box-sizing: border-box!important; 
+}
 
 .footer-minimal {
-  display:block!important; width:100%!important; position:relative!important;
-  left:auto!important; right:auto!important; bottom:auto!important; top:auto!important;
-  transform:none!important; z-index:auto!important; float:none!important;
+  display: block!important; 
+  width: 100%!important; 
+  position: relative!important;
+  left: auto!important; right: auto!important; bottom: auto!important; top: auto!important;
+  transform: none!important; z-index: auto!important; float: none!important;
   background: var(--fv-surface-page)!important;
   color: var(--fv-text-secondary);
   font-family: var(--fv-font-stack)!important;
-  font-size:0.9rem!important; font-weight:400!important; line-height:1.72!important;
-  letter-spacing:0.01em;
-  border-top: 1.5px solid var(--fv-border-default)!important;
-  border-left:none!important; border-right:none!important; border-bottom:none!important;
-  margin:0!important; padding:0!important;
-  -webkit-font-smoothing:antialiased; text-align:left!important;
+  font-size: 0.94rem!important; 
+  font-weight: 400!important; 
+  line-height: 1.7!important; 
+  letter-spacing: -0.015em; 
+  
+  border-top: 1px solid var(--fv-border-default)!important; 
+  border-left: none!important; border-right: none!important; border-bottom: none!important;
+  border-radius: 32px 32px 0 0!important; 
+  
+  margin: 0!important; padding: 0!important;
+  -webkit-font-smoothing: antialiased; 
+  -moz-osx-font-smoothing: grayscale;
+  text-align: left!important;
 }
 
-.footer-minimal .footer-inner { max-width:var(--fv-container-max)!important; width:100%!important; margin:0 auto!important; padding:2.6rem 1.6rem 1.6rem!important; }
+/* คอนเทนเนอร์หลัก: การ์ดนุ่มฟูมีมิติ ไล่เฉดสีบางเบา */
+.footer-minimal .footer-inner { 
+  max-width: var(--fv-container-max)!important; 
+  width: calc(100% - 2rem)!important; 
+  margin: 2.5rem auto!important; 
+  
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(248, 255, 253, 0.75) 100%)!important;
+  backdrop-filter: blur(12px); 
+  border: 1px solid rgba(0, 206, 176, 0.08)!important; 
+  border-radius: 28px!important; 
+  
+  padding: 4rem 3rem 3rem!important; 
+  box-shadow: 0 20px 50px rgba(6, 20, 24, 0.04), 0 2px 8px rgba(0, 206, 176, 0.02)!important; 
+}
 
 .footer-minimal .footer-grid {
-  display:grid!important;
-  grid-template-columns:2fr 1fr 1fr 1.3fr!important;
-  gap:1.8rem 2rem!important;
-  padding-bottom:1.8rem!important;
-  border-bottom:1.5px solid var(--fv-border-default)!important;
-  margin:0!important;
+  display: grid!important;
+  grid-template-columns: 2.2fr 1fr 1fr 1.2fr!important; 
+  gap: 2.5rem 3rem!important; 
+  padding-bottom: 3.5rem!important; 
+  border-bottom: 1px solid var(--fv-border-default)!important;
+  margin: 0!important;
 }
 
-@media (max-width:860px) {
-  .footer-minimal .footer-inner { padding:2.2rem 1.4rem 1.4rem!important; }
-  .footer-minimal .footer-grid { grid-template-columns:1fr 1fr!important; gap:1.6rem 1.4rem!important; }
-  .footer-minimal .footer-brand { grid-column:1/-1!important; }
-}
-@media (max-width:560px) {
-  .footer-minimal .footer-inner { padding:2rem 1rem 1.3rem!important; }
-  .footer-minimal .footer-grid { grid-template-columns:1fr 1fr!important; gap:1.4rem 1rem!important; padding-bottom:1.5rem!important; }
-}
-@media (max-width:400px) {
-  .footer-minimal .footer-inner { padding:1.8rem 0.9rem 1.2rem!important; }
-  .footer-minimal .footer-grid { grid-template-columns:1fr!important; gap:1.3rem!important; }
+/* ==========================================
+   🚨 SUPER MOBILE OPTIMIZATION (หน้าจอแนวตั้ง / มือถือ)
+   ========================================== */
+@media (max-width: 960px) {
+  .footer-minimal .footer-grid { grid-template-columns: 1.8fr 1fr 1fr 1fr!important; gap: 2rem 1.5rem!important; }
 }
 
-.footer-minimal .footer-brand { display:flex!important; flex-direction:column!important; gap:0.65rem!important; }
-.footer-minimal .footer-logo { display:inline-flex!important; align-items:center!important; text-decoration:none!important; width:fit-content!important; border:none!important; background:none!important; padding:0!important; }
-.footer-minimal .logo-text { font-family:'Sofia',cursive!important; font-size:1.4rem!important; font-weight:700!important; color:var(--fv-brand-teal-light)!important; letter-spacing:0.01em!important; line-height:1!important; background:none!important; -webkit-background-clip:unset!important; -webkit-text-fill-color:unset!important; background-clip:unset!important; }
-.footer-minimal .footer-desc { margin:0!important; font-size:0.84rem!important; color:var(--fv-text-muted)!important; max-width:230px!important; line-height:1.68!important; font-weight:400!important; }
+@media (max-width: 860px) {
+  .footer-minimal .footer-inner { width: 100%!important; margin: 0!important; border-radius: 32px 32px 0 0!important; border: none!important; border-top: 1px solid var(--fv-border-default)!important; padding: 3.5rem 1.5rem 2.5rem!important; }
+  .footer-minimal .footer-grid { grid-template-columns: 1fr 1fr!important; gap: 3rem 1.5rem!important; }
+  .footer-minimal .footer-brand { grid-column: 1 / -1!important; border-bottom: 1px solid rgba(0, 0, 0, 0.04); padding-bottom: 2rem; }
+}
 
-.footer-minimal .footer-heading { margin:0 0 0.6rem!important; padding:0!important; font-size:0.72rem!important; font-weight:700!important; letter-spacing:0.09em!important; text-transform:uppercase!important; color:var(--fv-text-faint)!important; background:none!important; border:none!important; line-height:1.4!important; }
+/* ปรับปรุงพิเศษขั้นสุดสำหรับหน้าจอแนวตั้ง (Portrait Mode) */
+@media (max-width: 560px) {
+  .footer-minimal .footer-inner { padding: 3rem 1.2rem 2.5rem!important; }
+  .footer-minimal .footer-grid { 
+    grid-template-columns: 1fr!important; 
+    gap: 2.5rem!important; 
+    padding-bottom: 2.5rem!important; 
+  }
+  
+  /* หัวข้อเมนูบนมือถือ: เพิ่มเส้นขอบล่างบางๆ ให้ดูมีโครงสร้าง ไม่โล่งโจ้ง */
+  .footer-minimal .footer-heading {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.03)!important;
+    padding-bottom: 0.6rem!important;
+    margin-bottom: 1rem!important;
+  }
 
-.footer-minimal .footer-list { list-style:none!important; margin:0!important; padding:0!important; display:flex!important; flex-direction:column!important; gap:0!important; }
-.footer-minimal .footer-list li { margin:0!important; padding:0!important; }
+  /* ปรับเมนูลิงก์ให้เรียงกันเป็น Grid 2 คอลัมน์คู่ขนาน เพื่อถมพื้นที่แนวตั้งและแนวนอนให้เต็มอิ่ม */
+  .footer-minimal .footer-list { 
+    display: grid!important;
+    grid-template-columns: 1fr 1fr!important;
+    gap: 0.8rem!important;
+  }
+  
+  .footer-minimal .footer-link {
+    width: 100%!important; /* แผ่ตัวปุ่มแคปซูลให้เต็มบล็อกของมัน */
+    justify-content: center!important; /* จัดข้อความให้อยู่ตรงกลางปุ่มเพื่อความสวยงามบนมือถือ */
+    margin-left: 0!important;
+    padding: 0.85rem 0.8rem!important; /* เพิ่มความอ้วนหนานุ่ม */
+  }
 
+  /* จัดตำแหน่งแผงปุ่มโซเชียลให้แผ่เต็มความกว้างหน้าจอ (App Dock Style) */
+  .footer-minimal .footer-socials { 
+    flex-direction: row!important; 
+    width: 100%!important; 
+    gap: 8px!important;
+    padding-top: 0.5rem;
+  }
+  .footer-minimal .footer-social { 
+    flex: 1!important; 
+    justify-content: center!important; 
+    padding: 1rem 0.5rem!important; /* ปุ่มอ้วนกลมหนานุ่ม กดง่ายสะใจ */
+  }
+}
+
+/* ส่วนประกอบย่อยของแบรนด์ */
+.footer-minimal .footer-brand { display: flex!important; flex-direction: column!important; gap: 0.8rem!important; justify-content: flex-start!important; }
+.footer-minimal .footer-logo { display: inline-flex!important; align-items: center!important; text-decoration: none!important; width: fit-content!important; border: none!important; background: none!important; padding: 0!important; }
+.footer-minimal .logo-text { font-family: 'Sofia', cursive!important; font-size: 1.7rem!important; font-weight: 700!important; color: var(--fv-brand-teal-light)!important; letter-spacing: -0.02em!important; line-height: 1!important; background: none!important; -webkit-background-clip: unset!important; -webkit-text-fill-color: unset!important; background-clip: unset!important; }
+.footer-minimal .footer-desc { margin: 0!important; font-size: 0.88rem!important; color: var(--fv-text-muted)!important; max-width: 100%!important; line-height: 1.6!important; font-weight: 400; opacity: 0.85; }
+
+/* หัวข้อคอลัมน์สไตล์โมเดิร์นแอป */
+.footer-minimal .footer-heading { 
+  margin: 0 0 1.2rem!important; padding: 0!important; 
+  font-size: 0.75rem!important; 
+  font-weight: 700!important; 
+  letter-spacing: 0.14em!important; 
+  text-transform: uppercase!important; 
+  color: var(--fv-text-faint)!important; 
+  background: none!important; border: none!important; line-height: 1.5!important; 
+}
+
+.footer-minimal .footer-list { list-style: none!important; margin: 0!important; padding: 0!important; display: flex!important; flex-direction: column!important; gap: 0.6rem!important; } 
+.footer-minimal .footer-list li { margin: 0!important; padding: 0!important; }
+
+/* ==========================================
+   ปุ่มแคปซูลเมนูลิงก์: นุ่มฟู อ้วนกลม มีมิติแบบ 3 มิติตื้นๆ ในทุกอุปกรณ์
+   ========================================== */
 .footer-minimal .footer-link {
-  display:inline-flex!important; align-items:center!important;
-  padding:0.35em 0.7em!important; border-radius:var(--fv-radius-pill)!important;
-  font-size:0.88rem!important; font-weight:500!important;
-  color:var(--fv-text-secondary)!important; text-decoration:none!important;
-  margin-left:-0.7em!important;
-  border:1px solid transparent!important; background:transparent!important;
-  transition:background 0.1s ease-out, color 0.1s ease-out, border-color 0.1s ease-out;
-  -webkit-tap-highlight-color:transparent!important; line-height:1.6!important;
+  display: inline-flex!important; 
+  align-items: center!important;
+  padding: 0.8rem 1.2rem!important; 
+  border-radius: var(--fv-radius-pill)!important; 
+  font-size: 0.92rem!important; 
+  font-weight: 500!important;
+  color: var(--fv-text-secondary)!important; 
+  text-decoration: none!important;
+  margin-left: -0.6rem!important; 
+  width: fit-content!important; 
+  
+  /* ใช้เส้นขอบและเงาซ้อนกันเบาๆ เพื่อให้ปุ่มดูอวบอิ่ม มีเนื้อหนัง ไม่จมหายไปกับพื้นหลัง */
+  border: 1px solid rgba(0, 206, 176, 0.06)!important; 
+  background: rgba(0, 206, 176, 0.03)!important; 
+  box-shadow: 0 2px 6px rgba(6, 20, 24, 0.01), inset 0 1px 0 rgba(255, 255, 255, 0.6)!important;
+  
+  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)!important;
+  -webkit-tap-highlight-color: transparent!important; 
+  line-height: 1!important; 
 }
 .footer-minimal .footer-link:hover {
-  background:rgba(0,206,176,0.06)!important;
-  border-color:var(--fv-border-teal)!important;
-  color:var(--fv-brand-teal-light)!important;
-  text-decoration:none!important;
+  background: rgba(0, 206, 176, 0.09)!important; 
+  border-color: rgba(0, 206, 176, 0.25)!important;
+  color: var(--fv-brand-teal-light)!important;
+  text-decoration: none!important;
+  box-shadow: 0 6px 16px rgba(0, 206, 176, 0.05)!important;
+  padding-left: 1.4rem!important;
+  padding-right: 1.4rem!important;
 }
-.footer-minimal .footer-license-note { margin:0.8rem 0 0!important; padding:0!important; font-size:0.76rem!important; color:var(--fv-text-faint)!important; line-height:1.6!important; font-weight:400!important; }
+.footer-minimal .footer-license-note { margin: 1.2rem 0 0!important; padding: 0!important; font-size: 0.8rem!important; color: var(--fv-text-faint)!important; line-height: 1.6!important; font-weight: 400!important; }
 
-.footer-minimal .footer-socials { display:flex!important; flex-direction:column!important; gap:6px!important; }
+.footer-minimal .footer-socials { display: flex!important; flex-direction: column!important; gap: 10px!important; align-items: flex-start!important; }
+
+/* ==========================================
+   ปุ่มแคปซูลโซเชียล: อ้วนกลมเต็มพิกัด น่ากด สไตล์ Premium App Widget
+   ========================================== */
 .footer-minimal .footer-social {
-  display:inline-flex!important; align-items:center!important; gap:7px!important;
-  padding:0.5em 0.9em!important; border-radius:var(--fv-radius-xl)!important;
-  border:1.5px solid var(--fv-border-default)!important;
-  background:var(--fv-surface-page)!important;
-  font-size:0.84rem!important; font-weight:600!important;
-  color:var(--fv-text-secondary)!important; text-decoration:none!important;
-  width:fit-content!important;
-  box-shadow:0 2px 6px rgba(6,20,24,0.04)!important;
-  transition:border-color 0.1s ease-out, color 0.1s ease-out, background 0.1s ease-out, box-shadow 0.1s ease-out;
-  -webkit-tap-highlight-color:transparent!important; line-height:1!important;
+  display: inline-flex!important; 
+  align-items: center!important; 
+  gap: 10px!important;
+  padding: 1.05rem 1.45rem!important; /* สัดส่วนความอ้วนกลมแนวตั้งเด่นชัดมาก */
+  border-radius: var(--fv-radius-pill)!important; 
+  border: 1.5px solid var(--fv-border-default)!important; 
+  background: var(--fv-surface-page)!important;
+  font-size: 0.88rem!important; 
+  font-weight: 500!important;
+  color: var(--fv-text-secondary)!important; 
+  text-decoration: none!important;
+  width: fit-content!important;
+  box-shadow: 0 3px 10px rgba(6, 20, 24, 0.02), inset 0 1px 0 rgba(255, 255, 255, 0.8)!important; 
+  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)!important;
+  -webkit-tap-highlight-color: transparent!important; 
+  line-height: 1!important;
 }
-.footer-minimal .footer-social svg { width:14px!important; height:14px!important; stroke:currentColor!important; flex-shrink:0!important; stroke-width:1.6!important; fill:none!important; display:block!important; }
+.footer-minimal .footer-social svg { width: 14px!important; height: 14px!important; stroke: currentColor!important; flex-shrink: 0!important; stroke-width: 1.8!important; fill: none!important; display: block!important; }
 .footer-minimal .footer-social:hover {
-  border-color:rgba(0,206,176,0.45)!important;
-  color:var(--fv-brand-teal-light)!important;
-  background:rgba(248,255,253,1)!important;
-  box-shadow:0 4px 12px rgba(0,206,176,0.08)!important;
-  text-decoration:none!important;
+  border-color: rgba(0, 206, 176, 0.35)!important;
+  color: var(--fv-brand-teal-light)!important;
+  background: rgba(0, 206, 176, 0.03)!important;
+  box-shadow: 0 10px 28px rgba(0, 206, 176, 0.06)!important; 
+  transform: translateY(-2px); 
+  padding-left: 1.65rem!important;
+  padding-right: 1.65rem!important;
 }
 
-.footer-minimal .footer-bottom { display:flex!important; align-items:center!important; justify-content:space-between!important; flex-wrap:wrap!important; gap:0.5rem!important; padding-top:1.1rem!important; margin:0!important; }
+/* ส่วนท้ายสุด (Bottom Section) บาลานซ์ซ้าย-ขวา */
+.footer-minimal .footer-bottom { 
+  display: flex!important; 
+  align-items: center!important; 
+  justify-content: space-between!important; 
+  flex-wrap: wrap!important; 
+  gap: 1.5rem!important; 
+  padding-top: 2rem!important; 
+  margin: 0!important; 
+}
 .footer-minimal .footer-bottom small,
-.footer-minimal .footer-bottom .text-muted { font-size:0.78rem!important; color:var(--fv-text-faint)!important; font-weight:400!important; line-height:1.5!important; }
-.footer-minimal .footer-bottom a { color:var(--fv-text-faint)!important; text-decoration:none!important; border-bottom:1px solid transparent!important; transition:color 0.1s, border-color 0.1s; font-weight:400!important; }
-.footer-minimal .footer-bottom a:hover { color:var(--fv-brand-teal)!important; border-bottom-color:rgba(19,180,127,0.3)!important; text-decoration:none!important; }
+.footer-minimal .footer-bottom .text-muted { font-size: 0.8rem!important; color: var(--fv-text-faint)!important; font-weight: 400!important; line-height: 1.5!important; }
+.footer-minimal .footer-bottom a { color: var(--fv-text-faint)!important; text-decoration: none!important; border-bottom: 1px solid transparent!important; transition: all 0.2s ease; font-weight: 400!important; }
+.footer-minimal .footer-bottom a:hover { color: var(--fv-brand-teal)!important; border-bottom-color: rgba(19, 180, 127, 0.25)!important; text-decoration: none!important; }
 
-@media (prefers-reduced-motion:reduce) {
-  .footer-minimal *, .footer-minimal *::before { transition:none!important; }
+@media (prefers-reduced-motion: reduce) {
+  .footer-minimal *, .footer-minimal *::before { transition: none!important; transform: none!important; }
 }
