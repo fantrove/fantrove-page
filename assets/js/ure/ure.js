@@ -11,16 +11,17 @@
 //
 // Module load order (dependency chain):
 //   types.js        — typedefs only
-//   config.js       — constants, device tier
+//   config.js       — constants, device tier, memory budgets (v1.7.0)
+//   memory.js       — MemoryManager singleton (v1.7.0) — must load after config
 //   scheduler.js    — rAF + rIC orchestration
-//   pool.js         — DOM node recycling
+//   pool.js         — DOM node recycling (getCap/setCap added v1.7.0)
 //   observer.js     — IO / RO / MO factories
 //   diffing.js      — O(n) data diff
 //   state.js        — reactive state store
 //   worker.js       — Web Worker bridge
 //   lazy-assets.js  — lazy img/iframe/bg loading
-//   virtual-list.js — core virtual scroll
-//   engine.js       — main orchestrator
+//   virtual-list.js — core virtual scroll (setMemoryBudget added v1.7.0)
+//   engine.js       — main orchestrator (MemoryManager integration v1.7.0)
 
 (function() {
   'use strict';
@@ -32,6 +33,7 @@
   const MODULES = [
     'types.js',
     'config.js',
+    'memory.js', // v1.7.0: must come after config.js, before all consumers
     'scheduler.js',
     'pool.js',
     'observer.js',
@@ -103,7 +105,7 @@
     const M = window.UREModules;
     if (!M) { console.error('[URE] UREModules namespace missing after load'); return; }
     
-    const { Engine, CONFIG } = M;
+    const { Engine, CONFIG, MemoryManager } = M;
     
     // ── Public API ────────────────────────────────────────────────────────────
     
@@ -112,19 +114,8 @@
       
       /**
        * Mount URE on a container and return a handle.
-       *
        * @param {UREngineOptions} opts
        * @returns {EngineHandle}
-       *
-       * @example
-       * const list = URE.mount({
-       *   container : '#discover-container',
-       *   data      : myJsonArray,
-       *   template  : (item, lang) => `<div class="card">${item.name}</div>`,
-       *   buffer    : 500,
-       *   recycling : true,
-       *   onItemClick: (e, item) => console.log('clicked', item),
-       * });
        */
       mount: (opts) => Engine.mount(opts),
       
@@ -154,6 +145,18 @@
       config: () => CONFIG,
       
       /**
+       * Current memory pressure stats.
+       * @returns {object}
+       */
+      memoryStats: () => MemoryManager.stats(),
+      
+      /**
+       * Force an immediate memory pressure evaluation.
+       * Useful after finishing a large data load operation.
+       */
+      memoryCheckpoint: () => MemoryManager.checkpoint(),
+      
+      /**
        * Log a stats snapshot for every active instance.
        * Handy for debugging from the browser console.
        */
@@ -167,16 +170,18 @@
           container: el.id || el.className || el.tagName,
           items: stats.vl.items,
           visible: stats.vl.visible,
-          totalHeight: stats.vl.totalHeight,
+          totalHeight: stats.vl.totalSize,
           workerMode: stats.worker.workerMode,
+          memPressure: stats.memory.levelName,
+          tmplCap: stats.vl.caps?.tmplCap,
+          poolCap: stats.vl.pool?.cap,
         })));
         return instances;
       },
     });
     
-    // Dispatch ready event so page scripts can detect URE is loaded
     try {
-      window.dispatchEvent(new CustomEvent('ure:ready', { detail: { version: '1.0.0' } }));
+      window.dispatchEvent(new CustomEvent('ure:ready', { detail: { version: '1.7.0' } }));
     } catch (_) {}
   }
   

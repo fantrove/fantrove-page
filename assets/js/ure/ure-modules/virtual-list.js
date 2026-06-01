@@ -4,25 +4,23 @@
 // v1.4.0  Jank fixes — deferred will-change, inline range calc, no first-frame boost.
 // v1.5.0  Height cache, scroll anchor protocol, warm start.
 // v1.6.0  Complexity control for large datasets:
+//           [FIX-D] Template HTML cache (_tmplCache)
+//           [FIX-E] Chunked height-cache init for large datasets
+// v1.7.0  Adaptive memory management:
 //
-//  [FIX-D] Template HTML cache (_tmplCache)
-//    Stores rendered HTML strings keyed by item identity (via keyExtractor).
-//    Cache hit requires same item object reference AND same lang — so any
-//    data mutation or lang switch is automatically a miss.
-//    Cap: LARGE_DATASET.TEMPLATE_CACHE_CAP entries, oldest evicted first.
-//    Result: recycled nodes that scroll back into view skip renderFn entirely.
-//    _mountNode uses _renderWithCache() instead of calling renderFn directly.
-//    setLang() and updateItem() invalidate affected entries.
+//  All internal cache/render caps are now per-instance mutable (let, not const):
+//    _tmplCap    — template HTML cache entry limit
+//    _chunkInitN — threshold for chunked height-cache init
+//    _buffer     — pre-render buffer px
+//    _MOUNT_CAP  — max buffer-zone nodes mounted per rAF frame
+//    _PRE_CAP    — idle pre-render lookahead count
 //
-//  [FIX-E] Chunked height-cache init for large datasets
-//    setItems() always uses Float32Array.fill(DEFAULT_ITEM_HEIGHT) for the
-//    initial allocation (fast typed-array bulk op), then:
-//      n ≤ CHUNK_INIT_N (50k): applies height cache in one synchronous pass.
-//      n >  CHUNK_INIT_N     : starts rendering immediately with default
-//        heights, then refines via _applyHeightCacheChunked() in
-//        requestIdleCallback slices (INIT_CHUNK_SIZE items per tick).
-//        When a chunk updates heights near the current viewport, a correction
-//        is scheduled so scroll position stays stable.
+//  setMemoryBudget(budget) — called by engine.js when MemoryManager fires a
+//    pressure change. Trims existing caches to new caps immediately so memory
+//    is reclaimed without waiting for natural eviction.
+//
+//  _trimMap(map, maxSize) — evicts oldest Map entries (insertion-order) until
+//    size ≤ maxSize. Used for both _tmplCache and _preCache trims.
 
 (function (M) {
   'use strict';
@@ -30,9 +28,11 @@
   const { CONFIG, Scheduler, ObserverFactory, createPool } = M;
 
   const ANCHOR_APPLY_VEL = CONFIG.ANCHOR.APPLY_VEL_THRESHOLD;
-  const TMPL_CAP         = CONFIG.LARGE_DATASET.TEMPLATE_CACHE_CAP;
-  const CHUNK_INIT_N     = CONFIG.LARGE_DATASET.CHUNK_INIT_N;
-  const INIT_CHUNK_SIZE  = CONFIG.LARGE_DATASET.INIT_CHUNK_SIZE;
+  // Module-level defaults — used as initial values for per-instance mutable caps.
+  // setMemoryBudget() overrides these per instance at runtime.
+  const TMPL_CAP        = CONFIG.LARGE_DATASET.TEMPLATE_CACHE_CAP;
+  const CHUNK_INIT_N    = CONFIG.LARGE_DATASET.CHUNK_INIT_N;
+  const INIT_CHUNK_SIZE = CONFIG.LARGE_DATASET.INIT_CHUNK_SIZE;
 
   // ── One-time CSS ──────────────────────────────────────────────────────────
   const _VL_CSS_ID = '_ure_vl_css';
@@ -45,6 +45,15 @@
 .ure-new{animation:_ure_fi 0.16s cubic-bezier(0.22,1,0.36,1) both;will-change:opacity;}
 .ure-new.ure-done{will-change:auto;animation:none;}`;
     document.head.appendChild(s);
+  }
+
+  // ── Oldest-first Map trim (v1.7.0) ───────────────────────────────────────
+  // Map preserves insertion order — keys().next() always returns the oldest.
+  // Called by setMemoryBudget() to immediately reclaim memory under pressure.
+  function _trimMap(map, maxSize) {
+    while (map.size > maxSize) {
+      map.delete(map.keys().next().value);
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -74,6 +83,13 @@
     const _gap      = Math.max(0, gap | 0);
     const _isGrid   = _columns > 1;
     const _overscan = Math.max(0, overscan | 0);
+
+    // ── Per-instance mutable caps (v1.7.0) ───────────────────────────────
+    // Starts at comfortable-level defaults; MemoryManager may lower these
+    // by calling setMemoryBudget() when pressure rises.
+    let _tmplCap    = TMPL_CAP;
+    let _chunkInitN = CHUNK_INIT_N;
+    let _buffer     = buffer;   // mutable — pressure lowers this to reduce DOM work
 
     // ── State ─────────────────────────────────────────────────────────────
     let _items    = items.slice();
@@ -112,9 +128,9 @@
       return _typeAvgHgt.get(type)?.avg || CONFIG.RENDER.DEFAULT_ITEM_HEIGHT;
     }
 
-    // ── Template HTML cache (v1.6.0 FIX-D) ───────────────────────────────
-    // Skips renderFn for items whose data + lang haven't changed.
-    // Eviction: oldest Map entry dropped when cap is reached (insertion order).
+    // ── Template HTML cache (v1.6.0) ──────────────────────────────────────
+    // _tmplCap is mutable — setMemoryBudget() can lower it under pressure,
+    // triggering an immediate _trimMap() to evict the oldest entries.
     const _tmplCache = new Map();
 
     function _renderWithCache(item, idx) {
@@ -124,7 +140,8 @@
       const hit = _tmplCache.get(key);
       if (hit && hit.item === item && hit.lang === _lang) return hit.html;
       const html = renderFn(item, _lang);
-      if (_tmplCache.size >= TMPL_CAP) {
+      // Evict oldest if at cap — O(1) due to Map insertion-order guarantee
+      if (_tmplCache.size >= _tmplCap) {
         _tmplCache.delete(_tmplCache.keys().next().value);
       }
       _tmplCache.set(key, { html, lang: _lang, item });
@@ -141,8 +158,12 @@
       if ((m && m <= 2) || c <= 4) return 1;
       return 2;
     })();
-    const _MOUNT_CAP = [4, 8, 16][_T];
-    const _PRE_CAP   = _MOUNT_CAP * 3;
+
+    // Mutable (v1.7.0) — MOUNT_CAP_SCALE from memory budget can reduce these.
+    // _MOUNT_CAP: max buffer-zone mounts per rAF frame (viewport items uncapped).
+    // _PRE_CAP:   idle pre-render lookahead count.
+    let _MOUNT_CAP = [4, 8, 16][_T];
+    let _PRE_CAP   = _MOUNT_CAP * 3;
 
     const _vis      = new Map();
     const _elIdx    = new WeakMap();
@@ -310,13 +331,13 @@
       }
     }
 
-    // ── Effective buffer ──────────────────────────────────────────────────
+    // ── Effective buffer — uses mutable _buffer (v1.7.0) ─────────────────
     function _effectiveBuf() {
-      if (_overscan < 1) return buffer;
+      if (_overscan < 1) return _buffer;
       let sum = 0, cnt = 0;
       for (const [, v] of _typeAvgHgt) { sum += v.avg * v.count; cnt += v.count; }
       const avgH = cnt > 0 ? sum / cnt : CONFIG.RENDER.DEFAULT_ITEM_HEIGHT;
-      return Math.max(buffer, _overscan * avgH);
+      return Math.max(_buffer, _overscan * avgH);
     }
 
     // ── Idle pre-render — bidirectional, velocity-aware ───────────────────
@@ -385,7 +406,6 @@
         ? `position:absolute;top:0;left:0;width:${_itemW}px;contain:layout style paint;transform:${_gridTransform(i)};`
         : `${_ax.itemBase}transform:${_ax.translate(_off[i])};`;
       el.setAttribute(CONFIG.DOM.ITEM_ATTR, i);
-      // FIX-D: use template cache — skips renderFn for stable items
       el.innerHTML = _preCache.get(i) ?? _renderWithCache(_items[i], i);
       _preCache.delete(i);
 
@@ -529,9 +549,7 @@
       Scheduler.schedule(_render, 'vl-post-correction');
     }
 
-    // ── v1.6.0 FIX-E: chunked height-cache init for large datasets ────────
-    // Runs in requestIdleCallback slices so the main thread stays free.
-    // Schedules a correction when dirty heights are near the viewport.
+    // ── Chunked height-cache init (v1.6.0, uses mutable _chunkInitN) ──────
     function _applyHeightCacheChunked(totalN) {
       if (!heightCache || !keyExtractor) return;
       let cursor = 0;
@@ -636,7 +654,6 @@
         });
         if (_vpRO) _vpRO.observe(_winMode ? document.body : viewport);
 
-        // v1.5.0 FIX-C: warm start — set scroll synchronously before first rAF
         if (scrollRestorePos > 0) {
           if (_winMode) {
             _H ? window.scrollTo({ left: scrollRestorePos, behavior: 'instant' })
@@ -661,16 +678,13 @@
         _pendingSettled.clear();
         _tmplCache.clear();
 
-        // Bulk fill with default height — fast typed-array op O(n/word_size)
         _hgt = new Float32Array(n).fill(CONFIG.RENDER.DEFAULT_ITEM_HEIGHT);
 
-        if (n > CHUNK_INIT_N) {
-          // FIX-E: very large dataset — render immediately with defaults,
-          // then refine heights from cache in background idle chunks.
+        // Uses mutable _chunkInitN so pressure-aware threshold applies here too
+        if (n > _chunkInitN) {
           _buildOffsets();
           _applyHeightCacheChunked(n);
         } else {
-          // Normal path: apply height cache synchronously then build offsets.
           if (heightCache && keyExtractor) {
             for (let i = 0; i < n; i++) {
               const key = keyExtractor(_items[i], i);
@@ -691,7 +705,6 @@
       updateItem(index, newData) {
         if (index < 0 || index >= _items.length) return;
         _items[index] = newData; _measured[index] = 0; _preCache.delete(index);
-        // Invalidate template cache entry so the item re-renders
         if (keyExtractor) {
           const key = keyExtractor(newData, index);
           if (key) _tmplCache.delete(key);
@@ -740,8 +753,41 @@
       setLang(newLang) {
         _lang = newLang;
         _preCache.clear();
-        _tmplCache.clear(); // lang changed — all cached HTML is stale
+        _tmplCache.clear();
         for (const [idx, el] of _vis) el.innerHTML = renderFn(_items[idx], _lang);
+      },
+
+      // ── v1.7.0: adaptive memory budget ─────────────────────────────────
+      // Called by engine.js whenever MemoryManager emits a pressure change.
+      // Trims existing caches immediately — does not wait for natural eviction.
+      // All budget keys are optional; unrecognised keys are silently ignored.
+      setMemoryBudget(budget) {
+        if (budget.TMPL_CACHE_CAP != null) {
+          _tmplCap = budget.TMPL_CACHE_CAP;
+          _trimMap(_tmplCache, _tmplCap);
+        }
+        if (budget.PRE_CACHE_CAP != null) {
+          _PRE_CAP = budget.PRE_CACHE_CAP;
+          _trimMap(_preCache, _PRE_CAP);
+        }
+        if (budget.BUFFER_PX != null) {
+          _buffer = budget.BUFFER_PX;
+        }
+        if (budget.CHUNK_INIT_N != null) {
+          _chunkInitN = budget.CHUNK_INIT_N;
+        }
+        if (budget.POOL_CAP != null && pool) {
+          // pool.setCap() drains excess nodes immediately
+          pool.setCap(budget.POOL_CAP);
+        }
+        if (budget.MOUNT_CAP_SCALE != null) {
+          const tierBase = [4, 8, 16][_T];
+          _MOUNT_CAP = Math.max(4, Math.round(tierBase * budget.MOUNT_CAP_SCALE));
+          // Keep PRE_CAP proportional unless it was explicitly set above
+          if (budget.PRE_CACHE_CAP == null) {
+            _PRE_CAP = Math.max(4, _MOUNT_CAP * 3);
+          }
+        }
       },
 
       refresh() {
@@ -786,6 +832,8 @@
           typeAvgCount: _typeAvgHgt.size,
           cachedHeights: heightCache ? heightCache.size : 0,
           pool: pool ? pool.stats() : null,
+          // v1.7.0: active cap values for memory debug
+          caps: { tmplCap: _tmplCap, preCap: _PRE_CAP, buffer: _buffer, chunkInitN: _chunkInitN },
         };
       },
 

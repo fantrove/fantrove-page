@@ -3,23 +3,27 @@
 //          public EngineHandle returned by URE.mount().
 //
 // v1.5.0  Height cache, scroll persistence, orientation invalidation.
-// v1.6.0  Large-dataset complexity control:
+// v1.6.0  Large-dataset complexity control: worker persistence, loadChunked.
+// v1.7.0  Adaptive memory management:
 //
-//   _maybeLoadWorkerData() — when item count ≥ WORKER_PERSIST_N (10k), loads
-//     the full dataset into the Web Worker once. Subsequent filter / paginate
-//     calls skip the structured-clone transfer entirely. Called on initial
-//     mount and on every setData() call.
+//   Mount-time: initial budget from MemoryManager clamps poolCap and buffer
+//     so low-memory devices start with conservative allocations immediately.
 //
-//   handle.loadChunked(source, chunkSize?) — progressive data loading API.
-//     Accepts a plain array OR an async iterable. Splits array sources into
-//     chunkSize slices and yields between chunks via requestIdleCallback,
-//     keeping the main thread responsive during large-data hydration.
+//   Runtime: subscribes to MemoryManager.on() — on each pressure change:
+//     • Propagates full budget to vl.setMemoryBudget()
+//     • Trims _heightCache to HEIGHT_CACHE_MAX
+//     • On CRITICAL + page hidden: clears worker stored data to reclaim the
+//       largest single in-memory allocation. Worker data is reloaded
+//       automatically on the next setData() / loadChunked() call.
+//
+//   _unsubMemory is stored and called in destroy() to prevent listener leaks
+//   across SPA route changes where URE.destroyAll() is called.
 
 (function (M) {
   'use strict';
 
   const {
-    CONFIG, Scheduler, DiffEngine,
+    CONFIG, Scheduler, DiffEngine, MemoryManager,
     createStateStore, createVirtualList, createLazyAssets, createWorkerBridge,
   } = M;
 
@@ -56,6 +60,15 @@
 
   function _saveScrollPos(key, pos) {
     try { sessionStorage.setItem(key, String(pos)); } catch (_) {}
+  }
+
+  // ── Height cache trim helper (v1.7.0) ─────────────────────────────────────
+  // Removes the oldest entries (Map insertion order) until size ≤ maxEntries.
+
+  function _trimHeightCache(cache, maxEntries) {
+    while (cache.size > maxEntries) {
+      cache.delete(cache.keys().next().value);
+    }
   }
 
   // ── mount ─────────────────────────────────────────────────────────────────
@@ -95,7 +108,6 @@
       return k !== undefined ? k : `__idx_${i}`;
     }
 
-    // Index-based keys are not stable across mutations — exclude from caches
     function _cacheKeyFor(item, i) {
       const k = _extractKey(item, i);
       return k.startsWith('__idx_') ? null : k;
@@ -110,6 +122,14 @@
     const _heightCache      = _loadHeightCache(_hCacheKey);
     const _scrollRestorePos = _loadScrollPos(_sCacheKey);
 
+    // ── v1.7.0: apply initial memory budget ─────────────────────────────
+    // Take the more conservative of user option and current memory budget.
+    // This ensures low-memory devices (TIGHT/CRITICAL) start with small caps
+    // rather than mounting at comfortable defaults and then immediately trimming.
+    const _initBudget       = MemoryManager.getAllBudgets();
+    const _effectivePoolCap = Math.min(poolCap, _initBudget.POOL_CAP);
+    const _effectiveBuffer  = Math.min(buffer,  _initBudget.BUFFER_PX);
+
     // ── Core state ────────────────────────────────────────────────────────
     const store = createStateStore({ items: data.slice(), lang, loading: false, error: null });
     let _currentItems = data.slice();
@@ -117,7 +137,7 @@
 
     container.setAttribute(CONFIG.DOM.CONTAINER_ATTR, '');
 
-    const lazy   = createLazyAssets(buffer);
+    const lazy   = createLazyAssets(_effectiveBuffer);
     const worker = createWorkerBridge();
     const _scrollEl = document.scrollingElement || document.documentElement;
 
@@ -127,9 +147,9 @@
       items            : _currentItems,
       renderFn         : _render,
       lang,
-      buffer,
+      buffer           : _effectiveBuffer,
       recycling,
-      poolCap,
+      poolCap          : _effectivePoolCap,
       horizontal,
       columns,
       gap,
@@ -144,17 +164,37 @@
 
     vl.mount();
 
+    // ── v1.7.0: subscribe to memory pressure changes ──────────────────────
+    const _unsubMemory = MemoryManager.on(_onMemoryPressure);
+
     // ── v1.6.0: pre-load large datasets into worker ───────────────────────
-    // Above WORKER_PERSIST_N threshold, the worker stores items internally.
-    // filter() and paginate() then skip the structured-clone transfer entirely.
     function _maybeLoadWorkerData(items) {
-      if (items.length < CONFIG.LARGE_DATASET.WORKER_PERSIST_N) return;
+      // Use current budget threshold — adapts to memory pressure
+      const threshold = MemoryManager.getBudget('WORKER_PERSIST_N')
+        ?? CONFIG.LARGE_DATASET.WORKER_PERSIST_N;
+      if (items.length < threshold) return;
       worker.loadData(items).catch(err => {
         console.warn('[URE/Engine] worker.loadData failed:', err.message);
       });
     }
 
     _maybeLoadWorkerData(_originalData);
+
+    // ── Memory pressure handler (v1.7.0) ──────────────────────────────────
+    // Responds to MemoryManager pressure changes by:
+    //   1. Propagating the full budget to virtual-list (trims caches immediately)
+    //   2. Trimming the height cache to its new budget limit
+    //   3. On CRITICAL + hidden: releasing worker stored data
+    function _onMemoryPressure(next /*, prev */) {
+      const budget = MemoryManager.getAllBudgets();
+      vl.setMemoryBudget(budget);
+      _trimHeightCache(_heightCache, budget.HEIGHT_CACHE_MAX);
+      if (next === MemoryManager.PRESSURE.CRITICAL && document.hidden && worker.dataLoaded) {
+        // Release the largest in-memory allocation. Will be reloaded on next
+        // setData() / loadChunked() when the page becomes active again.
+        worker.clearData().catch(() => {});
+      }
+    }
 
     // ── Delegated click ───────────────────────────────────────────────────
     if (onItemClick) {
@@ -248,7 +288,7 @@
       window.addEventListener('orientationchange', _onOrientationChange);
     }
 
-    // ── Idle yield helper (shared by loadChunked) ─────────────────────────
+    // ── Idle yield helper ─────────────────────────────────────────────────
     function _idleYield(timeoutMs = 200) {
       return new Promise(r => {
         typeof requestIdleCallback !== 'undefined'
@@ -310,10 +350,6 @@
         if (onUpdate) try { onUpdate({ added: 0, removed: 0, changed: changedCount }); } catch (_) {}
       },
 
-      // ── v1.6.0: progressive data loading ─────────────────────────────────
-      // Accepts a plain array (split into chunkSize slices with idle yields)
-      // or any async iterable (each yielded value is treated as a chunk).
-      // Keeps the main thread responsive during large-data hydration.
       async loadChunked(source, chunkSize = CONFIG.LARGE_DATASET.INIT_CHUNK_SIZE) {
         const isAsync = source != null && typeof source[Symbol.asyncIterator] === 'function';
 
@@ -335,11 +371,9 @@
           else        { handle.append(chunk); }
           if (!isAsync) await _idleYield();
         }
-        // Reload worker data with the now-complete dataset
         _maybeLoadWorkerData(_originalData);
       },
 
-      // ── Async Worker ops ──────────────────────────────────────────────────
       async filter(predicates) {
         store.set('loading', true);
         try {
@@ -373,7 +407,6 @@
         } catch (e) { store.set({ loading: false, error: e.message }); throw e; }
       },
 
-      // ── UI ────────────────────────────────────────────────────────────────
       setLang(lang)             { store.set('lang', lang); vl.setLang(lang); },
       scrollTo(index, behavior) { vl.scrollToIndex(index, behavior); },
 
@@ -399,11 +432,14 @@
           worker : { workerMode: worker.isWorkerMode, dataLoaded: worker.dataLoaded },
           store  : store.snapshot(),
           cache  : { heightEntries: _heightCache.size, cacheKey: _resolvedCacheKey },
+          // v1.7.0: memory pressure snapshot
+          memory : MemoryManager.stats(),
         };
       },
 
       destroy() {
         _persistAll();
+        _unsubMemory();   // unsubscribe from MemoryManager — prevents listener leak
         window.removeEventListener('languageChange',     _onLangChange);
         document.removeEventListener('visibilitychange', _onVisibilityChange);
         window.removeEventListener('pagehide',           _onPageHide);
