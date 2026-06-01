@@ -28,6 +28,7 @@ const ConDataRegistry = {
       required: ['categories'],
       categories: {
         required: ['id', 'name', 'file'],
+        optional: ['kind'], // 'copyable' (default) | 'collection'
         name: { required: ['en'] }
       }
     },
@@ -67,8 +68,17 @@ const ConDataRegistry = {
   
   // =========================================================
   // KNOWN TYPES (fallback ถ้า index.json โหลดไม่ได้)
+  // WHY: รายชื่อนี้มีแค่ copyable types เท่านั้น
+  //      collection types (cards) ไม่อยู่ที่นี่ เพราะ fetch แบบ direct path เสมอ
   // =========================================================
-  knownTypes: ['emoji', 'symbol', 'unicode', 'cards'],
+  knownTypes: ['emoji', 'symbol', 'unicode'],
+  
+  // WHY: kind map สำหรับ fallback assembly ให้รู้ว่า type ไหน copyable
+  knownKinds: Object.freeze({
+    emoji: 'copyable',
+    symbol: 'copyable',
+    unicode: 'copyable',
+  }),
   
   // =========================================================
   // QUERY BUILDERS

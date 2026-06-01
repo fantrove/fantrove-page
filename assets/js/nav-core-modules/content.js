@@ -189,10 +189,13 @@
 
         // category: ดึง subcategory เดียวจาก con-data — ข้อมูลดิบอยู่ใน con-data เท่านั้น
         // WHY: แยกจาก 'source' เพื่อระบุ subcategory เดียวได้โดยไม่ fetch ทั้ง type
+        // WHY typeId: ถ้าระบุ type → direct fetch (ไม่ผ่าน assembled DB)
+        //             ใช้กับ collection types เช่น cards ที่ไม่ควรอยู่ใน index.json
         if (item.category) {
           const asLayout = _toLayout(item.as || item.layout);
           const cfg = {
             categoryId: item.category,
+            typeId:     item.type || null,
             type:       asLayout === LAYOUT.CARD ? 'card' : 'button',
             layout:     item.horizontal ? 'horizontal' : undefined,
           };
@@ -285,7 +288,13 @@
 
       if (cfg.categoryId) {
         try {
-          const { data, header } = await M.DataService.fetchCategoryGroup(cfg.categoryId);
+          // WHY: typeId ระบุ → direct fetch ข้ามผ่าน assembled DB
+          //      ใช้กับ collection types (cards) ที่ไม่ควรปนกับ index.json ของ emoji/symbol
+          //      typeId ไม่ระบุ → ใช้ assembled DB ตามปกติ (emoji, symbol, ...)
+          const fetchFn = cfg.typeId
+            ? () => M.DataService.fetchCategoryDirect(cfg.typeId, cfg.categoryId)
+            : () => M.DataService.fetchCategoryGroup(cfg.categoryId);
+          const { data, header } = await fetchFn();
           const items = await _fetchItems(data);
           const type  = isHoriz ? 'card-group-h' : isCard ? 'card-group' : 'btn-group';
           return { _ureType: type, header: header || null, items };

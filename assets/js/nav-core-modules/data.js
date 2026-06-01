@@ -286,6 +286,10 @@
           if (!typeObj || typeof typeObj !== 'object') continue;
           if (typeObj.id) idMap.set(typeObj.id, typeObj);
 
+          // WHY: ข้าม type ที่เป็น collection (เช่น cards) — items ของมันไม่ใช่ตัวอักขระ copy ได้
+          //      การนำเข้า apiMap/textMap จะทำให้ระบบ copy และ search ทำงานผิดพลาด
+          if (typeObj.kind && typeObj.kind !== 'copyable') continue;
+
           for (const cat of (typeObj.category || [])) {
             if (!cat || typeof cat !== 'object') continue;
             if (cat.id) {
@@ -373,6 +377,49 @@
       };
 
       return { id: foundCat.id, name: foundCat.name, data: foundCat.data || [], header };
+    },
+
+    // ── fetchCategoryDirect ─────────────────────────────────────────────────────
+    //
+    // WHY แยกจาก fetchCategoryGroup:
+    //   fetchCategoryGroup ค้นหาผ่าน assembled DB — ใช้กับ emoji/symbol ที่อยู่ใน index.json
+    //   fetchCategoryDirect fetch จาก file path โดยตรง — ใช้กับ collection types (cards)
+    //   ที่ไม่ควรอยู่ใน index.json เพราะจะทำให้ระบบอื่นดึงไปประมวลผลเป็นปุ่มโดยไม่ตั้งใจ
+    //
+    // @param {string} typeId     — เช่น 'cards'
+    // @param {string} categoryId — เช่น 'ai_tools'
+    // @returns {Promise<{id, name, data, header}>}
+
+    async fetchCategoryDirect(typeId, categoryId) {
+      const cacheKey = `direct:${typeId}:${categoryId}`;
+      const cached   = this.getCached(cacheKey);
+      if (cached) return cached;
+
+      const svc  = await _requireConDataService();
+      const lang = localStorage.getItem('selectedLang') || 'en';
+      const url  = svc.registry.paths.subcategoryData(typeId, categoryId);
+      const raw  = await this._performFetch(url);
+
+      if (!raw || !Array.isArray(raw.data)) {
+        throw new Error(`fetchCategoryDirect: invalid data at ${url}`);
+      }
+
+      const getName = (nameObj) => {
+        if (!nameObj || typeof nameObj !== 'object') return String(nameObj || '');
+        return nameObj[lang] || nameObj.en || nameObj.th || Object.values(nameObj)[0] || '';
+      };
+
+      const header = {
+        title:      getName(raw.name) || categoryId,
+        description: '',
+        typeId,
+        categoryId,
+        className:  'auto-category-header',
+      };
+
+      const result = { id: raw.id || categoryId, name: raw.name || {}, data: raw.data, header };
+      this.setCache(cacheKey, result);
+      return result;
     },
 
     // ── getTypeCategories ───────────────────────────────────────────────────────

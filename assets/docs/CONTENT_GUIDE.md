@@ -8,58 +8,71 @@
 ## 1. ภาพรวมระบบ
 
 ```
-con-data/          ← ฐานข้อมูลดิบทั้งหมด (emoji, symbol, card, ฯลฯ)
+con-data/          ← ฐานข้อมูลดิบทั้งหมด
     ↓
-ConDataService     ← อ่าน + index ทุก item ไว้ใน memory
+ConDataService     ← อ่าน + index ไว้ใน memory (assembled DB)
     ↓
 content/*.json     ← ใบสั่งงาน: "ดึงอะไร + แสดงผลแบบไหน" เท่านั้น
     ↓
-ContentService     ← แปล descriptor → ดึงข้อมูลจาก con-data → render
+ContentService     ← แปล descriptor → ดึงข้อมูล → render
     ↓
 URE                ← virtual scroll + DOM
 ```
 
-**หลักการ:** content JSON ไม่มีข้อมูลดิบ มีแค่ descriptor ที่บอกว่า "เอาอะไร มาแสดงยังไง"
+---
+
+## 2. ข้อมูล 2 ระบบ — สำคัญมาก
+
+ระบบแยก data เป็น 2 ประเภทที่ **ต้องไม่ปนกัน**:
+
+| ประเภท | ตัวอย่าง | เก็บใน | fetch โดย |
+|---|---|---|---|
+| **Copyable** | emoji, symbol | `index.json` → assembled DB | `ConDataService.getAssembled()` |
+| **Collection** | cards, packages | `con-data/` โดยตรง | `fetchCategoryDirect(type, id)` |
+
+> ⚠️ **ห้ามเพิ่ม collection types ลงใน `index.json`**  
+> เพราะระบบอื่น (home, search, copy) ดึงข้อมูลจาก assembled DB และ render ทุกอย่างเป็นปุ่ม  
+> ถ้า cards เข้าไปอยู่ใน assembled DB จะทำให้หัวหมวดหมู่ขึ้น แต่เนื้อหาไม่ขึ้น
 
 ---
 
-## 2. โครงสร้างไฟล์
+## 3. โครงสร้างไฟล์
 
 ```
 assets/
-├── db/con-data/                      ← ฐานข้อมูลดิบ (แก้ได้ แต่ห้ามเปลี่ยน schema)
-│   ├── index.json                    ← รายชื่อ type ทั้งหมด
-│   ├── emoji.json                    ← index ของ emoji
-│   ├── symbol.json                   ← index ของ symbol
-│   ├── cards.json                    ← index ของ card collections  ← NEW
+├── db/con-data/
+│   ├── index.json              ← ONLY copyable types (emoji, symbol) — ห้ามเพิ่ม cards
+│   ├── emoji.json
+│   ├── symbol.json
 │   ├── emoji/
-│   │   └── *.json                    ← ข้อมูลจริง [{api, text, name}]
+│   │   └── *.json              ← [{api, text, name}]
 │   ├── symbol/
 │   │   └── *.json
-│   └── cards/
-│       └── ai_tools.json             ← ข้อมูลการ์ด [{api, text, name, image, link, ...}]
+│   └── cards/                 ← collection data — ไม่ต้องอยู่ใน index.json
+│       ├── ai_tools.json
+│       └── *.json
 │
 ├── json/
-│   ├── buttons.json                  ← กำหนดปุ่มนำทาง
-│   └── content/                     ← ใบสั่งงาน เท่านั้น ห้ามมีข้อมูลดิบ
+│   ├── buttons.json            ← กำหนดปุ่มนำทาง
+│   └── content/               ← ใบสั่งงาน เท่านั้น
 │       ├── emojis-page1.json
 │       ├── symbols.json
 │       └── packages.json
 │
 └── js/
     ├── con-data-service/
-    │   ├── con-data-registry.js      ← schema + path resolver
-    │   └── con-data-service.js       ← public API
+    │   ├── con-data-registry.js
+    │   └── con-data-service.js
     └── nav-core-modules/
-        ├── content.js                ← render (ContentService)
-        └── data.js                   ← fetch + cache (DataService)
+        ├── content.js          ← render (ContentService)
+        └── data.js             ← fetch + cache (DataService)
 ```
 
 ---
 
-## 3. Schema ข้อมูลใน con-data
+## 4. Schema ข้อมูลใน con-data
 
-### 3.1 Item ทั่วไป (emoji / symbol)
+### 4.1 Copyable item (emoji / symbol) — ใน assembled DB
 
 ```json
 {
@@ -69,9 +82,9 @@ assets/
 }
 ```
 
-### 3.2 Item การ์ด (card collection)
+### 4.2 Collection item (cards) — direct fetch เท่านั้น
 
-เพิ่ม optional fields ลงไปได้ — ไม่กระทบโครงสร้างเดิม
+โครงสร้างเหมือนเดิม บวก optional card fields:
 
 ```json
 {
@@ -86,115 +99,78 @@ assets/
 
 | field | required | ความหมาย |
 |---|---|---|
-| `api` | ✅ | unique ID — ตั้งอิสระได้ เช่น `"card-openai"` |
-| `text` | ✅ | ชื่อสั้น / ข้อความที่จะคัดลอก |
-| `name` | ✅ | ชื่อแสดงผล (multilingual object) |
+| `api` | ✅ | unique ID — ตั้งเองได้ เช่น `"card-openai"` |
+| `text` | ✅ | ชื่อสั้น |
+| `name` | ✅ | ชื่อแสดงผล (`name.en` ต้องมีเสมอ) |
 | `description` | ☐ | คำอธิบาย (string หรือ multilingual object) |
-| `image` | ☐ | URL รูปภาพ (absolute หรือ relative path) |
-| `link` | ☐ | URL ที่จะเปิดเมื่อกดการ์ด |
+| `image` | ☐ | URL รูปภาพ |
+| `link` | ☐ | URL ที่เปิดเมื่อกดการ์ด |
 | `className` | ☐ | CSS class พิเศษ |
-
-> ⚠️ `name.en` ต้องมีเสมอ — ระบบ fallback ไปหา `en` ก่อน
 
 ---
 
-## 4. Content JSON — ใบสั่งงาน
+## 5. Content JSON — ใบสั่งงาน
 
-ไฟล์ใน `assets/json/content/` มีหน้าที่เดียวคือ **บอกว่าจะดึงอะไรมาแสดงผลแบบไหน** ห้ามมีข้อมูลดิบ
-
-### 4.1 `source` — ดึงทั้ง type
+### 5.1 `source` — ดึงทั้ง type (copyable เท่านั้น)
 
 ```json
 [{ "source": "emoji" }]
-```
-
-```json
-[{ "source": "symbol", "as": "buttons" }]
-```
-
-```json
-[{ "source": "cards", "as": "cards" }]
-```
-
-```json
+[{ "source": "symbol" }]
 [{ "source": "emoji", "only": ["smileys_emotion", "activities"] }]
+[{ "source": "emoji", "as": "cards" }]
 ```
 
 | field | default | ความหมาย |
 |---|---|---|
-| `source` | — | ชื่อ type ใน con-data (`"emoji"`, `"symbol"`, `"cards"`) |
-| `as` | `"buttons"` | รูปแบบแสดงผล: `"buttons"` หรือ `"cards"` |
-| `only` | `null` (= ทั้งหมด) | array ของ subcategory ID ที่ต้องการ |
+| `source` | — | ชื่อ type ใน assembled DB |
+| `as` | `"buttons"` | รูปแบบ: `"buttons"` หรือ `"cards"` |
+| `only` | null | เลือกเฉพาะบาง subcategory |
 
-### 4.2 `category` — ดึง subcategory เดียว
+> ⚠️ `source` ใช้ได้กับ type ที่อยู่ใน `index.json` เท่านั้น (emoji, symbol)
 
+---
+
+### 5.2 `category` — ดึง subcategory เดียว
+
+**Copyable subcategory** (ไม่ต้องระบุ `type`):
 ```json
-[{ "category": "ai_tools", "as": "cards" }]
+[{ "category": "arrows" }]
+[{ "category": "smileys_emotion", "as": "cards" }]
 ```
 
+**Collection subcategory** (ต้องระบุ `type` เสมอ):
 ```json
-[{ "category": "arrows", "as": "buttons" }]
-```
-
-```json
-[{ "category": "ai_tools", "as": "cards", "horizontal": true }]
+[{ "category": "ai_tools", "type": "cards", "as": "cards" }]
+[{ "category": "ai_tools", "type": "cards", "as": "cards", "horizontal": true }]
 ```
 
 | field | default | ความหมาย |
 |---|---|---|
-| `category` | — | ชื่อ subcategory ใน con-data |
-| `as` | `"buttons"` | รูปแบบแสดงผล |
-| `horizontal` | `false` | (card เท่านั้น) scroll แนวนอน |
+| `category` | — | ชื่อ subcategory |
+| `type` | null | **required สำหรับ collection** — บอกว่าอยู่ใน folder ไหน |
+| `as` | `"buttons"` | รูปแบบ: `"buttons"` หรือ `"cards"` |
+| `horizontal` | false | scroll แนวนอน (card เท่านั้น) |
 
-### 4.3 ผสมหลาย descriptor ในไฟล์เดียว
+> `type` ที่ระบุ → ContentService ใช้ `fetchCategoryDirect(type, category)` fetch โดยตรง ไม่ผ่าน assembled DB
+
+---
+
+### 5.3 ผสมหลาย descriptor ในไฟล์เดียว
 
 ```json
 [
   { "source": "emoji" },
-  { "category": "ai_tools", "as": "cards" }
+  { "category": "ai_tools", "type": "cards", "as": "cards" }
 ]
 ```
-
-### 4.4 Legacy format (รองรับต่อไป ไม่ต้องแก้)
-
-```json
-[
-  { "group": { "categoryId": "arrows", "type": "button" } }
-]
-```
-
----
-
-## 5. การกำหนดปุ่มนำทาง (buttons.json)
-
-```json
-{
-  "mainButtons": [
-    {
-      "en_label": "Symbols",
-      "th_label": "สัญลักษณ์",
-      "url": "symbols",
-      "isDefault": true,
-      "jsonFile": "/assets/json/content/symbols.json"
-    }
-  ]
-}
-```
-
-| field | ความหมาย |
-|---|---|
-| `url` | key สำหรับ URL `?type=symbols` — ห้ามซ้ำกัน |
-| `jsonFile` | path ของ content JSON ที่จะโหลด |
-| `isDefault` | เปิดหน้าแรกมาให้เลือกปุ่มนี้ (มีได้แค่ 1 ปุ่ม) |
 
 ---
 
 ## 6. How-to: เพิ่มข้อมูลใหม่
 
-### เพิ่ม item ในหมวดที่มีอยู่แล้ว
+### เพิ่ม item ใน copyable subcategory
 
-เปิด `assets/db/con-data/emoji/activities.json` แล้วเพิ่มใน array `data`:
-
+เปิด `assets/db/con-data/emoji/activities.json` → เพิ่มใน `data[]`:
 ```json
 { "api": "U+XXXXX", "text": "🆕", "name": { "th": "ชื่อไทย", "en": "English Name" } }
 ```
@@ -203,7 +179,7 @@ assets/
 
 ### เพิ่ม card collection ใหม่
 
-**ขั้นที่ 1** — สร้างไฟล์ข้อมูล: `assets/db/con-data/cards/my_collection.json`
+**ขั้นที่ 1** — สร้าง `assets/db/con-data/cards/my_collection.json`:
 
 ```json
 {
@@ -222,32 +198,24 @@ assets/
 }
 ```
 
-**ขั้นที่ 2** — เพิ่มใน `assets/db/con-data/cards.json`:
+> ❌ **ห้ามเพิ่มใน `index.json`** — cards fetch แบบ direct path เสมอ
+
+**ขั้นที่ 2** — ใช้ใน content JSON:
 
 ```json
-{
-  "id": "my_collection",
-  "name": { "th": "คอลเลกชันของฉัน", "en": "My Collection" },
-  "file": "/assets/db/con-data/cards/my_collection.json"
-}
+[{ "category": "my_collection", "type": "cards", "as": "cards" }]
 ```
 
-**ขั้นที่ 3** — ใช้ใน content JSON:
-
-```json
-[{ "category": "my_collection", "as": "cards" }]
-```
+จบ — ไม่ต้องแตะ index.json เลย
 
 ---
 
-### เพิ่ม type ใหม่ทั้งหมด (เช่น kaomoji)
+### เพิ่ม copyable type ใหม่ (เช่น kaomoji)
 
-1. สร้างโฟลเดอร์: `assets/db/con-data/kaomoji/`
-2. สร้าง subcategory files
-3. สร้าง `assets/db/con-data/kaomoji.json` (type index)
-4. เพิ่มใน `assets/db/con-data/index.json`
-5. สร้าง content JSON: `[{ "source": "kaomoji" }]`
-6. เพิ่มปุ่มใน `buttons.json`
+1. สร้าง `assets/db/con-data/kaomoji/` + subcategory files
+2. สร้าง `assets/db/con-data/kaomoji.json`
+3. เพิ่มใน `assets/db/con-data/index.json` ← อนุญาตสำหรับ copyable types เท่านั้น
+4. ใช้งาน: `[{ "source": "kaomoji" }]`
 
 ---
 
@@ -255,14 +223,15 @@ assets/
 
 | ❌ ห้ามทำ | เหตุผล |
 |---|---|
-| เขียนข้อมูลดิบลงใน `content/*.json` | content = ใบสั่งงานเท่านั้น |
-| ลบหรือเปลี่ยนชื่อ field `api`, `text`, `name` ในข้อมูลเดิม | ระบบ index โดย `api` และ `text` — แตกแน่ |
+| เขียนข้อมูลดิบใน `content/*.json` | content = ใบสั่งงานเท่านั้น |
+| เพิ่ม cards หรือ collection types ลงใน `index.json` | ระบบอื่นจะดึงไปแสดงเป็นปุ่มโดยไม่ตั้งใจ |
+| ใช้ `{ "category": "...", "type": "cards" }` โดยไม่มี `"as": "cards"` | จะ render เป็น button group แทน card group |
+| ลบ `api`, `text`, `name` จาก item เดิม | ระบบ index โดย field เหล่านี้ — แตกแน่ |
 | ตั้ง `url` ซ้ำกันใน `buttons.json` | routing พัง |
-| เพิ่ม type ใน con-data โดยไม่อัพเดท `index.json` | ConDataService ไม่รู้จัก type ใหม่ |
 
 ---
 
-## 8. ตัวอย่าง content JSON สำเร็จรูป
+## 8. ตัวอย่างสำเร็จรูป
 
 ```json
 [{ "source": "emoji" }]
@@ -271,42 +240,38 @@ assets/
 [{ "source": "symbol" }]
 ```
 ```json
-[{ "category": "ai_tools", "as": "cards" }]
+[{ "source": "emoji", "only": ["smileys_emotion"] }]
 ```
 ```json
-[{ "source": "cards", "as": "cards" }]
+[{ "category": "ai_tools", "type": "cards", "as": "cards" }]
 ```
 ```json
 [
   { "source": "emoji" },
-  { "category": "ai_tools", "as": "cards" }
+  { "category": "ai_tools", "type": "cards", "as": "cards" }
 ]
-```
-```json
-[{ "source": "emoji", "only": ["smileys_emotion", "activities"] }]
 ```
 
 ---
 
-## 9. Decision tree สำหรับ AI
+## 9. Decision tree
 
 ```
 ต้องการทำอะไร?
 │
-├─ เพิ่ม/แก้ข้อมูล emoji หรือ symbol?
-│     └─ แก้ไฟล์ใน assets/db/con-data/emoji/ หรือ symbol/
+├─ เพิ่ม/แก้ emoji หรือ symbol?
+│     └─ แก้ไฟล์ใน con-data/emoji/ หรือ con-data/symbol/
 │
-├─ เพิ่มการ์ดหรือ collection ใหม่?
-│     └─ สร้างไฟล์ใน assets/db/con-data/cards/
-│        อัพเดท assets/db/con-data/cards.json
-│        (ไม่ต้องแตะ content JSON เลย ถ้าปุ่มมีอยู่แล้ว)
+├─ เพิ่ม card collection ใหม่?
+│     └─ สร้างไฟล์ใน con-data/cards/  (ไม่ต้องแตะ index.json)
+│        ใช้งาน: { "category": "...", "type": "cards", "as": "cards" }
 │
 ├─ เพิ่มปุ่มนำทางใหม่?
-│     └─ แก้ buttons.json + สร้าง content JSON ใหม่ (1 บรรทัด)
+│     └─ แก้ buttons.json + สร้าง content JSON (1 บรรทัด)
 │
 ├─ เปลี่ยนว่าปุ่มนี้แสดงอะไร?
-│     └─ แก้ไฟล์ใน assets/json/content/ เท่านั้น
+│     └─ แก้ไฟล์ใน content/ เท่านั้น
 │
-└─ เปลี่ยน render logic?
-      └─ แก้ content.js (ต้องเข้าใจ NavCore)
+└─ เพิ่ม copyable type ใหม่ (เช่น kaomoji)?
+      └─ สร้างไฟล์ + เพิ่มใน index.json (copyable types อนุญาต)
 ```

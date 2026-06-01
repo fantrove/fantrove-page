@@ -1,5 +1,6 @@
 {
   "id": "cards",
+  "kind": "collection",
   "name": {
     "th": "คอลเลกชัน",
     "en": "Collections"
