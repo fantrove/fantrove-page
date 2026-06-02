@@ -19,10 +19,10 @@
     TIMEOUT: 5000,
     RETRY_DELAY: 300,
     MAX_RETRIES: 1,
-    CACHE_DURATION: 2 * 60 * 60 * 1000, // 2 hours
-    MAX_CONCURRENT: 2, // max simultaneous fetch-queue workers
-    WARMUP_DELAY: 1200, // ms before warmup on non-idle browsers
-    WARMUP_TIMEOUT: 2000, // requestIdleCallback timeout
+    CACHE_DURATION: 2 * 60 * 60 * 1000,
+    MAX_CONCURRENT: 2,
+    WARMUP_DELAY: 1200,
+    WARMUP_TIMEOUT: 2000,
   });
   
   // ── Paths ─────────────────────────────────────────────────────────────────────
@@ -35,19 +35,14 @@
   
   // ── DOM identifiers ───────────────────────────────────────────────────────────
   const DOM = Object.freeze({
-    // Loading overlay
     OVERLAY_ID: 'clp-overlay',
     CONTENT_LOADING_ID: 'content-loading',
-    
-    // Navigation
     HEADER_TAG: 'header',
     NAV_LIST_ID: 'nav-list',
     SUB_NAV_ID: 'sub-nav',
     SUB_NAV_CLASS: 'hj',
     SUB_BUTTONS_ID: 'sub-buttons-container',
     LOGO_CLASS: '.logo',
-    
-    // Content
     SENTINEL_ID: 'cm4-sentinel',
   });
   
@@ -59,8 +54,20 @@
   
   // ── Content rendering ─────────────────────────────────────────────────────────
   const CONTENT = Object.freeze({
-    POOL_CAP: 48, // max recycled DOM nodes in pool
-    INDEX_YIELD_N: 500, // items between scheduler yields during index build
+    POOL_CAP: 48,
+    INDEX_YIELD_N: 500,
+  });
+  
+  // ── "All" system feed button ──────────────────────────────────────────────────
+  // WHY: ค่าทุกตัวต้องอยู่ใน CONFIG เพื่อป้องกัน magic string กระจายใน buttons/router/feed
+  //      isDefault สำหรับ main button ถูกยกเลิกแล้ว — All button คือ default เสมอ
+  const ALL_BUTTON = Object.freeze({
+    URL: '_all',
+    EN_LABEL: 'All',
+    TH_LABEL: 'ทั้งหมด',
+    FEED_SAMPLE_CATS: 12, // จำนวน category ที่สุ่มแสดงต่อฟีด 1 ครั้ง
+    FEED_ITEMS_PER_CAT: 8, // จำนวน item ต่อ category ในฟีด
+    FEED_SEED_TTL: 30 * 60 * 1000, // เปลี่ยน seed ทุก 30 นาที → ฟีดหมุนเวียนช้าๆ
   });
   
   // ── i18n messages — loading overlay ──────────────────────────────────────────
@@ -80,6 +87,7 @@
     LOADING,
     CONTENT,
     LOADING_MESSAGES,
+    ALL_BUTTON,
   });
   
 })(window.NavCoreModules = window.NavCoreModules || {});

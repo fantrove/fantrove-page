@@ -2,6 +2,11 @@
 /**
  * @file router.js
  * RouterService + NavigationService
+ *
+ * v2 — "All" system button:
+ *   • getDefaultRoute() คืน _all เสมอ ไม่ใช้ isDefault จาก config แล้ว
+ *   • navigateTo(): เมื่อ main === CONFIG.ALL_BUTTON.URL → เรียก FeedService
+ *
  * (patched: navigateTo guard hides loading, safety timeout, auto-recovery)
  */
 (function (M) {
@@ -22,7 +27,7 @@
     _initialNavigation: true,
     _safetyTimer: null,
 
-    // ── URL normalization ────────────────────────────────────────────────────────
+    // ── URL normalization ──────────────────────────────────────────────────────
 
     normalizeUrl(input) {
       if (!input) return '';
@@ -72,18 +77,15 @@
       } catch (_) { return false; }
     },
 
+    /**
+     * "All" system button เป็น default เสมอ — ไม่มี isDefault ใน main buttons แล้ว
+     * @returns {Promise<string>}
+     */
     async getDefaultRoute() {
-      const cfg = State.buttons.config;
-      if (!cfg) return '';
-      const def  = (cfg.mainButtons || []).find(b => b.isDefault) || cfg.mainButtons?.[0];
-      if (!def)  return '';
-      const main = def.url || def.jsonFile;
-      if (!def.subButtons?.length) return this.normalizeUrl(main);
-      const defSub = def.subButtons.find(sb => sb.isDefault) || def.subButtons[0];
-      return this.normalizeUrl({ type: main, page: defSub?.url || defSub?.jsonFile });
+      return this.normalizeUrl(CONFIG.ALL_BUTTON.URL);
     },
 
-    // ── changeURL ────────────────────────────────────────────────────────────────
+    // ── changeURL ──────────────────────────────────────────────────────────────
 
     async changeURL(url, forcePush = false, opts = {}) {
       try {
@@ -118,7 +120,7 @@
       } catch (err) { console.error('[NavCore/Router] changeURL error:', err); }
     },
 
-    // ── Active button state ───────────────────────────────────────────────────────
+    // ── Active button state ────────────────────────────────────────────────────
 
     setActiveButtons(main, sub) {
       try {
@@ -158,21 +160,19 @@
       } catch (_) {}
     },
 
-    // ── navigateTo ───────────────────────────────────────────────────────────────
-    // BUG FIX 1: guard "if (isNavigating) return" ทำให้ loading overlay ที่ show ไปแล้วไม่ถูก hide
+    // ── navigateTo ─────────────────────────────────────────────────────────────
+    // BUG FIX 1: guard "if (isNavigating) return" ทำให้ loading overlay ไม่ถูก hide
     //            → เปลี่ยนเป็น queue ด้วย waitUntil + safety timeout
     // BUG FIX 2: เพิ่ม safety timeout 20s force-reset ป้องกัน isNavigating ค้าง
+    // v2:        เพิ่ม smart feed rendering เมื่อ main === CONFIG.ALL_BUTTON.URL
 
     async navigateTo(route, options = {}) {
-      // แสดง loading ทันที — ก่อน guard ทุกอย่าง
       try { M.LoadingService?.show(); } catch (_) {}
 
-      // ── Guard: isNavigating อยู่ → รอให้จบก่อน (ไม่ return ทิ้ง) ──────────────
       if (this.state.isNavigating) {
         try {
           await this._waitUntilFree(10000);
         } catch (_) {
-          // timeout → force reset แล้วดำเนินการต่อ
           console.warn('[NavCore/Router] isNavigating timeout — forcing reset');
           this.state.isNavigating = false;
         }
@@ -181,7 +181,6 @@
       this.state.isNavigating       = true;
       this.state.lastScrollPosition = window.pageYOffset || 0;
 
-      // Safety timeout: ถ้า navigation ใช้เวลานาน 20s → force reset
       if (this._safetyTimer) clearTimeout(this._safetyTimer);
       this._safetyTimer = setTimeout(() => {
         if (this.state.isNavigating) {
@@ -259,6 +258,15 @@
           const results  = await Promise.all(jobs);
           const combined = results.flatMap(r => Array.isArray(r) ? r : (r ? [r] : []));
           if (combined.length) await M.ContentService.renderContent(combined);
+        } else if (main === CONFIG.ALL_BUTTON.URL) {
+          // ── Smart feed rendering ─────────────────────────────────────────────
+          // WHY: All button ไม่มี jsonFile จึงใช้ FeedService แทน path ปกติ
+          try {
+            const feedData = await M.FeedService.buildRenderData(lang);
+            if (feedData.length) await M.ContentService.renderContent(feedData);
+          } catch (feedErr) {
+            console.error('[NavCore/Router] feed render error:', feedErr);
+          }
         }
 
         this.setActiveButtons(main, chosenSub?.url || chosenSub?.jsonFile || sub);
@@ -276,13 +284,12 @@
         try { Utils.showNotification('เกิดข้อผิดพลาดในการนำทาง', 'error'); } catch (_) {}
         try { M.LoadingService?.hide(); } catch (_) {}
       } finally {
-        // ✅ isNavigating ต้อง reset เสมอ ไม่ว่าจะ success หรือ error
         this.state.isNavigating = false;
         if (this._safetyTimer) { clearTimeout(this._safetyTimer); this._safetyTimer = null; }
       }
     },
 
-    // ── _waitUntilFree: รอให้ isNavigating = false ────────────────────────────────
+    // ── _waitUntilFree ─────────────────────────────────────────────────────────
 
     _waitUntilFree(timeoutMs = 10000) {
       return new Promise((resolve, reject) => {
@@ -295,7 +302,7 @@
       });
     },
 
-    // ── Initialization ────────────────────────────────────────────────────────────
+    // ── Initialization ─────────────────────────────────────────────────────────
 
     init() {
       window.addEventListener('popstate', async () => {

@@ -19,7 +19,7 @@
  *
  * @module init
  * @depends {config.js, state.js, utils.js, data.js, loading.js, content.js,
- *           performance.js, buttons.js, router.js, copy.js}
+ *           performance.js, buttons.js, router.js, copy.js, feed.js}
  */
 (function (M) {
   'use strict';
@@ -30,7 +30,7 @@
     ScrollService, PerformanceService,
     SubNavService, ButtonService,
     RouterService, NavigationService,
-    CopyService,
+    CopyService, FeedService,
   } = M;
 
   // ── InitService ───────────────────────────────────────────────────────────────
@@ -42,33 +42,30 @@
      * @returns {Promise<void>}
      */
     async start() {
-      // Signal that bootstrap is in progress
       State.isBootstrapping = true;
       window._navCore_bootstrapping = true;
 
-      // Expose LoadingService early so it's available before full init completes
       try {
         if (!window._navCore_contentLoadingManager)
           window._navCore_contentLoadingManager = LoadingService;
       } catch (_) {}
 
-      // ── Phase 1: Synchronous bindings ────────────────────────────────────────
+      // ── Phase 1: Synchronous bindings ──────────────────────────────────────
       this._exposeGlobals();
 
-      // ── Phase 2: Ensure DOM structure ─────────────────────────────────────────
+      // ── Phase 2: Ensure DOM structure ──────────────────────────────────────
       this._ensureElements();
       this._cacheElements();
 
-      // ── Phase 3: Show loading overlay early ──────────────────────────────────
+      // ── Phase 3: Show loading overlay early ────────────────────────────────
       try { LoadingService.show(); } catch (_) {}
 
-      // ── Phase 4: Core service setup ───────────────────────────────────────────
+      // ── Phase 4: Core service setup ────────────────────────────────────────
       try {
         PerformanceService.setupErrorBoundary();
         ScrollService.init();
         PerformanceService.init();
 
-        // Network status
         window.addEventListener('online', () => {
           Utils.showNotification('การเชื่อมต่อกลับมาแล้ว', 'success');
           ButtonService.loadConfig().catch(() => {});
@@ -78,14 +75,15 @@
           Utils.showNotification('ขาดการเชื่อมต่ออินเทอร์เน็ต', 'warning');
         }, { passive: true });
 
-        // Language changes
         window.addEventListener('languageChange', ev => {
           const newLang = ev.detail?.language || 'en';
           try { ButtonService.updateButtonsLanguage?.(newLang); }  catch (_) {}
           try { ContentService.updateCardsLanguage?.(newLang); }   catch (_) {}
+          // WHY: feed cache เก็บชื่อ category ตามภาษา — ต้อง invalidate เมื่อเปลี่ยนภาษา
+          //      ไม่เช่นนั้น ฟีดจะแสดงชื่อภาษาเก่าจนกว่า seed window จะหมดอายุ (30 min)
+          try { FeedService?.invalidate?.(); }                      catch (_) {}
         }, { passive: true });
 
-        // Resize with debounce
         let _resizeTimer;
         window.addEventListener('resize', () => {
           clearTimeout(_resizeTimer);
@@ -94,7 +92,7 @@
           }, 150);
         }, { passive: true });
 
-        // ── Phase 5: Load button config ─────────────────────────────────────────
+        // ── Phase 5: Load button config ────────────────────────────────────
         try {
           await ButtonService.loadConfig();
         } catch (e) {
@@ -102,17 +100,17 @@
           console.error('[NavCore/Init] loadConfig error:', e);
         }
 
-        // ── Phase 6: Init router (registers popstate handler) ──────────────────
+        // ── Phase 6: Init router ───────────────────────────────────────────
         try {
           RouterService.init();
         } catch (e) { console.error('[NavCore/Init] RouterService.init error:', e); }
 
-        // ── Phase 7: Warmup data (prefetch in idle time) ───────────────────────
+        // ── Phase 7: Warmup data ───────────────────────────────────────────
         try {
           DataService._warmup().catch(() => {});
         } catch (_) {}
 
-        // ── Phase 8: Initial navigation ─────────────────────────────────────────
+        // ── Phase 8: Initial navigation ────────────────────────────────────
         try {
           const url = window.location.search;
           if (!url || url === '?') {
@@ -124,7 +122,7 @@
 
           State.isBootstrapping                      = false;
           window._navCore_bootstrapping              = false;
-          window._headerV2_bootstrapping             = false; // backward compat
+          window._headerV2_bootstrapping             = false;
 
           RouterService.markInitialNavigationHandled?.();
         } catch (e) {
@@ -139,7 +137,6 @@
         console.error('[NavCore/Init] bootstrap error:', error);
         try { Utils.showNotification('เกิดข้อผิดพลาดในการโหลดแอพพลิเคชัน กรุณารีเฟรชหน้า', 'error'); } catch (_) {}
       } finally {
-        // Always remove loading overlay when done (success or error)
         try {
           if (typeof window.__removeInstantLoadingOverlay === 'function'
             && window.__instantLoadingOverlayShown) {
@@ -154,11 +151,8 @@
       }
     },
 
-    // ── DOM setup ─────────────────────────────────────────────────────────────────
+    // ── DOM setup ─────────────────────────────────────────────────────────────
 
-    /**
-     * Ensure all required DOM elements exist — create missing ones.
-     */
     _ensureElements() {
       const ensure = (selector, tag = 'div', id = '') => {
         let el = document.querySelector(selector);
@@ -177,9 +171,6 @@
       ensure(CONFIG.DOM.LOGO_CLASS, 'div');
     },
 
-    /**
-     * Cache DOM element references into State.elements.
-     */
     _cacheElements() {
       State.elements.header              = document.querySelector(CONFIG.DOM.HEADER_TAG);
       State.elements.navList             = document.getElementById(CONFIG.DOM.NAV_LIST_ID);
@@ -188,15 +179,10 @@
       State.elements.logo                = document.querySelector(CONFIG.DOM.LOGO_CLASS);
     },
 
-    // ── Global exposure ────────────────────────────────────────────────────────────
+    // ── Global exposure ────────────────────────────────────────────────────────
 
-    /**
-     * Expose services as window globals.
-     * New canonical names: window._navCore_*
-     * Backward-compat aliases: window._headerV2_* (for external scripts)
-     */
     _exposeGlobals() {
-      // ── New canonical globals ──────────────────────────────────────────────────
+      // ── New canonical globals ────────────────────────────────────────────────
       window._navCore_utils                = Utils;
       window._navCore_errorManager         = Utils.errorManager;
       window._navCore_dataManager          = DataService;
@@ -204,13 +190,14 @@
       window._navCore_contentManager       = ContentService;
       window._navCore_scrollManager        = ScrollService;
       window._navCore_performanceOptimizer = PerformanceService;
-      window._navCore_navigationManager    = RouterService;   // router IS the nav manager
+      window._navCore_navigationManager    = RouterService;
       window._navCore_buttonManager        = ButtonService;
       window._navCore_subNavManager        = SubNavService;
       window._navCore_router               = RouterService;
+      window._navCore_feedService          = FeedService;
       window._navCore_elements             = State.elements;
 
-      // ── Backward-compat aliases (_headerV2_*) ──────────────────────────────────
+      // ── Backward-compat aliases (_headerV2_*) ──────────────────────────────
       window._headerV2_utils                = Utils;
       window._headerV2_errorManager         = Utils.errorManager;
       window._headerV2_dataManager          = DataService;
@@ -222,13 +209,11 @@
       window._headerV2_buttonManager        = ButtonService;
       window._headerV2_subNavManager        = SubNavService;
       window._headerV2_router               = RouterService;
-      window._headerV2_data_manager         = DataService;   // alternate alias used in contentManager
+      window._headerV2_data_manager         = DataService;
       window._headerV2_elements             = State.elements;
 
-      // ── Public function globals ────────────────────────────────────────────────
+      // ── Public function globals ──────────────────────────────────────────────
       window.unifiedCopyToClipboard = (info) => CopyService.copy(info);
-
-      // showNotification / removeInstantLoadingOverlay are set in their own modules
     },
   };
 

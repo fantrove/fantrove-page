@@ -12,7 +12,7 @@
   const PHASES = [
     ['types.js', 'config.js', 'state.js'],
     ['utils.js', 'data.js'],
-    ['loading.js', 'content.js', 'performance.js'],
+    ['loading.js', 'content.js', 'performance.js', 'feed.js'], // feed.js ต้องอยู่หลัง data.js (Phase 2)
     ['buttons.js', 'router.js', 'copy.js'],
     ['init.js'],
   ];
@@ -20,7 +20,6 @@
   function getModuleBase() {
     try {
       if (document.currentScript && document.currentScript.src) {
-        // ✅ ตัด ?query และ #hash ออกก่อน แล้วค่อย strip ชื่อไฟล์
         const clean = document.currentScript.src.split('?')[0].split('#')[0];
         return clean.replace(/\/[^/]*$/, '/nav-core-modules/');
       }
@@ -30,7 +29,6 @@
         if (!src) continue;
         try {
           if (/\/nav-core(?:\.min)?\.js/.test(src)) {
-            // ✅ ตัด query/hash ออกก่อนเสมอ
             const clean = src.split('?')[0].split('#')[0];
             return clean.replace(/\/[^/]*$/, '/nav-core-modules/');
           }

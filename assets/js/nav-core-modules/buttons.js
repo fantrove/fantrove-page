@@ -4,11 +4,10 @@
  * SubNavService  — ensures #sub-nav and #sub-buttons-container exist in the DOM.
  * ButtonService  — renders and manages main-nav + sub-nav buttons.
  *
- * Consolidated from managers.js (buttonManager + subNavManager).
- * SubNavService is a dependency of ButtonService, so they live in the same file.
- *
- * Rendering optimizations:
- *   • buildFragment() → all buttons created inside DocumentFragment → single DOM write
+ * v2 — "All" system button:
+ *   • isDefault สำหรับ main button ถูกยกเลิก — All button (_all) คือ default เสมอ
+ *   • isDefault สำหรับ sub button ยังคงทำงานเหมือนเดิม
+ *   • All button ถูก inject ที่ index 0 ของ mainButtons ตอน loadConfig()
  *
  * @module buttons
  * @depends {config.js, state.js, utils.js, loading.js, content.js}
@@ -18,19 +17,21 @@
 
   const { CONFIG, State, Utils } = M;
 
+  // ── "All" system button config ─────────────────────────────────────────────────
+  // WHY: inject ที่นี่เพียงจุดเดียว ไม่ผ่าน buttons.json
+  //      ผู้ดูแล buttons.json ไม่ต้องรู้เรื่องนี้ — ระบบจัดการเอง
+  const _ALL_BTN_CFG = Object.freeze({
+    url:             CONFIG.ALL_BUTTON.URL,
+    en_label:        CONFIG.ALL_BUTTON.EN_LABEL,
+    th_label:        CONFIG.ALL_BUTTON.TH_LABEL,
+    _isSystemButton: true,
+    className:       'all-feed-button',
+  });
+
   // ── SubNavService ──────────────────────────────────────────────────────────────
 
-  /**
-   * Ensures the sub-nav DOM structure exists and exposes show/hide/clear helpers.
-   * Accessing SubNavService from ButtonService is done via M.SubNavService.
-   */
   const SubNavService = {
 
-    /**
-     * Ensure #sub-nav → .hj → #sub-buttons-container structure exists.
-     * Idempotent — safe to call multiple times.
-     * @returns {HTMLElement} the #sub-buttons-container element
-     */
     ensureSubNavContainer() {
       let sn = document.getElementById(CONFIG.DOM.SUB_NAV_ID);
       if (!sn) {
@@ -49,7 +50,6 @@
         sn.appendChild(hj);
       }
 
-      // Move any externally-placed #sub-buttons-container inside .hj
       const ext = document.querySelector(`#${CONFIG.DOM.SUB_BUTTONS_ID}`);
       if (ext && !hj.contains(ext)) try { hj.appendChild(ext); } catch (_) {}
 
@@ -63,7 +63,6 @@
         hj.appendChild(sbc);
       }
 
-      // Sync element cache
       State.elements.subNav              = sn;
       State.elements.subNavInner         = hj;
       State.elements.subButtonsContainer = sbc;
@@ -94,10 +93,10 @@
 
   const ButtonService = {
 
-    // ── Config + state loading ──────────────────────────────────────────────────
+    // ── Config + state loading ─────────────────────────────────────────────────
 
     /**
-     * Load buttons.json and render main navigation buttons.
+     * Load buttons.json, inject "All" system button, then render main nav.
      * Idempotent — uses DataService cache on repeat calls.
      * @returns {Promise<void>}
      */
@@ -105,31 +104,41 @@
       if (State.buttons.config) { await this.renderMainButtons(); return; }
 
       const cached = M.DataService.getCached('buttonConfig');
-      if (cached) { State.buttons.config = cached; await this.renderMainButtons(); return; }
+      if (cached) {
+        State.buttons.config = cached;
+      } else {
+        const res = await M.DataService.fetchWithRetry(
+          CONFIG.PATHS.BUTTONS_CONFIG, {}, 2
+        );
+        State.buttons.config = res;
+        M.DataService.setCache('buttonConfig', res);
+      }
 
-      const res = await M.DataService.fetchWithRetry(
-        CONFIG.PATHS.BUTTONS_CONFIG, {}, 2
-      );
-      State.buttons.config = res;
-      M.DataService.setCache('buttonConfig', res);
+      // ── Inject "All" system button at index 0 ──────────────────────────────
+      // WHY: ตรวจสอบก่อน inject เพื่อป้องกัน duplicate ถ้า loadConfig ถูกเรียกซ้ำ
+      //      (เช่น กรณี network reconnect trigger loadConfig อีกครั้ง)
+      const mbs = State.buttons.config.mainButtons;
+      if (!mbs.some(b => b.url === CONFIG.ALL_BUTTON.URL)) {
+        mbs.unshift(_ALL_BTN_CFG);
+      }
+
       await this.renderMainButtons();
-
       try { M.RouterService?.updateButtonStates?.(); } catch (_) {}
     },
 
-    // ── Main button rendering ───────────────────────────────────────────────────
+    // ── Main button rendering ──────────────────────────────────────────────────
 
     /**
      * Render all main navigation buttons into #nav-list.
      * Uses DocumentFragment — single DOM write.
+     * "All" button (index 0) เป็น default เสมอ — ไม่มี isDefault tracking แล้ว
      */
     async renderMainButtons() {
-      const lang                = localStorage.getItem('selectedLang') || 'en';
-      const { mainButtons }     = State.buttons.config;
-      const navList             = State.elements.navList;
-      navList.innerHTML         = '';
-      State.buttons.buttonMap   = new Map();
-      let def                   = null;
+      const lang            = localStorage.getItem('selectedLang') || 'en';
+      const { mainButtons } = State.buttons.config;
+      const navList         = State.elements.navList;
+      navList.innerHTML     = '';
+      State.buttons.buttonMap = new Map();
 
       const frag = document.createDocumentFragment();
 
@@ -145,8 +154,9 @@
         btn.setAttribute('data-url', url);
         if (cfg.className) btn.classList.add(cfg.className);
 
+        // WHY: isDefault tracking ถูกลบออก
+        //      All button ที่ index 0 เป็น default เสมอ — ดึงจาก buttonMap ด้านล่าง
         State.buttons.buttonMap.set(url, { button: btn, config: cfg });
-        if (cfg.isDefault) def = { button: btn, config: cfg };
 
         btn.addEventListener('click', async ev => {
           ev.preventDefault();
@@ -157,28 +167,35 @@
           await M.RouterService.navigateTo(url, {
             skipUrlUpdate: !!State.isBootstrapping,
           });
-        }); // non-passive: needs preventDefault
+        });
 
         li.appendChild(btn);
         frag.appendChild(li);
       }
 
-      navList.appendChild(frag); // single DOM write
+      navList.appendChild(frag);
+
+      // "All" system button เป็น default เสมอ
+      const allEntry = State.buttons.buttonMap.get(CONFIG.ALL_BUTTON.URL) || null;
 
       if (!State.isBootstrapping) {
-        await this._handleInitialUrl(window.location.search, def);
-      } else if (def?.button) {
-        def.button.classList.add('active');
-        State.buttons.currentMainButton    = def.button;
-        State.buttons.currentMainButtonUrl = def.config?.url || def.config?.jsonFile;
+        await this._handleInitialUrl(window.location.search, allEntry);
+      } else if (allEntry) {
+        allEntry.button.classList.add('active');
+        State.buttons.currentMainButton    = allEntry.button;
+        State.buttons.currentMainButtonUrl = CONFIG.ALL_BUTTON.URL;
       }
     },
 
-    // ── Initial URL handling ────────────────────────────────────────────────────
+    // ── Initial URL handling ───────────────────────────────────────────────────
 
+    // def คือ All button entry เสมอ (ไม่ใช่ isDefault จาก config อีกต่อไป)
     async _handleInitialUrl(url, def) {
       try {
-        if (!url || url === '?') { if (def) await this.triggerMainButtonClick(def.button); return; }
+        if (!url || url === '?') {
+          if (def) await this.triggerMainButtonClick(def.button);
+          return;
+        }
 
         const p    = new URLSearchParams(url.startsWith('?') ? url : `?${url}`);
         const main = (p.get('type') || '').replace(/__$/, '');
@@ -261,7 +278,7 @@
       }
     },
 
-    // ── Click triggers ──────────────────────────────────────────────────────────
+    // ── Click triggers ─────────────────────────────────────────────────────────
 
     async triggerMainButtonClick(btn) {
       if (!btn) return;
@@ -287,11 +304,12 @@
       } catch (e) { console.error('[NavCore/Buttons] triggerSubButtonClick', e); }
     },
 
-    // ── Sub-button rendering ────────────────────────────────────────────────────
+    // ── Sub-button rendering ───────────────────────────────────────────────────
 
     /**
      * Render sub-navigation buttons into #sub-buttons-container.
      * Uses DocumentFragment — single DOM write.
+     * isDefault ยังคงทำงานสำหรับ sub buttons เหมือนเดิม
      * @param {SubButtonConfig[]} subBtns
      * @param {string}            mainUrl
      * @param {string}            lang
@@ -317,7 +335,7 @@
         const label = cfg[`${lang}_label`];
         if (!label) return;
 
-        const btn    = document.createElement('button');
+        const btn     = document.createElement('button');
         btn.className = 'button-sub sub-button';
         if (cfg.className) btn.classList.add(cfg.className);
         btn.textContent = label;
@@ -339,14 +357,14 @@
         frag.appendChild(btn);
       });
 
-      ctr.appendChild(frag); // single DOM write
+      ctr.appendChild(frag);
 
       const needDef = !activeUrl || !ctr.querySelector('.button-sub.active');
       if (needDef && defBtn)
         setTimeout(() => { try { this.triggerSubButtonClick(defBtn); } catch (_) {} }, 0);
     },
 
-    // ── Utilities ───────────────────────────────────────────────────────────────
+    // ── Utilities ──────────────────────────────────────────────────────────────
 
     /** @param {string} url @returns {MainButtonConfig|undefined} */
     findMainButtonConfig(url) {
@@ -408,7 +426,7 @@
     scrollActiveSubButtonIntoView(btn)  { return this._scrollSub(btn); },
   };
 
-  // ── Export ────────────────────────────────────────────────────────────────────
+  // ── Export ─────────────────────────────────────────────────────────────────────
 
   M.SubNavService = SubNavService;
   M.ButtonService = ButtonService;
