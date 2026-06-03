@@ -5,7 +5,9 @@
  *
  * v2 — "All" system button:
  *   • getDefaultRoute() คืน _all เสมอ ไม่ใช้ isDefault จาก config แล้ว
- *   • navigateTo(): เมื่อ main === CONFIG.ALL_BUTTON.URL → เรียก FeedService
+ *   • navigateTo(): main === _all → M.ContentService.renderFeed(lang)
+ *     renderFeed จัดการ clearContent + infinite scroll ภายในตัวเอง
+ *     ดังนั้นจึงข้าม clearContent ภายนอกสำหรับ route นี้
  *
  * (patched: navigateTo guard hides loading, safety timeout, auto-recovery)
  */
@@ -161,10 +163,6 @@
     },
 
     // ── navigateTo ─────────────────────────────────────────────────────────────
-    // BUG FIX 1: guard "if (isNavigating) return" ทำให้ loading overlay ไม่ถูก hide
-    //            → เปลี่ยนเป็น queue ด้วย waitUntil + safety timeout
-    // BUG FIX 2: เพิ่ม safety timeout 20s force-reset ป้องกัน isNavigating ค้าง
-    // v2:        เพิ่ม smart feed rendering เมื่อ main === CONFIG.ALL_BUTTON.URL
 
     async navigateTo(route, options = {}) {
       try { M.LoadingService?.show(); } catch (_) {}
@@ -246,26 +244,32 @@
           try { M.LoadingService?._updateTopVar(); } catch (_) {}
         }
 
-        try { await M.ContentService.clearContent(); } catch (_) {}
+        // ── Content rendering ──────────────────────────────────────────────────
+        // WHY: All feed route ข้าม clearContent ภายนอก
+        //      เพราะ renderFeed() จัดการ clearContent + FeedService.reset() ภายในตัวเอง
+        //      route อื่นทุก route ยังคง clearContent ปกติ
 
-        const jobs = [];
-        if (mainButton.jsonFile)
-          jobs.push(M.DataService.fetchWithRetry(mainButton.jsonFile, {}, 2).catch(() => null));
-        if (chosenSub?.jsonFile)
-          jobs.push(M.DataService.fetchWithRetry(chosenSub.jsonFile, {}, 3).catch(() => null));
-
-        if (jobs.length) {
-          const results  = await Promise.all(jobs);
-          const combined = results.flatMap(r => Array.isArray(r) ? r : (r ? [r] : []));
-          if (combined.length) await M.ContentService.renderContent(combined);
-        } else if (main === CONFIG.ALL_BUTTON.URL) {
-          // ── Smart feed rendering ─────────────────────────────────────────────
-          // WHY: All button ไม่มี jsonFile จึงใช้ FeedService แทน path ปกติ
+        if (main === CONFIG.ALL_BUTTON.URL) {
+          // ── Smart infinite feed ───────────────────────────────────────────
           try {
-            const feedData = await M.FeedService.buildRenderData(lang);
-            if (feedData.length) await M.ContentService.renderContent(feedData);
+            await M.ContentService.renderFeed(lang);
           } catch (feedErr) {
-            console.error('[NavCore/Router] feed render error:', feedErr);
+            console.error('[NavCore/Router] renderFeed error:', feedErr);
+          }
+        } else {
+          // ── Normal content rendering ──────────────────────────────────────
+          try { await M.ContentService.clearContent(); } catch (_) {}
+
+          const jobs = [];
+          if (mainButton.jsonFile)
+            jobs.push(M.DataService.fetchWithRetry(mainButton.jsonFile, {}, 2).catch(() => null));
+          if (chosenSub?.jsonFile)
+            jobs.push(M.DataService.fetchWithRetry(chosenSub.jsonFile, {}, 3).catch(() => null));
+
+          if (jobs.length) {
+            const results  = await Promise.all(jobs);
+            const combined = results.flatMap(r => Array.isArray(r) ? r : (r ? [r] : []));
+            if (combined.length) await M.ContentService.renderContent(combined);
           }
         }
 
@@ -355,7 +359,7 @@
     },
   };
 
-  // ── NavigationService — backward-compat proxy ─────────────────────────────────
+  // ── NavigationService — backward-compat proxy ──────────────────────────────────
 
   const NavigationService = {
     state: RouterService.state,

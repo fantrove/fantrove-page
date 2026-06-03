@@ -1,19 +1,28 @@
 // Path:    assets/js/nav-core-modules/feed.js
-// Purpose: FeedService — smart discovery feed สำหรับ "All" system button
-//          สุ่มเนื้อหาจากหลาย category ด้วย seeded algorithm เพื่อการค้นพบเนื้อหาใหม่
-// Used by: router.js (navigateTo เมื่อ main === CONFIG.ALL_BUTTON.URL)
+// Purpose: FeedService — full-coverage infinite feed สำหรับ "All" system button
+//          ครอบคลุม ทุก item ในฐานข้อมูล ทั้ง button + card, สลับกันอย่างชาญฉลาด
+// Used by: content.js (renderFeed → loadNextPage)
 
 // @ts-check
-(function (M) {
+(function(M) {
   'use strict';
-
+  
   const { CONFIG } = M;
-
-  // ── Seeded LCG PRNG ────────────────────────────────────────────────────────────
-  // WHY: ใช้ seed แทน Math.random() เพื่อให้ฟีดเหมือนกันตลอด seed window (30 min)
-  //      ผู้ใช้ refresh หน้าภายใน 30 นาทีเห็นฟีดเดิม — ไม่กระพริบทุกครั้ง
-  //      Math.imul ให้ 32-bit integer multiplication โดยไม่ overflow
-
+  
+  // ── Constants ──────────────────────────────────────────────────────────────────
+  // WHY CHUNK_SIZE_BUTTON=20: เป็นขนาดที่พอดี — ไม่เล็กเกินไป (8 เดิมเห็นน้อย)
+  //   ไม่ใหญ่เกินไป (แต่ละกลุ่มก็ยังน่าสนใจ)
+  // WHY CHUNK_SIZE_CARD=30: card มักมีไม่มาก — แสดงทั้ง category ในคราวเดียวเลย
+  //   ถ้า category มีเยอะกว่า 30 ค่อย split เป็นหลาย segment
+  const CHUNK_SIZE_BUTTON = 20;
+  const CHUNK_SIZE_CARD = 30;
+  
+  // จำนวนรอบสูงสุดก่อนหยุด (1 รอบ = เห็นทุก item ใน DB ครั้งหนึ่ง)
+  // WHY 4 รอบ: ผู้ใช้ที่ scroll จนสุดจะเห็น content ซ้ำในลำดับต่างกัน
+  //   ให้ feel เหมือน infinite โดยไม่ leak memory ไม่มีที่สิ้นสุด
+  const MAX_ROUNDS = 4;
+  
+  // ── Seeded Fisher-Yates shuffle ────────────────────────────────────────────────
   function _seededRng(seed) {
     let s = seed >>> 0;
     return () => {
@@ -21,8 +30,7 @@
       return s / 0x100000000;
     };
   }
-
-  // Fisher-Yates shuffle ด้วย seeded rng
+  
   function _shuffle(arr, rng) {
     const a = arr.slice();
     for (let i = a.length - 1; i > 0; i--) {
@@ -31,124 +39,224 @@
     }
     return a;
   }
-
-  // seed เปลี่ยนทุก FEED_SEED_TTL ms → ฟีดหมุนเวียนอัตโนมัติ
-  function _currentSeed() {
-    return Math.floor(Date.now() / CONFIG.ALL_BUTTON.FEED_SEED_TTL);
-  }
-
+  
   function _resolveName(nameObj, lang) {
     if (!nameObj || typeof nameObj !== 'object') return String(nameObj || '');
     return nameObj[lang] || nameObj.en || nameObj.th || Object.values(nameObj)[0] || '';
   }
-
+  
+  // ── Smart interleave ───────────────────────────────────────────────────────────
+  // WHY: ถ้า shuffle สุ่มล้วน card อาจกระจุกอยู่ที่ใดที่หนึ่ง
+  //      interleave แบบ interval ทำให้ card กระจายสม่ำเสมอตลอดฟีด
+  //      ผู้ใช้เห็นความหลากหลายตลอดการ scroll ไม่ใช่ button ทั้งนั้นแล้ว card ทีเดียว
+  function _interleave(buttonSegs, cardSegs, rng) {
+    if (!cardSegs.length) return _shuffle(buttonSegs, rng);
+    if (!buttonSegs.length) return _shuffle(cardSegs, rng);
+    
+    const shuffledCards = _shuffle(cardSegs, rng);
+    const shuffledBtns = _shuffle(buttonSegs, rng);
+    
+    // คำนวณ interval: แทรก 1 card ทุก N button segment
+    // WHY: ให้ card กระจายเท่าๆ กัน ไม่กระจุก
+    const interval = Math.ceil(shuffledBtns.length / (shuffledCards.length + 1));
+    const result = [];
+    let cardIdx = 0;
+    
+    for (let i = 0; i < shuffledBtns.length; i++) {
+      result.push(shuffledBtns[i]);
+      // แทรก card หลังครบ interval (ยกเว้น card หมดแล้ว)
+      if ((i + 1) % interval === 0 && cardIdx < shuffledCards.length) {
+        result.push(shuffledCards[cardIdx++]);
+      }
+    }
+    
+    // card ที่เหลือ (ถ้ามี) ต่อท้าย
+    while (cardIdx < shuffledCards.length) {
+      result.push(shuffledCards[cardIdx++]);
+    }
+    
+    return result;
+  }
+  
   // ── FeedService ────────────────────────────────────────────────────────────────
-
+  
   const FeedService = {
-
-    _lastSeed:   null,
-    _cachedData: null,
-
+    
+    // ── Persistent state (ไม่ล้างเมื่อ reset เพราะแค่ rebuild ไม่ได้เปลี่ยน DB) ──
+    _dbRef: null, // reference ไปยัง assembled DB (ไม่ copy)
+    _copyableIds: null, // Set<string> — type IDs ที่เป็น copyable
+    
+    // ── Cursor state (reset() clears all) ─────────────────────────────────────
+    _allSegments: [], // [{groupType,catId,catName,typeId,typeName,items}]
+    _segCursor: 0,
+    _roundIndex: 0,
+    _totalEmitted: 0,
+    _totalSegmentsPerRound: 0, // คำนวณครั้งเดียว ใช้ตรวจ hasMore
+    _isInitialized: false,
+    
     /**
-     * Build renderContent-compatible descriptors สำหรับ smart feed.
-     * Output format: [{ group: { type, header, items } }, ...]
-     *
-     * Algorithm:
-     *  1. ดึง assembled DB → กรองเฉพาะ copyable types (emoji, symbol, ...)
-     *  2. รวม categories ทั้งหมด → Fisher-Yates shuffle ด้วย seed
-     *  3. เลือก FEED_SAMPLE_CATS categories แรก
-     *  4. แต่ละ category: random window ขนาด FEED_ITEMS_PER_CAT items
-     *     (offset ต่างกันทุก seed window → ค้นพบ item ใหม่เรื่อยๆ)
-     *
-     * @param {string} lang
-     * @returns {Promise<Array>}
+     * Reset cursor — เรียกทุกครั้งที่กดปุ่ม All ใหม่
+     * ไม่ clear _dbRef / _copyableIds (ใช้ซ้ำได้)
      */
-    async buildRenderData(lang) {
-      const seed = _currentSeed();
-
-      // WHY: cache ต่อ seed window — ไม่ rebuild ถ้า seed ยังเหมือนเดิม
-      if (seed === this._lastSeed && this._cachedData) return this._cachedData;
-
-      const SAMPLE_CATS   = CONFIG.ALL_BUTTON.FEED_SAMPLE_CATS;
-      const ITEMS_PER_CAT = CONFIG.ALL_BUTTON.FEED_ITEMS_PER_CAT;
-
-      // ── Resolve copyable type IDs ──────────────────────────────────────────────
-      // WHY: collection types (cards) ไม่ควรปรากฏในฟีด
-      //      item ของ cards ไม่ใช่ตัวอักขระ copy ได้ — ใช้ ConDataRegistry เป็น source of truth
-      const registry    = window.ConDataService?.registry || window.ConDataRegistry || null;
-      const knownKinds  = registry?.knownKinds || {};
-      const copyableIds = new Set(
-        Object.entries(knownKinds)
-          .filter(([, kind]) => kind === 'copyable')
-          .map(([id]) => id)
-      );
-      // WHY fallback: registry อาจยังไม่ mount ตอน feed เรียกครั้งแรก
-      if (!copyableIds.size) { copyableIds.add('emoji'); copyableIds.add('symbol'); }
-
-      // ── Fetch assembled DB ─────────────────────────────────────────────────────
-      const db = await M.DataService.loadApiDatabase();
-      if (!db?.type?.length) return [];
-
-      // ── Collect all eligible categories ───────────────────────────────────────
-      const allCats = [];
-      for (const typeObj of db.type) {
-        if (!copyableIds.has(typeObj.id)) continue;
-        for (const cat of (typeObj.category || [])) {
-          if (!(cat.data?.length)) continue;
-          allCats.push({
-            typeId:   typeObj.id,
-            typeName: typeObj.name,
-            catId:    cat.id,
-            catName:  cat.name,
-            items:    cat.data,
-          });
+    reset() {
+      this._allSegments = [];
+      this._segCursor = 0;
+      this._roundIndex = 0;
+      this._totalEmitted = 0;
+      this._totalSegmentsPerRound = 0;
+      this._isInitialized = false;
+    },
+    
+    /**
+     * สร้าง segment list ครอบคลุม ทั้ง DB (lazy init)
+     * เรียกครั้งแรก: load DB + สร้าง segments
+     * เรียกซ้ำ: ใช้ cache
+     */
+    async _ensureInit() {
+      if (this._isInitialized) return;
+      
+      // ── Resolve type kinds ────────────────────────────────────────────────────
+      // WHY: แยก copyable (emoji, symbol) กับ collection (cards) เพื่อ render ต่างกัน
+      //      copyable → btn-group, collection → card-group
+      if (!this._copyableIds) {
+        const registry = window.ConDataService?.registry || window.ConDataRegistry || null;
+        const knownKinds = registry?.knownKinds || {};
+        this._copyableIds = new Set(
+          Object.entries(knownKinds).filter(([, k]) => k === 'copyable').map(([id]) => id)
+        );
+        if (!this._copyableIds.size) {
+          this._copyableIds.add('emoji');
+          this._copyableIds.add('symbol');
         }
       }
-
-      if (!allCats.length) return [];
-
-      // ── Shuffle → sample N categories ─────────────────────────────────────────
-      const rng     = _seededRng(seed);
-      const sampled = _shuffle(allCats, rng).slice(0, SAMPLE_CATS);
-
-      // ── Build render groups ────────────────────────────────────────────────────
-      // WHY: ส่งออกเป็น { group: { type, header, items } } ซึ่ง ContentService._resolveAll()
-      //      รับได้โดยตรง ผ่าน _resolveGroup() → _fetchItems() → _resolveItem()
-      const renderData = sampled.map(entry => {
-        // สุ่ม offset ภายใน category ให้ได้ item ที่ต่างกันทุก seed window
-        const maxOffset = Math.max(0, entry.items.length - ITEMS_PER_CAT);
-        const offset    = Math.floor(rng() * (maxOffset + 1));
-        const slice     = entry.items.slice(offset, offset + ITEMS_PER_CAT);
-
-        return {
-          group: {
-            type:   'button',
-            header: {
-              title:       _resolveName(entry.catName,  lang),
-              description: _resolveName(entry.typeName, lang),
-              className:   'auto-category-header',
-            },
-            items: slice,
-          },
-        };
-      });
-
-      this._lastSeed   = seed;
-      this._cachedData = renderData;
-      return renderData;
+      
+      // ── Load DB ────────────────────────────────────────────────────────────────
+      const db = await M.DataService.loadApiDatabase();
+      this._dbRef = db;
+      
+      // ── Build segments ─────────────────────────────────────────────────────────
+      // สร้าง segment จากทุก type ทุก category ไม่มีการคัดออก
+      const buttonSegs = [];
+      const cardSegs = [];
+      
+      for (const typeObj of (db?.type || [])) {
+        const isCopyable = this._copyableIds.has(typeObj.id);
+        const isCollection = !isCopyable;
+        
+        for (const cat of (typeObj.category || [])) {
+          if (!cat.data?.length) continue;
+          
+          const chunkSize = isCollection ? CHUNK_SIZE_CARD : CHUNK_SIZE_BUTTON;
+          const groupType = isCollection ? 'card' : 'button';
+          
+          // Split category items into chunks → each chunk = 1 segment
+          for (let offset = 0; offset < cat.data.length; offset += chunkSize) {
+            const slice = cat.data.slice(offset, offset + chunkSize);
+            if (!slice.length) continue;
+            
+            const seg = {
+              groupType,
+              typeId: typeObj.id,
+              typeName: typeObj.name,
+              catId: cat.id,
+              catName: cat.name,
+              items: slice, // ref slice — ไม่ copy object ใหม่
+            };
+            
+            if (isCollection) cardSegs.push(seg);
+            else buttonSegs.push(seg);
+          }
+        }
+      }
+      
+      // WHY เก็บแยก: เพื่อทำ smart interleave — ไม่ใช่ shuffle สุ่มล้วน
+      // เก็บไว้เพื่อ re-interleave ในรอบถัดไปด้วย seed ต่าง
+      this._buttonSegsSource = buttonSegs;
+      this._cardSegsSource = cardSegs;
+      
+      // สร้าง interleaved segments สำหรับ round 0
+      this._totalSegmentsPerRound = buttonSegs.length + cardSegs.length;
+      this._allSegments = this._buildRoundSegments(0);
+      this._isInitialized = true;
     },
-
+    
+    // สร้าง interleaved + shuffled segment list สำหรับ round ที่กำหนด
+    // WHY แยก method: เรียกซ้ำเมื่อเริ่ม round ใหม่
+    _buildRoundSegments(roundIndex) {
+      if (!this._buttonSegsSource?.length && !this._cardSegsSource?.length) return [];
+      const rng = _seededRng((roundIndex * 98317 + 11) >>> 0);
+      return _interleave(
+        this._buttonSegsSource || [],
+        this._cardSegsSource || [],
+        rng
+      );
+    },
+    
     /**
-     * Force rebuild ครั้งถัดไป.
-     * เรียกเมื่อ: ผู้ใช้เปลี่ยนภาษา หรือต้องการล้าง cache ด้วยตนเอง
+     * Load N segments ถัดไปสำหรับ feed.
+     * เรียกได้ต่อเนื่อง — cursor เดินหน้าอัตโนมัติ
+     * เมื่อครบ round: re-shuffle + เริ่ม round ใหม่
+     *
+     * @param {string} lang
+     * @param {number} [n=12]
+     * @returns {Promise<{groups: Array, hasMore: boolean}>}
      */
-    invalidate() {
-      this._lastSeed   = null;
-      this._cachedData = null;
+    async loadNextPage(lang, n = 12) {
+      await this._ensureInit();
+      if (!this._totalSegmentsPerRound) return { groups: [], hasMore: false };
+      
+      const maxEmit = this._totalSegmentsPerRound * MAX_ROUNDS;
+      const groups = [];
+      
+      for (let i = 0; i < n; i++) {
+        if (this._totalEmitted >= maxEmit) break;
+        
+        // Wrap round เมื่อ cursor เดินถึงปลาย allSegments
+        if (this._segCursor >= this._allSegments.length) {
+          this._roundIndex++;
+          // WHY re-build: round ใหม่ = shuffle order ใหม่ = ลำดับ content ต่าง
+          //   ผู้ใช้ที่ scroll ผ่านครบ 1 รอบจะเห็น content เดิมในลำดับใหม่
+          this._allSegments = this._buildRoundSegments(this._roundIndex);
+          this._segCursor = 0;
+          if (!this._allSegments.length) break;
+        }
+        
+        const seg = this._allSegments[this._segCursor];
+        const group = this._buildGroup(seg, lang);
+        if (group) groups.push(group);
+        
+        this._segCursor++;
+        this._totalEmitted++;
+      }
+      
+      const hasMore = (this._totalEmitted < maxEmit) && (this._totalSegmentsPerRound > 0);
+      return { groups, hasMore };
     },
+    
+    // แปลง segment → group descriptor ในรูปแบบที่ ContentService._resolveAll() รับได้
+    // WHY: ส่ง groupType ไปใน group.type เพื่อให้ _resolveGroup รู้ว่าจะ render แบบไหน
+    //   'card' → card-group template (รูปภาพ + ชื่อ + description)
+    //   'button' → btn-group template (ตัวอักขระ/emoji แบบกริด)
+    _buildGroup(seg, lang) {
+      if (!seg?.items?.length) return null;
+      return {
+        group: {
+          type: seg.groupType,
+          header: {
+            title: _resolveName(seg.catName, lang),
+            description: _resolveName(seg.typeName, lang),
+            className: 'auto-category-header',
+          },
+          items: seg.items, // ref — ไม่ allocate ใหม่
+        },
+      };
+    },
+    
+    /** Invalidate — เรียกเมื่อเปลี่ยนภาษา (header ต้อง resolve ใหม่) */
+    invalidate() { this.reset(); },
   };
-
+  
   // ── Export ──────────────────────────────────────────────────────────────────────
   M.FeedService = FeedService;
-
+  
 })(window.NavCoreModules = window.NavCoreModules || {});

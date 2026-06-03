@@ -1,29 +1,26 @@
 // Path:    assets/js/nav-core-modules/content.js
 // Purpose: ContentService — renders content items (buttons, cards, source groups) via URE
-// Used by: router.js (M.ContentService.renderContent), init.js (M.ContentService.updateCardsLanguage)
+//          + renderFeed() สำหรับ All button: infinite scroll, delegated click, memory-safe
+// Used by: router.js (renderContent, renderFeed), init.js (updateCardsLanguage)
 
 // @ts-check
 /**
  * @file content.js
- * ContentService — URE-powered rendering.
- * Adds horizontal card group support (card-group-h) alongside existing
- * btn-row split and card-group types.
+ * ContentService — URE-powered rendering + native infinite-scroll feed.
  *
- * Layout types emitted to URE:
- *   btn-row      — 10 buttons per item; --first/mid/last/only position
- *   card-group   — vertical card grid (normal wrapping)
- *   card-group-h — horizontal scroll strip (overflow-x; no virtual scroll on X)
+ * Feed render path (renderFeed):
+ *   - native DOM append แทน URE → รองรับ infinite scroll ได้โดยไม่ re-mount
+ *   - IntersectionObserver (rootMargin 600px) preload ก่อนถึง bottom
+ *   - content-visibility:auto บน .feed-page → browser discard off-screen rendering
+ *   - delegated click บน #content-loading → copy + card open ทำงานเหมือนกัน
+ *   - clearContent() disconnect observer → ไม่มี memory leak
  *
- * Data spec for source descriptor (v2 — pulls entire type from con-data):
- *   { "source": "emoji" }
- *   { "source": "symbol", "layout": "button" }
- *   { "source": "emoji", "only": ["smileys_emotion", "activities"] }
- *
- * Data spec for horizontal cards:
- *   { "group": { "categoryId": "...", "type": "card", "layout": "horizontal" } }
+ * Feed page sizes:
+ *   FEED_FIRST_PAGE_SIZE = 10 segments × 20 items = 200 items on first paint
+ *   FEED_PAGE_SIZE       = 12 segments × 20 items = 240 items per scroll load
  *
  * @module content
- * @depends {config.js, state.js, data.js, loading.js}
+ * @depends {config.js, state.js, data.js, loading.js, feed.js}
  */
 (function (M) {
   'use strict';
@@ -35,17 +32,22 @@
 
   const BTN_ROW_SIZE = 10;
 
-  // WHY: กำหนด constant เพื่อป้องกัน magic string ใน _resolveSource / _fetchSourceGroup
   const LAYOUT = Object.freeze({ BUTTON: 'button', CARD: 'card' });
 
-  // WHY: content JSON ใช้ plural ('cards', 'buttons') เพื่อความอ่านง่าย
-  //      แต่ LAYOUT constant ใช้ singular — normalize ที่ entry point เดียว
   function _toLayout(val) {
     if (val === 'cards' || val === 'card') return LAYOUT.CARD;
     return LAYOUT.BUTTON;
   }
 
-  // ── CSS (injected once) ───────────────────────────────────────────────────
+  // ── Feed constants ─────────────────────────────────────────────────────────────
+  const FEED_SENTINEL_ID     = 'nc-feed-sentinel';
+  // WHY 10/12: FeedService ส่ง segment ละ 20 items
+  //   10 segments × 20 = 200 items on first paint  → ผู้ใช้เห็น content เยอะตั้งแต่ load แรก
+  //   12 segments × 20 = 240 items ต่อ scroll load → scroll ได้ smooth ไม่ต้องรอบ่อย
+  const FEED_FIRST_PAGE_SIZE = 10;
+  const FEED_PAGE_SIZE       = 12;
+
+  // ── CSS ────────────────────────────────────────────────────────────────────────
 
   const _CSS_ID = '_nc_content_css';
   function _ensureCss() {
@@ -54,11 +56,7 @@
     s.id = _CSS_ID;
     s.textContent = `
 .cm-group{contain:layout style;isolation:isolate;}
-/* fade-in moved to ure-new in virtual-list.js */
 
-
-
-/* btn-row: replicates button-content-container across split URE items */
 .ure-btn-row{
   display:flex!important;flex-wrap:wrap!important;
   background:var(--fv-surface-page);
@@ -71,7 +69,6 @@
 .ure-btn-row--mid  {border-radius:0!important;padding:2px 5px!important;}
 .ure-btn-row--last {border-radius:0 0 25px 25px!important;padding:0 5px 1rem!important;margin:0 0 40px!important;}
 
-/* horizontal card strip */
 .card-content-container--h{
   flex-wrap:nowrap!important;
   overflow-x:auto;
@@ -87,7 +84,31 @@
     document.head.appendChild(s);
   }
 
-  // ── URE hard-dependency guard ─────────────────────────────────────────────
+  const _FEED_CSS_ID = '_nc_feed_css';
+  function _ensureFeedCss() {
+    if (document.getElementById(_FEED_CSS_ID)) return;
+    const s = document.createElement('style');
+    s.id = _FEED_CSS_ID;
+    // WHY content-visibility:auto:
+    //   browser discard rendering + layout ของ .feed-page ที่อยู่นอก viewport
+    //   ทำให้มี DOM 400+ pages โดยไม่กินแรง GPU/memory มากเกินไป
+    //   contain-intrinsic-block-size: hint ความสูงโดยประมาณ
+    //   → scrollbar height ถูกต้องแม้ page ยังไม่ render จริง
+    //   800px ≈ group header (40px) + 2 rows × ~380px = สมเหตุสมผลสำหรับ 20 items
+    s.textContent = `
+.feed-page{
+  content-visibility: auto;
+  contain-intrinsic-block-size: 800px;
+}
+#${FEED_SENTINEL_ID}{
+  height: 1px;
+  width: 100%;
+  pointer-events: none;
+}`;
+    document.head.appendChild(s);
+  }
+
+  // ── URE dependency guard ───────────────────────────────────────────────────────
 
   function _ensureURE() {
     if (window.URE) return Promise.resolve();
@@ -101,23 +122,39 @@
     });
   }
 
-  // ── Module state ──────────────────────────────────────────────────────────
+  // ── Module state ───────────────────────────────────────────────────────────────
 
-  let _ureHandle = null;
-  let _sess      = 0;
+  let _ureHandle    = null;
+  let _feedObserver = null;
+  let _sess         = 0;
 
-  // ── ContentService ────────────────────────────────────────────────────────
+  // ── ContentService ─────────────────────────────────────────────────────────────
 
   const ContentService = {
 
     LOADING_CONTAINER_ID: CONFIG.DOM.CONTENT_LOADING_ID,
 
+    // ── clearContent ────────────────────────────────────────────────────────────
+
     async clearContent() {
       _sess++;
-      if (_ureHandle) { try { _ureHandle.destroy(); } catch (err) { console.warn('[Content] URE destroy failed:', err); } _ureHandle = null; }
+
+      // WHY disconnect ก่อน destroy: ป้องกัน observer fire ระหว่าง DOM clear
+      if (_feedObserver) {
+        _feedObserver.disconnect();
+        _feedObserver = null;
+      }
+
+      if (_ureHandle) {
+        try { _ureHandle.destroy(); } catch (err) { console.warn('[Content] URE destroy failed:', err); }
+        _ureHandle = null;
+      }
+
       const ctr = document.getElementById(CONFIG.DOM.CONTENT_LOADING_ID);
       if (ctr) ctr.innerHTML = '';
     },
+
+    // ── renderContent (URE path — ใช้กับ route ทั่วไป) ──────────────────────────
 
     async renderContent(data) {
       if (!Array.isArray(data)) throw new Error('[Content] data must be array');
@@ -133,7 +170,9 @@
         if (sess !== _sess) return;
 
         const lang = localStorage.getItem('selectedLang') || 'en';
-        await M.DataService.loadApiDatabase().catch(err => { console.warn('[Content] loadApiDatabase failed, continuing:', err); });
+        await M.DataService.loadApiDatabase().catch(err => {
+          console.warn('[Content] loadApiDatabase failed, continuing:', err);
+        });
         if (sess !== _sess) return;
 
         const items = await this._resolveAll(data, lang);
@@ -158,7 +197,178 @@
       }
     },
 
-    // ── Resolution ────────────────────────────────────────────────────────────
+    // ── renderFeed (All button — infinite scroll, native DOM) ────────────────────
+
+    /**
+     * Render smart infinite feed สำหรับ "All" button.
+     *
+     * ทำไมไม่ใช้ URE:
+     *   URE mount ครั้งเดียว ถ้าจะ append ต้องรู้ internal API
+     *   feed ใช้ IntersectionObserver + DOM append แทน
+     *   ทำให้ append ได้ไม่จำกัดโดยไม่ต้อง re-mount (ไม่มี scroll jump)
+     *
+     * Memory safety:
+     *   .feed-page ใช้ content-visibility:auto → off-screen pages ไม่ render
+     *   MAX_ROUNDS ใน FeedService จำกัด total emit
+     *   clearContent() disconnect observer ก่อน clear DOM เสมอ
+     *
+     * @param {string} lang
+     */
+    async renderFeed(lang) {
+      _ensureCss();
+      _ensureFeedCss();
+
+      const ctr = document.getElementById(CONFIG.DOM.CONTENT_LOADING_ID);
+      if (!ctr) return;
+
+      // WHY reset ก่อน clearContent: FeedService.reset() ต้องเรียกก่อน
+      //   เพื่อให้ _ensureInit() ใน loadNextPage() สร้าง segments ใหม่ได้ถูกต้อง
+      M.FeedService.reset();
+      await this.clearContent();
+      const sess = _sess;
+
+      try {
+        await M.DataService.loadApiDatabase().catch(err => {
+          console.warn('[Content] renderFeed: loadApiDatabase failed:', err);
+        });
+        if (sess !== _sess) return;
+
+        try { M.LoadingService?.hide(); } catch (_) {}
+
+        // Delegated click — attach ครั้งเดียว ตลอดอายุ ctr element
+        this._ensureFeedClickDelegate(ctr);
+
+        // ── First page ─────────────────────────────────────────────────────────
+        const { groups: firstGroups, hasMore } =
+          await M.FeedService.loadNextPage(lang, FEED_FIRST_PAGE_SIZE);
+        if (sess !== _sess) return;
+
+        if (firstGroups.length) {
+          await this._appendFeedGroups(ctr, firstGroups, lang, null);
+        }
+
+        if (sess !== _sess) return;
+
+        if (hasMore) {
+          this._attachFeedSentinel(ctr, lang, sess);
+        }
+
+      } catch (e) {
+        console.error('[NavCore/Content] renderFeed error:', e);
+        try { M.LoadingService?.hide(); } catch (_) {}
+      }
+    },
+
+    /**
+     * Resolve groups → render HTML → append เป็น .feed-page div.
+     * ใช้ _resolveAll + _tpl เหมือน URE path → HTML classes เหมือนกันทุกอย่าง
+     * รองรับทั้ง button group และ card group จาก FeedService
+     *
+     * @param {HTMLElement}      ctr
+     * @param {Array}            groups    group descriptors จาก FeedService
+     * @param {string}           lang
+     * @param {HTMLElement|null} sentinel  insertBefore ถ้ามี, append ถ้าไม่มี
+     */
+    async _appendFeedGroups(ctr, groups, lang, sentinel) {
+      if (!groups.length) return;
+
+      const resolvedItems = await this._resolveAll(groups, lang);
+      if (!resolvedItems.length) return;
+
+      const page     = document.createElement('div');
+      page.className = 'feed-page';
+
+      // WHY สร้าง HTML string ก่อนแล้ว set innerHTML ครั้งเดียว:
+      //   ลด DOM mutation ให้น้อยที่สุด — browser parse + build subtree ครั้งเดียว
+      //   ดีกว่า append element ทีละอัน (หลาย reflow)
+      let html = '';
+      for (const item of resolvedItems) html += this._tpl(item, lang);
+      page.innerHTML = html;
+
+      if (sentinel && sentinel.parentNode === ctr) {
+        ctr.insertBefore(page, sentinel);
+      } else {
+        ctr.appendChild(page);
+      }
+    },
+
+    /**
+     * Attach sentinel div + IntersectionObserver สำหรับ infinite scroll.
+     * rootMargin 600px: preload content ก่อน scroll ถึง bottom 600px
+     * → ไม่มี "หยุดรอ" แม้ scroll เร็วบน mobile
+     *
+     * @param {HTMLElement} ctr
+     * @param {string}      lang
+     * @param {number}      sess  session snapshot — ยกเลิกถ้า navigate ออก
+     */
+    _attachFeedSentinel(ctr, lang, sess) {
+      if (_feedObserver) { _feedObserver.disconnect(); _feedObserver = null; }
+
+      const sentinel = document.createElement('div');
+      sentinel.id    = FEED_SENTINEL_ID;
+      sentinel.setAttribute('aria-hidden', 'true');
+      ctr.appendChild(sentinel);
+
+      // WHY _loading flag: ป้องกัน double-trigger ถ้า observer fires ซ้อนกัน
+      //   (เช่น scroll เร็วมาก ทำให้ sentinel อยู่ใน viewport นานพอให้ fire ซ้ำ)
+      let _loading = false;
+
+      _feedObserver = new IntersectionObserver(async entries => {
+        if (!entries[0].isIntersecting || _loading) return;
+
+        // ตรวจ session ก่อน — ถ้า navigate ออกแล้ว ไม่ต้องทำอะไร
+        if (sess !== _sess) {
+          _feedObserver?.disconnect();
+          _feedObserver = null;
+          return;
+        }
+
+        _loading = true;
+        try {
+          const { groups, hasMore } = await M.FeedService.loadNextPage(lang, FEED_PAGE_SIZE);
+
+          if (sess !== _sess) return; // ตรวจซ้ำหลัง async
+
+          if (groups.length) {
+            await this._appendFeedGroups(ctr, groups, lang, sentinel);
+          }
+
+          if (!hasMore) {
+            // ครบ MAX_ROUNDS แล้ว — หยุด observe, ลบ sentinel
+            _feedObserver?.disconnect();
+            _feedObserver = null;
+            sentinel.remove();
+          }
+          // ถ้ายัง hasMore: sentinel ยังอยู่ที่เดิม (ท้ายสุดของ ctr)
+          // observer จะ fire อีกครั้งเมื่อ scroll ถึง
+
+        } catch (e) {
+          console.error('[NavCore/Content] feed loadMore error:', e);
+        } finally {
+          _loading = false;
+        }
+      }, {
+        rootMargin: '600px',
+        threshold:  0,
+      });
+
+      _feedObserver.observe(sentinel);
+    },
+
+    /**
+     * Attach delegated click handler บน ctr ครั้งเดียวตลอดอายุ element.
+     * WHY: feed groups เป็น plain HTML นอก URE
+     *   click bubble ขึ้น ctr → _onClick จัดการ copy + card open
+     *   ไม่ re-attach หลัง clearContent เพราะ ctr element ยังเป็นตัวเดิม
+     *   listener ยังคงอยู่บน element เดิม ไม่หาย
+     */
+    _ensureFeedClickDelegate(ctr) {
+      if (ctr._feedClickDelegated) return;
+      ctr.addEventListener('click', e => this._onClick(e));
+      ctr._feedClickDelegated = true;
+    },
+
+    // ── Resolution ──────────────────────────────────────────────────────────────
 
     async _resolveAll(data, lang) {
       const out = [];
@@ -167,7 +377,6 @@
       for (const item of data) {
         if (!item) continue;
 
-        // jsonFile: fetch then recurse
         if (item.jsonFile && !item._fetched) {
           try {
             const res = await M.DataService.fetchWithRetry(item.jsonFile, {}, 3);
@@ -178,8 +387,6 @@
           continue;
         }
 
-        // source: ดึงทั้ง type จาก con-data
-        // WHY: remap 'as' → 'layout' ที่นี่เพื่อไม่ต้องแก้ _resolveSource signature
         if (item.source) {
           const descriptor = item.as ? { ...item, layout: _toLayout(item.as) } : item;
           const groups = await this._resolveSource(descriptor, lang);
@@ -187,10 +394,6 @@
           continue;
         }
 
-        // category: ดึง subcategory เดียวจาก con-data — ข้อมูลดิบอยู่ใน con-data เท่านั้น
-        // WHY: แยกจาก 'source' เพื่อระบุ subcategory เดียวได้โดยไม่ fetch ทั้ง type
-        // WHY typeId: ถ้าระบุ type → direct fetch (ไม่ผ่าน assembled DB)
-        //             ใช้กับ collection types เช่น cards ที่ไม่ควรอยู่ใน index.json
         if (item.category) {
           const asLayout = _toLayout(item.as || item.layout);
           const cfg = {
@@ -204,7 +407,6 @@
           continue;
         }
 
-        // group / categoryId: legacy path — รองรับ format เดิม ไม่เปลี่ยน
         if (item.group || item.categoryId) {
           const cfg      = item.group || { categoryId: item.categoryId, type: item.type || 'button' };
           const resolved = await this._resolveGroup(cfg, lang);
@@ -212,7 +414,6 @@
           continue;
         }
 
-        // single item
         const isCard = this._isCard(item);
         const ri     = await this._resolveItem(item, lang, isCard);
         if (ri) {
@@ -228,15 +429,6 @@
       return out;
     },
 
-    // ── _resolveSource ────────────────────────────────────────────────────────
-    //
-    // WHY: แทนที่การเขียน categoryId ทีละตัวใน content JSON
-    //      ด้วย { "source": "emoji" } ตัวเดียว — ระบบดึงทุก category ของ type นั้นเอง
-    //
-    // @param {{ source: string, layout?: string, only?: string[] }} item
-    // @param {string} lang
-    // @returns {Promise<Array>}
-
     async _resolveSource(item, lang) {
       const { source, layout = LAYOUT.BUTTON, only: filter = null } = item;
       if (!source) return [];
@@ -244,7 +436,6 @@
       const cats = await M.DataService.getTypeCategories(source);
       if (!cats || !cats.length) return [];
 
-      // WHY filter หลัง fetch cats: ไม่ต้อง fetch ทีละ cat ก่อน — cats มาจาก index แล้ว
       const filtered = filter
         ? cats.filter(c => filter.includes(c.id))
         : cats;
@@ -254,16 +445,6 @@
       );
       return groups.filter(Boolean);
     },
-
-    // ── _fetchSourceGroup ─────────────────────────────────────────────────────
-    //
-    // WHY แยกจาก _resolveSource: แต่ละ category resolve อิสระ
-    //     category เดียวพังไม่ทำให้ทั้ง type พัง
-    //
-    // @param {{ id: string, name: object }} cat
-    // @param {string} layout
-    // @param {string} lang
-    // @returns {Promise<Object|null>}
 
     async _fetchSourceGroup(cat, layout, lang) {
       try {
@@ -288,9 +469,6 @@
 
       if (cfg.categoryId) {
         try {
-          // WHY: typeId ระบุ → direct fetch ข้ามผ่าน assembled DB
-          //      ใช้กับ collection types (cards) ที่ไม่ควรปนกับ index.json ของ emoji/symbol
-          //      typeId ไม่ระบุ → ใช้ assembled DB ตามปกติ (emoji, symbol, ...)
           const fetchFn = cfg.typeId
             ? () => M.DataService.fetchCategoryDirect(cfg.typeId, cfg.categoryId)
             : () => M.DataService.fetchCategoryGroup(cfg.categoryId);
@@ -312,9 +490,13 @@
     async _resolveItem(item, lang, forceCard = false) {
       if (forceCard || this._isCard(item)) {
         return {
-          _type: 'card', image: item.image || null, imageAlt: item.imageAlt,
-          title: item.title || item.name, description: item.description,
-          link: item.link || null, className: item.className || null,
+          _type      : 'card',
+          image      : item.image      || null,
+          imageAlt   : item.imageAlt,
+          title      : item.title      || item.name,
+          description: item.description,
+          link       : item.link       || null,
+          className  : item.className  || null,
         };
       }
       const api  = item.api || null;
@@ -328,19 +510,20 @@
       return { _type: 'button', text, api, name: item.name || api || '' };
     },
 
+    // WHY: card item จาก collection มี api field (เช่น 'card-openai')
+    //   แต่ก็มี image field ด้วย — ตรวจ group type ก่อน (forceCard จาก caller)
+    //   ตรงนี้ใช้เป็น fallback สำหรับ item เดี่ยวที่ไม่มี group context
     _isCard: item =>
       item.type === 'card' || item.group?.type === 'card' || (!!item.image && !item.api),
 
-    // ── Emit ─────────────────────────────────────────────────────────────────
-    // card-group and card-group-h: single URE item.
-    // btn-group: split into row items (same visual appearance, smaller DOM per item).
+    // ── Emit ──────────────────────────────────────────────────────────────────────
 
     _emit(group, k, out) {
       if (group._ureType === 'card-group' || group._ureType === 'card-group-h') {
         out.push({ ...group, _ureKey: `k${k.v++}` });
         return;
       }
-      // btn-group → rows
+      // btn-group → แบ่งเป็น btn-row (BTN_ROW_SIZE items ต่อ row)
       const rows = [];
       for (let i = 0; i < group.items.length; i += BTN_ROW_SIZE)
         rows.push(group.items.slice(i, i + BTN_ROW_SIZE));
@@ -357,13 +540,13 @@
       });
     },
 
-    // ── Templates ─────────────────────────────────────────────────────────────
+    // ── Templates ──────────────────────────────────────────────────────────────────
 
     _tpl(item, lang) {
       switch (item._ureType) {
         case 'card-group':   return this._tplCardGroup(item, lang);
         case 'card-group-h': return this._tplCardGroupH(item, lang);
-        default:             return this._tplBtnRow(item, lang);   // 'btn-row'
+        default:             return this._tplBtnRow(item, lang);
       }
     },
 
@@ -382,9 +565,6 @@
       return html + '</div></div>';
     },
 
-    // Horizontal card strip — CSS overflow-x scroll, no X-axis virtual scroll.
-    // Appropriate for carousels with up to ~30 items.
-    // For large horizontal datasets use URE.mount({ horizontal: true }) directly.
     _tplCardGroupH(item, lang) {
       let html = `<div class="cm-group"><div class="card-content-container card-content-container--h">`;
       if (item.header) html += this._tplHeader(item.header, lang);
@@ -420,14 +600,18 @@
       );
     },
 
-    // ── Click delegation ──────────────────────────────────────────────────────
+    // ── Click delegation ────────────────────────────────────────────────────────────
 
     _onClick(e) {
       const btn = e.target.closest('.button-content');
       if (btn) {
         try {
-          window.unifiedCopyToClipboard?.({ text: btn.dataset.text, api: btn.dataset.api || null, type: 'button', name: btn.dataset.api || '' })
-            ?.catch?.(() => M.Utils?.showNotification('Copy failed', 'error'));
+          window.unifiedCopyToClipboard?.({
+            text: btn.dataset.text,
+            api:  btn.dataset.api || null,
+            type: 'button',
+            name: btn.dataset.api || '',
+          })?.catch?.(() => M.Utils?.showNotification('Copy failed', 'error'));
         } catch (err) { console.warn('[Content] copy failed:', err); }
         return;
       }
