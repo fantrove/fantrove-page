@@ -1,27 +1,7 @@
 {
  "seo": {
   "home-seo-title": "Fantrove — ศูนย์อิโมจิและอักขระพิเศษ | คัดลอกด้วยแตะเดียว",
-  "home-seo-description": "เรียกดูอิโมจิ อักขระพิเศษ และตัวอักษรแฟนซีหลายพันรายการ ค้นหาและคัดลอกใช้งานได้ทันที — Fantrove (Fantrove Verse). ฟรีใช้งานตลอดไป",
-  "home-hero-title": "ค้นพบอิโมจิและสัญลักษณ์",
-  "home-hero-desc": "ค้นหาและคัดลอกอิโมจิ อักขระพิเศษ และตัวอักษรแฟนซีในที่เดียว",
-  "home-hero-btn-emoji": "เรียกดูอิโมจิ",
-  "home-hero-btn-symbol": "เรียกดูสัญลักษณ์",
-  "home-features-title": "ทำไมต้องใช้ Fantrove",
-  "home-feature1-title": "ค้นหาได้อย่างรวดเร็ว",
-  "home-feature1-desc": "ค้นหาอิโมจิและสัญลักษณ์จาก Unicode ได้อย่างรวดเร็ว",
-  "home-feature2-title": "คัดลอกด้วยแตะเดียว",
-  "home-feature2-desc": "คัดลอกตัวอักษรด้วยการแตะหรือคลิกเพียงครั้งเดียว",
-  "home-feature3-title": "ใช้ฟรีและเปิด",
-  "home-feature3-desc": "ใช้ฟรีและอัปเดตอย่างต่อเนื่อง",
-  "home-faq-title": "คำถามที่พบบ่อย",
-  "home-faq-q1": "Fantrove ฟรีหรือไม่?",
-  "home-faq-a1": "ใช่ — Fantrove ใช้งานได้ฟรีสำหรับทุกคน",
-  "home-faq-q2": "ฉันขอให้เพิ่มสัญลักษณ์ได้ไหม?",
-  "home-faq-a2": "สามารถเสนอเพิ่มได้ผ่าน Discord ของเรา",
-  "home-faq-q3": "ตัวอักษรเหล่านี้เป็น Unicode แบบทางการหรือไม่?",
-  "home-faq-a3": "ตัวส่วนใหญ่เป็น Unicode บางส่วนเป็นการจัดเรียง/คอมโบที่สร้างขึ้นภายในหรือโดยชุมชน",
-  "footer-copyright": "© {{year}} Fantrove. สงวนลิขสิทธิ์",
-  "site-name": "Fantrove"
+  "home-seo-description": "เรียกดูอิโมจิ อักขระพิเศษ และตัวอักษรแฟนซีหลายพันรายการ ค้นหาและคัดลอกใช้งานได้ทันที — Fantrove (Fantrove Verse). ฟรีใช้งานตลอดไป"
  },
  "general": {
   "homePageTitle": "ยินดีต้อนรับสู่ FanTrove",

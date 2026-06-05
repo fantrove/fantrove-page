@@ -1,27 +1,7 @@
 {
  "seo": {
   "home-seo-title": "Fantrove — Emoji & Symbols Hub | Copy with One Tap",
-  "home-seo-description": "Browse thousands of emojis, special characters and fancy text. Search, copy and use instantly — Fantrove (Fantrove Verse). Free to use.",
-  "home-hero-title": "Discover emojis & symbols",
-  "home-hero-desc": "Find and copy emojis, special characters and fancy text in one place.",
-  "home-hero-btn-emoji": "Browse Emojis",
-  "home-hero-btn-symbol": "Browse Symbols",
-  "home-features-title": "Why Fantrove",
-  "home-feature1-title": "Powerful search",
-  "home-feature1-desc": "Search across Unicode emojis and symbols quickly.",
-  "home-feature2-title": "One-tap copy",
-  "home-feature2-desc": "Copy any character with a single tap or click.",
-  "home-feature3-title": "Free & open",
-  "home-feature3-desc": "Free to use and continuously updated.",
-  "home-faq-title": "Frequently Asked Questions",
-  "home-faq-q1": "Is Fantrove free to use?",
-  "home-faq-a1": "Yes — Fantrove is free to use for everyone.",
-  "home-faq-q2": "Can I request new symbols?",
-  "home-faq-a2": "You can suggest additions via our Discord server.",
-  "home-faq-q3": "Are these official Unicode characters?",
-  "home-faq-a3": "Most characters are Unicode; some fancy combos are community-created.",
-  "footer-copyright": "© {{year}} Fantrove. All rights reserved.",
-  "site-name": "Fantrove"
+  "home-seo-description": "Browse thousands of emojis, special characters and fancy text. Search, copy and use instantly — Fantrove (Fantrove Verse). Free to use."
  },
  "general": {
   "homePageTitle": "ยินดีต้อนรับสู่ FanTrove",
