@@ -1,0 +1,12 @@
+# robots.txt for Fantrove
+# Allow all crawlers, point to sitemap
+User-agent: *
+Allow: /
+
+# Block crawling of internal JSON endpoints that shouldn't be indexed (optional)
+Disallow: /assets/json/whats-new.json
+Disallow: /assets/json/release-history.json
+Disallow: /assets/json/current-stage.json
+
+Sitemap: https://fantrove.pages.dev/sitemap.xml
+Host: fantrove.pages.dev

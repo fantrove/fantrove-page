@@ -8,7 +8,9 @@
     "build:dry": "node scripts/build.js --dry-run",
     "build:verbose": "node scripts/build.js --verbose",
     "dev": "echo 'Development mode: open index.html / home/index.html directly in browser (no build required)'",
-    "clean": "node -e \"const fs=require('fs'); if(fs.existsSync('dist')) fs.rmSync('dist',{recursive:true,force:true}); console.log('dist/ cleaned');\""
+    "clean": "node -e \"const fs=require('fs'); if(fs.existsSync('dist')) fs.rmSync('dist',{recursive:true,force:true}); console.log('dist/ cleaned');\"",
+    "generate-sitemap": "node scripts/generate-sitemap.js",
+    "postbuild": "npm run generate-sitemap && node -e \"const fs=require('fs'); const src='sitemap.xml'; const dest='dist/sitemap.xml'; try{ fs.mkdirSync('dist',{ recursive:true }); fs.copyFileSync(src, dest); console.log('sitemap copied to', dest); } catch(e) { console.warn('sitemap copy failed:', e && e.message ? e.message : e); }\""
   },
   "dependencies": {
     "cheerio": "^1.0.0"

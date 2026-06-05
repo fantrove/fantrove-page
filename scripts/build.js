@@ -21,21 +21,8 @@
  *       - บันทึกไปที่ dist/{lang}/{path}
  *  5. Copy assets/ ไปที่ dist/assets/
  *  6. สร้าง _redirects สำหรับ production
- *  7. Copy _headers ไปยัง dist/
- *
- * โครงสร้าง output:
- *   dist/
- *     en/
- *       home/index.html
- *       info/about/index.html
- *       setting/index.html
- *       …
- *     th/
- *       home/index.html
- *       …
- *     assets/             ← copied as-is
- *     _redirects          ← generated
- *     _headers            ← copied from source
+ *  7. Generate sitemap (scripts/generate-sitemap.js) และคัดลอกไป dist/
+ *  8. Copy _headers ไปยัง dist/
  *
  * Usage:
  *   node scripts/build.js             (normal build)
@@ -45,10 +32,11 @@
 
 const fs   = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
 
 const { flattenJson, parseTranslation }     = require('./lib/marker-parser');
 const { transformHtml, setConfig }          = require('./lib/html-transformer');
-const { findHtmlFiles, copyDir, writeFile,
+const { findHtmlFiles, copyDir, ensureDir, writeFile,
         loadTranslationFile, loadDbJson }   = require('./lib/file-utils');
 
 // ── Build configuration ───────────────────────────────────────────────────
@@ -127,13 +115,13 @@ const CONFIG = {
   footerTemplatePath: 'assets/template-html/footer-template.html',
 };
 
-// ── CLI flags ─────────────────────────────────────────────────────────────
+// ── CLI flags ────────────────────────────────────────────────────────────
 
 const args    = process.argv.slice(2);
 const DRY_RUN = args.includes('--dry-run');
 const VERBOSE = args.includes('--verbose');
 
-// ── Main ──────────────────────────────────────────────────────────────────
+// ── Main ───────────────────────────────────────────────────────────────
 
 async function build() {
   const startTime = Date.now();
@@ -283,7 +271,35 @@ async function build() {
     console.log(redirectsContent.split('\n').map(l => '  ' + l).join('\n'));
   }
 
-  // ── Summary ─────────────────────────────────────────────────────────────
+  // ── 7. Generate sitemap using scripts/generate-sitemap.js ───────────────
+  if (DRY_RUN) {
+    console.log('\n[sitemap] (dry-run) Would generate sitemap.xml using scripts/generate-sitemap.js and copy to dist/');
+  } else {
+    try {
+      console.log('\n[sitemap] Generating sitemap.xml (scripts/generate-sitemap.js)...');
+      const res = spawnSync('node', ['scripts/generate-sitemap.js'], { encoding: 'utf8' });
+      if (res.status !== 0) {
+        console.warn('[sitemap] Generator exited with status', res.status);
+        if (res.stderr) console.warn(res.stderr.trim());
+        if (res.stdout) console.log(res.stdout.trim());
+      } else {
+        if (res.stdout) console.log(res.stdout.trim());
+      }
+
+      const sitemapSrc = path.join(process.cwd(), 'sitemap.xml');
+      if (fs.existsSync(sitemapSrc)) {
+        const sitemapContent = fs.readFileSync(sitemapSrc, 'utf8');
+        writeFile(path.join(CONFIG.distDir, 'sitemap.xml'), sitemapContent);
+        console.log('[sitemap] sitemap.xml copied to dist/');
+      } else {
+        console.warn('[sitemap] sitemap.xml not found after generation');
+      }
+    } catch (e) {
+      console.warn('[sitemap] generation failed (continuing):', e && e.message ? e.message : e);
+    }
+  }
+
+  // ── Summary ────────────────────────────────────────────────────────────
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
   console.log('');
   console.log('─────────────────────────────────────────');
@@ -356,7 +372,7 @@ function _generateRedirects(langs, defaultLang) {
   return lines.join('\n');
 }
 
-// ── Run ───────────────────────────────────────────────────────────────────
+// ── Run ──────────────────────────────────────────────────────────────
 
 build().catch(err => {
   console.error('\n[build] ✗ Fatal error:', err.message);

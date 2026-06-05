@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <!-- Generated sample sitemap (update/generate with scripts/generate-sitemap.js for full coverage) -->
+  <!-- lastmod uses 2026-06-05 (adjust when regenerating) -->
+  <url>
+    <loc>https://fantrove.pages.dev/en/home/</loc>
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/home/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/home/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/home/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/data/verse/discover/</loc>
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/data/verse/discover/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/data/verse/discover/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/data/verse/discover/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/data/verse/discover/?type=emojis__&amp;page=1</loc>
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/data/verse/discover/?type=emojis__&amp;page=1"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/data/verse/discover/?type=emojis__&amp;page=1"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/data/verse/discover/?type=emojis__&amp;page=1"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/data/verse/discover/?type=symbols__&amp;page=1</loc>
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/data/verse/discover/?type=symbols__&amp;page=1"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/data/verse/discover/?type=symbols__&amp;page=1"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/data/verse/discover/?type=symbols__&amp;page=1"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/info/about/</loc>
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/info/about/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/info/about/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/info/about/"/>
+  </url>
+
+  <!-- Add more URLs here or use scripts/generate-sitemap.js to auto-generate from your HTML files -->
+</urlset>
