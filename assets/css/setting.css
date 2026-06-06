@@ -10,7 +10,7 @@ body {
   font-family: var(--fv-font-stack);
 }
 
-main { padding:3rem 1rem 1.8rem; }
+main { padding:0rem 1rem 1.8rem; }
 
 .settings {
   max-width:28rem; width:100%; margin:0 auto;
