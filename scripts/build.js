@@ -63,6 +63,9 @@ const CONFIG = {
   /**
    * Directories to exclude from HTML discovery.
    * These are checked against the path relative to srcDir.
+   *
+   * NOTE: You can include individual filenames here (e.g. google verification files)
+   * to prevent them from being processed/translated by the build pipeline.
    */
   excludeDirs: [
     'dist',
@@ -70,6 +73,8 @@ const CONFIG = {
     '.git',
     'scripts',
     '.cloudflare',
+    // Keep google verification file out of language processing
+    'google6b646fa60e0f9f2f.html',
   ],
 
   /**
@@ -99,12 +104,15 @@ const CONFIG = {
 
   /**
    * Static files (in srcDir) to copy directly to dist/ root.
+   * Add the google verification file here so it will be copied as-is to dist/
+   * and not translated / moved into language subfolders.
    */
   staticFiles: [
     'robots.txt',
     'sitemap.xml',
     '_headers',
     'fantrove-console-bridge.js',
+    'google6b646fa60e0f9f2f.html',
   ],
 
   /**
@@ -115,13 +123,13 @@ const CONFIG = {
   footerTemplatePath: 'assets/template-html/footer-template.html',
 };
 
-// ── CLI flags ────────────────────────────────────────────────────────────
+// ── CLI flags ───────────────────────────────────────────────────────────
 
 const args    = process.argv.slice(2);
 const DRY_RUN = args.includes('--dry-run');
 const VERBOSE = args.includes('--verbose');
 
-// ── Main ───────────────────────────────────────────────────────────────
+// ── Main ─────────────────────────────────────────────────────────────��[...]
 
 async function build() {
   const startTime = Date.now();
