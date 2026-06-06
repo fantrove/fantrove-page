@@ -21,29 +21,33 @@
   line-height: 1.7!important; 
   letter-spacing: -0.015em; 
   
-  border-top: 1px solid var(--fv-border-default)!important; 
-  border-left: none!important; border-right: none!important; border-bottom: none!important;
+  /* 🚀 ปรับจุดที่ 1: ตัว Footer หลัก เปลี่ยนจาก border-top เป็นการใช้เงาดันขึ้นด้านบนเบาๆแทน border */
+  box-shadow: 0 -1px 0 0 var(--fv-border-default)!important;
+  border: none!important; 
   border-radius: 32px 32px 0 0!important; 
   
   margin: 0!important; padding: 0!important;
   -webkit-font-smoothing: antialiased; 
   -moz-osx-font-smoothing: grayscale;
   text-align: left!important;
+  -webkit-tap-highlight-color: transparent!important; 
 }
 
-/* คอนเทนเนอร์หลัก: การ์ดนุ่มฟูมีมิติ ไล่เฉดสีบางเบา */
+/* 🚀 ปรับจุดที่ 2: คอนเทนเนอร์แม่ (.footer-inner) ยกเลิก border แล้วใช้ box-shadow จำลองเส้นขอบ */
 .footer-minimal .footer-inner { 
   max-width: var(--fv-container-max)!important; 
   width: calc(100% - 2rem)!important; 
   margin: 2.5rem auto!important; 
   
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(248, 255, 253, 0.75) 100%)!important;
-  backdrop-filter: blur(12px); 
-  border: 1px solid rgba(0, 206, 176, 0.08)!important; 
-  border-radius: 28px!important; 
+  background: linear-gradient(135deg, #ffffff 0%, #f7fffb 100%)!important;
   
+  /* เทคนิคชั้นสูง: ใช้เงาแรเงาซ้อนกัน เลเยอร์แรกทำหน้าที่แทน Border บางๆ เลเยอร์สองทำให้นุ่มนวลมีมิติ */
+  box-shadow: 0 0 0 1px rgba(0, 206, 176, 0.12), 0 10px 30px -10px rgba(6, 20, 24, 0.04)!important;
+  border: none!important; 
+  
+  border-radius: 28px!important; 
   padding: 4rem 3rem 3rem!important; 
-  box-shadow: 0 20px 50px rgba(6, 20, 24, 0.04), 0 2px 8px rgba(0, 206, 176, 0.02)!important; 
+  contain: content!important;
 }
 
 .footer-minimal .footer-grid {
@@ -51,24 +55,42 @@
   grid-template-columns: 2.2fr 1fr 1fr 1.2fr!important; 
   gap: 2.5rem 3rem!important; 
   padding-bottom: 3.5rem!important; 
-  border-bottom: 1px solid var(--fv-border-default)!important;
+  
+  /* 🚀 ปรับจุดที่ 3: เส้นคั่นใน Grid เปลี่ยนมาใช้ shadow จำลองเส้นขอบล่างแทน border-bottom */
+  box-shadow: 0 1px 0 0 var(--fv-border-default)!important;
+  border: none!important;
   margin: 0!important;
 }
 
 /* ==========================================
-   🚨 SUPER MOBILE OPTIMIZATION (หน้าจอแนวตั้ง / มือถือ)
+   📱 SUPER MOBILE OPTIMIZATION
    ========================================== */
 @media (max-width: 960px) {
   .footer-minimal .footer-grid { grid-template-columns: 1.8fr 1fr 1fr 1fr!important; gap: 2rem 1.5rem!important; }
 }
 
 @media (max-width: 860px) {
-  .footer-minimal .footer-inner { width: 100%!important; margin: 0!important; border-radius: 32px 32px 0 0!important; border: none!important; border-top: 1px solid var(--fv-border-default)!important; padding: 3.5rem 1.5rem 2.5rem!important; }
+  .footer-minimal .footer-inner { 
+    width: 100%!important; 
+    margin: 0!important; 
+    border-radius: 32px 32px 0 0!important; 
+    
+    /* บนมือถือ ถอดโครงสร้างเงาเดิมออก แล้วปรับให้กลมกลืนกับขอบบน */
+    box-shadow: 0 -1px 0 0 var(--fv-border-default)!important;
+    border: none!important; 
+    padding: 3.5rem 1.5rem 2.5rem!important; 
+  }
   .footer-minimal .footer-grid { grid-template-columns: 1fr 1fr!important; gap: 3rem 1.5rem!important; }
-  .footer-minimal .footer-brand { grid-column: 1 / -1!important; border-bottom: 1px solid rgba(0, 0, 0, 0.04); padding-bottom: 2rem; }
+  
+  /* 🚀 เส้นคั่นแบรนด์บนมือถือ เปลี่ยนเป็น shadow แทน borderเช่นกัน */
+  .footer-minimal .footer-brand { 
+    grid-column: 1 / -1!important; 
+    box-shadow: 0 1px 0 0 rgba(0, 0, 0, 0.04)!important; 
+    border: none!important;
+    padding-bottom: 2rem; 
+  }
 }
 
-/* ปรับปรุงพิเศษขั้นสุดสำหรับหน้าจอแนวตั้ง (Portrait Mode) */
 @media (max-width: 560px) {
   .footer-minimal .footer-inner { padding: 3rem 1.2rem 2.5rem!important; }
   .footer-minimal .footer-grid { 
@@ -77,14 +99,14 @@
     padding-bottom: 2.5rem!important; 
   }
   
-  /* หัวข้อเมนูบนมือถือ: เพิ่มเส้นขอบล่างบางๆ ให้ดูมีโครงสร้าง ไม่โล่งโจ้ง */
+  /* 🚀 หัวข้อเมนูบนมือถือ เปลี่ยนเป็น shadow คั่นด้านล่างแทน border */
   .footer-minimal .footer-heading {
-    border-bottom: 1px solid rgba(0, 0, 0, 0.03)!important;
+    box-shadow: 0 1px 0 0 rgba(0, 0, 0, 0.03)!important;
+    border: none!important;
     padding-bottom: 0.6rem!important;
     margin-bottom: 1rem!important;
   }
 
-  /* ปรับเมนูลิงก์ให้เรียงกันเป็น Grid 2 คอลัมน์คู่ขนาน เพื่อถมพื้นที่แนวตั้งและแนวนอนให้เต็มอิ่ม */
   .footer-minimal .footer-list { 
     display: grid!important;
     grid-template-columns: 1fr 1fr!important;
@@ -92,13 +114,12 @@
   }
   
   .footer-minimal .footer-link {
-    width: 100%!important; /* แผ่ตัวปุ่มแคปซูลให้เต็มบล็อกของมัน */
-    justify-content: center!important; /* จัดข้อความให้อยู่ตรงกลางปุ่มเพื่อความสวยงามบนมือถือ */
+    width: 100%!important; 
+    justify-content: center!important; 
     margin-left: 0!important;
-    padding: 0.85rem 0.8rem!important; /* เพิ่มความอ้วนหนานุ่ม */
+    padding: 0.85rem 0.8rem!important; 
   }
 
-  /* จัดตำแหน่งแผงปุ่มโซเชียลให้แผ่เต็มความกว้างหน้าจอ (App Dock Style) */
   .footer-minimal .footer-socials { 
     flex-direction: row!important; 
     width: 100%!important; 
@@ -108,7 +129,7 @@
   .footer-minimal .footer-social { 
     flex: 1!important; 
     justify-content: center!important; 
-    padding: 1rem 0.5rem!important; /* ปุ่มอ้วนกลมหนานุ่ม กดง่ายสะใจ */
+    padding: 1rem 0.5rem!important; 
   }
 }
 
@@ -118,7 +139,6 @@
 .footer-minimal .logo-text { font-family: 'Sofia', cursive!important; font-size: 1.7rem!important; font-weight: 700!important; color: var(--fv-brand-teal-light)!important; letter-spacing: -0.02em!important; line-height: 1!important; background: none!important; -webkit-background-clip: unset!important; -webkit-text-fill-color: unset!important; background-clip: unset!important; }
 .footer-minimal .footer-desc { margin: 0!important; font-size: 0.88rem!important; color: var(--fv-text-muted)!important; max-width: 100%!important; line-height: 1.6!important; font-weight: 400; opacity: 0.85; }
 
-/* หัวข้อคอลัมน์สไตล์โมเดิร์นแอป */
 .footer-minimal .footer-heading { 
   margin: 0 0 1.2rem!important; padding: 0!important; 
   font-size: 0.75rem!important; 
@@ -133,7 +153,7 @@
 .footer-minimal .footer-list li { margin: 0!important; padding: 0!important; }
 
 /* ==========================================
-   ปุ่มแคปซูลเมนูลิงก์: นุ่มฟู อ้วนกลม มีมิติแบบ 3 มิติตื้นๆ ในทุกอุปกรณ์
+   ⚡ ปุ่มแคปซูลเมนูลิงก์
    ========================================== */
 .footer-minimal .footer-link {
   display: inline-flex!important; 
@@ -147,61 +167,62 @@
   margin-left: -0.6rem!important; 
   width: fit-content!important; 
   
-  /* ใช้เส้นขอบและเงาซ้อนกันเบาๆ เพื่อให้ปุ่มดูอวบอิ่ม มีเนื้อหนัง ไม่จมหายไปกับพื้นหลัง */
-  border: 1px solid rgba(0, 206, 176, 0.06)!important; 
+  /* 🚀 ปรับจุดที่ 4: เปลี่ยนจาก border เป็นการใช้ shadow แรเงาแทนขอบ 1px */
+  box-shadow: 0 0 0 1px rgba(0, 206, 176, 0.06), 0 2px 6px rgba(6, 20, 24, 0.01), inset 0 1px 0 rgba(255, 255, 255, 0.6)!important;
+  border: none!important;
   background: rgba(0, 206, 176, 0.03)!important; 
-  box-shadow: 0 2px 6px rgba(6, 20, 24, 0.01), inset 0 1px 0 rgba(255, 255, 255, 0.6)!important;
   
-  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)!important;
-  -webkit-tap-highlight-color: transparent!important; 
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease, transform 0.2s cubic-bezier(0.25, 1, 0.5, 1)!important;
+  
   line-height: 1!important; 
 }
 .footer-minimal .footer-link:hover {
   background: rgba(0, 206, 176, 0.09)!important; 
-  border-color: rgba(0, 206, 176, 0.25)!important;
+  /* 🚀 ตอน Hover อัปเดตสีขอบเงาให้ชัดขึ้นแทน border-color */
+  box-shadow: 0 0 0 1px rgba(0, 206, 176, 0.25), 0 4px 12px rgba(0, 206, 176, 0.05)!important;
   color: var(--fv-brand-teal-light)!important;
   text-decoration: none!important;
-  box-shadow: 0 6px 16px rgba(0, 206, 176, 0.05)!important;
-  padding-left: 1.4rem!important;
-  padding-right: 1.4rem!important;
+  transform: translateX(4px) scale(1.02)!important; 
 }
 .footer-minimal .footer-license-note { margin: 1.2rem 0 0!important; padding: 0!important; font-size: 0.8rem!important; color: var(--fv-text-faint)!important; line-height: 1.6!important; font-weight: 400!important; }
 
 .footer-minimal .footer-socials { display: flex!important; flex-direction: column!important; gap: 10px!important; align-items: flex-start!important; }
 
 /* ==========================================
-   ปุ่มแคปซูลโซเชียล: อ้วนกลมเต็มพิกัด น่ากด สไตล์ Premium App Widget
+   ⚡ ปุ่มแคปซูลโซเชียล
    ========================================== */
 .footer-minimal .footer-social {
   display: inline-flex!important; 
   align-items: center!important; 
   gap: 10px!important;
-  padding: 1.05rem 1.45rem!important; /* สัดส่วนความอ้วนกลมแนวตั้งเด่นชัดมาก */
+  padding: 1.05rem 1.45rem!important; 
   border-radius: var(--fv-radius-pill)!important; 
-  border: 1.5px solid var(--fv-border-default)!important; 
+  
+  /* 🚀 ปรับจุดที่ 5: ปุ่มโซเชียลเปลี่ยนมาใช้ขอบเงา 1.5px แทน border เดิม */
+  box-shadow: 0 0 0 1.5px var(--fv-border-default)!important;
+  border: none!important;
   background: var(--fv-surface-page)!important;
+  
   font-size: 0.88rem!important; 
   font-weight: 500!important;
   color: var(--fv-text-secondary)!important; 
   text-decoration: none!important;
   width: fit-content!important;
-  box-shadow: 0 3px 10px rgba(6, 20, 24, 0.02), inset 0 1px 0 rgba(255, 255, 255, 0.8)!important; 
-  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)!important;
-  -webkit-tap-highlight-color: transparent!important; 
+  
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease, transform 0.2s cubic-bezier(0.25, 1, 0.5, 1)!important;
+  
   line-height: 1!important;
 }
 .footer-minimal .footer-social svg { width: 14px!important; height: 14px!important; stroke: currentColor!important; flex-shrink: 0!important; stroke-width: 1.8!important; fill: none!important; display: block!important; }
 .footer-minimal .footer-social:hover {
-  border-color: rgba(0, 206, 176, 0.35)!important;
+  /* 🚀 ตอน Hover อัปเดตสีขอบเงาโซเชียล */
+  box-shadow: 0 0 0 1.5px rgba(0, 206, 176, 0.35), 0 6px 15px rgba(0, 206, 176, 0.08)!important;
   color: var(--fv-brand-teal-light)!important;
   background: rgba(0, 206, 176, 0.03)!important;
-  box-shadow: 0 10px 28px rgba(0, 206, 176, 0.06)!important; 
-  transform: translateY(-2px); 
-  padding-left: 1.65rem!important;
-  padding-right: 1.65rem!important;
+  transform: translateY(-3px) scale(1.03)!important; 
 }
 
-/* ส่วนท้ายสุด (Bottom Section) บาลานซ์ซ้าย-ขวา */
+/* ส่วนท้ายสุด */
 .footer-minimal .footer-bottom { 
   display: flex!important; 
   align-items: center!important; 
@@ -213,7 +234,7 @@
 }
 .footer-minimal .footer-bottom small,
 .footer-minimal .footer-bottom .text-muted { font-size: 0.8rem!important; color: var(--fv-text-faint)!important; font-weight: 400!important; line-height: 1.5!important; }
-.footer-minimal .footer-bottom a { color: var(--fv-text-faint)!important; text-decoration: none!important; border-bottom: 1px solid transparent!important; transition: all 0.2s ease; font-weight: 400!important; }
+.footer-minimal .footer-bottom a { color: var(--fv-text-faint)!important; text-decoration: none!important; border-bottom: 1px solid transparent!important; transition: color 0.2s ease; font-weight: 400!important; }
 .footer-minimal .footer-bottom a:hover { color: var(--fv-brand-teal)!important; border-bottom-color: rgba(19, 180, 127, 0.25)!important; text-decoration: none!important; }
 
 @media (prefers-reduced-motion: reduce) {
