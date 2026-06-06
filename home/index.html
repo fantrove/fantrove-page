@@ -1,34 +1,128 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <script src="assets/js/lang-proxy.js?v=1.0.0-20250322"></script>
   <script src="assets/js/lang-sync.js?v=1.0.0-20250322"></script>
-
+  
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Fantrove — Emoji &amp; Symbols Hub | Copy with One Tap</title>
-  <meta name="description" content="Browse thousands of emojis and special characters. Search, copy, and use them instantly — free forever. Your all-in-one emoji and symbol collection.">
-
+  
+  <!-- Title: ใช้ data-translate เพื่อให้ build/translation engine แทนที่เป็นภาษาที่เหมาะสม -->
+  <title data-translate="home-seo-title">Fantrove — Emoji &amp; Symbols Hub | Copy with One Tap</title>
+  
+  <!-- Primary meta description:
+       ถ้าต้องการแปล ควรเพิ่ม key "home-seo-description" ในไฟล์แปลแต่ละภาษา
+  -->
+  <meta name="description" content="Browse thousands of emojis, special characters and fancy text. Search, copy and use instantly — Fantrove (also Fantrove Verse). Free to use." />
+  
+  <!-- General SEO -->
+  <meta name="robots" content="index, follow" />
+  <meta name="author" content="Fantrove (Lédp Aero Wings, Nontakorn Nonsurat)" />
+  <link rel="canonical" href="https://fantrove.pages.dev/home/" />
+  
+  <!-- hreflang alternates (explicit): build also injects hreflang; having them here is safe -->
+  <link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/home/" />
+  <link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/home/" />
+  <link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/home/" />
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:site_name" content="Fantrove" />
+  <meta property="og:title" content="Fantrove — Emoji & Symbols Hub | Copy with One Tap" />
+  <meta property="og:description" content="Browse thousands of emojis, special characters and fancy text. Search, copy and use instantly — Fantrove (Fantrove Verse)." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://fantrove.pages.dev/home/" />
+  <!-- UPDATED: OG image moved into assets/images/OG/ -->
+  <meta property="og:image" content="https://fantrove.pages.dev/assets/images/OG/fantrove-hub-og.png" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:locale:alternate" content="th_TH" />
+  
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@fantrove" />
+  <meta name="twitter:title" content="Fantrove — Emoji & Symbols Hub" />
+  <meta name="twitter:description" content="Browse thousands of emojis, special characters and fancy text. Search, copy and use instantly." />
+  <!-- UPDATED: Twitter image path -->
+  <meta name="twitter:image" content="https://fantrove.pages.dev/assets/images/OG/fantrove-hub-og.png" />
+  
+  <!-- Optional: keywords (minor use nowadays, but included) -->
+  <meta name="keywords" content="emoji, emojis, symbols, special characters, copy, fancy text, unicode, fantrove, fantrove verse" />
+  
+  <!-- Sitemap (helpful for some crawlers) -->
+  <link rel="sitemap" type="application/xml" title="Sitemap" href="https://fantrove.pages.dev/sitemap.xml" />
+  
+  <!-- Structured Data (JSON-LD) — includes localized fields for en/th -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://fantrove.pages.dev/#organization",
+        "name": "Fantrove",
+        "alternateName": "Fantrove Verse",
+        "url": "https://fantrove.pages.dev/",
+        /* If you prefer organization logo to point to main logo keep original path;
+           if you want JSON-LD to reference OG preview, set same OG path below.
+           UPDATED: point to OG folder preview for social preview usage */
+        "logo": "https://fantrove.pages.dev/assets/images/OG/fantrove-hub-og.png",
+        "sameAs": [
+          "https://discord.gg/MMxQSZB3y3"
+        ]
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://fantrove.pages.dev/#website",
+        "url": "https://fantrove.pages.dev/",
+        "name": "Fantrove",
+        "description": "A hub for emojis, special characters and fancy text. Browse, search and copy instantly.",
+        "publisher": {
+          "@id": "https://fantrove.pages.dev/#organization"
+        },
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://fantrove.pages.dev/{lang}/data/verse/discover/?q={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      },
+      {
+        "@type": "WebPage",
+        "@id": "https://fantrove.pages.dev/home/#webpage",
+        "url": "https://fantrove.pages.dev/home/",
+        "inLanguage": "en",
+        "name": "Fantrove — Emoji & Symbols Hub | Copy with One Tap",
+        "description": "Browse thousands of emojis, special characters and fancy text. Search, copy and use instantly — Fantrove."
+      },
+      {
+        "@type": "WebPage",
+        "@id": "https://fantrove.pages.dev/th/home/#webpage",
+        "url": "https://fantrove.pages.dev/th/home/",
+        "inLanguage": "th",
+        "name": "Fantrove — ศูนย์อิโมจิและอักขระพิเศษ | คัดลอกด้วยแตะเดียว",
+        "description": "เรียกดูอิโมจิ อักขระพิเศษ และตัวอักษรแฟนซีหลายพันรายการ ค้นหาและคัดลอกไปใช้ได้ทันที — Fantrove."
+      }]
+    }
+  </script>
+  
   <meta name="theme-color" content="#13b47f" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-
   <link rel="icon" type="image/x-icon" href="/assets/images/fantrove-hub360.ico" />
-
+  
   <!-- 1. Tokens ก่อนสุดเสมอ -->
   <link rel="preload" href="/assets/css/tokens.css" as="style">
   <link rel="stylesheet" href="/assets/css/tokens.css">
-
+  
   <!-- 2. Page CSS -->
   <link rel="preload" href="/assets/css/bg.css?v=1.0.0-20250322" as="style" />
   <link rel="stylesheet" href="/assets/css/bg.css?v=1.0.0-20250322" />
   <link rel="preload" href="/assets/css/home.css?v=1.0.0-20250322" as="style">
   <link rel="stylesheet" href="/assets/css/home.css?v=1.0.0-20250322">
-
+  
   <noscript>
     <link rel="stylesheet" href="/assets/css/bg.css?v=1.0.0-20250322" />
     <link rel="stylesheet" href="/assets/css/home.css?v=1.0.0-20250322" />
   </noscript>
-
+  
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8233915433564101" crossorigin="anonymous"></script>
   
   <script defer src="/assets/js/banner-engine.js?v=1.0.0"></script>
