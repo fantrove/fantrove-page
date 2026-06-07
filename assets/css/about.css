@@ -86,9 +86,6 @@ p.content {
   word-break:break-word;
 }
 
-p.developer-name { margin:0.55rem 0 0; color:#1f3a3e; font-size:1rem; font-weight:var(--fv-font-semibold); letter-spacing:0.01em; }
-p.developer-name strong { color:var(--fv-brand-teal); font-weight:var(--fv-font-black); letter-spacing:0.02em; display:inline-block; }
-
 p.content a {
   color: var(--fv-brand-cyan);
   text-decoration:none;
@@ -112,7 +109,6 @@ strong { color:var(--fv-brand-teal); font-weight:var(--fv-font-extrabold); }
   .section { padding:2rem; border-radius:var(--fv-radius-lg); margin-bottom:var(--fv-space-20); }
   h2.title { font-size:1rem; padding-left:12px; }
   p.content { font-size:0.96rem; line-height:1.6; }
-  p.developer-name { font-size:0.98rem; }
 }
 
 .visually-hidden, .fv-sr-only {

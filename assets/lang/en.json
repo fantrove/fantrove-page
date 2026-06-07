@@ -4,28 +4,20 @@
   "home-seo-description": "Browse thousands of emojis, special characters and fancy text. Search, copy and use instantly — Fantrove (Fantrove Verse). Free to use."
  },
  "general": {
-  "homePageTitle": "ยินดีต้อนรับสู่ FanTrove",
-  "languageSelector": "เลือกภาษา",
-  "description": "สำรวจอิโมจิและอักขระพิเศษจากแทบทุกแพลตฟอร์ม",
+  "description": "Explore emojis and special characters from virtually every platform",
   "h.dp": "The FanTrove Hub",
-  "dp": "สร้างในแบบของคุณ"
+  "dp": "Create in Your Style"
  },
  "buttons": {
-  "home-button": "หน้าแรก",
-  "content-button": "เนื้อหา",
   "new-button": "What's New",
   "planned-features-button": "Coming Features",
-  "setting-button": "ตั้งค่า",
   "support-button": "Support on Ko-fi",
   "support-button-patreon": "Support on Patreon",
   "about-button": "Fantrove Overview",
-  "contact-button": "Talk to the Creator",
-  "emoji-home": "สำรวจอิโมจิ",
-  "special-characters-home": "สำรวจอักษรพิเศษ"
+  "contact-button": "Talk to the Creator"
  },
  "pages": {
   "page-What's-New": "What's New",
-  "date": "11 ก.พ. 2025",
   "page-planned-features": "Planned Features",
   "page-setting": "Control Center",
   "page-about": "About Fantrove",
@@ -45,40 +37,21 @@
   "pE": "Explore the development progress and upcoming features for FanTrove. @a What's New @"
  },
  "others": {
-  "Not": "Not specified",
   "about-text": "Platform",
   "support-text": "Fuel Fantrove",
-  "footer": "© 2025 Fantrove (เบต้า) สงวนลิขสิทธิ์",
-  "footer-deve": "พัฒนาโดย บริษัท Lédp Aero Wings",
+  "footer": "© 2025 Fantrove (Beta) All rights reserved",
   "logo-header": "Fantrove Verse"
  },
  "about": {
   "1title": "About Fantrove",
-  "1content": "FanTrove is a platform designed to meet the needs of text decoration and design in the digital world. It combines special characters, emojis, font transformers, and various text customization tools all in one place, allowing users to express themselves freely and stand out on platforms like Discord, Instagram, and X (formerly Twitter).@br@brWe believe everyone should have the right to access beauty and uniqueness without relying on technical knowledge or paying for premium features. Therefore, FanTrove is free to use with no limitations on core functionalities.@br@brFanTrove is developed and maintained by the parent company, Lédp Aero Wings, which aims to create digital tools that are truly accessible, fair, and user-centered. We are committed to making technology available to everyone, not just a select few.",
-  "2title": "Development Team",
-  "1developer-name": "@strong Nontakorn Nonsurat@ — Founder and lead developer, overseeing everything from system architecture to code and UX/UI design. Dedicated to making everything intuitive and accessible to everyone.",
-  "2developer-name": "@strong ChatGPT@ — Logic expert and coding consultant, providing AI-powered guidance to boost the team’s performance rapidly and efficiently.",
-  "3developer-name": "@strong GitHub Copilot@ — Logic expert and coding consultant, providing AI-powered guidance to boost the team’s performance rapidly and efficiently.",
-  "3title": "UX/UI Design",
-  "2content": "It's not just about looking good—we prioritize user experience above all. Every button, color, and font size in FanTrove is designed for ease of use and responsiveness, whether you're on mobile or desktop. Our goal is to make customizing names and text easy for everyone. @br@br A great experience starts with simplicity—while still keeping things unique.",
-  "4developer-name": "@strong Nontakorn Nonsurat@ — Responsible for every design element on the site, from color schemes to layouts, ensuring a comfortable and user-friendly experience for all.",
-  "4title": "Source Code Developers",
-  "3content": "The source code team ensures that FanTrove isn’t just visually appealing—but fast and stable across all platforms and devices. @br@br With efficient coding techniques and a focus on sustainability, our team guarantees that the site will keep evolving to meet users’ needs well into the future.",
-  "5developer-name": "@strong Nontakorn Nonsurat@ — Leads the core coding process and system testing to ensure FanTrove performs at its highest efficiency.",
-  "6developer-name": "@strong ChatGPT@ — Offers logical insight and code reviews to eliminate errors that could affect users.",
-  "7developer-name": "@strong GitHub Copilot@ — Accelerates code writing with smart and efficient AI-generated suggestions.",
-  "5title": "Content Director",
-  "4content": "Every piece of content on Fantrove is carefully curated to give users access to functional and up-to-date special characters and emojis. We don’t just collect what already exists—we continually update to bring users fresh experiences. @br@br Every letter, every emoji isn’t just decoration—it’s a representation of creativity and user expression.",
-  "8developer-name": "@strong Nontakorn Nonsurat@ — Oversees and manages all content on the site, from selecting characters to ensuring all information is modern, relevant, and usable.",
+  "1content": "FanTrove is a platform designed to meet the needs of text decoration and design in the digital world...",
   "6title": "Content License",
-  "5content": "All content on this site (including special characters and emojis) is considered public domain under the @a Creative Commons Zero v1.0 Universal (CC0)@ license. @br@br Users are free to copy, modify, distribute, or use this content commercially or otherwise—no permission or credit required. @br@br We believe creativity should be accessible to everyone—whether you’re a creator or an entrepreneur."
+  "5content": "All content on this site (including special characters and emojis) is considered public domain..."
  },
- 
  "home-hero-title": "Emoji & Special Characters Hub",
  "home-hero-desc": "Your central place to search, copy, and use @strong emojis@ and @strong special characters@ for all your needs!",
  "home-hero-btn-emoji": "@slot:1@ Browse All Emojis",
  "home-hero-btn-symbol": "@slot:1@ Browse Cool Symbols",
- "home-tip": "Tip: You can change the website language anytime via the @aSettings@ page!",
  "home-features-title": "Why Choose FANTROVE?",
  "home-feature1-title": "Easy Search",
  "home-feature1-desc": "Find emojis and special symbols instantly using categories and smart search features.",
@@ -98,25 +71,19 @@
  "footer-privacy": "Privacy Policy",
  "footer-contact": "Contact",
  "footer-follow-us": "Follow us:",
- 
  "contact-main-title": "Contact the Developer",
  "contact-main-desc": "Please select the topic you want to contact or report. Choose one of the following actions.",
- "contact-other-btn": "General Contact",
  "contact-other-text": "General Contact",
- "contact-report-btn": "Report an Issue",
  "contact-report-text": "Report an Issue",
  "contact-report-method-label": "Choose Report Channel",
  "contact-other-title": "General Contact",
- "contact-other-desc": "You can use this page to contact the FanTrove Hub developer for general inquiries, suggestions, collaboration, or other topics that are not bug reports or abuse reports. @br@br <span class=\"col\"> Available contact channels: </span> @br • Gmail: \nfantrove.offical@gmail.com\n @br • Form: Submit your message directly from the website.",
+ "contact-other-desc": "You can use this page to contact the FanTrove Hub developer for general inquiries...",
  "contact-method-label": "Choose Contact Channel",
  "contact-method-gmail": "Gmail",
  "contact-method-form": "Form",
  "contact-form-lang-label": "Choose Language",
- "contact-form-message-label": "ข้อความของคุณ",
- "contact-form-message-placeholder": "กรอกข้อความของคุณที่นี่...",
- "contact-form-submit": "ส่งข้อความ",
  "contact-gmail-text": "Send your message via Gmail:",
  "contact-gmail-btn": "Send via Gmail",
  "contact-report-title": "Report an Issue",
- "contact-report-desc": "You can use this page to report any issues, bugs, or abuse found on FanTrove.\n\nCurrently, you can only use the form below to submit your report."
+ "contact-report-desc": "You can use this page to report any issues, bugs, or abuse found on FanTrove..."
 }
