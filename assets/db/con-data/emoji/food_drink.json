@@ -5,143 +5,1093 @@
     "en": "Food & Drink"
   },
   "data": [
-    { "api": "U+1F347", "text": "🍇", "name": { "th": "องุ่น", "en": "Grapes" } },
-    { "api": "U+1F348", "text": "🍈", "name": { "th": "แตงเมลอน", "en": "Melon" } },
-    { "api": "U+1F349", "text": "🍉", "name": { "th": "แตงโม", "en": "Watermelon" } },
-    { "api": "U+1F34A", "text": "🍊", "name": { "th": "ส้ม", "en": "Tangerine" } },
-    { "api": "U+1F34B", "text": "🍋", "name": { "th": "มะนาว", "en": "Lemon" } },
-    { "api": "U+1F34C", "text": "🍌", "name": { "th": "กล้วย", "en": "Banana" } },
-    { "api": "U+1F34D", "text": "🍍", "name": { "th": "สับปะรด", "en": "Pineapple" } },
-    { "api": "U+1F96D", "text": "🥭", "name": { "th": "มะม่วง", "en": "Mango" } },
-    { "api": "U+1F34E", "text": "🍎", "name": { "th": "แอปเปิ้ลแดง", "en": "Red Apple" } },
-    { "api": "U+1F34F", "text": "🍏", "name": { "th": "แอปเปิ้ลเขียว", "en": "Green Apple" } },
-    { "api": "U+1F350", "text": "🍐", "name": { "th": "ลูกแพร์", "en": "Pear" } },
-    { "api": "U+1F351", "text": "🍑", "name": { "th": "พีช", "en": "Peach" } },
-    { "api": "U+1F352", "text": "🍒", "name": { "th": "เชอร์รี", "en": "Cherries" } },
-    { "api": "U+1F353", "text": "🍓", "name": { "th": "สตรอเบอร์รี", "en": "Strawberry" } },
-    { "api": "U+1FAD0", "text": "🫐", "name": { "th": "เบอร์รี่", "en": "Blueberries" } },
-    { "api": "U+1F95D", "text": "🥝", "name": { "th": "กีวี", "en": "Kiwi Fruit" } },
-    { "api": "U+1F345", "text": "🍅", "name": { "th": "มะเขือเทศ", "en": "Tomato" } },
-    { "api": "U+1FAD2", "text": "🫒", "name": { "th": "มะกอก", "en": "Olive" } },
-    { "api": "U+1F965", "text": "🥥", "name": { "th": "มะพร้าว", "en": "Coconut" } },
-    
-    { "api": "U+1F951", "text": "🥑", "name": { "th": "อะโวคาโด", "en": "Avocado" } },
-    { "api": "U+1F346", "text": "🍆", "name": { "th": "มะเขือยาว", "en": "Eggplant" } },
-    { "api": "U+1F954", "text": "🥔", "name": { "th": "มันฝรั่ง", "en": "Potato" } },
-    { "api": "U+1F955", "text": "🥕", "name": { "th": "แครอท", "en": "Carrot" } },
-    { "api": "U+1F33D", "text": "🌽", "name": { "th": "ข้าวโพด", "en": "Ear of Corn" } },
-    { "api": "U+1F336-FE0F", "text": "🌶️", "name": { "th": "พริก", "en": "Hot Pepper" } },
-    { "api": "U+1FAD1", "text": "🫑", "name": { "th": "พริกหวาน/พริกหยวก", "en": "Bell Pepper" } },
-    { "api": "U+1F952", "text": "🥒", "name": { "th": "แตงกวา", "en": "Cucumber" } },
-    { "api": "U+1F96C", "text": "🥬", "name": { "th": "ผักใบ", "en": "Leafy Green" } },
-    { "api": "U+1F966", "text": "🥦", "name": { "th": "บรอกโคลี", "en": "Broccoli" } },
-    { "api": "U+1F9C4", "text": "🧄", "name": { "th": "กระเทียม", "en": "Garlic" } },
-    { "api": "U+1F9C5", "text": "🧅", "name": { "th": "หัวหอม", "en": "Onion" } },
-    { "api": "U+1F344", "text": "🍄", "name": { "th": "เห็ด", "en": "Mushroom" } },
-    { "api": "U+1F95C", "text": "🥜", "name": { "th": "ถั่วลิสง", "en": "Peanuts" } },
-    { "api": "U+1F9C8", "text": "🫘", "name": { "th": "ถั่วเมล็ดแห้ง", "en": "Beans" } },
-    { "api": "U+1F330", "text": "🌰", "name": { "th": "เกาลัด/เมล็ด", "en": "Chestnut" } },
-    { "api": "U+1F9DA", "text": "🫚", "name": { "th": "ขิง", "en": "Ginger" } },
-    { "api": "U+1FAD8", "text": "🫛", "name": { "th": "ถั่วลันเตา", "en": "Pea Pod" } },
-    { "api": "U+1FA9C", "text": "🫜", "name": { "th": "ผักหัว/หัวไชเท้า (ใหม่)", "en": "Root Vegetables (New)" } },
-    
-    { "api": "U+1F35E", "text": "🍞", "name": { "th": "ขนมปัง", "en": "Bread" } },
-    { "api": "U+1F950", "text": "🥐", "name": { "th": "ครัวซองต์", "en": "Croissant" } },
-    { "api": "U+1F35F", "text": "🥖", "name": { "th": "ขนมปังยาว/บาแก็ตต์", "en": "Baguette Bread" } },
-    { "api": "U+1FAD3", "text": "🫓", "name": { "th": "แผ่นแป้ง/แป้งแผ่น", "en": "Flatbread" } },
-    { "api": "U+1F968", "text": "🥨", "name": { "th": "เพรทเซล", "en": "Pretzel" } },
-    { "api": "U+1F96F", "text": "🥯", "name": { "th": "เบเกิล", "en": "Bagel" } },
-    { "api": "U+1F95E", "text": "🥞", "name": { "th": "แพนเค้ก", "en": "Pancakes" } },
-    { "api": "U+1F9C7", "text": "🧇", "name": { "th": "วาฟเฟิล", "en": "Waffle" } },
-    { "api": "U+1F33E", "text": "🌾", "name": { "th": "รวงข้าว", "en": "Sheaf of Rice" } },
-    { "api": "U+1F963", "text": "🥣", "name": { "th": "ชามซีเรียล/ซุป", "en": "Bowl with Spoon" } },
-    
-    { "api": "U+1F9C0", "text": "🧀", "name": { "th": "ชีส", "en": "Cheese Wedge" } },
-    { "api": "U+1F356", "text": "🍖", "name": { "th": "เนื้อย่าง", "en": "Meat on Bone" } },
-    { "api": "U+1F357", "text": "🍗", "name": { "th": "ขาไก่ทอด", "en": "Poultry Leg" } },
-    { "api": "U+1F969", "text": "🥩", "name": { "th": "สเต็ก/เนื้อชิ้น", "en": "Cut of Meat" } },
-    { "api": "U+1F953", "text": "🥓", "name": { "th": "เบคอน", "en": "Bacon" } },
-    { "api": "U+1F354", "text": "🍔", "name": { "th": "แฮมเบอร์เกอร์", "en": "Hamburger" } },
-    { "api": "U+1F35F", "text": "🍟", "name": { "th": "เฟรนช์ฟราย", "en": "French Fries" } },
-    { "api": "U+1F355", "text": "🍕", "name": { "th": "พิซซ่า", "en": "Pizza" } },
-    { "api": "U+1F32D", "text": "🌭", "name": { "th": "ฮอทด็อก", "en": "Hot Dog" } },
-    { "api": "U+1F96A", "text": "🥪", "name": { "th": "แซนด์วิช", "en": "Sandwich" } },
-    { "api": "U+1F32E", "text": "🌮", "name": { "th": "ทาโก้", "en": "Taco" } },
-    { "api": "U+1F32F", "text": "🌯", "name": { "th": "เบอร์ริโต", "en": "Burrito" } },
-    { "api": "U+1FAD4", "text": "🫔", "name": { "th": "ทาเมล/ตอร์ตียา", "en": "Tamale" } },
-    { "api": "U+1F959", "text": "🥙", "name": { "th": "พิต้า/เคบับ", "en": "Stuffed Flatbread" } },
-    { "api": "U+1F9C6", "text": "🧆", "name": { "th": "ฟาลาเฟล", "en": "Falafel" } },
-    { "api": "U+1F95A", "text": "🥚", "name": { "th": "ไข่", "en": "Egg" } },
-    { "api": "U+1F373", "text": "🍳", "name": { "th": "ไข่ดาว/ทำอาหาร", "en": "Cooking" } },
-    { "api": "U+1F958", "text": "🥘", "name": { "th": "กระทะ/จานอาหาร", "en": "Shallow Pan of Food" } },
-    { "api": "U+1F372", "text": "🍲", "name": { "th": "หม้อ/อาหาร", "en": "Pot of Food" } },
-    { "api": "U+1F95F", "text": "🥟", "name": { "th": "เกี๊ยว", "en": "Dumpling" } },
-    { "api": "U+1F963", "text": "🥣", "name": { "th": "ชามซุป/ซีเรียล", "en": "Bowl with Spoon" } },
-    { "api": "U+1F95F", "text": "🫕", "name": { "th": "ฟองดูว์/หม้อน้ำ", "en": "Fondue" } },
-    { "api": "U+1F957", "text": "🥗", "name": { "th": "สลัด", "en": "Green Salad" } },
-    { "api": "U+1F37F", "text": "🍿", "name": { "th": "ป๊อปคอร์น", "en": "Popcorn" } },
-    { "api": "U+1F9C8", "text": "🧈", "name": { "th": "เนย", "en": "Butter" } },
-    { "api": "U+1F9C2", "text": "🧂", "name": { "th": "เกลือ", "en": "Salt" } },
-    { "api": "U+1F96B", "text": "🥫", "name": { "th": "กระป๋องอาหาร", "en": "Canned Food" } },
-    
-    { "api": "U+1F371", "text": "🍱", "name": { "th": "เบนโตะ", "en": "Bento Box" } },
-    { "api": "U+1F358", "text": "🍘", "name": { "th": "ข้าวเกรียบญี่ปุ่น", "en": "Rice Cracker" } },
-    { "api": "U+1F359", "text": "🍙", "name": { "th": "ข้าวปั้น", "en": "Rice Ball" } },
-    { "api": "U+1F35A", "text": "🍚", "name": { "th": "ข้าวสวย", "en": "Cooked Rice" } },
-    { "api": "U+1F35B", "text": "🍛", "name": { "th": "ข้าวแกง", "en": "Curry Rice" } },
-    { "api": "U+1F35C", "text": "🍜", "name": { "th": "ราเม็ง/บะหมี่", "en": "Steaming Bowl" } },
-    { "api": "U+1F35D", "text": "🍝", "name": { "th": "พาสต้า", "en": "Spaghetti" } },
-    { "api": "U+1F360", "text": "🍠", "name": { "th": "มันเทศ", "en": "Roasted Sweet Potato" } },
-    { "api": "U+1F362", "text": "🍢", "name": { "th": "โอเด็น/เสียบไม้", "en": "Oden" } },
-    { "api": "U+1F363", "text": "🍣", "name": { "th": "ซูชิ", "en": "Sushi" } },
-    { "api": "U+1F364", "text": "🍤", "name": { "th": "กุ้งเทมปุระ", "en": "Fried Shrimp" } },
-    { "api": "U+1F365", "text": "🍥", "name": { "th": "คามาโบโกะ/ลูกชิ้นปลาวง", "en": "Fish Cake with Swirl" } },
-    { "api": "U+1F96E", "text": "🥮", "name": { "th": "ขนมไหว้พระจันทร์", "en": "Moon Cake" } },
-    { "api": "U+1F361", "text": "🍡", "name": { "th": "ดังงะ/ขนมเสียบไม้", "en": "Dango" } },
-    { "api": "U+1F960", "text": "🥠", "name": { "th": "คุ้กกี้โชคดี/ขนมมงคล", "en": "Fortune Cookie" } },
-    { "api": "U+1F961", "text": "🥡", "name": { "th": "กล่องอาหาร", "en": "Takeout Box" } },
-    
-    { "api": "U+1F366", "text": "🍦", "name": { "th": "ไอศกรีมโคน", "en": "Soft Ice Cream" } },
-    { "api": "U+1F367", "text": "🍧", "name": { "th": "น้ำแข็งใส", "en": "Shaved Ice" } },
-    { "api": "U+1F368", "text": "🍨", "name": { "th": "ไอศกรีมถ้วย", "en": "Ice Cream" } },
-    { "api": "U+1F369", "text": "🍩", "name": { "th": "โดนัท", "en": "Doughnut" } },
-    { "api": "U+1F36A", "text": "🍪", "name": { "th": "คุกกี้", "en": "Cookie" } },
-    { "api": "U+1F382", "text": "🎂", "name": { "th": "เค้กวันเกิด", "en": "Birthday Cake" } },
-    { "api": "U+1F370", "text": "🍰", "name": { "th": "เค้ก", "en": "Shortcake" } },
-    { "api": "U+1F9C1", "text": "🧁", "name": { "th": "คัพเค้ก", "en": "Cupcake" } },
-    { "api": "U+1F967", "text": "🥧", "name": { "th": "พาย", "en": "Pie" } },
-    { "api": "U+1F36B", "text": "🍫", "name": { "th": "ช็อกโกแลต", "en": "Chocolate Bar" } },
-    { "api": "U+1F36C", "text": "🍬", "name": { "th": "ลูกกวาด", "en": "Candy" } },
-    { "api": "U+1F36D", "text": "🍭", "name": { "th": "อมยิ้ม", "en": "Lollipop" } },
-    { "api": "U+1F36E", "text": "🍮", "name": { "th": "ขนมชนิดนิ่ม", "en": "Custard" } },
-    { "api": "U+1F36F", "text": "🍯", "name": { "th": "น้ำผึ้ง", "en": "Honey Pot" } },
-    
-    { "api": "U+1F95B", "text": "🥛", "name": { "th": "นม", "en": "Glass of Milk" } },
-    { "api": "U+1F37C", "text": "🍼", "name": { "th": "ขวดนมทารก", "en": "Baby Bottle" } },
-    { "api": "U+2615", "text": "☕", "name": { "th": "เครื่องดื่มร้อน", "en": "Hot Beverage" } },
-    { "api": "U+1FAD6", "text": "🫖", "name": { "th": "กาต้มน้ำ/ชา", "en": "Teapot" } },
-    { "api": "U+1F375", "text": "🍵", "name": { "th": "ชาถ้วย", "en": "Teacup Without Handle" } },
-    { "api": "U+1F964", "text": "🥤", "name": { "th": "เครื่องดื่มเย็น/แก้ว", "en": "Cup with Straw" } },
-    { "api": "U+1F9CB", "text": "🧋", "name": { "th": "ชานมไข่มุก", "en": "Bubble Tea" } },
-    { "api": "U+1F9C3", "text": "🧃", "name": { "th": "น้ำผลไม้กล่อง", "en": "Beverage Box" } },
-    { "api": "U+1F9C9", "text": "🧉", "name": { "th": "มัทยา/เครื่องดื่มพื้นเมือง", "en": "Mate" } },
-    { "api": "U+1F9CA", "text": "🧊", "name": { "th": "น้ำแข็ง", "en": "Ice" } },
-    
-    { "api": "U+1F37A", "text": "🍺", "name": { "th": "เบียร์", "en": "Beer Mug" } },
-    { "api": "U+1F37B", "text": "🍻", "name": { "th": "ชนแก้ว", "en": "Clinking Beer Mugs" } },
-    { "api": "U+1F942", "text": "🥂", "name": { "th": "จิบแชมเปญ", "en": "Clinking Glasses" } },
-    { "api": "U+1F377", "text": "🍷", "name": { "th": "ไวน์", "en": "Wine Glass" } },
-    { "api": "U+1F943", "text": "🥃", "name": { "th": "วิสกี้", "en": "Tumbler Glass" } },
-    { "api": "U+1F378", "text": "🍸", "name": { "th": "ค็อกเทล", "en": "Cocktail Glass" } },
-    { "api": "U+1F378-200D-1F37A", "text": "🍹", "name": { "th": "ค็อกเทล/ค็อกเทลฟรุต", "en": "Tropical Drink" } },
-    { "api": "U+1F376", "text": "🍶", "name": { "th": "สาเก/ขวดเหล้า", "en": "Sake" } },
-    
-    { "api": "U+1F962", "text": "🥢", "name": { "th": "ตะเกียบ", "en": "Chopsticks" } },
-    { "api": "U+1F37D-FE0F", "text": "🍽️", "name": { "th": "จานและช้อน", "en": "Fork and Knife with Plate" } },
-    { "api": "U+1F374", "text": "🍴", "name": { "th": "ส้อมและมีด", "en": "Fork and Knife" } },
-    { "api": "U+1F944", "text": "🥄", "name": { "th": "ช้อน", "en": "Spoon" } },
-    { "api": "U+1F52A", "text": "🔪", "name": { "th": "มีดครัว", "en": "Kitchen Knife" } },
-    { "api": "U+1FAD9", "text": "🫙", "name": { "th": "โหลแก้ว/โถ", "en": "Jar" } },
-    { "api": "U+1F3FA", "text": "🏺", "name": { "th": "โอ่ง/ภาชนะโบราณ", "en": "Amphora" } }
+    {
+      "api": "U+1F347",
+      "text": "🍇",
+      "name": {
+        "th": "องุ่น",
+        "en": "Grapes"
+      }
+    },
+    {
+      "api": "U+1F348",
+      "text": "🍈",
+      "name": {
+        "th": "แตงเมลอน",
+        "en": "Melon"
+      }
+    },
+    {
+      "api": "U+1F349",
+      "text": "🍉",
+      "name": {
+        "th": "แตงโม",
+        "en": "Watermelon"
+      }
+    },
+    {
+      "api": "U+1F34A",
+      "text": "🍊",
+      "name": {
+        "th": "ส้ม",
+        "en": "Tangerine"
+      }
+    },
+    {
+      "api": "U+1F34B",
+      "text": "🍋",
+      "name": {
+        "th": "มะนาว",
+        "en": "Lemon"
+      }
+    },
+    {
+      "api": "U+1F34C",
+      "text": "🍌",
+      "name": {
+        "th": "กล้วย",
+        "en": "Banana"
+      }
+    },
+    {
+      "api": "U+1F34D",
+      "text": "🍍",
+      "name": {
+        "th": "สับปะรด",
+        "en": "Pineapple"
+      }
+    },
+    {
+      "api": "U+1F96D",
+      "text": "🥭",
+      "name": {
+        "th": "มะม่วง",
+        "en": "Mango"
+      }
+    },
+    {
+      "api": "U+1F34E",
+      "text": "🍎",
+      "name": {
+        "th": "แอปเปิ้ลแดง",
+        "en": "Red Apple"
+      }
+    },
+    {
+      "api": "U+1F34F",
+      "text": "🍏",
+      "name": {
+        "th": "แอปเปิ้ลเขียว",
+        "en": "Green Apple"
+      }
+    },
+    {
+      "api": "U+1F350",
+      "text": "🍐",
+      "name": {
+        "th": "ลูกแพร์",
+        "en": "Pear"
+      }
+    },
+    {
+      "api": "U+1F351",
+      "text": "🍑",
+      "name": {
+        "th": "พีช",
+        "en": "Peach"
+      }
+    },
+    {
+      "api": "U+1F352",
+      "text": "🍒",
+      "name": {
+        "th": "เชอร์รี",
+        "en": "Cherries"
+      }
+    },
+    {
+      "api": "U+1F353",
+      "text": "🍓",
+      "name": {
+        "th": "สตรอเบอร์รี",
+        "en": "Strawberry"
+      }
+    },
+    {
+      "api": "U+1FAD0",
+      "text": "🫐",
+      "name": {
+        "th": "เบอร์รี่",
+        "en": "Blueberries"
+      }
+    },
+    {
+      "api": "U+1F95D",
+      "text": "🥝",
+      "name": {
+        "th": "กีวี",
+        "en": "Kiwi Fruit"
+      }
+    },
+    {
+      "api": "U+1F345",
+      "text": "🍅",
+      "name": {
+        "th": "มะเขือเทศ",
+        "en": "Tomato"
+      }
+    },
+    {
+      "api": "U+1FAD2",
+      "text": "🫒",
+      "name": {
+        "th": "มะกอก",
+        "en": "Olive"
+      }
+    },
+    {
+      "api": "U+1F965",
+      "text": "🥥",
+      "name": {
+        "th": "มะพร้าว",
+        "en": "Coconut"
+      }
+    },
+    {
+      "api": "U+1F951",
+      "text": "🥑",
+      "name": {
+        "th": "อะโวคาโด",
+        "en": "Avocado"
+      }
+    },
+    {
+      "api": "U+1F346",
+      "text": "🍆",
+      "name": {
+        "th": "มะเขือยาว",
+        "en": "Eggplant"
+      }
+    },
+    {
+      "api": "U+1F954",
+      "text": "🥔",
+      "name": {
+        "th": "มันฝรั่ง",
+        "en": "Potato"
+      }
+    },
+    {
+      "api": "U+1F955",
+      "text": "🥕",
+      "name": {
+        "th": "แครอท",
+        "en": "Carrot"
+      }
+    },
+    {
+      "api": "U+1F33D",
+      "text": "🌽",
+      "name": {
+        "th": "ข้าวโพด",
+        "en": "Ear of Corn"
+      }
+    },
+    {
+      "api": "U+1F336-FE0F",
+      "text": "🌶️",
+      "name": {
+        "th": "พริก",
+        "en": "Hot Pepper"
+      }
+    },
+    {
+      "api": "U+1FAD1",
+      "text": "🫑",
+      "name": {
+        "th": "พริกหวาน/พริกหยวก",
+        "en": "Bell Pepper"
+      }
+    },
+    {
+      "api": "U+1F952",
+      "text": "🥒",
+      "name": {
+        "th": "แตงกวา",
+        "en": "Cucumber"
+      }
+    },
+    {
+      "api": "U+1F96C",
+      "text": "🥬",
+      "name": {
+        "th": "ผักใบ",
+        "en": "Leafy Green"
+      }
+    },
+    {
+      "api": "U+1F966",
+      "text": "🥦",
+      "name": {
+        "th": "บรอกโคลี",
+        "en": "Broccoli"
+      }
+    },
+    {
+      "api": "U+1F9C4",
+      "text": "🧄",
+      "name": {
+        "th": "กระเทียม",
+        "en": "Garlic"
+      }
+    },
+    {
+      "api": "U+1F9C5",
+      "text": "🧅",
+      "name": {
+        "th": "หัวหอม",
+        "en": "Onion"
+      }
+    },
+    {
+      "api": "U+1F344",
+      "text": "🍄",
+      "name": {
+        "th": "เห็ด",
+        "en": "Mushroom"
+      }
+    },
+    {
+      "api": "U+1F95C",
+      "text": "🥜",
+      "name": {
+        "th": "ถั่วลิสง",
+        "en": "Peanuts"
+      }
+    },
+    {
+      "api": "U+1F9C8",
+      "text": "🫘",
+      "name": {
+        "th": "ถั่วเมล็ดแห้ง",
+        "en": "Beans"
+      }
+    },
+    {
+      "api": "U+1F330",
+      "text": "🌰",
+      "name": {
+        "th": "เกาลัด/เมล็ด",
+        "en": "Chestnut"
+      }
+    },
+    {
+      "api": "U+1FADA",
+      "text": "🫚",
+      "name": {
+        "th": "ขิง",
+        "en": "Ginger"
+      }
+    },
+    {
+      "api": "U+1FAD8",
+      "text": "🫛",
+      "name": {
+        "th": "ถั่วลันเตา",
+        "en": "Pea Pod"
+      }
+    },
+    {
+      "api": "U+1FA9C",
+      "text": "🫜",
+      "name": {
+        "th": "ผักหัว/หัวไชเท้า (ใหม่)",
+        "en": "Root Vegetables (New)"
+      }
+    },
+    {
+      "api": "U+1F35E",
+      "text": "🍞",
+      "name": {
+        "th": "ขนมปัง",
+        "en": "Bread"
+      }
+    },
+    {
+      "api": "U+1F950",
+      "text": "🥐",
+      "name": {
+        "th": "ครัวซองต์",
+        "en": "Croissant"
+      }
+    },
+    {
+      "api": "U+1F956",
+      "text": "🥖",
+      "name": {
+        "th": "ขนมปังยาว/บาแก็ตต์",
+        "en": "Baguette Bread"
+      }
+    },
+    {
+      "api": "U+1FAD3",
+      "text": "🫓",
+      "name": {
+        "th": "แผ่นแป้ง/แป้งแผ่น",
+        "en": "Flatbread"
+      }
+    },
+    {
+      "api": "U+1F968",
+      "text": "🥨",
+      "name": {
+        "th": "เพรทเซล",
+        "en": "Pretzel"
+      }
+    },
+    {
+      "api": "U+1F96F",
+      "text": "🥯",
+      "name": {
+        "th": "เบเกิล",
+        "en": "Bagel"
+      }
+    },
+    {
+      "api": "U+1F95E",
+      "text": "🥞",
+      "name": {
+        "th": "แพนเค้ก",
+        "en": "Pancakes"
+      }
+    },
+    {
+      "api": "U+1F9C7",
+      "text": "🧇",
+      "name": {
+        "th": "วาฟเฟิล",
+        "en": "Waffle"
+      }
+    },
+    {
+      "api": "U+1F33E",
+      "text": "🌾",
+      "name": {
+        "th": "รวงข้าว",
+        "en": "Sheaf of Rice"
+      }
+    },
+    {
+      "api": "U+1F963",
+      "text": "🥣",
+      "name": {
+        "th": "ชามซีเรียล/ซุป",
+        "en": "Bowl with Spoon"
+      }
+    },
+    {
+      "api": "U+1F9C0",
+      "text": "🧀",
+      "name": {
+        "th": "ชีส",
+        "en": "Cheese Wedge"
+      }
+    },
+    {
+      "api": "U+1F356",
+      "text": "🍖",
+      "name": {
+        "th": "เนื้อย่าง",
+        "en": "Meat on Bone"
+      }
+    },
+    {
+      "api": "U+1F357",
+      "text": "🍗",
+      "name": {
+        "th": "ขาไก่ทอด",
+        "en": "Poultry Leg"
+      }
+    },
+    {
+      "api": "U+1F969",
+      "text": "🥩",
+      "name": {
+        "th": "สเต็ก/เนื้อชิ้น",
+        "en": "Cut of Meat"
+      }
+    },
+    {
+      "api": "U+1F953",
+      "text": "🥓",
+      "name": {
+        "th": "เบคอน",
+        "en": "Bacon"
+      }
+    },
+    {
+      "api": "U+1F354",
+      "text": "🍔",
+      "name": {
+        "th": "แฮมเบอร์เกอร์",
+        "en": "Hamburger"
+      }
+    },
+    {
+      "api": "U+1F35F",
+      "text": "🍟",
+      "name": {
+        "th": "เฟรนช์ฟราย",
+        "en": "French Fries"
+      }
+    },
+    {
+      "api": "U+1F355",
+      "text": "🍕",
+      "name": {
+        "th": "พิซซ่า",
+        "en": "Pizza"
+      }
+    },
+    {
+      "api": "U+1F32D",
+      "text": "🌭",
+      "name": {
+        "th": "ฮอทด็อก",
+        "en": "Hot Dog"
+      }
+    },
+    {
+      "api": "U+1F96A",
+      "text": "🥪",
+      "name": {
+        "th": "แซนด์วิช",
+        "en": "Sandwich"
+      }
+    },
+    {
+      "api": "U+1F32E",
+      "text": "🌮",
+      "name": {
+        "th": "ทาโก้",
+        "en": "Taco"
+      }
+    },
+    {
+      "api": "U+1F32F",
+      "text": "🌯",
+      "name": {
+        "th": "เบอร์ริโต",
+        "en": "Burrito"
+      }
+    },
+    {
+      "api": "U+1FAD4",
+      "text": "🫔",
+      "name": {
+        "th": "ทาเมล/ตอร์ตียา",
+        "en": "Tamale"
+      }
+    },
+    {
+      "api": "U+1F959",
+      "text": "🥙",
+      "name": {
+        "th": "พิต้า/เคบับ",
+        "en": "Stuffed Flatbread"
+      }
+    },
+    {
+      "api": "U+1F9C6",
+      "text": "🧆",
+      "name": {
+        "th": "ฟาลาเฟล",
+        "en": "Falafel"
+      }
+    },
+    {
+      "api": "U+1F95A",
+      "text": "🥚",
+      "name": {
+        "th": "ไข่",
+        "en": "Egg"
+      }
+    },
+    {
+      "api": "U+1F373",
+      "text": "🍳",
+      "name": {
+        "th": "ไข่ดาว/ทำอาหาร",
+        "en": "Cooking"
+      }
+    },
+    {
+      "api": "U+1F958",
+      "text": "🥘",
+      "name": {
+        "th": "กระทะ/จานอาหาร",
+        "en": "Shallow Pan of Food"
+      }
+    },
+    {
+      "api": "U+1F372",
+      "text": "🍲",
+      "name": {
+        "th": "หม้อ/อาหาร",
+        "en": "Pot of Food"
+      }
+    },
+    {
+      "api": "U+1F95F",
+      "text": "🥟",
+      "name": {
+        "th": "เกี๊ยว",
+        "en": "Dumpling"
+      }
+    },
+    {
+      "api": "U+1F963",
+      "text": "🥣",
+      "name": {
+        "th": "ชามซุป/ซีเรียล",
+        "en": "Bowl with Spoon"
+      }
+    },
+    {
+      "api": "U+1F95F",
+      "text": "🫕",
+      "name": {
+        "th": "ฟองดูว์/หม้อน้ำ",
+        "en": "Fondue"
+      }
+    },
+    {
+      "api": "U+1F957",
+      "text": "🥗",
+      "name": {
+        "th": "สลัด",
+        "en": "Green Salad"
+      }
+    },
+    {
+      "api": "U+1F37F",
+      "text": "🍿",
+      "name": {
+        "th": "ป๊อปคอร์น",
+        "en": "Popcorn"
+      }
+    },
+    {
+      "api": "U+1F9C8",
+      "text": "🧈",
+      "name": {
+        "th": "เนย",
+        "en": "Butter"
+      }
+    },
+    {
+      "api": "U+1F9C2",
+      "text": "🧂",
+      "name": {
+        "th": "เกลือ",
+        "en": "Salt"
+      }
+    },
+    {
+      "api": "U+1F96B",
+      "text": "🥫",
+      "name": {
+        "th": "กระป๋องอาหาร",
+        "en": "Canned Food"
+      }
+    },
+    {
+      "api": "U+1F371",
+      "text": "🍱",
+      "name": {
+        "th": "เบนโตะ",
+        "en": "Bento Box"
+      }
+    },
+    {
+      "api": "U+1F358",
+      "text": "🍘",
+      "name": {
+        "th": "ข้าวเกรียบญี่ปุ่น",
+        "en": "Rice Cracker"
+      }
+    },
+    {
+      "api": "U+1F359",
+      "text": "🍙",
+      "name": {
+        "th": "ข้าวปั้น",
+        "en": "Rice Ball"
+      }
+    },
+    {
+      "api": "U+1F35A",
+      "text": "🍚",
+      "name": {
+        "th": "ข้าวสวย",
+        "en": "Cooked Rice"
+      }
+    },
+    {
+      "api": "U+1F35B",
+      "text": "🍛",
+      "name": {
+        "th": "ข้าวแกง",
+        "en": "Curry Rice"
+      }
+    },
+    {
+      "api": "U+1F35C",
+      "text": "🍜",
+      "name": {
+        "th": "ราเม็ง/บะหมี่",
+        "en": "Steaming Bowl"
+      }
+    },
+    {
+      "api": "U+1F35D",
+      "text": "🍝",
+      "name": {
+        "th": "พาสต้า",
+        "en": "Spaghetti"
+      }
+    },
+    {
+      "api": "U+1F360",
+      "text": "🍠",
+      "name": {
+        "th": "มันเทศ",
+        "en": "Roasted Sweet Potato"
+      }
+    },
+    {
+      "api": "U+1F362",
+      "text": "🍢",
+      "name": {
+        "th": "โอเด็น/เสียบไม้",
+        "en": "Oden"
+      }
+    },
+    {
+      "api": "U+1F363",
+      "text": "🍣",
+      "name": {
+        "th": "ซูชิ",
+        "en": "Sushi"
+      }
+    },
+    {
+      "api": "U+1F364",
+      "text": "🍤",
+      "name": {
+        "th": "กุ้งเทมปุระ",
+        "en": "Fried Shrimp"
+      }
+    },
+    {
+      "api": "U+1F365",
+      "text": "🍥",
+      "name": {
+        "th": "คามาโบโกะ/ลูกชิ้นปลาวง",
+        "en": "Fish Cake with Swirl"
+      }
+    },
+    {
+      "api": "U+1F96E",
+      "text": "🥮",
+      "name": {
+        "th": "ขนมไหว้พระจันทร์",
+        "en": "Moon Cake"
+      }
+    },
+    {
+      "api": "U+1F361",
+      "text": "🍡",
+      "name": {
+        "th": "ดังงะ/ขนมเสียบไม้",
+        "en": "Dango"
+      }
+    },
+    {
+      "api": "U+1F960",
+      "text": "🥠",
+      "name": {
+        "th": "คุ้กกี้โชคดี/ขนมมงคล",
+        "en": "Fortune Cookie"
+      }
+    },
+    {
+      "api": "U+1F961",
+      "text": "🥡",
+      "name": {
+        "th": "กล่องอาหาร",
+        "en": "Takeout Box"
+      }
+    },
+    {
+      "api": "U+1F366",
+      "text": "🍦",
+      "name": {
+        "th": "ไอศกรีมโคน",
+        "en": "Soft Ice Cream"
+      }
+    },
+    {
+      "api": "U+1F367",
+      "text": "🍧",
+      "name": {
+        "th": "น้ำแข็งใส",
+        "en": "Shaved Ice"
+      }
+    },
+    {
+      "api": "U+1F368",
+      "text": "🍨",
+      "name": {
+        "th": "ไอศกรีมถ้วย",
+        "en": "Ice Cream"
+      }
+    },
+    {
+      "api": "U+1F369",
+      "text": "🍩",
+      "name": {
+        "th": "โดนัท",
+        "en": "Doughnut"
+      }
+    },
+    {
+      "api": "U+1F36A",
+      "text": "🍪",
+      "name": {
+        "th": "คุกกี้",
+        "en": "Cookie"
+      }
+    },
+    {
+      "api": "U+1F382",
+      "text": "🎂",
+      "name": {
+        "th": "เค้กวันเกิด",
+        "en": "Birthday Cake"
+      }
+    },
+    {
+      "api": "U+1F370",
+      "text": "🍰",
+      "name": {
+        "th": "เค้ก",
+        "en": "Shortcake"
+      }
+    },
+    {
+      "api": "U+1F9C1",
+      "text": "🧁",
+      "name": {
+        "th": "คัพเค้ก",
+        "en": "Cupcake"
+      }
+    },
+    {
+      "api": "U+1F967",
+      "text": "🥧",
+      "name": {
+        "th": "พาย",
+        "en": "Pie"
+      }
+    },
+    {
+      "api": "U+1F36B",
+      "text": "🍫",
+      "name": {
+        "th": "ช็อกโกแลต",
+        "en": "Chocolate Bar"
+      }
+    },
+    {
+      "api": "U+1F36C",
+      "text": "🍬",
+      "name": {
+        "th": "ลูกกวาด",
+        "en": "Candy"
+      }
+    },
+    {
+      "api": "U+1F36D",
+      "text": "🍭",
+      "name": {
+        "th": "อมยิ้ม",
+        "en": "Lollipop"
+      }
+    },
+    {
+      "api": "U+1F36E",
+      "text": "🍮",
+      "name": {
+        "th": "ขนมชนิดนิ่ม",
+        "en": "Custard"
+      }
+    },
+    {
+      "api": "U+1F36F",
+      "text": "🍯",
+      "name": {
+        "th": "น้ำผึ้ง",
+        "en": "Honey Pot"
+      }
+    },
+    {
+      "api": "U+1F95B",
+      "text": "🥛",
+      "name": {
+        "th": "นม",
+        "en": "Glass of Milk"
+      }
+    },
+    {
+      "api": "U+1F37C",
+      "text": "🍼",
+      "name": {
+        "th": "ขวดนมทารก",
+        "en": "Baby Bottle"
+      }
+    },
+    {
+      "api": "U+2615",
+      "text": "☕",
+      "name": {
+        "th": "เครื่องดื่มร้อน",
+        "en": "Hot Beverage"
+      }
+    },
+    {
+      "api": "U+1FAD6",
+      "text": "🫖",
+      "name": {
+        "th": "กาต้มน้ำ/ชา",
+        "en": "Teapot"
+      }
+    },
+    {
+      "api": "U+1F375",
+      "text": "🍵",
+      "name": {
+        "th": "ชาถ้วย",
+        "en": "Teacup Without Handle"
+      }
+    },
+    {
+      "api": "U+1F964",
+      "text": "🥤",
+      "name": {
+        "th": "เครื่องดื่มเย็น/แก้ว",
+        "en": "Cup with Straw"
+      }
+    },
+    {
+      "api": "U+1F9CB",
+      "text": "🧋",
+      "name": {
+        "th": "ชานมไข่มุก",
+        "en": "Bubble Tea"
+      }
+    },
+    {
+      "api": "U+1F9C3",
+      "text": "🧃",
+      "name": {
+        "th": "น้ำผลไม้กล่อง",
+        "en": "Beverage Box"
+      }
+    },
+    {
+      "api": "U+1F9C9",
+      "text": "🧉",
+      "name": {
+        "th": "มัทยา/เครื่องดื่มพื้นเมือง",
+        "en": "Mate"
+      }
+    },
+    {
+      "api": "U+1F9CA",
+      "text": "🧊",
+      "name": {
+        "th": "น้ำแข็ง",
+        "en": "Ice"
+      }
+    },
+    {
+      "api": "U+1F37A",
+      "text": "🍺",
+      "name": {
+        "th": "เบียร์",
+        "en": "Beer Mug"
+      }
+    },
+    {
+      "api": "U+1F37B",
+      "text": "🍻",
+      "name": {
+        "th": "ชนแก้ว",
+        "en": "Clinking Beer Mugs"
+      }
+    },
+    {
+      "api": "U+1F942",
+      "text": "🥂",
+      "name": {
+        "th": "จิบแชมเปญ",
+        "en": "Clinking Glasses"
+      }
+    },
+    {
+      "api": "U+1F377",
+      "text": "🍷",
+      "name": {
+        "th": "ไวน์",
+        "en": "Wine Glass"
+      }
+    },
+    {
+      "api": "U+1F943",
+      "text": "🥃",
+      "name": {
+        "th": "วิสกี้",
+        "en": "Tumbler Glass"
+      }
+    },
+    {
+      "api": "U+1F378",
+      "text": "🍸",
+      "name": {
+        "th": "ค็อกเทล",
+        "en": "Cocktail Glass"
+      }
+    },
+    {
+      "api": "U+1F378-200D-1F37A",
+      "text": "🍹",
+      "name": {
+        "th": "ค็อกเทล/ค็อกเทลฟรุต",
+        "en": "Tropical Drink"
+      }
+    },
+    {
+      "api": "U+1F376",
+      "text": "🍶",
+      "name": {
+        "th": "สาเก/ขวดเหล้า",
+        "en": "Sake"
+      }
+    },
+    {
+      "api": "U+1F962",
+      "text": "🥢",
+      "name": {
+        "th": "ตะเกียบ",
+        "en": "Chopsticks"
+      }
+    },
+    {
+      "api": "U+1F37D-FE0F",
+      "text": "🍽️",
+      "name": {
+        "th": "จานและช้อน",
+        "en": "Fork and Knife with Plate"
+      }
+    },
+    {
+      "api": "U+1F374",
+      "text": "🍴",
+      "name": {
+        "th": "ส้อมและมีด",
+        "en": "Fork and Knife"
+      }
+    },
+    {
+      "api": "U+1F944",
+      "text": "🥄",
+      "name": {
+        "th": "ช้อน",
+        "en": "Spoon"
+      }
+    },
+    {
+      "api": "U+1F52A",
+      "text": "🔪",
+      "name": {
+        "th": "มีดครัว",
+        "en": "Kitchen Knife"
+      }
+    },
+    {
+      "api": "U+1FAD9",
+      "text": "🫙",
+      "name": {
+        "th": "โหลแก้ว/โถ",
+        "en": "Jar"
+      }
+    },
+    {
+      "api": "U+1F3FA",
+      "text": "🏺",
+      "name": {
+        "th": "โอ่ง/ภาชนะโบราณ",
+        "en": "Amphora"
+      }
+    },
+    {
+      "api": "U+1FADA",
+      "text": "🫚",
+      "name": {
+        "th": "ขิง",
+        "en": "Ginger"
+      }
+    },
+    {
+      "api": "U+1FAD5",
+      "text": "🫕",
+      "name": {
+        "th": "ฟองดูว์",
+        "en": "Fondue"
+      }
+    },
+    {
+      "api": "U+1FAD7",
+      "text": "🫗",
+      "name": {
+        "th": "เทน้ำ",
+        "en": "Pouring Liquid"
+      }
+    },
+    {
+      "api": "U+1FADB",
+      "text": "🫛",
+      "name": {
+        "th": "ถั่วลันเตา",
+        "en": "Pea"
+      }
+    },
+    {
+      "api": "U+1FA73",
+      "text": "🩳",
+      "name": {
+        "th": "กางเกงขาสั้น",
+        "en": "Shorts"
+      }
+    },
+    {
+      "api": "U+1FA74",
+      "text": "🩴",
+      "name": {
+        "th": "รองเท้าแตะ",
+        "en": "Thong Sandal"
+      }
+    }
   ]
 }

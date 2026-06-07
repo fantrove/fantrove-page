@@ -5,200 +5,2885 @@
     "en": "People & Body"
   },
   "data": [
-    { "api": "U+1F44B", "text": "👋", "name": { "th": "โบกมือ", "en": "Waving Hand" } },
-    { "api": "U+1F91A", "text": "🤚", "name": { "th": "มือด้านหลัง", "en": "Raised Back of Hand" } },
-    { "api": "U+1F590", "text": "🖐️", "name": { "th": "มือห้าแฉก", "en": "Hand with Fingers Splayed" } },
-    { "api": "U+270B", "text": "✋", "name": { "th": "ยกมือ", "en": "Raised Hand" } },
-    { "api": "U+1F596", "text": "🖖", "name": { "th": "วูลคัน", "en": "Vulcan Salute" } },
-    { "api": "U+1F44C", "text": "👌", "name": { "th": "โอเค", "en": "OK Hand" } },
-    { "api": "U+1F90C", "text": "🤌", "name": { "th": "มือหยิบ", "en": "Pinched Fingers" } },
-    { "api": "U+1F90F", "text": "🤏", "name": { "th": "มือดีดนิ้ว", "en": "Pinching Hand" } },
-    { "api": "U+270C", "text": "✌️", "name": { "th": "ชูสองนิ้ว", "en": "Victory Hand" } },
-    { "api": "U+1F91E", "text": "🤞", "name": { "th": "ไขว้นิ้ว", "en": "Crossed Fingers" } },
-    { "api": "U+1F91F", "text": "🤟", "name": { "th": "ภาษามือรัก", "en": "Love-You Gesture" } },
-    { "api": "U+1F918", "text": "🤘", "name": { "th": "ร็อกแอนด์โรล", "en": "Sign of the Horns" } },
-    { "api": "U+1F919", "text": "🤙", "name": { "th": "โทรหาฉัน", "en": "Call Me Hand" } },
-    { "api": "U+1F448", "text": "👈", "name": { "th": "ชี้ซ้าย", "en": "Backhand Index Pointing Left" } },
-    { "api": "U+1F449", "text": "👉", "name": { "th": "ชี้ขวา", "en": "Backhand Index Pointing Right" } },
-    { "api": "U+1F446", "text": "👆", "name": { "th": "ชี้ขึ้น", "en": "Backhand Index Pointing Up" } },
-    { "api": "U+1F595", "text": "🖕", "name": { "th": "ชูนิ้วกลาง", "en": "Middle Finger" } },
-    { "api": "U+1F447", "text": "👇", "name": { "th": "ชี้ลง", "en": "Backhand Index Pointing Down" } },
-    { "api": "U+261D", "text": "☝️", "name": { "th": "ชูนิ้วชี้ขึ้น", "en": "Index Pointing Up" } },
-    { "api": "U+1FAF5", "text": "🫵", "name": { "th": "นิ้วชี้มาที่หน้า", "en": "Index Pointing at the Viewer" } },
-    { "api": "U+1F44D", "text": "👍", "name": { "th": "โป้งขึ้น", "en": "Thumbs Up" } },
-    { "api": "U+1F44E", "text": "👎", "name": { "th": "โป้งลง", "en": "Thumbs Down" } },
-    { "api": "U+270A", "text": "✊", "name": { "th": "กำหมัด", "en": "Raised Fist" } },
-    { "api": "U+1F44A", "text": "👊", "name": { "th": "ต่อย", "en": "Oncoming Fist" } },
-    { "api": "U+1F91B", "text": "🤛", "name": { "th": "หมัดซ้า���", "en": "Left-Facing Fist" } },
-    { "api": "U+1F91C", "text": "🤜", "name": { "th": "หมัดขวา", "en": "Right-Facing Fist" } },
-    { "api": "U+1F44F", "text": "👏", "name": { "th": "ตบมือ", "en": "Clapping Hands" } },
-    { "api": "U+1F64C", "text": "🙌", "name": { "th": "ดีใจ", "en": "Raising Hands" } },
-    { "api": "U+1F450", "text": "👐", "name": { "th": "มือแบ", "en": "Open Hands" } },
-    { "api": "U+1F932", "text": "🤲", "name": { "th": "มือถ้วย", "en": "Palms Up Together" } },
-    { "api": "U+1F91D", "text": "🤝", "name": { "th": "จับมือ", "en": "Handshake" } },
-    { "api": "U+1F64F", "text": "🙏", "name": { "th": "ไหว้/ขอพร", "en": "Folded Hands" } },
-    
-    { "api": "U+1FAF7", "text": "🫷", "name": { "th": "ผลักไปซ้าย", "en": "Palm Down Leftwards" } },
-    { "api": "U+1FAF8", "text": "🫸", "name": { "th": "ผลักไปขวา", "en": "Palm Down Rightwards" } },
-    
-    { "api": "U+270D", "text": "✍️", "name": { "th": "เขียน", "en": "Writing Hand" } },
-    { "api": "U+1F485", "text": "💅", "name": { "th": "ทาเล็บ", "en": "Nail Polish" } },
-    { "api": "U+1F933", "text": "🤳", "name": { "th": "เซลฟี่", "en": "Selfie" } },
-    { "api": "U+1F4AA", "text": "💪", "name": { "th": "แข็งแรง", "en": "Flexed Biceps" } },
-    { "api": "U+1F9BE", "text": "🦾", "name": { "th": "แขนกล", "en": "Mechanical Arm" } },
-    { "api": "U+1F9BF", "text": "🦿", "name": { "th": "ขากล", "en": "Mechanical Leg" } },
-    { "api": "U+1F9B5", "text": "🦵", "name": { "th": "ขา", "en": "Leg" } },
-    { "api": "U+1F9B6", "text": "🦶", "name": { "th": "เท้า", "en": "Foot" } },
-    { "api": "U+1F442", "text": "👂", "name": { "th": "หู", "en": "Ear" } },
-    { "api": "U+1F9BB", "text": "🦻", "name": { "th": "หูฟังประสาทเทียม", "en": "Ear with Hearing Aid" } },
-    { "api": "U+1F443", "text": "👃", "name": { "th": "จมูก", "en": "Nose" } },
-    { "api": "U+1F9E0", "text": "🧠", "name": { "th": "สมอง", "en": "Brain" } },
-    { "api": "U+1FAC0", "text": "🫀", "name": { "th": "หัวใจจริง", "en": "Anatomical Heart" } },
-    { "api": "U+1FAC1", "text": "🫁", "name": { "th": "ปอด", "en": "Lungs" } },
-    { "api": "U+1F9B7", "text": "🦷", "name": { "th": "ฟัน", "en": "Tooth" } },
-    { "api": "U+1F9B4", "text": "🦴", "name": { "th": "กระดูก", "en": "Bone" } },
-    { "api": "U+1F440", "text": "👀", "name": { "th": "ดวงตา", "en": "Eyes" } },
-    { "api": "U+1F441", "text": "👁️", "name": { "th": "ตาข้างเดียว", "en": "Eye" } },
-    { "api": "U+1F445", "text": "👅", "name": { "th": "ลิ้น", "en": "Tongue" } },
-    { "api": "U+1F444", "text": "👄", "name": { "th": "ปาก", "en": "Mouth" } },
-    { "api": "U+1FAE6", "text": "🫦", "name": { "th": "กัดริมฝีปาก", "en": "Biting Lip" } },
-    { "api": "U+1FA78", "text": "🩸", "name": { "th": "หยดเลือด", "en": "Drop of Blood" } },
-    { "api": "U+1F463", "text": "👣", "name": { "th": "รอยเท้า", "en": "Footprints" } },
-    
-    { "api": "U+1F476", "text": "👶", "name": { "th": "ทารก", "en": "Baby" } },
-    { "api": "U+1F467", "text": "👧", "name": { "th": "เด็กผู้หญิง", "en": "Girl" } },
-    { "api": "U+1F9D2", "text": "🧒", "name": { "th": "เด็ก", "en": "Child" } },
-    { "api": "U+1F466", "text": "👦", "name": { "th": "เด็กผู้ชาย", "en": "Boy" } },
-    { "api": "U+1F469", "text": "👩", "name": { "th": "ผู้หญิง", "en": "Woman" } },
-    { "api": "U+1F9D1", "text": "🧑", "name": { "th": "บุคคล", "en": "Person" } },
-    { "api": "U+1F468", "text": "👨", "name": { "th": "ผู้ชาย", "en": "Man" } },
-    { "api": "U+1F475", "text": "👵", "name": { "th": "หญิงชรา", "en": "Old Woman" } },
-    { "api": "U+1F9D3", "text": "🧓", "name": { "th": "สูงอายุ", "en": "Older Person" } },
-    { "api": "U+1F474", "text": "👴", "name": { "th": "ชายชรา", "en": "Old Man" } },
-    
-    { "api": "U+1F469-200D-1F9B1", "text": "👩‍🦱", "name": { "th": "ผู้หญิงผมหยิก", "en": "Woman: Curly Hair" } },
-    { "api": "U+1F468-200D-1F9B0", "text": "👨‍🦰", "name": { "th": "ผู้ชายผมแดง", "en": "Man: Red Hair" } },
-    { "api": "U+1F469-200D-1F9B3", "text": "👩‍🦳", "name": { "th": "ผู้หญิงผมขาว", "en": "Woman: White Hair" } },
-    { "api": "U+1F468-200D-1F9B2", "text": "👨‍🦲", "name": { "th": "ผู้ชายหัวล้าน", "en": "Man: Bald" } },
-    { "api": "U+1F9D4-200D-2640-FE0F", "text": "🧔‍♀️", "name": { "th": "ผู้หญิงมีหนวดเครา", "en": "Woman: Beard" } },
-    { "api": "U+1F9D4", "text": "🧔", "name": { "th": "คนมีหนวดเครา", "en": "Person: Beard" } },
-    { "api": "U+1F471-200D-2640-FE0F", "text": "👱‍♀️", "name": { "th": "ผู้หญิงผมบลอนด์", "en": "Woman: Blond Hair" } },
-    { "api": "U+1F471-200D-2642-FE0F", "text": "👱‍♂️", "name": { "th": "ผู้ชายผมบลอนด์", "en": "Man: Blond Hair" } },
-    
-    { "api": "U+1F472", "text": "👲", "name": { "th": "ชายสวมหมวก", "en": "Person with Skullcap" } },
-    { "api": "U+1F473-200D-2640-FE0F", "text": "👳‍♀️", "name": { "th": "ผู้หญิงโพกศีรษะ", "en": "Woman: Turban" } },
-    { "api": "U+1F473", "text": "👳", "name": { "th": "คนโพกศีรษะ", "en": "Person: Turban" } },
-    { "api": "U+1F473-200D-2642-FE0F", "text": "👳‍♂️", "name": { "th": "ผู้ชายโพกศีรษะ", "en": "Man: Turban" } },
-    { "api": "U+1F9D5", "text": "🧕", "name": { "th": "ผู้หญิงคลุมฮิญาบ", "en": "Woman: Headscarf" } },
-    
-    { "api": "U+1F935-200D-2640-FE0F", "text": "🤵‍♀️", "name": { "th": "ผู้หญิงชุดสูทเจ้าบ่าว", "en": "Woman: Tuxedo" } },
-    { "api": "U+1F935", "text": "🤵", "name": { "th": "เจ้าบ่าว", "en": "Person: Tuxedo" } },
-    { "api": "U+1F935-200D-2642-FE0F", "text": "🤵‍♂️", "name": { "th": "ผู้ชายชุดสูทเจ้าบ่าว", "en": "Man: Tuxedo" } },
-    { "api": "U+1F470-200D-2640-FE0F", "text": "👰‍♀️", "name": { "th": "เจ้าสาว (หญิง)", "en": "Woman: Veil" } },
-    { "api": "U+1F470", "text": "👰", "name": { "th": "เจ้าสาว", "en": "Person: Veil" } },
-    { "api": "U+1F470-200D-2642-FE0F", "text": "👰‍♂️", "name": { "th": "เจ้าสาว (ชาย)", "en": "Man: Veil" } },
-    { "api": "U+1F930", "text": "🤰", "name": { "th": "ตั้งครรภ์", "en": "Pregnant Woman" } },
-    { "api": "U+1FAC3", "text": "🫃", "name": { "th": "ผู้ชายตั้งครรภ์", "en": "Pregnant Man" } },
-    { "api": "U+1FAC4", "text": "🫄", "name": { "th": "บุคคลตั้งครรภ์", "en": "Pregnant Person" } },
-    { "api": "U+1F931", "text": "🤱", "name": { "th": "ให้นมลูก", "en": "Breastfeeding" } },
-    { "api": "U+1F469-200D-1F37C", "text": "👩‍🍼", "name": { "th": "ผู้หญิงให้นม", "en": "Woman Feeding Baby" } },
-    { "api": "U+1F9D1-200D-1F37C", "text": "🧑‍🍼", "name": { "th": "บุคคลให้นม", "en": "Person Feeding Baby" } },
-    { "api": "U+1F468-200D-1F37C", "text": "👨‍🍼", "name": { "th": "ผู้ชายให้นม", "en": "Man Feeding Baby" } },
-    { "api": "U+1F9D1-200D-2695-FE0F", "text": "🧑‍⚕️", "name": { "th": "บุคคลแพทย์", "en": "Health Worker" } },
-    { "api": "U+1F469-200D-1F393", "text": "👩‍🎓", "name": { "th": "ผู้หญิงบัณฑิต", "en": "Woman Student" } },
-    { "api": "U+1F9D1-200D-1F393", "text": "🧑‍🎓", "name": { "th": "บุคคลบัณฑิต", "en": "Student" } },
-    { "api": "U+1F469-200D-1F3EB", "text": "👩‍🏫", "name": { "th": "ผู้หญิงครู", "en": "Woman Teacher" } },
-    { "api": "U+1F9D1-200D-1F3EB", "text": "🧑‍🏫", "name": { "th": "บุคคลครู", "en": "Teacher" } },
-    { "api": "U+1F469-200D-2696-FE0F", "text": "👩‍⚖️", "name": { "th": "ผู้หญิงผู้พิพากษา", "en": "Woman Judge" } },
-    { "api": "U+1F469-200D-1F33E", "text": "👩‍🌾", "name": { "th": "ผู้หญิงชาวนา", "en": "Woman Farmer" } },
-    { "api": "U+1F9D1-200D-1F373", "text": "🧑‍🍳", "name": { "th": "บุคคลเชฟ", "en": "Cook" } },
-    { "api": "U+1F527", "text": "🔧", "name": { "th": "ประแจ", "en": "Wrench" } },
-    { "api": "U+1F469-200D-1F52C", "text": "👩‍🔬", "name": { "th": "ผู้หญิงนักวิทยาศาสตร์", "en": "Woman Scientist" } },
-    { "api": "U+1F3A8", "text": "🎨", "name": { "th": "จานสี", "en": "Artist Palette" } },
-    { "api": "U+1F469-200D-1F692", "text": "👩‍🚒", "name": { "th": "ผู้หญิงนักดับเพลิง", "en": "Woman Firefighter" } },
-    { "api": "U+1F46E-200D-2640-FE0F", "text": "👮‍♀️", "name": { "th": "ตำรวจหญิง", "en": "Woman Police Officer" } },
-    { "api": "U+1F575", "text": "🕵️", "name": { "th": "สายลับ", "en": "Detective" } },
-    { "api": "U+1F482", "text": "💂", "name": { "th": "ทหารรักษาพระองค์", "en": "Guard" } },
-    { "api": "U+1F477", "text": "👷", "name": { "th": "คนงานก่อสร้าง", "en": "Construction Worker" } },
-    { "api": "U+1F934", "text": "🤴", "name": { "th": "เจ้าชาย", "en": "Prince" } },
-    { "api": "U+1F478", "text": "👸", "name": { "th": "เจ้าหญิง", "en": "Princess" } },
-    { "api": "U+1F9B8", "text": "🦸", "name": { "th": "ซูเปอร์ฮีโร่", "en": "Superhero" } },
-    { "api": "U+1F9B9", "text": "🦹", "name": { "th": "ซูเปอร์วายร้าย", "en": "Supervillain" } },
-    { "api": "U+1F9D9", "text": "🧙", "name": { "th": "พ่อมด/แม่มด", "en": "Mage" } },
-    { "api": "U+1F9DA", "text": "🧚", "name": { "th": "ภูติ", "en": "Fairy" } },
-    { "api": "U+1F9DB", "text": "🧛", "name": { "th": "แวมไพร์", "en": "Vampire" } },
-    { "api": "U+1F9DC", "text": "🧜", "name": { "th": "เงือก", "en": "Merperson" } },
-    { "api": "U+1F9DD", "text": "🧝", "name": { "th": "เอลฟ์", "en": "Elf" } },
-    { "api": "U+1F9DE", "text": "🧞", "name": { "th": "จีนี่", "en": "Genie" } },
-    { "api": "U+1F9DF", "text": "🧟", "name": { "th": "ซอมบี้", "en": "Zombie" } },
-    
-    { "api": "U+1F9D7", "text": "🧗", "name": { "th": "ปีนเขา", "en": "Climbing" } },
-    { "api": "U+1F93A", "text": "🤺", "name": { "th": "ฟันดาบ", "en": "Fencing" } },
-    { "api": "U+1F3C7", "text": "🏇", "name": { "th": "แข่งม้า", "en": "Horse Racing" } },
-    { "api": "U+26F7", "text": "⛷️", "name": { "th": "สกี", "en": "Skier" } },
-    { "api": "U+1F3C2", "text": "🏂", "name": { "th": "สโนว์บอร์ด", "en": "Snowboarder" } },
-    { "api": "U+1F3C4", "text": "🏄", "name": { "th": "โต้คลื่น", "en": "Surfer" } },
-    { "api": "U+1F6A3", "text": "🚣", "name": { "th": "พายเรือ", "en": "Rowboat" } },
-    { "api": "U+1F3CA", "text": "🏊", "name": { "th": "ว่ายน้ำ", "en": "Swimmer" } },
-    { "api": "U+26F9", "text": "⛹️", "name": { "th": "บาสเก็ตบอล", "en": "Person Bouncing Ball" } },
-    { "api": "U+1F3CB", "text": "🏋️", "name": { "th": "ยกน้ำหนัก", "en": "Weightlifter" } },
-    { "api": "U+1F6B4", "text": "🚴", "name": { "th": "จักรยาน", "en": "Bicyclist" } },
-    { "api": "U+1F6B5", "text": "🚵", "name": { "th": "จักรยานภูเขา", "en": "Mountain Bicyclist" } },
-    { "api": "U+1F938", "text": "🤸", "name": { "th": "ยิมนาสติก", "en": "Cartwheeling" } },
-    { "api": "U+1F93C", "text": "🤼", "name": { "th": "มวยปล้ำ", "en": "Wrestling" } },
-    { "api": "U+1F93D", "text": "🤽", "name": { "th": "โปโลน้ำ", "en": "Water Polo" } },
-    { "api": "U+1F93E", "text": "🤾", "name": { "th": "แฮนด์บอล", "en": "Handball" } },
-    { "api": "U+1F939", "text": "🤹", "name": { "th": "เล่นกล", "en": "Juggling" } },
-    { "api": "U+1F9D8", "text": "🧘", "name": { "th": "นั่งสมาธิ", "en": "Person in Lotus Position" } },
-    { "api": "U+1F6C0", "text": "🛀", "name": { "th": "อาบน้ำ", "en": "Person Taking Bath" } },
-    { "api": "U+1F6CC", "text": "🛌", "name": { "th": "นอน", "en": "Person in Bed" } },
-    
-    { "api": "U+1F468-200D-1F469-200D-1F466", "text": "👨‍👩‍👦", "name": { "th": "ครอบครัว (พ่อแม่ลูกชาย)", "en": "Family: Man, Woman, Boy" } },
-    { "api": "U+1F468-200D-1F469-200D-1F467", "text": "👨‍👩‍👧", "name": { "th": "ครอบครัว (พ่อแม่ลูกสาว)", "en": "Family: Man, Woman, Girl" } },
-    { "api": "U+1F468-200D-1F469-200D-1F467-200D-1F466", "text": "👨‍👩‍👧‍👦", "name": { "th": "ครอบครัว (พ่อแม่ลูกสาวและลูกชาย)", "en": "Family: Man, Woman, Girl, Boy" } },
-    { "api": "U+1F468-200D-1F469-200D-1F466-200D-1F466", "text": "👨‍👩‍👦‍👦", "name": { "th": "ครอบครัว (พ่อแม่ลูกชายสองคน)", "en": "Family: Man, Woman, Boy, Boy" } },
-    { "api": "U+1F468-200D-1F469-200D-1F467-200D-1F467", "text": "👨‍👩‍👧‍👧", "name": { "th": "ครอบครัว (พ่อแม่ลูกสาวสองคน)", "en": "Family: Man, Woman, Girl, Girl" } },
-    { "api": "U+1F469-200D-1F469-200D-1F466", "text": "👩‍👩‍👦", "name": { "th": "ครอบครัว (หญิงหญิงลูกชาย)", "en": "Family: Woman, Woman, Boy" } },
-    { "api": "U+1F468-200D-1F468-200D-1F466", "text": "👨‍👨‍👦", "name": { "th": "ครอบครัว (ชายชายลูกชาย)", "en": "Family: Man, Man, Boy" } },
-    { "api": "U+1F469-200D-1F466", "text": "👩‍👦", "name": { "th": "แม่กับลูกชาย", "en": "Family: Woman, Boy" } },
-    { "api": "U+1F468-200D-1F466", "text": "👨‍👦", "name": { "th": "พ่อกับลูกชาย", "en": "Family: Man, Boy" } },
-    
-    { "api": "U+1F9D1-200D-1F91D-200D-1F9D1", "text": "🫅", "name": { "th": "คนสวมมงกุฎ/คนจับมือ (สัญลักษณ์)", "en": "Person Holding Hands / Person with Crown (symbolic)" } },
-    
-    { "api": "U+1F645", "text": "🙅", "name": { "th": "บุคคลห้าม", "en": "Person Gesturing No" } },
-    { "api": "U+1F646", "text": "🙆", "name": { "th": "บุคคลยอมรับ", "en": "Person Gesturing OK" } },
-    { "api": "U+1F481", "text": "💁", "name": { "th": "บุคคลยื่นมือ", "en": "Person Tipping Hand" } },
-    { "api": "U+1F64B", "text": "🙋", "name": { "th": "บุคคลยกมือ", "en": "Person Raising Hand" } },
-    { "api": "U+1F9CF", "text": "🧏", "name": { "th": "บุคคลหูหนวก", "en": "Deaf Person" } },
-    { "api": "U+1F647", "text": "🙇", "name": { "th": "บุคคลคำนับ", "en": "Person Bowing" } },
-    { "api": "U+1F926", "text": "🤦", "name": { "th": "บุคคลเอามือปิดหน้า", "en": "Person Facepalming" } },
-    { "api": "U+1F937", "text": "🤷", "name": { "th": "บุคคลยักไหล่", "en": "Person Shrugging" } },
-    
-    { "api": "U+2695-FE0F", "text": "⚕️", "name": { "th": "สัญลักษณ์การแพทย์", "en": "Medical Symbol" } },
-    { "api": "U+1F6B6", "text": "🚶", "name": { "th": "เดิน", "en": "Person Walking" } },
-    { "api": "U+1F3C3", "text": "🏃", "name": { "th": "วิ่ง", "en": "Person Running" } },
-    { "api": "U+1F57A", "text": "🕺", "name": { "th": "เต้นผู้ชาย", "en": "Man Dancing" } },
-    { "api": "U+1F483", "text": "💃", "name": { "th": "เต้นผู้หญิง", "en": "Woman Dancing" } },
-    { "api": "U+1F46F", "text": "👯", "name": { "th": "เต้นคู่/เพื่อน", "en": "People with Bunny Ears" } },
-    { "api": "U+1F9D6", "text": "🧖", "name": { "th": "ในสปา/อบไอน้ำ", "en": "Person in Steamy Room" } },
-    
-    { "api": "U+1F46E", "text": "👮", "name": { "th": "ตำรวจ", "en": "Police Officer" } },
-    { "api": "U+1F575-FE0F", "text": "🕵️", "name": { "th": "นักสืบ", "en": "Detective" } },
-    { "api": "U+1F482", "text": "💂", "name": { "th": "ยาม", "en": "Guard" } },
-    { "api": "U+1F477", "text": "👷", "name": { "th": "คนงานก่อสร้าง", "en": "Construction Worker" } },
-    { "api": "U+1F934", "text": "🤴", "name": { "th": "เจ้าชาย", "en": "Prince" } },
-    { "api": "U+1F478", "text": "👸", "name": { "th": "เจ้าหญิง", "en": "Princess" } },
-    { "api": "U+1F473", "text": "👳", "name": { "th": "คนโพกศีรษะ", "en": "Person Wearing Turban" } },
-    { "api": "U+1F472", "text": "👲", "name": { "th": "ชายสวมหมวก", "en": "Man with Chinese Cap" } },
-    { "api": "U+1F9D5", "text": "🧕", "name": { "th": "ผู้หญิงคลุมฮิญาบ", "en": "Woman with Headscarf" } },
-    { "api": "U+1F935", "text": "🤵", "name": { "th": "คนใส่ทักซิโด้", "en": "Person in Tuxedo" } },
-    { "api": "U+1F470", "text": "👰", "name": { "th": "คนใส่ผ้าคลุม", "en": "Person with Veil" } },
-    { "api": "U+1F930", "text": "🤰", "name": { "th": "ตั้งครรภ์", "en": "Pregnant Woman" } },
-    { "api": "U+1F931", "text": "🤱", "name": { "th": "ให้นมลูก", "en": "Breastfeeding" } },
-    
-    { "api": "U+1F468-200D-2642-FE0F-200D-27A1-FE0F", "text": "🚶‍♂️‍➡️", "name": { "th": "เดินหันขวา (ตัวอย่าง direction-specific)", "en": "Person Walking: Male, Facing Right (direction-specific example)" } },
-    { "api": "U+1F3C3-200D-2642-FE0F-200D-27A1-FE0F", "text": "🏃‍♂️‍➡️", "name": { "th": "วิ่งหันขวา (ตัวอย่าง direction-specific)", "en": "Person Running: Male, Facing Right (direction-specific example)" } },
-    { "api": "U+1F9BD-200D-27A1-FE0F", "text": "👨‍🦽‍➡️", "name": { "th": "นั่งรถเข็นหันขวา (ตัวอย่าง)", "en": "Man in Manual Wheelchair: Facing Right (example)" } },
-    { "api": "U+1F9BC-200D-27A1-FE0F", "text": "👨‍🦼‍➡️", "name": { "th": "นั่งรถเข็นไฟฟ้าหันขวา (ตัวอย่าง)", "en": "Man in Motorized Wheelchair: Facing Right (example)" } }
+    {
+      "api": "U+1F44B",
+      "text": "👋",
+      "name": {
+        "th": "โบกมือ",
+        "en": "Waving Hand"
+      }
+    },
+    {
+      "api": "U+1F91A",
+      "text": "🤚",
+      "name": {
+        "th": "มือด้านหลัง",
+        "en": "Raised Back of Hand"
+      }
+    },
+    {
+      "api": "U+1F590",
+      "text": "🖐️",
+      "name": {
+        "th": "มือห้าแฉก",
+        "en": "Hand with Fingers Splayed"
+      }
+    },
+    {
+      "api": "U+270B",
+      "text": "✋",
+      "name": {
+        "th": "ยกมือ",
+        "en": "Raised Hand"
+      }
+    },
+    {
+      "api": "U+1F596",
+      "text": "🖖",
+      "name": {
+        "th": "วูลคัน",
+        "en": "Vulcan Salute"
+      }
+    },
+    {
+      "api": "U+1F44C",
+      "text": "👌",
+      "name": {
+        "th": "โอเค",
+        "en": "OK Hand"
+      }
+    },
+    {
+      "api": "U+1F90C",
+      "text": "🤌",
+      "name": {
+        "th": "มือหยิบ",
+        "en": "Pinched Fingers"
+      }
+    },
+    {
+      "api": "U+1F90F",
+      "text": "🤏",
+      "name": {
+        "th": "มือดีดนิ้ว",
+        "en": "Pinching Hand"
+      }
+    },
+    {
+      "api": "U+270C",
+      "text": "✌️",
+      "name": {
+        "th": "ชูสองนิ้ว",
+        "en": "Victory Hand"
+      }
+    },
+    {
+      "api": "U+1F91E",
+      "text": "🤞",
+      "name": {
+        "th": "ไขว้นิ้ว",
+        "en": "Crossed Fingers"
+      }
+    },
+    {
+      "api": "U+1F91F",
+      "text": "🤟",
+      "name": {
+        "th": "ภาษามือรัก",
+        "en": "Love-You Gesture"
+      }
+    },
+    {
+      "api": "U+1F918",
+      "text": "🤘",
+      "name": {
+        "th": "ร็อกแอนด์โรล",
+        "en": "Sign of the Horns"
+      }
+    },
+    {
+      "api": "U+1F919",
+      "text": "🤙",
+      "name": {
+        "th": "โทรหาฉัน",
+        "en": "Call Me Hand"
+      }
+    },
+    {
+      "api": "U+1F448",
+      "text": "👈",
+      "name": {
+        "th": "ชี้ซ้าย",
+        "en": "Backhand Index Pointing Left"
+      }
+    },
+    {
+      "api": "U+1F449",
+      "text": "👉",
+      "name": {
+        "th": "ชี้ขวา",
+        "en": "Backhand Index Pointing Right"
+      }
+    },
+    {
+      "api": "U+1F446",
+      "text": "👆",
+      "name": {
+        "th": "ชี้ขึ้น",
+        "en": "Backhand Index Pointing Up"
+      }
+    },
+    {
+      "api": "U+1F595",
+      "text": "🖕",
+      "name": {
+        "th": "ชูนิ้วกลาง",
+        "en": "Middle Finger"
+      }
+    },
+    {
+      "api": "U+1F447",
+      "text": "👇",
+      "name": {
+        "th": "ชี้ลง",
+        "en": "Backhand Index Pointing Down"
+      }
+    },
+    {
+      "api": "U+261D",
+      "text": "☝️",
+      "name": {
+        "th": "ชูนิ้วชี้ขึ้น",
+        "en": "Index Pointing Up"
+      }
+    },
+    {
+      "api": "U+1FAF5",
+      "text": "🫵",
+      "name": {
+        "th": "นิ้วชี้มาที่หน้า",
+        "en": "Index Pointing at the Viewer"
+      }
+    },
+    {
+      "api": "U+1F44D",
+      "text": "👍",
+      "name": {
+        "th": "โป้งขึ้น",
+        "en": "Thumbs Up"
+      }
+    },
+    {
+      "api": "U+1F44E",
+      "text": "👎",
+      "name": {
+        "th": "โป้งลง",
+        "en": "Thumbs Down"
+      }
+    },
+    {
+      "api": "U+270A",
+      "text": "✊",
+      "name": {
+        "th": "กำหมัด",
+        "en": "Raised Fist"
+      }
+    },
+    {
+      "api": "U+1F44A",
+      "text": "👊",
+      "name": {
+        "th": "ต่อย",
+        "en": "Oncoming Fist"
+      }
+    },
+    {
+      "api": "U+1F91B",
+      "text": "🤛",
+      "name": {
+        "th": "หมัดซ้าย",
+        "en": "Left-Facing Fist"
+      }
+    },
+    {
+      "api": "U+1F91C",
+      "text": "🤜",
+      "name": {
+        "th": "หมัดขวา",
+        "en": "Right-Facing Fist"
+      }
+    },
+    {
+      "api": "U+1F44F",
+      "text": "👏",
+      "name": {
+        "th": "ตบมือ",
+        "en": "Clapping Hands"
+      }
+    },
+    {
+      "api": "U+1F64C",
+      "text": "🙌",
+      "name": {
+        "th": "ดีใจ",
+        "en": "Raising Hands"
+      }
+    },
+    {
+      "api": "U+1F450",
+      "text": "👐",
+      "name": {
+        "th": "มือแบ",
+        "en": "Open Hands"
+      }
+    },
+    {
+      "api": "U+1F932",
+      "text": "🤲",
+      "name": {
+        "th": "มือถ้วย",
+        "en": "Palms Up Together"
+      }
+    },
+    {
+      "api": "U+1F91D",
+      "text": "🤝",
+      "name": {
+        "th": "จับมือ",
+        "en": "Handshake"
+      }
+    },
+    {
+      "api": "U+1F64F",
+      "text": "🙏",
+      "name": {
+        "th": "ไหว้/ขอพร",
+        "en": "Folded Hands"
+      }
+    },
+    {
+      "api": "U+1FAF6",
+      "text": "🫶",
+      "name": {
+        "th": "มือหัวใจ",
+        "en": "Heart Hands"
+      }
+    },
+    {
+      "api": "U+1FAF1",
+      "text": "🫱",
+      "name": {
+        "th": "มือชี้ขวา",
+        "en": "Rightwards Hand"
+      }
+    },
+    {
+      "api": "U+1FAF2",
+      "text": "🫲",
+      "name": {
+        "th": "มือชี้ซ้าย",
+        "en": "Leftwards Hand"
+      }
+    },
+    {
+      "api": "U+1FAF3",
+      "text": "🫳",
+      "name": {
+        "th": "มือหงายลง",
+        "en": "Palm Down Hand"
+      }
+    },
+    {
+      "api": "U+1FAF4",
+      "text": "🫴",
+      "name": {
+        "th": "มือหงายขึ้น",
+        "en": "Palm Up Hand"
+      }
+    },
+    {
+      "api": "U+1FAF7",
+      "text": "🫷",
+      "name": {
+        "th": "ผลักไปซ้าย",
+        "en": "Palm Down Leftwards"
+      }
+    },
+    {
+      "api": "U+1FAF8",
+      "text": "🫸",
+      "name": {
+        "th": "ผลักไปขวา",
+        "en": "Palm Down Rightwards"
+      }
+    },
+    {
+      "api": "U+270D",
+      "text": "✍️",
+      "name": {
+        "th": "เขียน",
+        "en": "Writing Hand"
+      }
+    },
+    {
+      "api": "U+1F485",
+      "text": "💅",
+      "name": {
+        "th": "ทาเล็บ",
+        "en": "Nail Polish"
+      }
+    },
+    {
+      "api": "U+1F933",
+      "text": "🤳",
+      "name": {
+        "th": "เซลฟี่",
+        "en": "Selfie"
+      }
+    },
+    {
+      "api": "U+1F4AA",
+      "text": "💪",
+      "name": {
+        "th": "แข็งแรง",
+        "en": "Flexed Biceps"
+      }
+    },
+    {
+      "api": "U+1F9BE",
+      "text": "🦾",
+      "name": {
+        "th": "แขนกล",
+        "en": "Mechanical Arm"
+      }
+    },
+    {
+      "api": "U+1F9BF",
+      "text": "🦿",
+      "name": {
+        "th": "ขากล",
+        "en": "Mechanical Leg"
+      }
+    },
+    {
+      "api": "U+1F9B5",
+      "text": "🦵",
+      "name": {
+        "th": "ขา",
+        "en": "Leg"
+      }
+    },
+    {
+      "api": "U+1F9B6",
+      "text": "🦶",
+      "name": {
+        "th": "เท้า",
+        "en": "Foot"
+      }
+    },
+    {
+      "api": "U+1F442",
+      "text": "👂",
+      "name": {
+        "th": "หู",
+        "en": "Ear"
+      }
+    },
+    {
+      "api": "U+1F9BB",
+      "text": "🦻",
+      "name": {
+        "th": "หูฟังประสาทเทียม",
+        "en": "Ear with Hearing Aid"
+      }
+    },
+    {
+      "api": "U+1F443",
+      "text": "👃",
+      "name": {
+        "th": "จมูก",
+        "en": "Nose"
+      }
+    },
+    {
+      "api": "U+1F9E0",
+      "text": "🧠",
+      "name": {
+        "th": "สมอง",
+        "en": "Brain"
+      }
+    },
+    {
+      "api": "U+1FAC0",
+      "text": "🫀",
+      "name": {
+        "th": "หัวใจจริง",
+        "en": "Anatomical Heart"
+      }
+    },
+    {
+      "api": "U+1FAC1",
+      "text": "🫁",
+      "name": {
+        "th": "ปอด",
+        "en": "Lungs"
+      }
+    },
+    {
+      "api": "U+1F9B7",
+      "text": "🦷",
+      "name": {
+        "th": "ฟัน",
+        "en": "Tooth"
+      }
+    },
+    {
+      "api": "U+1F9B4",
+      "text": "🦴",
+      "name": {
+        "th": "กระดูก",
+        "en": "Bone"
+      }
+    },
+    {
+      "api": "U+1F440",
+      "text": "👀",
+      "name": {
+        "th": "ดวงตา",
+        "en": "Eyes"
+      }
+    },
+    {
+      "api": "U+1F441",
+      "text": "👁️",
+      "name": {
+        "th": "ตาข้างเดียว",
+        "en": "Eye"
+      }
+    },
+    {
+      "api": "U+1F445",
+      "text": "👅",
+      "name": {
+        "th": "ลิ้น",
+        "en": "Tongue"
+      }
+    },
+    {
+      "api": "U+1F444",
+      "text": "👄",
+      "name": {
+        "th": "ปาก",
+        "en": "Mouth"
+      }
+    },
+    {
+      "api": "U+1FAE6",
+      "text": "🫦",
+      "name": {
+        "th": "กัดริมฝีปาก",
+        "en": "Biting Lip"
+      }
+    },
+    {
+      "api": "U+1FA78",
+      "text": "🩸",
+      "name": {
+        "th": "หยดเลือด",
+        "en": "Drop of Blood"
+      }
+    },
+    {
+      "api": "U+1F463",
+      "text": "👣",
+      "name": {
+        "th": "รอยเท้า",
+        "en": "Footprints"
+      }
+    },
+    {
+      "api": "U+1F476",
+      "text": "👶",
+      "name": {
+        "th": "ทารก",
+        "en": "Baby"
+      }
+    },
+    {
+      "api": "U+1F467",
+      "text": "👧",
+      "name": {
+        "th": "เด็กผู้หญิง",
+        "en": "Girl"
+      }
+    },
+    {
+      "api": "U+1F9D2",
+      "text": "🧒",
+      "name": {
+        "th": "เด็ก",
+        "en": "Child"
+      }
+    },
+    {
+      "api": "U+1F466",
+      "text": "👦",
+      "name": {
+        "th": "เด็กผู้ชาย",
+        "en": "Boy"
+      }
+    },
+    {
+      "api": "U+1F469",
+      "text": "👩",
+      "name": {
+        "th": "ผู้หญิง",
+        "en": "Woman"
+      }
+    },
+    {
+      "api": "U+1F9D1",
+      "text": "🧑",
+      "name": {
+        "th": "บุคคล",
+        "en": "Person"
+      }
+    },
+    {
+      "api": "U+1F468",
+      "text": "👨",
+      "name": {
+        "th": "ผู้ชาย",
+        "en": "Man"
+      }
+    },
+    {
+      "api": "U+1F475",
+      "text": "👵",
+      "name": {
+        "th": "หญิงชรา",
+        "en": "Old Woman"
+      }
+    },
+    {
+      "api": "U+1F9D3",
+      "text": "🧓",
+      "name": {
+        "th": "สูงอายุ",
+        "en": "Older Person"
+      }
+    },
+    {
+      "api": "U+1F474",
+      "text": "👴",
+      "name": {
+        "th": "ชายชรา",
+        "en": "Old Man"
+      }
+    },
+    {
+      "api": "U+1F469-200D-1F9B1",
+      "text": "👩‍🦱",
+      "name": {
+        "th": "ผู้หญิงผมหยิก",
+        "en": "Woman: Curly Hair"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F9B0",
+      "text": "👨‍🦰",
+      "name": {
+        "th": "ผู้ชายผมแดง",
+        "en": "Man: Red Hair"
+      }
+    },
+    {
+      "api": "U+1F469-200D-1F9B3",
+      "text": "👩‍🦳",
+      "name": {
+        "th": "ผู้หญิงผมขาว",
+        "en": "Woman: White Hair"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F9B2",
+      "text": "👨‍🦲",
+      "name": {
+        "th": "ผู้ชายหัวล้าน",
+        "en": "Man: Bald"
+      }
+    },
+    {
+      "api": "U+1F9D4-200D-2640-FE0F",
+      "text": "🧔‍♀️",
+      "name": {
+        "th": "ผู้หญิงมีหนวดเครา",
+        "en": "Woman: Beard"
+      }
+    },
+    {
+      "api": "U+1F9D4",
+      "text": "🧔",
+      "name": {
+        "th": "คนมีหนวดเครา",
+        "en": "Person: Beard"
+      }
+    },
+    {
+      "api": "U+1F471-200D-2640-FE0F",
+      "text": "👱‍♀️",
+      "name": {
+        "th": "ผู้หญิงผมบลอนด์",
+        "en": "Woman: Blond Hair"
+      }
+    },
+    {
+      "api": "U+1F471-200D-2642-FE0F",
+      "text": "👱‍♂️",
+      "name": {
+        "th": "ผู้ชายผมบลอนด์",
+        "en": "Man: Blond Hair"
+      }
+    },
+    {
+      "api": "U+1F472",
+      "text": "👲",
+      "name": {
+        "th": "ชายสวมหมวก",
+        "en": "Person with Skullcap"
+      }
+    },
+    {
+      "api": "U+1F473-200D-2640-FE0F",
+      "text": "👳‍♀️",
+      "name": {
+        "th": "ผู้หญิงโพกศีรษะ",
+        "en": "Woman: Turban"
+      }
+    },
+    {
+      "api": "U+1F473",
+      "text": "👳",
+      "name": {
+        "th": "คนโพกศีรษะ",
+        "en": "Person: Turban"
+      }
+    },
+    {
+      "api": "U+1F473-200D-2642-FE0F",
+      "text": "👳‍♂️",
+      "name": {
+        "th": "ผู้ชายโพกศีรษะ",
+        "en": "Man: Turban"
+      }
+    },
+    {
+      "api": "U+1F9D5",
+      "text": "🧕",
+      "name": {
+        "th": "ผู้หญิงคลุมฮิญาบ",
+        "en": "Woman: Headscarf"
+      }
+    },
+    {
+      "api": "U+1F935-200D-2640-FE0F",
+      "text": "🤵‍♀️",
+      "name": {
+        "th": "ผู้หญิงชุดสูทเจ้าบ่าว",
+        "en": "Woman: Tuxedo"
+      }
+    },
+    {
+      "api": "U+1F935",
+      "text": "🤵",
+      "name": {
+        "th": "เจ้าบ่าว",
+        "en": "Person: Tuxedo"
+      }
+    },
+    {
+      "api": "U+1F935-200D-2642-FE0F",
+      "text": "🤵‍♂️",
+      "name": {
+        "th": "ผู้ชายชุดสูทเจ้าบ่าว",
+        "en": "Man: Tuxedo"
+      }
+    },
+    {
+      "api": "U+1F470-200D-2640-FE0F",
+      "text": "👰‍♀️",
+      "name": {
+        "th": "เจ้าสาว (หญิง)",
+        "en": "Woman: Veil"
+      }
+    },
+    {
+      "api": "U+1F470",
+      "text": "👰",
+      "name": {
+        "th": "เจ้าสาว",
+        "en": "Person: Veil"
+      }
+    },
+    {
+      "api": "U+1F470-200D-2642-FE0F",
+      "text": "👰‍♂️",
+      "name": {
+        "th": "เจ้าสาว (ชาย)",
+        "en": "Man: Veil"
+      }
+    },
+    {
+      "api": "U+1F930",
+      "text": "🤰",
+      "name": {
+        "th": "ตั้งครรภ์",
+        "en": "Pregnant Woman"
+      }
+    },
+    {
+      "api": "U+1FAC3",
+      "text": "🫃",
+      "name": {
+        "th": "ผู้ชายตั้งครรภ์",
+        "en": "Pregnant Man"
+      }
+    },
+    {
+      "api": "U+1FAC4",
+      "text": "🫄",
+      "name": {
+        "th": "บุคคลตั้งครรภ์",
+        "en": "Pregnant Person"
+      }
+    },
+    {
+      "api": "U+1F931",
+      "text": "🤱",
+      "name": {
+        "th": "ให้นมลูก",
+        "en": "Breastfeeding"
+      }
+    },
+    {
+      "api": "U+1F469-200D-1F37C",
+      "text": "👩‍🍼",
+      "name": {
+        "th": "ผู้หญิงให้นม",
+        "en": "Woman Feeding Baby"
+      }
+    },
+    {
+      "api": "U+1F9D1-200D-1F37C",
+      "text": "🧑‍🍼",
+      "name": {
+        "th": "บุคคลให้นม",
+        "en": "Person Feeding Baby"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F37C",
+      "text": "👨‍🍼",
+      "name": {
+        "th": "ผู้ชายให้นม",
+        "en": "Man Feeding Baby"
+      }
+    },
+    {
+      "api": "U+1F9D1-200D-2695-FE0F",
+      "text": "🧑‍⚕️",
+      "name": {
+        "th": "บุคคลแพทย์",
+        "en": "Health Worker"
+      }
+    },
+    {
+      "api": "U+1F468-200D-2695-FE0F",
+      "text": "👨‍⚕️",
+      "name": {
+        "th": "ผู้ชายแพทย์",
+        "en": "Man Health Worker"
+      }
+    },
+    {
+      "api": "U+1F469-200D-2695-FE0F",
+      "text": "👩‍⚕️",
+      "name": {
+        "th": "ผู้หญิงแพทย์",
+        "en": "Woman Health Worker"
+      }
+    },
+    {
+      "api": "U+1F9D1-200D-1F393",
+      "text": "🧑‍🎓",
+      "name": {
+        "th": "บุคคลบัณฑิต",
+        "en": "Student"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F393",
+      "text": "👨‍🎓",
+      "name": {
+        "th": "ผู้ชายบัณฑิต",
+        "en": "Man Student"
+      }
+    },
+    {
+      "api": "U+1F469-200D-1F393",
+      "text": "👩‍🎓",
+      "name": {
+        "th": "ผู้หญิงบัณฑิต",
+        "en": "Woman Student"
+      }
+    },
+    {
+      "api": "U+1F9D1-200D-1F3EB",
+      "text": "🧑‍🏫",
+      "name": {
+        "th": "บุคคลครู",
+        "en": "Teacher"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F3EB",
+      "text": "👨‍🏫",
+      "name": {
+        "th": "ผู้ชายครู",
+        "en": "Man Teacher"
+      }
+    },
+    {
+      "api": "U+1F469-200D-1F3EB",
+      "text": "👩‍🏫",
+      "name": {
+        "th": "ผู้หญิงครู",
+        "en": "Woman Teacher"
+      }
+    },
+    {
+      "api": "U+1F9D1-200D-2696-FE0F",
+      "text": "🧑‍⚖️",
+      "name": {
+        "th": "บุคคลผู้พิพากษา",
+        "en": "Judge"
+      }
+    },
+    {
+      "api": "U+1F468-200D-2696-FE0F",
+      "text": "👨‍⚖️",
+      "name": {
+        "th": "ผู้ชายผู้พิพากษา",
+        "en": "Man Judge"
+      }
+    },
+    {
+      "api": "U+1F469-200D-2696-FE0F",
+      "text": "👩‍⚖️",
+      "name": {
+        "th": "ผู้หญิงผู้พิพากษา",
+        "en": "Woman Judge"
+      }
+    },
+    {
+      "api": "U+1F9D1-200D-1F33E",
+      "text": "🧑‍🌾",
+      "name": {
+        "th": "บุคคลชาวนา",
+        "en": "Farmer"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F33E",
+      "text": "👨‍🌾",
+      "name": {
+        "th": "ผู้ชายชาวนา",
+        "en": "Man Farmer"
+      }
+    },
+    {
+      "api": "U+1F469-200D-1F33E",
+      "text": "👩‍🌾",
+      "name": {
+        "th": "ผู้หญิงชาวนา",
+        "en": "Woman Farmer"
+      }
+    },
+    {
+      "api": "U+1F9D1-200D-1F373",
+      "text": "🧑‍🍳",
+      "name": {
+        "th": "บุคคลเชฟ",
+        "en": "Cook"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F373",
+      "text": "👨‍🍳",
+      "name": {
+        "th": "ผู้ชายเชฟ",
+        "en": "Man Cook"
+      }
+    },
+    {
+      "api": "U+1F469-200D-1F373",
+      "text": "👩‍🍳",
+      "name": {
+        "th": "ผู้หญิงเชฟ",
+        "en": "Woman Cook"
+      }
+    },
+    {
+      "api": "U+1F9D1-200D-1F527",
+      "text": "🧑‍🔧",
+      "name": {
+        "th": "บุคคลช่างซ่อม",
+        "en": "Person Mechanic"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F527",
+      "text": "👨‍🔧",
+      "name": {
+        "th": "ผู้ชายช่างซ่อม",
+        "en": "Man Mechanic"
+      }
+    },
+    {
+      "api": "U+1F469-200D-1F527",
+      "text": "👩‍🔧",
+      "name": {
+        "th": "ผู้หญิงช่างซ่อม",
+        "en": "Woman Mechanic"
+      }
+    },
+    {
+      "api": "U+1F9D1-200D-1F3ED",
+      "text": "🧑‍🏭",
+      "name": {
+        "th": "บุคคลคนงานโรงงาน",
+        "en": "Factory Worker"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F3ED",
+      "text": "👨‍🏭",
+      "name": {
+        "th": "ผู้ชายคนงานโรงงาน",
+        "en": "Man Factory Worker"
+      }
+    },
+    {
+      "api": "U+1F469-200D-1F3ED",
+      "text": "👩‍🏭",
+      "name": {
+        "th": "ผู้หญิงคนงานโรงงาน",
+        "en": "Woman Factory Worker"
+      }
+    },
+    {
+      "api": "U+1F9D1-200D-1F4BC",
+      "text": "🧑‍💼",
+      "name": {
+        "th": "บุคคลพนักงานออฟฟิศ",
+        "en": "Office Worker"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F4BC",
+      "text": "👨‍💼",
+      "name": {
+        "th": "ผู้ชายพนักงานออฟฟิศ",
+        "en": "Man Office Worker"
+      }
+    },
+    {
+      "api": "U+1F469-200D-1F4BC",
+      "text": "👩‍💼",
+      "name": {
+        "th": "ผู้หญิงพนักงานออฟฟิศ",
+        "en": "Woman Office Worker"
+      }
+    },
+    {
+      "api": "U+1F9D1-200D-1F4BB",
+      "text": "🧑‍💻",
+      "name": {
+        "th": "บุคคลนักเทคโนโลยี",
+        "en": "Technologist"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F4BB",
+      "text": "👨‍💻",
+      "name": {
+        "th": "ผู้ชายนักเทคโนโลยี",
+        "en": "Man Technologist"
+      }
+    },
+    {
+      "api": "U+1F469-200D-1F4BB",
+      "text": "👩‍💻",
+      "name": {
+        "th": "ผู้หญิงนักเทคโนโลยี",
+        "en": "Woman Technologist"
+      }
+    },
+    {
+      "api": "U+1F9D1-200D-1F3A4",
+      "text": "🧑‍🎤",
+      "name": {
+        "th": "บุคคลนักร้อง",
+        "en": "Singer"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F3A4",
+      "text": "👨‍🎤",
+      "name": {
+        "th": "ผู้ชายนักร้อง",
+        "en": "Man Singer"
+      }
+    },
+    {
+      "api": "U+1F469-200D-1F3A4",
+      "text": "👩‍🎤",
+      "name": {
+        "th": "ผู้หญิงนักร้อง",
+        "en": "Woman Singer"
+      }
+    },
+    {
+      "api": "U+1F9D1-200D-1F3A8",
+      "text": "🧑‍🎨",
+      "name": {
+        "th": "บุคคลศิลปิน",
+        "en": "Artist"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F3A8",
+      "text": "👨‍🎨",
+      "name": {
+        "th": "ผู้ชายศิลปิน",
+        "en": "Man Artist"
+      }
+    },
+    {
+      "api": "U+1F469-200D-1F3A8",
+      "text": "👩‍🎨",
+      "name": {
+        "th": "ผู้หญิงศิลปิน",
+        "en": "Woman Artist"
+      }
+    },
+    {
+      "api": "U+1F9D1-200D-2708-FE0F",
+      "text": "🧑‍✈️",
+      "name": {
+        "th": "บุคคลนักบิน",
+        "en": "Pilot"
+      }
+    },
+    {
+      "api": "U+1F468-200D-2708-FE0F",
+      "text": "👨‍✈️",
+      "name": {
+        "th": "ผู้ชายนักบิน",
+        "en": "Man Pilot"
+      }
+    },
+    {
+      "api": "U+1F469-200D-2708-FE0F",
+      "text": "👩‍✈️",
+      "name": {
+        "th": "ผู้หญิงนักบิน",
+        "en": "Woman Pilot"
+      }
+    },
+    {
+      "api": "U+1F9D1-200D-1F680",
+      "text": "🧑‍🚀",
+      "name": {
+        "th": "บุคคลนักบินอวกาศ",
+        "en": "Astronaut"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F680",
+      "text": "👨‍🚀",
+      "name": {
+        "th": "ผู้ชายนักบินอวกาศ",
+        "en": "Man Astronaut"
+      }
+    },
+    {
+      "api": "U+1F469-200D-1F680",
+      "text": "👩‍🚀",
+      "name": {
+        "th": "ผู้หญิงนักบินอวกาศ",
+        "en": "Woman Astronaut"
+      }
+    },
+    {
+      "api": "U+1F469-200D-1F52C",
+      "text": "👩‍🔬",
+      "name": {
+        "th": "ผู้หญิงนักวิทยาศาสตร์",
+        "en": "Woman Scientist"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F52C",
+      "text": "👨‍🔬",
+      "name": {
+        "th": "ผู้ชายนักวิทยาศาสตร์",
+        "en": "Man Scientist"
+      }
+    },
+    {
+      "api": "U+1F469-200D-1F692",
+      "text": "👩‍🚒",
+      "name": {
+        "th": "ผู้หญิงนักดับเพลิง",
+        "en": "Woman Firefighter"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F692",
+      "text": "👨‍🚒",
+      "name": {
+        "th": "ผู้ชายนักดับเพลิง",
+        "en": "Man Firefighter"
+      }
+    },
+    {
+      "api": "U+1F46E",
+      "text": "👮",
+      "name": {
+        "th": "ตำรวจ",
+        "en": "Police Officer"
+      }
+    },
+    {
+      "api": "U+1F46E-200D-2640-FE0F",
+      "text": "👮‍♀️",
+      "name": {
+        "th": "ตำรวจหญิง",
+        "en": "Woman Police Officer"
+      }
+    },
+    {
+      "api": "U+1F46E-200D-2642-FE0F",
+      "text": "👮‍♂️",
+      "name": {
+        "th": "ตำรวจชาย",
+        "en": "Man Police Officer"
+      }
+    },
+    {
+      "api": "U+1F575",
+      "text": "🕵️",
+      "name": {
+        "th": "สายลับ",
+        "en": "Detective"
+      }
+    },
+    {
+      "api": "U+1F482",
+      "text": "💂",
+      "name": {
+        "th": "ทหารรักษาพระองค์",
+        "en": "Guard"
+      }
+    },
+    {
+      "api": "U+1F477",
+      "text": "👷",
+      "name": {
+        "th": "คนงานก่อสร้าง",
+        "en": "Construction Worker"
+      }
+    },
+    {
+      "api": "U+1F934",
+      "text": "🤴",
+      "name": {
+        "th": "เจ้าชาย",
+        "en": "Prince"
+      }
+    },
+    {
+      "api": "U+1F478",
+      "text": "👸",
+      "name": {
+        "th": "เจ้าหญิง",
+        "en": "Princess"
+      }
+    },
+    {
+      "api": "U+1F9B8",
+      "text": "🦸",
+      "name": {
+        "th": "ซูเปอร์ฮีโร่",
+        "en": "Superhero"
+      }
+    },
+    {
+      "api": "U+1F9B9",
+      "text": "🦹",
+      "name": {
+        "th": "ซูเปอร์วายร้าย",
+        "en": "Supervillain"
+      }
+    },
+    {
+      "api": "U+1F9D9",
+      "text": "🧙",
+      "name": {
+        "th": "พ่อมด/แม่มด",
+        "en": "Mage"
+      }
+    },
+    {
+      "api": "U+1F9DA",
+      "text": "🧚",
+      "name": {
+        "th": "ภูติ",
+        "en": "Fairy"
+      }
+    },
+    {
+      "api": "U+1F9DB",
+      "text": "🧛",
+      "name": {
+        "th": "แวมไพร์",
+        "en": "Vampire"
+      }
+    },
+    {
+      "api": "U+1F9DC",
+      "text": "🧜",
+      "name": {
+        "th": "เงือก",
+        "en": "Merperson"
+      }
+    },
+    {
+      "api": "U+1F9DD",
+      "text": "🧝",
+      "name": {
+        "th": "เอลฟ์",
+        "en": "Elf"
+      }
+    },
+    {
+      "api": "U+1F9DE",
+      "text": "🧞",
+      "name": {
+        "th": "จีนี่",
+        "en": "Genie"
+      }
+    },
+    {
+      "api": "U+1F9DF",
+      "text": "🧟",
+      "name": {
+        "th": "ซอมบี้",
+        "en": "Zombie"
+      }
+    },
+    {
+      "api": "U+1F7CC",
+      "text": "🧌",
+      "name": {
+        "th": "โทรลล์",
+        "en": "Troll"
+      }
+    },
+    {
+      "api": "U+1F9D7",
+      "text": "🧗",
+      "name": {
+        "th": "ปีนเขา",
+        "en": "Climbing"
+      }
+    },
+    {
+      "api": "U+1F93A",
+      "text": "🤺",
+      "name": {
+        "th": "ฟันดาบ",
+        "en": "Fencing"
+      }
+    },
+    {
+      "api": "U+1F3C7",
+      "text": "🏇",
+      "name": {
+        "th": "แข่งม้า",
+        "en": "Horse Racing"
+      }
+    },
+    {
+      "api": "U+26F7",
+      "text": "⛷️",
+      "name": {
+        "th": "สกี",
+        "en": "Skier"
+      }
+    },
+    {
+      "api": "U+1F3C2",
+      "text": "🏂",
+      "name": {
+        "th": "สโนว์บอร์ด",
+        "en": "Snowboarder"
+      }
+    },
+    {
+      "api": "U+1F3C4",
+      "text": "🏄",
+      "name": {
+        "th": "โต้คลื่น",
+        "en": "Surfer"
+      }
+    },
+    {
+      "api": "U+1F6A3",
+      "text": "🚣",
+      "name": {
+        "th": "พายเรือ",
+        "en": "Rowboat"
+      }
+    },
+    {
+      "api": "U+1F3CA",
+      "text": "🏊",
+      "name": {
+        "th": "ว่ายน้ำ",
+        "en": "Swimmer"
+      }
+    },
+    {
+      "api": "U+26F9",
+      "text": "⛹️",
+      "name": {
+        "th": "บาสเก็ตบอล",
+        "en": "Person Bouncing Ball"
+      }
+    },
+    {
+      "api": "U+1F3CB",
+      "text": "🏋️",
+      "name": {
+        "th": "ยกน้ำหนัก",
+        "en": "Weightlifter"
+      }
+    },
+    {
+      "api": "U+1F6B4",
+      "text": "🚴",
+      "name": {
+        "th": "จักรยาน",
+        "en": "Bicyclist"
+      }
+    },
+    {
+      "api": "U+1F6B5",
+      "text": "🚵",
+      "name": {
+        "th": "จักรยานภูเขา",
+        "en": "Mountain Bicyclist"
+      }
+    },
+    {
+      "api": "U+1F938",
+      "text": "🤸",
+      "name": {
+        "th": "ยิมนาสติก",
+        "en": "Cartwheeling"
+      }
+    },
+    {
+      "api": "U+1F93C",
+      "text": "🤼",
+      "name": {
+        "th": "มวยปล้ำ",
+        "en": "Wrestling"
+      }
+    },
+    {
+      "api": "U+1F93D",
+      "text": "🤽",
+      "name": {
+        "th": "โปโลน้ำ",
+        "en": "Water Polo"
+      }
+    },
+    {
+      "api": "U+1F93E",
+      "text": "🤾",
+      "name": {
+        "th": "แฮนด์บอล",
+        "en": "Handball"
+      }
+    },
+    {
+      "api": "U+1F939",
+      "text": "🤹",
+      "name": {
+        "th": "เล่นกล",
+        "en": "Juggling"
+      }
+    },
+    {
+      "api": "U+1F9D8",
+      "text": "🧘",
+      "name": {
+        "th": "นั่งสมาธิ",
+        "en": "Person in Lotus Position"
+      }
+    },
+    {
+      "api": "U+1F6C0",
+      "text": "🛀",
+      "name": {
+        "th": "อาบน้ำ",
+        "en": "Person Taking Bath"
+      }
+    },
+    {
+      "api": "U+1F6CC",
+      "text": "🛌",
+      "name": {
+        "th": "นอน",
+        "en": "Person in Bed"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F469-200D-1F466",
+      "text": "👨‍👩‍👦",
+      "name": {
+        "th": "ครอบครัว (พ่อแม่ลูกชาย)",
+        "en": "Family: Man, Woman, Boy"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F469-200D-1F467",
+      "text": "👨‍👩‍👧",
+      "name": {
+        "th": "ครอบครัว (พ่อแม่ลูกสาว)",
+        "en": "Family: Man, Woman, Girl"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F469-200D-1F467-200D-1F466",
+      "text": "👨‍👩‍👧‍👦",
+      "name": {
+        "th": "ครอบครัว (พ่อแม่ลูกสาวและลูกชาย)",
+        "en": "Family: Man, Woman, Girl, Boy"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F469-200D-1F466-200D-1F466",
+      "text": "👨‍👩‍👦‍👦",
+      "name": {
+        "th": "ครอบครัว (พ่อแม่ลูกชายสองคน)",
+        "en": "Family: Man, Woman, Boy, Boy"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F469-200D-1F467-200D-1F467",
+      "text": "👨‍👩‍👧‍👧",
+      "name": {
+        "th": "ครอบครัว (พ่อแม่ลูกสาวสองคน)",
+        "en": "Family: Man, Woman, Girl, Girl"
+      }
+    },
+    {
+      "api": "U+1F469-200D-1F469-200D-1F466",
+      "text": "👩‍👩‍👦",
+      "name": {
+        "th": "ครอบครัว (หญิงหญิงลูกชาย)",
+        "en": "Family: Woman, Woman, Boy"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F468-200D-1F466",
+      "text": "👨‍👨‍👦",
+      "name": {
+        "th": "ครอบครัว (ชายชายลูกชาย)",
+        "en": "Family: Man, Man, Boy"
+      }
+    },
+    {
+      "api": "U+1F469-200D-1F466",
+      "text": "👩‍👦",
+      "name": {
+        "th": "แม่กับลูกชาย",
+        "en": "Family: Woman, Boy"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F466",
+      "text": "👨‍👦",
+      "name": {
+        "th": "พ่อกับลูกชาย",
+        "en": "Family: Man, Boy"
+      }
+    },
+    {
+      "api": "U+1F9D1-200D-1F91D-200D-1F9D1",
+      "text": "🧑‍🤝‍🧑",
+      "name": {
+        "th": "คนจับมือ",
+        "en": "People Holding Hands"
+      }
+    },
+    {
+      "api": "U+1F645",
+      "text": "🙅",
+      "name": {
+        "th": "บุคคลห้าม",
+        "en": "Person Gesturing No"
+      }
+    },
+    {
+      "api": "U+1F646",
+      "text": "🙆",
+      "name": {
+        "th": "บุคคลยอมรับ",
+        "en": "Person Gesturing OK"
+      }
+    },
+    {
+      "api": "U+1F481",
+      "text": "💁",
+      "name": {
+        "th": "บุคคลยื่นมือ",
+        "en": "Person Tipping Hand"
+      }
+    },
+    {
+      "api": "U+1F64B",
+      "text": "🙋",
+      "name": {
+        "th": "บุคคลยกมือ",
+        "en": "Person Raising Hand"
+      }
+    },
+    {
+      "api": "U+1F9CF",
+      "text": "🧏",
+      "name": {
+        "th": "บุคคลหูหนวก",
+        "en": "Deaf Person"
+      }
+    },
+    {
+      "api": "U+1F647",
+      "text": "🙇",
+      "name": {
+        "th": "บุคคลคำนับ",
+        "en": "Person Bowing"
+      }
+    },
+    {
+      "api": "U+1F926",
+      "text": "🤦",
+      "name": {
+        "th": "บุคคลเอามือปิดหน้า",
+        "en": "Person Facepalming"
+      }
+    },
+    {
+      "api": "U+1F937",
+      "text": "🤷",
+      "name": {
+        "th": "บุคคลยักไหล่",
+        "en": "Person Shrugging"
+      }
+    },
+    {
+      "api": "U+2695-FE0F",
+      "text": "⚕️",
+      "name": {
+        "th": "สัญลักษณ์การแพทย์",
+        "en": "Medical Symbol"
+      }
+    },
+    {
+      "api": "U+1F527",
+      "text": "🔧",
+      "name": {
+        "th": "ประแจ",
+        "en": "Wrench"
+      }
+    },
+    {
+      "api": "U+1F3A8",
+      "text": "🎨",
+      "name": {
+        "th": "จานสี",
+        "en": "Artist Palette"
+      }
+    },
+    {
+      "api": "U+1F6B6",
+      "text": "🚶",
+      "name": {
+        "th": "เดิน",
+        "en": "Person Walking"
+      }
+    },
+    {
+      "api": "U+1F3C3",
+      "text": "🏃",
+      "name": {
+        "th": "วิ่ง",
+        "en": "Person Running"
+      }
+    },
+    {
+      "api": "U+1F9CD",
+      "text": "🧍",
+      "name": {
+        "th": "ยืน",
+        "en": "Standing"
+      }
+    },
+    {
+      "api": "U+1F9CE",
+      "text": "🧎",
+      "name": {
+        "th": "คุกเข่า",
+        "en": "Kneeling"
+      }
+    },
+    {
+      "api": "U+1F9D1-200D-1F9AF",
+      "text": "🧑‍🦯",
+      "name": {
+        "th": "บุคคลใช้ไม้เท้าขาว",
+        "en": "Person with White Cane"
+      }
+    },
+    {
+      "api": "U+1F9D1-200D-1F9BC",
+      "text": "🧑‍🦼",
+      "name": {
+        "th": "บุคคลนั่งรถเข็นไฟฟ้า",
+        "en": "Person in Motorized Wheelchair"
+      }
+    },
+    {
+      "api": "U+1F9D1-200D-1F9BD",
+      "text": "🧑‍🦽",
+      "name": {
+        "th": "บุคคลนั่งรถเข็น",
+        "en": "Person in Manual Wheelchair"
+      }
+    },
+    {
+      "api": "U+1F57A",
+      "text": "🕺",
+      "name": {
+        "th": "เต้นผู้ชาย",
+        "en": "Man Dancing"
+      }
+    },
+    {
+      "api": "U+1F483",
+      "text": "💃",
+      "name": {
+        "th": "เต้นผู้หญิง",
+        "en": "Woman Dancing"
+      }
+    },
+    {
+      "api": "U+1F46F",
+      "text": "👯",
+      "name": {
+        "th": "เต้นคู่/เพื่อน",
+        "en": "People with Bunny Ears"
+      }
+    },
+    {
+      "api": "U+1F9D6",
+      "text": "🧖",
+      "name": {
+        "th": "ในสปา/อบไอน้ำ",
+        "en": "Person in Steamy Room"
+      }
+    },
+    {
+      "api": "U+1F9D1-200D-1F52C",
+      "text": "🧑‍🔬",
+      "name": {
+        "th": "บุคคลนักวิทยาศาสตร์",
+        "en": "Scientist"
+      }
+    },
+    {
+      "api": "U+1F9D1-200D-1F692",
+      "text": "🧑‍🚒",
+      "name": {
+        "th": "บุคคลนักดับเพลิง",
+        "en": "Firefighter"
+      }
+    },
+    {
+      "api": "U+1F46B",
+      "text": "👫",
+      "name": {
+        "th": "คู่รักชายหญิง",
+        "en": "Man and Woman Holding Hands"
+      }
+    },
+    {
+      "api": "U+1F46C",
+      "text": "👬",
+      "name": {
+        "th": "คู่รักชายชาย",
+        "en": "Men Holding Hands"
+      }
+    },
+    {
+      "api": "U+1F46D",
+      "text": "👭",
+      "name": {
+        "th": "คู่รักหญิงหญิง",
+        "en": "Women Holding Hands"
+      }
+    },
+    {
+      "api": "U+1F469-200D-2764-FE0F-200D-1F468",
+      "text": "👩‍❤️‍👨",
+      "name": {
+        "th": "หญิงรักชาย",
+        "en": "Couple with Heart: Woman, Man"
+      }
+    },
+    {
+      "api": "U+1F468-200D-2764-FE0F-200D-1F468",
+      "text": "👨‍❤️‍👨",
+      "name": {
+        "th": "ชายรักชาย",
+        "en": "Couple with Heart: Man, Man"
+      }
+    },
+    {
+      "api": "U+1F469-200D-2764-FE0F-200D-1F469",
+      "text": "👩‍❤️‍👩",
+      "name": {
+        "th": "หญิงรักหญิง",
+        "en": "Couple with Heart: Woman, Woman"
+      }
+    },
+    {
+      "api": "U+1F469-200D-2764-FE0F-200D-1F48B-200D-1F468",
+      "text": "👩‍❤️‍💋‍👨",
+      "name": {
+        "th": "หญิงจูบชาย",
+        "en": "Kiss: Woman, Man"
+      }
+    },
+    {
+      "api": "U+1F468-200D-2764-FE0F-200D-1F48B-200D-1F468",
+      "text": "👨‍❤️‍💋‍👨",
+      "name": {
+        "th": "ชายจูบชาย",
+        "en": "Kiss: Man, Man"
+      }
+    },
+    {
+      "api": "U+1F469-200D-2764-FE0F-200D-1F48B-200D-1F469",
+      "text": "👩‍❤️‍💋‍👩",
+      "name": {
+        "th": "หญิงจูบหญิง",
+        "en": "Kiss: Woman, Woman"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F466-200D-1F466",
+      "text": "👨‍👦‍👦",
+      "name": {
+        "th": "พ่อกับลูกชายสองคน",
+        "en": "Family: Man, Boy, Boy"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F467-200D-1F467",
+      "text": "👨‍👧‍👧",
+      "name": {
+        "th": "พ่อกับลูกสาวสองคน",
+        "en": "Family: Man, Girl, Girl"
+      }
+    },
+    {
+      "api": "U+1F469-200D-1F467-200D-1F467",
+      "text": "👩‍👧‍👧",
+      "name": {
+        "th": "แม่กับลูกสาวสองคน",
+        "en": "Family: Woman, Girl, Girl"
+      }
+    },
+    {
+      "api": "U+1F469-200D-1F466-200D-1F466",
+      "text": "👩‍👦‍👦",
+      "name": {
+        "th": "แม่กับลูกชายสองคน",
+        "en": "Family: Woman, Boy, Boy"
+      }
+    },
+    {
+      "api": "U+1F469-200D-1F467-200D-1F466",
+      "text": "👩‍👧‍👦",
+      "name": {
+        "th": "แม่กับลูกสาวและลูกชาย",
+        "en": "Family: Woman, Girl, Boy"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F467-200D-1F466",
+      "text": "👨‍👧‍👦",
+      "name": {
+        "th": "พ่อกับลูกสาวและลูกชาย",
+        "en": "Family: Man, Girl, Boy"
+      }
+    },
+    {
+      "api": "U+1F469-200D-1F469-200D-1F467",
+      "text": "👩‍👩‍👧",
+      "name": {
+        "th": "ครอบครัว (หญิงหญิงลูกสาว)",
+        "en": "Family: Woman, Woman, Girl"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F468-200D-1F467",
+      "text": "👨‍👨‍👧",
+      "name": {
+        "th": "ครอบครัว (ชายชายลูกสาว)",
+        "en": "Family: Man, Man, Girl"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F468-200D-1F466-200D-1F466",
+      "text": "👨‍👨‍👦‍👦",
+      "name": {
+        "th": "ครอบครัว (ชายชายลูกชายสอง)",
+        "en": "Family: Man, Man, Boy, Boy"
+      }
+    },
+    {
+      "api": "U+1F469-200D-1F469-200D-1F467-200D-1F467",
+      "text": "👩‍👩‍👧‍👧",
+      "name": {
+        "th": "ครอบครัว (หญิงหญิงลูกสาวสอง)",
+        "en": "Family: Woman, Woman, Girl, Girl"
+      }
+    },
+    {
+      "api": "U+1F469-200D-1F469-200D-1F466-200D-1F466",
+      "text": "👩‍👩‍👦‍👦",
+      "name": {
+        "th": "ครอบครัว (หญิงหญิงลูกชายสอง)",
+        "en": "Family: Woman, Woman, Boy, Boy"
+      }
+    },
+    {
+      "api": "U+1F469-200D-1F467",
+      "text": "👩‍👧",
+      "name": {
+        "th": "แม่กับลูกสาว",
+        "en": "Family: Woman, Girl"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F467",
+      "text": "👨‍👧",
+      "name": {
+        "th": "พ่อกับลูกสาว",
+        "en": "Family: Man, Girl"
+      }
+    },
+    {
+      "api": "U+1F575-FE0F",
+      "text": "🕵️",
+      "name": {
+        "th": "สายลับ",
+        "en": "Detective"
+      }
+    },
+    {
+      "api": "U+1F9D1-200D-1F692",
+      "text": "🧑‍🚒",
+      "name": {
+        "th": "บุคคลนักดับเพลิง",
+        "en": "Firefighter"
+      }
+    },
+    {
+      "api": "U+1F9D1-200D-1F9B0",
+      "text": "🧑‍🦰",
+      "name": {
+        "th": "บุคคลผมแดง",
+        "en": "Person: Red Hair"
+      }
+    },
+    {
+      "api": "U+1F9D1-200D-1F9B1",
+      "text": "🧑‍🦱",
+      "name": {
+        "th": "บุคคลผมหยิก",
+        "en": "Person: Curly Hair"
+      }
+    },
+    {
+      "api": "U+1F9D1-200D-1F9B3",
+      "text": "🧑‍🦳",
+      "name": {
+        "th": "บุคคลผมขาว",
+        "en": "Person: White Hair"
+      }
+    },
+    {
+      "api": "U+1F9D1-200D-1F9B2",
+      "text": "🧑‍🦲",
+      "name": {
+        "th": "บุคคลหัวล้าน",
+        "en": "Person: Bald"
+      }
+    },
+    {
+      "api": "U+1F469-200D-1F9B0",
+      "text": "👩‍🦰",
+      "name": {
+        "th": "ผู้หญิงผมแดง",
+        "en": "Woman: Red Hair"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F9B1",
+      "text": "👨‍🦱",
+      "name": {
+        "th": "ผู้ชายผมหยิก",
+        "en": "Man: Curly Hair"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F9B3",
+      "text": "👨‍🦳",
+      "name": {
+        "th": "ผู้ชายผมขาว",
+        "en": "Man: White Hair"
+      }
+    },
+    {
+      "api": "U+1F469-200D-1F9B2",
+      "text": "👩‍🦲",
+      "name": {
+        "th": "ผู้หญิงหัวล้าน",
+        "en": "Woman: Bald"
+      }
+    },
+    {
+      "api": "U+26F7-FE0F",
+      "text": "⛷️",
+      "name": {
+        "th": "สกี",
+        "en": "Skier"
+      }
+    },
+    {
+      "api": "U+26F9-FE0F",
+      "text": "⛹️",
+      "name": {
+        "th": "บาสเก็ตบอล",
+        "en": "Person Bouncing Ball"
+      }
+    },
+    {
+      "api": "U+1F9D4-200D-2642-FE0F",
+      "text": "🧔‍♂️",
+      "name": {
+        "th": "ผู้ชายมีหนวดเครา",
+        "en": "Man: Beard"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F9BD",
+      "text": "👨‍🦽",
+      "name": {
+        "th": "ผู้ชายนั่งรถเข็น",
+        "en": "Man in Manual Wheelchair"
+      }
+    },
+    {
+      "api": "U+1F469-200D-1F9BD",
+      "text": "👩‍🦽",
+      "name": {
+        "th": "ผู้หญิงนั่งรถเข็น",
+        "en": "Woman in Manual Wheelchair"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F9BC",
+      "text": "👨‍🦼",
+      "name": {
+        "th": "ผู้ชายนั่งรถเข็นไฟฟ้า",
+        "en": "Man in Motorized Wheelchair"
+      }
+    },
+    {
+      "api": "U+1F469-200D-1F9BC",
+      "text": "👩‍🦼",
+      "name": {
+        "th": "ผู้หญิงนั่งรถเข็นไฟฟ้า",
+        "en": "Woman in Motorized Wheelchair"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F9AF",
+      "text": "👨‍🦯",
+      "name": {
+        "th": "ผู้ชายใช้ไม้เท้าคนตาบอด",
+        "en": "Man with White Cane"
+      }
+    },
+    {
+      "api": "U+1F469-200D-1F9AF",
+      "text": "👩‍🦯",
+      "name": {
+        "th": "ผู้หญิงใช้ไม้เท้าคนตาบอด",
+        "en": "Woman with White Cane"
+      }
+    },
+    {
+      "api": "U+1F9D1-200D-1F9CF",
+      "text": "🧑‍🧏",
+      "name": {
+        "th": "บุคคลหูหนวก",
+        "en": "Deaf Person"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F9CF",
+      "text": "👨‍🧏",
+      "name": {
+        "th": "ผู้ชายหูหนวก",
+        "en": "Deaf Man"
+      }
+    },
+    {
+      "api": "U+1F469-200D-1F9CF",
+      "text": "👩‍🧏",
+      "name": {
+        "th": "ผู้หญิงหูหนวก",
+        "en": "Deaf Woman"
+      }
+    },
+    {
+      "api": "U+1F9CD-200D-2640-FE0F",
+      "text": "🧍‍♀️",
+      "name": {
+        "th": "ผู้หญิงยืน",
+        "en": "Woman Standing"
+      }
+    },
+    {
+      "api": "U+1F9CD-200D-2642-FE0F",
+      "text": "🧍‍♂️",
+      "name": {
+        "th": "ผู้ชายยืน",
+        "en": "Man Standing"
+      }
+    },
+    {
+      "api": "U+1F9CE-200D-2640-FE0F",
+      "text": "🧎‍♀️",
+      "name": {
+        "th": "ผู้หญิงคุกเข่า",
+        "en": "Woman Kneeling"
+      }
+    },
+    {
+      "api": "U+1F9CE-200D-2642-FE0F",
+      "text": "🧎‍♂️",
+      "name": {
+        "th": "ผู้ชายคุกเข่า",
+        "en": "Man Kneeling"
+      }
+    },
+    {
+      "api": "U+1F6B6-200D-2640-FE0F",
+      "text": "🚶‍♀️",
+      "name": {
+        "th": "ผู้หญิงเดิน",
+        "en": "Woman Walking"
+      }
+    },
+    {
+      "api": "U+1F6B6-200D-2642-FE0F",
+      "text": "🚶‍♂️",
+      "name": {
+        "th": "ผู้ชายเดิน",
+        "en": "Man Walking"
+      }
+    },
+    {
+      "api": "U+1F3C3-200D-2640-FE0F",
+      "text": "🏃‍♀️",
+      "name": {
+        "th": "ผู้หญิงวิ่ง",
+        "en": "Woman Running"
+      }
+    },
+    {
+      "api": "U+1F3C3-200D-2642-FE0F",
+      "text": "🏃‍♂️",
+      "name": {
+        "th": "ผู้ชายวิ่ง",
+        "en": "Man Running"
+      }
+    },
+    {
+      "api": "U+1F9D1-200D-1F6B6",
+      "text": "🧑‍🚶",
+      "name": {
+        "th": "บุคคลเดิน",
+        "en": "Person Walking"
+      }
+    },
+    {
+      "api": "U+1F9D1-200D-1F3C3",
+      "text": "🧑‍🏃",
+      "name": {
+        "th": "บุคคลวิ่ง",
+        "en": "Person Running"
+      }
+    },
+    {
+      "api": "U+1F491",
+      "text": "💑",
+      "name": {
+        "th": "คู่รัก",
+        "en": "Couple with Heart"
+      }
+    },
+    {
+      "api": "U+1F48F",
+      "text": "💏",
+      "name": {
+        "th": "จูบ",
+        "en": "Kiss"
+      }
+    },
+    {
+      "api": "U+1F469-200D-1F469-200D-1F467-200D-1F466",
+      "text": "👩‍👩‍👧‍👦",
+      "name": {
+        "th": "ครอบครัว (หญิงหญิงลูกสาวลูกชาย)",
+        "en": "Family: Woman, Woman, Girl, Boy"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F468-200D-1F467-200D-1F466",
+      "text": "👨‍👨‍👧‍👦",
+      "name": {
+        "th": "ครอบครัว (ชายชายลูกสาวลูกชาย)",
+        "en": "Family: Man, Man, Girl, Boy"
+      }
+    },
+    {
+      "api": "U+1F468-200D-1F468-200D-1F467-200D-1F467",
+      "text": "👨‍👨‍👧‍👧",
+      "name": {
+        "th": "ครอบครัว (ชายชายลูกสาวสองคน)",
+        "en": "Family: Man, Man, Girl, Girl"
+      }
+    },
+    {
+      "api": "U+1F645-200D-2640-FE0F",
+      "text": "🙅‍♀️",
+      "name": {
+        "th": "ผู้หญิงห้าม",
+        "en": "Woman Gesturing No"
+      }
+    },
+    {
+      "api": "U+1F645-200D-2642-FE0F",
+      "text": "🙅‍♂️",
+      "name": {
+        "th": "ผู้ชายห้าม",
+        "en": "Man Gesturing No"
+      }
+    },
+    {
+      "api": "U+1F646-200D-2640-FE0F",
+      "text": "🙆‍♀️",
+      "name": {
+        "th": "ผู้หญิงยอมรับ",
+        "en": "Woman Gesturing OK"
+      }
+    },
+    {
+      "api": "U+1F646-200D-2642-FE0F",
+      "text": "🙆‍♂️",
+      "name": {
+        "th": "ผู้ชายยอมรับ",
+        "en": "Man Gesturing OK"
+      }
+    },
+    {
+      "api": "U+1F481-200D-2640-FE0F",
+      "text": "💁‍♀️",
+      "name": {
+        "th": "ผู้หญิงยื่นมือ",
+        "en": "Woman Tipping Hand"
+      }
+    },
+    {
+      "api": "U+1F481-200D-2642-FE0F",
+      "text": "💁‍♂️",
+      "name": {
+        "th": "ผู้ชายยื่นมือ",
+        "en": "Man Tipping Hand"
+      }
+    },
+    {
+      "api": "U+1F64B-200D-2640-FE0F",
+      "text": "🙋‍♀️",
+      "name": {
+        "th": "ผู้หญิงยกมือ",
+        "en": "Woman Raising Hand"
+      }
+    },
+    {
+      "api": "U+1F64B-200D-2642-FE0F",
+      "text": "🙋‍♂️",
+      "name": {
+        "th": "ผู้ชายยกมือ",
+        "en": "Man Raising Hand"
+      }
+    },
+    {
+      "api": "U+1F647-200D-2640-FE0F",
+      "text": "🙇‍♀️",
+      "name": {
+        "th": "ผู้หญิงคำนับ",
+        "en": "Woman Bowing"
+      }
+    },
+    {
+      "api": "U+1F647-200D-2642-FE0F",
+      "text": "🙇‍♂️",
+      "name": {
+        "th": "ผู้ชายคำนับ",
+        "en": "Man Bowing"
+      }
+    },
+    {
+      "api": "U+1F926-200D-2640-FE0F",
+      "text": "🤦‍♀️",
+      "name": {
+        "th": "ผู้หญิงเอามือปิดหน้า",
+        "en": "Woman Facepalming"
+      }
+    },
+    {
+      "api": "U+1F926-200D-2642-FE0F",
+      "text": "🤦‍♂️",
+      "name": {
+        "th": "ผู้ชายเอามือปิดหน้า",
+        "en": "Man Facepalming"
+      }
+    },
+    {
+      "api": "U+1F937-200D-2640-FE0F",
+      "text": "🤷‍♀️",
+      "name": {
+        "th": "ผู้หญิงยักไหล่",
+        "en": "Woman Shrugging"
+      }
+    },
+    {
+      "api": "U+1F937-200D-2642-FE0F",
+      "text": "🤷‍♂️",
+      "name": {
+        "th": "ผู้ชายยักไหล่",
+        "en": "Man Shrugging"
+      }
+    },
+    {
+      "api": "U+1F9B8-200D-2640-FE0F",
+      "text": "🦸‍♀️",
+      "name": {
+        "th": "ผู้หญิงซูเปอร์ฮีโร่",
+        "en": "Woman Superhero"
+      }
+    },
+    {
+      "api": "U+1F9B8-200D-2642-FE0F",
+      "text": "🦸‍♂️",
+      "name": {
+        "th": "ผู้ชายซูเปอร์ฮีโร่",
+        "en": "Man Superhero"
+      }
+    },
+    {
+      "api": "U+1F9B9-200D-2640-FE0F",
+      "text": "🦹‍♀️",
+      "name": {
+        "th": "ผู้หญิงซูเปอร์วายร้าย",
+        "en": "Woman Supervillain"
+      }
+    },
+    {
+      "api": "U+1F9B9-200D-2642-FE0F",
+      "text": "🦹‍♂️",
+      "name": {
+        "th": "ผู้ชายซูเปอร์วายร้าย",
+        "en": "Man Supervillain"
+      }
+    },
+    {
+      "api": "U+1F9D9-200D-2640-FE0F",
+      "text": "🧙‍♀️",
+      "name": {
+        "th": "แม่มด",
+        "en": "Woman Mage"
+      }
+    },
+    {
+      "api": "U+1F9D9-200D-2642-FE0F",
+      "text": "🧙‍♂️",
+      "name": {
+        "th": "พ่อมด",
+        "en": "Man Mage"
+      }
+    },
+    {
+      "api": "U+1F9DA-200D-2640-FE0F",
+      "text": "🧚‍♀️",
+      "name": {
+        "th": "ภูติหญิง",
+        "en": "Woman Fairy"
+      }
+    },
+    {
+      "api": "U+1F9DA-200D-2642-FE0F",
+      "text": "🧚‍♂️",
+      "name": {
+        "th": "ภูติชาย",
+        "en": "Man Fairy"
+      }
+    },
+    {
+      "api": "U+1F9DB-200D-2640-FE0F",
+      "text": "🧛‍♀️",
+      "name": {
+        "th": "แวมไพร์หญิง",
+        "en": "Woman Vampire"
+      }
+    },
+    {
+      "api": "U+1F9DB-200D-2642-FE0F",
+      "text": "🧛‍♂️",
+      "name": {
+        "th": "แวมไพร์ชาย",
+        "en": "Man Vampire"
+      }
+    },
+    {
+      "api": "U+1F9DC-200D-2640-FE0F",
+      "text": "🧜‍♀️",
+      "name": {
+        "th": "เงือกหญิง",
+        "en": "Mermaid"
+      }
+    },
+    {
+      "api": "U+1F9DC-200D-2642-FE0F",
+      "text": "🧜‍♂️",
+      "name": {
+        "th": "เงือกชาย",
+        "en": "Merman"
+      }
+    },
+    {
+      "api": "U+1F9DD-200D-2640-FE0F",
+      "text": "🧝‍♀️",
+      "name": {
+        "th": "เอลฟ์หญิง",
+        "en": "Woman Elf"
+      }
+    },
+    {
+      "api": "U+1F9DD-200D-2642-FE0F",
+      "text": "🧝‍♂️",
+      "name": {
+        "th": "เอลฟ์ชาย",
+        "en": "Man Elf"
+      }
+    },
+    {
+      "api": "U+1F9DE-200D-2640-FE0F",
+      "text": "🧞‍♀️",
+      "name": {
+        "th": "จีนี่หญิง",
+        "en": "Woman Genie"
+      }
+    },
+    {
+      "api": "U+1F9DE-200D-2642-FE0F",
+      "text": "🧞‍♂️",
+      "name": {
+        "th": "จีนี่ชาย",
+        "en": "Man Genie"
+      }
+    },
+    {
+      "api": "U+1F9DF-200D-2640-FE0F",
+      "text": "🧟‍♀️",
+      "name": {
+        "th": "ซอมบี้หญิง",
+        "en": "Woman Zombie"
+      }
+    },
+    {
+      "api": "U+1F9DF-200D-2642-FE0F",
+      "text": "🧟‍♂️",
+      "name": {
+        "th": "ซอมบี้ชาย",
+        "en": "Man Zombie"
+      }
+    },
+    {
+      "api": "U+1F482-200D-2640-FE0F",
+      "text": "💂‍♀️",
+      "name": {
+        "th": "ทหารรักษาพระองค์หญิง",
+        "en": "Woman Guard"
+      }
+    },
+    {
+      "api": "U+1F482-200D-2642-FE0F",
+      "text": "💂‍♂️",
+      "name": {
+        "th": "ทหารรักษาพระองค์ชาย",
+        "en": "Man Guard"
+      }
+    },
+    {
+      "api": "U+1F477-200D-2640-FE0F",
+      "text": "👷‍♀️",
+      "name": {
+        "th": "คนงานก่อสร้างหญิง",
+        "en": "Woman Construction Worker"
+      }
+    },
+    {
+      "api": "U+1F477-200D-2642-FE0F",
+      "text": "👷‍♂️",
+      "name": {
+        "th": "คนงานก่อสร้างชาย",
+        "en": "Man Construction Worker"
+      }
+    },
+    {
+      "api": "U+1F575-FE0F-200D-2640-FE0F",
+      "text": "🕵️‍♀️",
+      "name": {
+        "th": "สายลับหญิง",
+        "en": "Woman Detective"
+      }
+    },
+    {
+      "api": "U+1F575-FE0F-200D-2642-FE0F",
+      "text": "🕵️‍♂️",
+      "name": {
+        "th": "สายลับชาย",
+        "en": "Man Detective"
+      }
+    },
+    {
+      "api": "U+1F9D7-200D-2640-FE0F",
+      "text": "🧗‍♀️",
+      "name": {
+        "th": "ผู้หญิงปีนเขา",
+        "en": "Woman Climbing"
+      }
+    },
+    {
+      "api": "U+1F9D7-200D-2642-FE0F",
+      "text": "🧗‍♂️",
+      "name": {
+        "th": "ผู้ชายปีนเขา",
+        "en": "Man Climbing"
+      }
+    },
+    {
+      "api": "U+1F3C4-200D-2640-FE0F",
+      "text": "🏄‍♀️",
+      "name": {
+        "th": "ผู้หญิงโต้คลื่น",
+        "en": "Woman Surfer"
+      }
+    },
+    {
+      "api": "U+1F3C4-200D-2642-FE0F",
+      "text": "🏄‍♂️",
+      "name": {
+        "th": "ผู้ชายโต้คลื่น",
+        "en": "Man Surfer"
+      }
+    },
+    {
+      "api": "U+1F6A3-200D-2640-FE0F",
+      "text": "🚣‍♀️",
+      "name": {
+        "th": "ผู้หญิงพายเรือ",
+        "en": "Woman Rowing"
+      }
+    },
+    {
+      "api": "U+1F6A3-200D-2642-FE0F",
+      "text": "🚣‍♂️",
+      "name": {
+        "th": "ผู้ชายพายเรือ",
+        "en": "Man Rowing"
+      }
+    },
+    {
+      "api": "U+1F3CA-200D-2640-FE0F",
+      "text": "🏊‍♀️",
+      "name": {
+        "th": "ผู้หญิงว่ายน้ำ",
+        "en": "Woman Swimming"
+      }
+    },
+    {
+      "api": "U+1F3CA-200D-2642-FE0F",
+      "text": "🏊‍♂️",
+      "name": {
+        "th": "ผู้ชายว่ายน้ำ",
+        "en": "Man Swimming"
+      }
+    },
+    {
+      "api": "U+1F3CB-FE0F-200D-2640-FE0F",
+      "text": "🏋️‍♀️",
+      "name": {
+        "th": "ผู้หญิงยกน้ำหนัก",
+        "en": "Woman Weightlifting"
+      }
+    },
+    {
+      "api": "U+1F3CB-FE0F-200D-2642-FE0F",
+      "text": "🏋️‍♂️",
+      "name": {
+        "th": "ผู้ชายยกน้ำหนัก",
+        "en": "Man Weightlifting"
+      }
+    },
+    {
+      "api": "U+1F6B4-200D-2640-FE0F",
+      "text": "🚴‍♀️",
+      "name": {
+        "th": "ผู้หญิงขี่จักรยาน",
+        "en": "Woman Biking"
+      }
+    },
+    {
+      "api": "U+1F6B4-200D-2642-FE0F",
+      "text": "🚴‍♂️",
+      "name": {
+        "th": "ผู้ชายขี่จักรยาน",
+        "en": "Man Biking"
+      }
+    },
+    {
+      "api": "U+1F6B5-200D-2640-FE0F",
+      "text": "🚵‍♀️",
+      "name": {
+        "th": "ผู้หญิงขี่จักรยานภูเขา",
+        "en": "Woman Mountain Biking"
+      }
+    },
+    {
+      "api": "U+1F6B5-200D-2642-FE0F",
+      "text": "🚵‍♂️",
+      "name": {
+        "th": "ผู้ชายขี่จักรยานภูเขา",
+        "en": "Man Mountain Biking"
+      }
+    },
+    {
+      "api": "U+1F938-200D-2640-FE0F",
+      "text": "🤸‍♀️",
+      "name": {
+        "th": "ผู้หญิงยิมนาสติก",
+        "en": "Woman Cartwheeling"
+      }
+    },
+    {
+      "api": "U+1F938-200D-2642-FE0F",
+      "text": "🤸‍♂️",
+      "name": {
+        "th": "ผู้ชายยิมนาสติก",
+        "en": "Man Cartwheeling"
+      }
+    },
+    {
+      "api": "U+1F93C-200D-2640-FE0F",
+      "text": "🤼‍♀️",
+      "name": {
+        "th": "ผู้หญิงมวยปล้ำ",
+        "en": "Women Wrestling"
+      }
+    },
+    {
+      "api": "U+1F93C-200D-2642-FE0F",
+      "text": "🤼‍♂️",
+      "name": {
+        "th": "ผู้ชายมวยปล้ำ",
+        "en": "Men Wrestling"
+      }
+    },
+    {
+      "api": "U+1F93D-200D-2640-FE0F",
+      "text": "🤽‍♀️",
+      "name": {
+        "th": "ผู้หญิงโปโลน้ำ",
+        "en": "Woman Playing Water Polo"
+      }
+    },
+    {
+      "api": "U+1F93D-200D-2642-FE0F",
+      "text": "🤽‍♂️",
+      "name": {
+        "th": "ผู้ชายโปโลน้ำ",
+        "en": "Man Playing Water Polo"
+      }
+    },
+    {
+      "api": "U+1F93E-200D-2640-FE0F",
+      "text": "🤾‍♀️",
+      "name": {
+        "th": "ผู้หญิงแฮนด์บอล",
+        "en": "Woman Playing Handball"
+      }
+    },
+    {
+      "api": "U+1F93E-200D-2642-FE0F",
+      "text": "🤾‍♂️",
+      "name": {
+        "th": "ผู้ชายแฮนด์บอล",
+        "en": "Man Playing Handball"
+      }
+    },
+    {
+      "api": "U+1F939-200D-2640-FE0F",
+      "text": "🤹‍♀️",
+      "name": {
+        "th": "ผู้หญิงเล่นกล",
+        "en": "Woman Juggling"
+      }
+    },
+    {
+      "api": "U+1F939-200D-2642-FE0F",
+      "text": "🤹‍♂️",
+      "name": {
+        "th": "ผู้ชายเล่นกล",
+        "en": "Man Juggling"
+      }
+    },
+    {
+      "api": "U+1F9D8-200D-2640-FE0F",
+      "text": "🧘‍♀️",
+      "name": {
+        "th": "ผู้หญิงนั่งสมาธิ",
+        "en": "Woman in Lotus Position"
+      }
+    },
+    {
+      "api": "U+1F9D8-200D-2642-FE0F",
+      "text": "🧘‍♂️",
+      "name": {
+        "th": "ผู้ชายนั่งสมาธิ",
+        "en": "Man in Lotus Position"
+      }
+    },
+    {
+      "api": "U+1F9CE-200D-2640-FE0F-200D-27A1-FE0F",
+      "text": "🧎‍♀️‍➡️",
+      "name": {
+        "th": "ผู้หญิงคุกเข่าหันขวา",
+        "en": "Woman Kneeling Facing Right"
+      }
+    },
+    {
+      "api": "U+1F9CE-200D-2642-FE0F-200D-27A1-FE0F",
+      "text": "🧎‍♂️‍➡️",
+      "name": {
+        "th": "ผู้ชายคุกเข่าหันขวา",
+        "en": "Man Kneeling Facing Right"
+      }
+    },
+    {
+      "api": "U+1F6B6-200D-2640-FE0F-200D-27A1-FE0F",
+      "text": "🚶‍♀️‍➡️",
+      "name": {
+        "th": "ผู้หญิงเดินหันขวา",
+        "en": "Woman Walking Facing Right"
+      }
+    },
+    {
+      "api": "U+1F6B6-200D-2642-FE0F-200D-27A1-FE0F",
+      "text": "🚶‍♂️‍➡️",
+      "name": {
+        "th": "ผู้ชายเดินหันขวา",
+        "en": "Man Walking Facing Right"
+      }
+    },
+    {
+      "api": "U+1F3C3-200D-2640-FE0F-200D-27A1-FE0F",
+      "text": "🏃‍♀️‍➡️",
+      "name": {
+        "th": "ผู้หญิงวิ่งหันขวา",
+        "en": "Woman Running Facing Right"
+      }
+    },
+    {
+      "api": "U+1F3C3-200D-2642-FE0F-200D-27A1-FE0F",
+      "text": "🏃‍♂️‍➡️",
+      "name": {
+        "th": "ผู้ชายวิ่งหันขวา",
+        "en": "Man Running Facing Right"
+      }
+    },
+    {
+      "api": "U+1F9CD-200D-2640-FE0F-200D-27A1-FE0F",
+      "text": "🧍‍♀️‍➡️",
+      "name": {
+        "th": "ผู้หญิงยืนหันขวา",
+        "en": "Woman Standing Facing Right"
+      }
+    },
+    {
+      "api": "U+1F9CD-200D-2642-FE0F-200D-27A1-FE0F",
+      "text": "🧍‍♂️‍➡️",
+      "name": {
+        "th": "ผู้ชายยืนหันขวา",
+        "en": "Man Standing Facing Right"
+      }
+    },
+    {
+      "api": "U+1F9D1-200D-1F6B6-200D-27A1-FE0F",
+      "text": "🧑‍🚶‍➡️",
+      "name": {
+        "th": "บุคคลเดินหันขวา",
+        "en": "Person Walking Facing Right"
+      }
+    },
+    {
+      "api": "U+1F9D1-200D-1F3C3-200D-27A1-FE0F",
+      "text": "🧑‍🏃‍➡️",
+      "name": {
+        "th": "บุคคลวิ่งหันขวา",
+        "en": "Person Running Facing Right"
+      }
+    },
+    {
+      "api": "U+1FAC5",
+      "text": "🫅",
+      "name": {
+        "th": "คนสวมมงกุฎ",
+        "en": "Person with Crown"
+      }
+    },
+    {
+      "api": "U+1FAF1-200D-1FAF2",
+      "text": "🫱‍🫲",
+      "name": {
+        "th": "จับมือ (สีต่างกัน)",
+        "en": "Handshake"
+      }
+    },
+    {
+      "api": "U+1F9CF-200D-2640-FE0F",
+      "text": "🧏‍♀️",
+      "name": {
+        "th": "ผู้หญิงหูหนวก",
+        "en": "Deaf Woman"
+      }
+    },
+    {
+      "api": "U+1F9CF-200D-2642-FE0F",
+      "text": "🧏‍♂️",
+      "name": {
+        "th": "ผู้ชายหูหนวก",
+        "en": "Deaf Man"
+      }
+    },
+    {
+      "api": "U+1FAC2",
+      "text": "🫂",
+      "name": {
+        "th": "กอดกัน",
+        "en": "People Hugging"
+      }
+    },
+    {
+      "api": "U+1F486-200D-2640-FE0F",
+      "text": "💆‍♀️",
+      "name": {
+        "th": "ผู้หญิงนวดหน้า",
+        "en": "Woman Getting Massage"
+      }
+    },
+    {
+      "api": "U+1F486-200D-2642-FE0F",
+      "text": "💆‍♂️",
+      "name": {
+        "th": "ผู้ชายนวดหน้า",
+        "en": "Man Getting Massage"
+      }
+    },
+    {
+      "api": "U+1F487-200D-2640-FE0F",
+      "text": "💇‍♀️",
+      "name": {
+        "th": "ผู้หญิงตัดผม",
+        "en": "Woman Getting Haircut"
+      }
+    },
+    {
+      "api": "U+1F487-200D-2642-FE0F",
+      "text": "💇‍♂️",
+      "name": {
+        "th": "ผู้ชายตัดผม",
+        "en": "Man Getting Haircut"
+      }
+    },
+    {
+      "api": "U+1F486",
+      "text": "💆",
+      "name": {
+        "th": "นวดหน้า",
+        "en": "Person Getting Massage"
+      }
+    },
+    {
+      "api": "U+1F487",
+      "text": "💇",
+      "name": {
+        "th": "ตัดผม",
+        "en": "Person Getting Haircut"
+      }
+    }
   ]
 }

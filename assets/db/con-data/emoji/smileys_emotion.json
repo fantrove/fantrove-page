@@ -5,184 +5,1349 @@
     "en": "Smileys & Emotion"
   },
   "data": [
-    { "api": "U+1F600", "text": "😀", "name": { "th": "หน้ายิ้มกว้าง", "en": "Grinning Face" } },
-    { "api": "U+1F603", "text": "😃", "name": { "th": "หน้ายิ้มตาโต", "en": "Grinning Face with Big Eyes" } },
-    { "api": "U+1F604", "text": "😄", "name": { "th": "หน้ายิ้มตาหยี", "en": "Grinning Face with Smiling Eyes" } },
-    { "api": "U+1F601", "text": "😁", "name": { "th": "หน้ายิ้มโชว์ฟัน", "en": "Beaming Face with Smiling Eyes" } },
-    { "api": "U+1F606", "text": "😆", "name": { "th": "หน้ายิ้มตาปิด", "en": "Grinning Squinting Face" } },
-    { "api": "U+1F605", "text": "😅", "name": { "th": "หน้ายิ้มมีเหงื่อ", "en": "Grinning Face with Sweat" } },
-    { "api": "U+1F923", "text": "🤣", "name": { "th": "หัวเราะกลิ้ง", "en": "Rolling on the Floor Laughing" } },
-    { "api": "U+1F602", "text": "😂", "name": { "th": "หัวเราะทั้งน้ำตา", "en": "Face with Tears of Joy" } },
-    { "api": "U+1F642", "text": "🙂", "name": { "th": "หน้ายิ้มเล็กน้อย", "en": "Slightly Smiling Face" } },
-    { "api": "U+1F643", "text": "🙃", "name": { "th": "หน้ายิ้มกลับหัว", "en": "Upside-Down Face" } },
-    { "api": "U+1FAE0", "text": "🫠", "name": { "th": "หน้าละลาย", "en": "Melting Face" } },
-    { "api": "U+1F609", "text": "😉", "name": { "th": "หน้ายิ้มขยิบตา", "en": "Winking Face" } },
-    { "api": "U+1F60A", "text": "😊", "name": { "th": "หน้ายิ้มอบอุ่น", "en": "Smiling Face with Smiling Eyes" } },
-    { "api": "U+1F607", "text": "😇", "name": { "th": "หน้ายิ้มมีรัศมี", "en": "Smiling Face with Halo" } },
-    
-    { "api": "U+1F970", "text": "🥰", "name": { "th": "หน้ายิ้มล้อม���ัวใจ", "en": "Smiling Face with Hearts" } },
-    { "api": "U+1F60D", "text": "😍", "name": { "th": "หน้ายิ้มตาหัวใจ", "en": "Smiling Face with Heart-Eyes" } },
-    { "api": "U+1F929", "text": "🤩", "name": { "th": "หน้ายิ้มตาเป็นดาว", "en": "Star-Struck" } },
-    { "api": "U+1F618", "text": "😘", "name": { "th": "จูบส่งใจ", "en": "Face Blowing a Kiss" } },
-    { "api": "U+1F617", "text": "😗", "name": { "th": "หน้ายื่นจูบ", "en": "Kissing Face" } },
-    { "api": "U+1F61A", "text": "😚", "name": { "th": "จูบตาปิด", "en": "Kissing Face with Closed Eyes" } },
-    { "api": "U+1F619", "text": "😙", "name": { "th": "จูบตายิ้ม", "en": "Kissing Face with Smiling Eyes" } },
-    { "api": "U+1F972", "text": "🥲", "name": { "th": "หน้ายิ้มมีน้ำตา", "en": "Smiling Face with Tear" } },
-    
-    { "api": "U+1F60B", "text": "😋", "name": { "th": "อร่อย", "en": "Face Savoring Food" } },
-    { "api": "U+1F61B", "text": "😛", "name": { "th": "แลบลิ้น", "en": "Face with Tongue" } },
-    { "api": "U+1F61C", "text": "😜", "name": { "th": "แลบลิ้นขยิบตา", "en": "Winking Face with Tongue" } },
-    { "api": "U+1F92A", "text": "🤪", "name": { "th": "หน้าเพี้ยน", "en": "Zany Face" } },
-    { "api": "U+1F61D", "text": "😝", "name": { "th": "แลบลิ้นตาปิด", "en": "Squinting Face with Tongue" } },
-    { "api": "U+1F911", "text": "🤑", "name": { "th": "ตาเงิน", "en": "Money-Mouth Face" } },
-    
-    { "api": "U+1F917", "text": "🤗", "name": { "th": "กอด", "en": "Hugging Face" } },
-    { "api": "U+1F92D", "text": "🤭", "name": { "th": "ปิดปากขำ", "en": "Face with Hand Over Mouth" } },
-    { "api": "U+1FAE2", "text": "🫢", "name": { "th": "เอามือปิดปาก", "en": "Face with Open Eyes and Hand Over Mouth" } },
-    { "api": "U+1FAE3", "text": "🫣", "name": { "th": "เอามือปิดตาแอบดู", "en": "Face with Peeking Eye" } },
-    { "api": "U+1F92B", "text": "🤫", "name": { "th": "ชูนิ้วห้าม", "en": "Shushing Face" } },
-    { "api": "U+1F914", "text": "🤔", "name": { "th": "คิด", "en": "Thinking Face" } },
-    { "api": "U+1FAE1", "text": "🫡", "name": { "th": "ท่าทำความเคารพ", "en": "Saluting Face" } },
-    
-    { "api": "U+1F910", "text": "🤐", "name": { "th": "ปากรูดซิป", "en": "Zipper-Mouth Face" } },
-    { "api": "U+1F928", "text": "🤨", "name": { "th": "เลิกคิ้ว", "en": "Face with Raised Eyebrow" } },
-    { "api": "U+1F610", "text": "😐", "name": { "th": "หน้าเฉย", "en": "Neutral Face" } },
-    { "api": "U+1F611", "text": "😑", "name": { "th": "หน้าไร้อารมณ์", "en": "Expressionless Face" } },
-    { "api": "U+1F636", "text": "😶", "name": { "th": "หน้าไม่มีปาก", "en": "Face Without Mouth" } },
-    { "api": "U+1FAE5", "text": "🫥", "name": { "th": "หน้าเส้นประ", "en": "Dotted Line Face" } },
-    { "api": "U+1F636-200D-1F32B-FE0F", "text": "😶‍🌫️", "name": { "th": "หน้าในหมอก", "en": "Face in Clouds" } },
-    { "api": "U+1F60F", "text": "😏", "name": { "th": "ยิ้มมุมปาก", "en": "Smirking Face" } },
-    { "api": "U+1F612", "text": "😒", "name": { "th": "ไม่พอใจ", "en": "Unamused Face" } },
-    { "api": "U+1F644", "text": "🙄", "name": { "th": "กลอกตา", "en": "Face with Rolling Eyes" } },
-    { "api": "U+1F62C", "text": "😬", "name": { "th": "หน้ากัดฟัน", "en": "Grimacing Face" } },
-    { "api": "U+1F62E-200D-1F4A8", "text": "😮‍💨", "name": { "th": "ถอนหายใจ", "en": "Face Exhaling" } },
-    { "api": "U+1F925", "text": "🤥", "name": { "th": "โกหก", "en": "Lying Face" } },
-    { "api": "U+1FAE8", "text": "🫨", "name": { "th": "หน้าสั่น", "en": "Shaking Face" } },
-    
-    { "api": "U+1F60C", "text": "😌", "name": { "th": "โล่งใจ", "en": "Relieved Face" } },
-    { "api": "U+1F614", "text": "😔", "name": { "th": "เศร้า", "en": "Pensive Face" } },
-    { "api": "U+1F62A", "text": "😪", "name": { "th": "ง่วง", "en": "Sleepy Face" } },
-    { "api": "U+1F924", "text": "🤤", "name": { "th": "น้ำลายไหล", "en": "Drooling Face" } },
-    { "api": "U+1F634", "text": "😴", "name": { "th": "หลับ", "en": "Sleeping Face" } },
-    
-    { "api": "U+1F637", "text": "😷", "name": { "th": "หน้าป่วย", "en": "Face with Medical Mask" } },
-    { "api": "U+1F912", "text": "🤒", "name": { "th": "ป่วย", "en": "Face with Thermometer" } },
-    { "api": "U+1F915", "text": "🤕", "name": { "th": "บาดเจ็บ", "en": "Face with Head-Bandage" } },
-    { "api": "U+1F922", "text": "🤢", "name": { "th": "คลื่นไส้", "en": "Nauseated Face" } },
-    { "api": "U+1F92E", "text": "🤮", "name": { "th": "อาเจียน", "en": "Face Vomiting" } },
-    { "api": "U+1F927", "text": "🤧", "name": { "th": "เป็นหวัด", "en": "Sneezing Face" } },
-    { "api": "U+1F975", "text": "🥵", "name": { "th": "ร้อนจัด", "en": "Hot Face" } },
-    { "api": "U+1F976", "text": "🥶", "name": { "th": "หนาวจัด", "en": "Cold Face" } },
-    { "api": "U+1F974", "text": "🥴", "name": { "th": "มึนเมา", "en": "Woozy Face" } },
-    { "api": "U+1F635", "text": "😵", "name": { "th": "หน้ามืด", "en": "Dizzy Face" } },
-    { "api": "U+1F635-200D-1F4AB", "text": "😵‍💫", "name": { "th": "เวียนหัว", "en": "Face with Spiral Eyes" } },
-    { "api": "U+1F92F", "text": "🤯", "name": { "th": "สมองระเบิด", "en": "Exploding Head" } },
-    
-    { "api": "U+1F920", "text": "🤠", "name": { "th": "ใส่หมวกคาวบอย", "en": "Cowboy Hat Face" } },
-    { "api": "U+1F973", "text": "🥳", "name": { "th": "ใส่หมวกปาร์ตี้", "en": "Partying Face" } },
-    { "api": "U+1F978", "text": "🥸", "name": { "th": "หน้าปลอมตัว", "en": "Disguised Face" } },
-    { "api": "U+1F60E", "text": "😎", "name": { "th": "ใส่แว่นกันแดด", "en": "Smiling Face with Sunglasses" } },
-    { "api": "U+1F913", "text": "🤓", "name": { "th": "หน้าเนิร์ด", "en": "Nerd Face" } },
-    { "api": "U+1F9D0", "text": "🧐", "name": { "th": "แว่นขยาย", "en": "Face with Monocle" } },
-    
-    { "api": "U+1F615", "text": "😕", "name": { "th": "สับสน", "en": "Confused Face" } },
-    { "api": "U+1FAE4", "text": "🫤", "name": { "th": "หน้างง", "en": "Face with Diagonal Mouth" } },
-    { "api": "U+1F61F", "text": "😟", "name": { "th": "กังวล", "en": "Worried Face" } },
-    { "api": "U+1F641", "text": "🙁", "name": { "th": "เศร้านิด ๆ", "en": "Slightly Frowning Face" } },
-    { "api": "U+2639-FE0F", "text": "☹️", "name": { "th": "หน้าเศร้า", "en": "Frowning Face" } },
-    { "api": "U+1F62E", "text": "😮", "name": { "th": "อ้าปาก", "en": "Face with Open Mouth" } },
-    { "api": "U+1F62F", "text": "😯", "name": { "th": "ตกใจ", "en": "Hushed Face" } },
-    { "api": "U+1F632", "text": "😲", "name": { "th": "ตกใจมาก", "en": "Astonished Face" } },
-    { "api": "U+1F633", "text": "😳", "name": { "th": "หน้าแดง", "en": "Flushed Face" } },
-    { "api": "U+1F97A", "text": "🥺", "name": { "th": "อ้อนวอน", "en": "Pleading Face" } },
-    { "api": "U+1F979", "text": "🥹", "name": { "th": "หน้ากลั้นน้ำตา", "en": "Face Holding Back Tears" } },
-    { "api": "U+1F626", "text": "😦", "name": { "th": "กังวล", "en": "Frowning Face with Open Mouth" } },
-    { "api": "U+1F627", "text": "😧", "name": { "th": "วิตก", "en": "Anguished Face" } },
-    { "api": "U+1F628", "text": "😨", "name": { "th": "กลัว", "en": "Fearful Face" } },
-    { "api": "U+1F630", "text": "😰", "name": { "th": "กังวลเหงื่อแตก", "en": "Anxious Face with Sweat" } },
-    { "api": "U+1F625", "text": "😥", "name": { "th": "โล่งใจเศร้า", "en": "Sad but Relieved Face" } },
-    { "api": "U+1F622", "text": "😢", "name": { "th": "ร้องไห้", "en": "Crying Face" } },
-    { "api": "U+1F62D", "text": "😭", "name": { "th": "ร้องไห้หนัก", "en": "Loudly Crying Face" } },
-    { "api": "U+1F631", "text": "😱", "name": { "th": "กรีดร้อง", "en": "Face Screaming in Fear" } },
-    { "api": "U+1F616", "text": "😖", "name": { "th": "ทรมาน", "en": "Confounded Face" } },
-    { "api": "U+1F623", "text": "😣", "name": { "th": "กังวลมาก", "en": "Persevering Face" } },
-    { "api": "U+1F61E", "text": "😞", "name": { "th": "ผิดหวัง", "en": "Disappointed Face" } },
-    { "api": "U+1F613", "text": "😓", "name": { "th": "เหงื่อเย็น", "en": "Downcast Face with Sweat" } },
-    { "api": "U+1F629", "text": "😩", "name": { "th": "เศร้าใจ", "en": "Weary Face" } },
-    { "api": "U+1F62B", "text": "😫", "name": { "th": "เหนื่อยล้า", "en": "Tired Face" } },
-    { "api": "U+1F971", "text": "🥱", "name": { "th": "หาว", "en": "Yawning Face" } },
-    
-    { "api": "U+1F624", "text": "😤", "name": { "th": "ฮึดฮัด", "en": "Face with Steam From Nose" } },
-    { "api": "U+1F621", "text": "😡", "name": { "th": "โกรธจัด", "en": "Pouting Face" } },
-    { "api": "U+1F620", "text": "😠", "name": { "th": "โกรธ", "en": "Angry Face" } },
-    { "api": "U+1F92C", "text": "🤬", "name": { "th": "ด่าด้วยสัญลักษณ์", "en": "Face with Symbols on Mouth" } },
-    { "api": "U+1F608", "text": "😈", "name": { "th": "ปีศาจยิ้ม", "en": "Smiling Face with Horns" } },
-    { "api": "U+1F47F", "text": "👿", "name": { "th": "ปีศาจโกรธ", "en": "Angry Face with Horns" } },
-    { "api": "U+1F480", "text": "💀", "name": { "th": "หัวกะโหลก", "en": "Skull" } },
-    { "api": "U+2620-FE0F", "text": "☠️", "name": { "th": "กะโหลกไขว้", "en": "Skull and Crossbones" } },
-    
-    { "api": "U+1F4A9", "text": "💩", "name": { "th": "อึ", "en": "Pile of Poo" } },
-    { "api": "U+1F921", "text": "🤡", "name": { "th": "ตัวตลก", "en": "Clown Face" } },
-    { "api": "U+1F479", "text": "👹", "name": { "th": "ปีศาจโอนิ", "en": "Ogre" } },
-    { "api": "U+1F47A", "text": "👺", "name": { "th": "โกบลิน/หน้ากาก", "en": "Goblin" } },
-    { "api": "U+1F47B", "text": "👻", "name": { "th": "ผี", "en": "Ghost" } },
-    { "api": "U+1F47D", "text": "👽", "name": { "th": "มนุษย์ต่างดาว", "en": "Alien" } },
-    { "api": "U+1F47E", "text": "👾", "name": { "th": "เอเลี่ยนบุก", "en": "Alien Monster" } },
-    { "api": "U+1F916", "text": "🤖", "name": { "th": "หุ่นยนต์", "en": "Robot Face" } },
-    
-    { "api": "U+1F63A", "text": "😺", "name": { "th": "แมวยิ้ม", "en": "Grinning Cat" } },
-    { "api": "U+1F638", "text": "😸", "name": { "th": "แมวยิ้มตาหยี", "en": "Grinning Cat with Smiling Eyes" } },
-    { "api": "U+1F63B", "text": "😻", "name": { "th": "แมวตาหัวใจ", "en": "Smiling Cat with Heart-Eyes" } },
-    { "api": "U+1F63C", "text": "😼", "name": { "th": "แมวยิ้มมุมปาก", "en": "Cat with Wry Smile" } },
-    { "api": "U+1F63D", "text": "😽", "name": { "th": "แมวจูบ", "en": "Kissing Cat" } },
-    { "api": "U+1F640", "text": "🙀", "name": { "th": "แมวตกใจ", "en": "Weary Cat" } },
-    { "api": "U+1F63F", "text": "😿", "name": { "th": "แมวร้องไห้", "en": "Crying Cat" } },
-    { "api": "U+1F63E", "text": "😾", "name": { "th": "แมวโกรธ", "en": "Pouting Cat" } },
-    
-    { "api": "U+1F648", "text": "🙈", "name": { "th": "ลิงปิดตา", "en": "See-No-Evil Monkey" } },
-    { "api": "U+1F649", "text": "🙉", "name": { "th": "ลิงปิดหู", "en": "Hear-No-Evil Monkey" } },
-    { "api": "U+1F64A", "text": "🙊", "name": { "th": "ลิงปิดปาก", "en": "Speak-No-Evil Monkey" } },
-    
-    { "api": "U+2764-FE0F", "text": "❤️", "name": { "th": "หัวใจแดง", "en": "Red Heart" } },
-    { "api": "U+1F9E1", "text": "🧡", "name": { "th": "หัวใจส้ม", "en": "Orange Heart" } },
-    { "api": "U+1F49B", "text": "💛", "name": { "th": "หัวใจเหลือง", "en": "Yellow Heart" } },
-    { "api": "U+1F49A", "text": "💚", "name": { "th": "หัวใจเขียว", "en": "Green Heart" } },
-    { "api": "U+1F499", "text": "💙", "name": { "th": "หัวใจฟ้า", "en": "Blue Heart" } },
-    { "api": "U+1F49C", "text": "💜", "name": { "th": "หัวใจม่วง", "en": "Purple Heart" } },
-    { "api": "U+1F90E", "text": "🤎", "name": { "th": "หัวใจน้ำตาล", "en": "Brown Heart" } },
-    { "api": "U+1F5A4", "text": "🖤", "name": { "th": "หัวใจดำ", "en": "Black Heart" } },
-    { "api": "U+1F90D", "text": "🤍", "name": { "th": "หัวใจขาว", "en": "White Heart" } },
-    { "api": "U+1FA76", "text": "🩶", "name": { "th": "หัวใจสีเทา", "en": "Grey Heart" } },
-    { "api": "U+1FA75", "text": "🩵", "name": { "th": "หัวใจฟ้าอ่อน", "en": "Light Blue Heart" } },
-    { "api": "U+1FA77", "text": "🩷", "name": { "th": "หัวใจชมพู", "en": "Pink Heart" } },
-    { "api": "U+1F494", "text": "💔", "name": { "th": "หัวใจแตกสลาย", "en": "Broken Heart" } },
-    { "api": "U+2764-FE0F-200D-1F525", "text": "❤️‍🔥", "name": { "th": "หัวใจลุกไฟ", "en": "Heart on Fire" } },
-    { "api": "U+2764-FE0F-200D-1FA79", "text": "❤️‍🩹", "name": { "th": "หัวใจแผลเป็น/หาย", "en": "Mending Heart" } },
-    { "api": "U+2763-FE0F", "text": "❣️", "name": { "th": "หัวใจอัศเจรีย์", "en": "Heart Exclamation" } },
-    { "api": "U+1F493", "text": "💓", "name": { "th": "หัวใจเต้น", "en": "Beating Heart" } },
-    { "api": "U+1F495", "text": "💕", "name": { "th": "หัวใจคู่", "en": "Two Hearts" } },
-    { "api": "U+1F49E", "text": "💞", "name": { "th": "หัวใจหมุนวน", "en": "Revolving Hearts" } },
-    { "api": "U+1F497", "text": "💗", "name": { "th": "หัวใจโต", "en": "Growing Heart" } },
-    { "api": "U+1F496", "text": "💖", "name": { "th": "หัวใจประกาย", "en": "Sparkling Heart" } },
-    { "api": "U+1F498", "text": "💘", "name": { "th": "หัวใจกับลูกศร", "en": "Heart with Arrow" } },
-    { "api": "U+1F49D", "text": "💝", "name": { "th": "หัวใจของขวัญ", "en": "Heart with Ribbon" } },
-    { "api": "U+1F49F", "text": "💟", "name": { "th": "หัวใจตกแต่ง", "en": "Heart Decoration" } },
-    
-    { "api": "U+1F48B", "text": "💋", "name": { "th": "รอยจูบ", "en": "Kiss Mark" } },
-    { "api": "U+1F48C", "text": "💌", "name": { "th": "จดหมายรัก", "en": "Love Letter" } },
-    { "api": "U+1F4A4", "text": "💤", "name": { "th": "งีบ/หลับ", "en": "Zzz" } },
-    { "api": "U+1F4A2", "text": "💢", "name": { "th": "สัญลักษณ์โกรธ", "en": "Anger Symbol" } },
-    { "api": "U+1F4A3", "text": "💣", "name": { "th": "ระเบิด", "en": "Bomb" } },
-    { "api": "U+1F4A5", "text": "💥", "name": { "th": "ปะทะ/ระเบิด", "en": "Collision" } },
-    { "api": "U+1F4AB", "text": "💫", "name": { "th": "เวียนหัว/ประกาย", "en": "Dizzy" } },
-    { "api": "U+1F4A6", "text": "💦", "name": { "th": "หยดน้ำ/กระเซ็น", "en": "Sweat Droplets" } },
-    { "api": "U+1F4A8", "text": "💨", "name": { "th": "ลมพัด/พลัง", "en": "Dashing Away" } },
-    { "api": "U+1F573-FE0F", "text": "🕳️", "name": { "th": "หลุม", "en": "Hole" } },
-    { "api": "U+1F4AC", "text": "💬", "name": { "th": "ฟองข้อความ", "en": "Speech Balloon" } },
-    { "api": "U+1F441-200D-1F5E8-FE0F", "text": "👁️‍🗨️", "name": { "th": "ตาในฟองข้อความ", "en": "Eye in Speech Bubble" } },
-    { "api": "U+1F5E8-FE0F", "text": "🗨️", "name": { "th": "ฟองข้อความซ้าย", "en": "Left Speech Bubble" } },
-    { "api": "U+1F5EF-FE0F", "text": "🗯️", "name": { "th": "ฟองข้อความโกรธ", "en": "Right Anger Bubble" } },
-    { "api": "U+1F4AD", "text": "💭", "name": { "th": "ฟองความคิด", "en": "Thought Balloon" } },
-    { "api": "U+2668-FE0F", "text": "♨️", "name": { "th": "สปา/น้ำร้อน", "en": "Hot Springs" } }
+    {
+      "api": "U+263A-FE0F",
+      "text": "☺️",
+      "name": {
+        "th": "หน้ายิ้มพอใจ",
+        "en": "Smiling Face"
+      }
+    },
+    {
+      "api": "U+1F600",
+      "text": "😀",
+      "name": {
+        "th": "หน้ายิ้มกว้าง",
+        "en": "Grinning Face"
+      }
+    },
+    {
+      "api": "U+1F603",
+      "text": "😃",
+      "name": {
+        "th": "หน้ายิ้มตาโต",
+        "en": "Grinning Face with Big Eyes"
+      }
+    },
+    {
+      "api": "U+1F604",
+      "text": "😄",
+      "name": {
+        "th": "หน้ายิ้มตาหยี",
+        "en": "Grinning Face with Smiling Eyes"
+      }
+    },
+    {
+      "api": "U+1F601",
+      "text": "😁",
+      "name": {
+        "th": "หน้ายิ้มโชว์ฟัน",
+        "en": "Beaming Face with Smiling Eyes"
+      }
+    },
+    {
+      "api": "U+1F606",
+      "text": "😆",
+      "name": {
+        "th": "หน้ายิ้มตาปิด",
+        "en": "Grinning Squinting Face"
+      }
+    },
+    {
+      "api": "U+1F605",
+      "text": "😅",
+      "name": {
+        "th": "หน้ายิ้มมีเหงื่อ",
+        "en": "Grinning Face with Sweat"
+      }
+    },
+    {
+      "api": "U+1F923",
+      "text": "🤣",
+      "name": {
+        "th": "หัวเราะกลิ้ง",
+        "en": "Rolling on the Floor Laughing"
+      }
+    },
+    {
+      "api": "U+1F602",
+      "text": "😂",
+      "name": {
+        "th": "หัวเราะทั้งน้ำตา",
+        "en": "Face with Tears of Joy"
+      }
+    },
+    {
+      "api": "U+1F642",
+      "text": "🙂",
+      "name": {
+        "th": "หน้ายิ้มเล็กน้อย",
+        "en": "Slightly Smiling Face"
+      }
+    },
+    {
+      "api": "U+1F643",
+      "text": "🙃",
+      "name": {
+        "th": "หน้ายิ้มกลับหัว",
+        "en": "Upside-Down Face"
+      }
+    },
+    {
+      "api": "U+1FAE0",
+      "text": "🫠",
+      "name": {
+        "th": "หน้าละลาย",
+        "en": "Melting Face"
+      }
+    },
+    {
+      "api": "U+1F609",
+      "text": "😉",
+      "name": {
+        "th": "หน้ายิ้มขยิบตา",
+        "en": "Winking Face"
+      }
+    },
+    {
+      "api": "U+1F60A",
+      "text": "😊",
+      "name": {
+        "th": "หน้ายิ้มอบอุ่น",
+        "en": "Smiling Face with Smiling Eyes"
+      }
+    },
+    {
+      "api": "U+1F607",
+      "text": "😇",
+      "name": {
+        "th": "หน้ายิ้มมีรัศมี",
+        "en": "Smiling Face with Halo"
+      }
+    },
+    {
+      "api": "U+1F970",
+      "text": "🥰",
+      "name": {
+        "th": "หน้ายิ้มล้อม���ัวใจ",
+        "en": "Smiling Face with Hearts"
+      }
+    },
+    {
+      "api": "U+1F60D",
+      "text": "😍",
+      "name": {
+        "th": "หน้ายิ้มตาหัวใจ",
+        "en": "Smiling Face with Heart-Eyes"
+      }
+    },
+    {
+      "api": "U+1F929",
+      "text": "🤩",
+      "name": {
+        "th": "หน้ายิ้มตาเป็นดาว",
+        "en": "Star-Struck"
+      }
+    },
+    {
+      "api": "U+1F618",
+      "text": "😘",
+      "name": {
+        "th": "จูบส่งใจ",
+        "en": "Face Blowing a Kiss"
+      }
+    },
+    {
+      "api": "U+1F617",
+      "text": "😗",
+      "name": {
+        "th": "หน้ายื่นจูบ",
+        "en": "Kissing Face"
+      }
+    },
+    {
+      "api": "U+1F61A",
+      "text": "😚",
+      "name": {
+        "th": "จูบตาปิด",
+        "en": "Kissing Face with Closed Eyes"
+      }
+    },
+    {
+      "api": "U+1F619",
+      "text": "😙",
+      "name": {
+        "th": "จูบตายิ้ม",
+        "en": "Kissing Face with Smiling Eyes"
+      }
+    },
+    {
+      "api": "U+1F972",
+      "text": "🥲",
+      "name": {
+        "th": "หน้ายิ้มมีน้ำตา",
+        "en": "Smiling Face with Tear"
+      }
+    },
+    {
+      "api": "U+1F60B",
+      "text": "😋",
+      "name": {
+        "th": "อร่อย",
+        "en": "Face Savoring Food"
+      }
+    },
+    {
+      "api": "U+1F61B",
+      "text": "😛",
+      "name": {
+        "th": "แลบลิ้น",
+        "en": "Face with Tongue"
+      }
+    },
+    {
+      "api": "U+1F61C",
+      "text": "😜",
+      "name": {
+        "th": "แลบลิ้นขยิบตา",
+        "en": "Winking Face with Tongue"
+      }
+    },
+    {
+      "api": "U+1F92A",
+      "text": "🤪",
+      "name": {
+        "th": "หน้าเพี้ยน",
+        "en": "Zany Face"
+      }
+    },
+    {
+      "api": "U+1F61D",
+      "text": "😝",
+      "name": {
+        "th": "แลบลิ้นตาปิด",
+        "en": "Squinting Face with Tongue"
+      }
+    },
+    {
+      "api": "U+1F911",
+      "text": "🤑",
+      "name": {
+        "th": "ตาเงิน",
+        "en": "Money-Mouth Face"
+      }
+    },
+    {
+      "api": "U+1F917",
+      "text": "🤗",
+      "name": {
+        "th": "กอด",
+        "en": "Hugging Face"
+      }
+    },
+    {
+      "api": "U+1F92D",
+      "text": "🤭",
+      "name": {
+        "th": "ปิดปากขำ",
+        "en": "Face with Hand Over Mouth"
+      }
+    },
+    {
+      "api": "U+1FAE2",
+      "text": "🫢",
+      "name": {
+        "th": "เอามือปิดปาก",
+        "en": "Face with Open Eyes and Hand Over Mouth"
+      }
+    },
+    {
+      "api": "U+1FAE3",
+      "text": "🫣",
+      "name": {
+        "th": "เอามือปิดตาแอบดู",
+        "en": "Face with Peeking Eye"
+      }
+    },
+    {
+      "api": "U+1F92B",
+      "text": "🤫",
+      "name": {
+        "th": "ชูนิ้วห้าม",
+        "en": "Shushing Face"
+      }
+    },
+    {
+      "api": "U+1F914",
+      "text": "🤔",
+      "name": {
+        "th": "คิด",
+        "en": "Thinking Face"
+      }
+    },
+    {
+      "api": "U+1FAE1",
+      "text": "🫡",
+      "name": {
+        "th": "ท่าทำความเคารพ",
+        "en": "Saluting Face"
+      }
+    },
+    {
+      "api": "U+1F910",
+      "text": "🤐",
+      "name": {
+        "th": "ปากรูดซิป",
+        "en": "Zipper-Mouth Face"
+      }
+    },
+    {
+      "api": "U+1F928",
+      "text": "🤨",
+      "name": {
+        "th": "เลิกคิ้ว",
+        "en": "Face with Raised Eyebrow"
+      }
+    },
+    {
+      "api": "U+1F610",
+      "text": "😐",
+      "name": {
+        "th": "หน้าเฉย",
+        "en": "Neutral Face"
+      }
+    },
+    {
+      "api": "U+1F611",
+      "text": "😑",
+      "name": {
+        "th": "หน้าไร้อารมณ์",
+        "en": "Expressionless Face"
+      }
+    },
+    {
+      "api": "U+1F636",
+      "text": "😶",
+      "name": {
+        "th": "หน้าไม่มีปาก",
+        "en": "Face Without Mouth"
+      }
+    },
+    {
+      "api": "U+1FAE5",
+      "text": "🫥",
+      "name": {
+        "th": "หน้าเส้นประ",
+        "en": "Dotted Line Face"
+      }
+    },
+    {
+      "api": "U+1F636-200D-1F32B-FE0F",
+      "text": "😶‍🌫️",
+      "name": {
+        "th": "หน้าในหมอก",
+        "en": "Face in Clouds"
+      }
+    },
+    {
+      "api": "U+1F60F",
+      "text": "😏",
+      "name": {
+        "th": "ยิ้มมุมปาก",
+        "en": "Smirking Face"
+      }
+    },
+    {
+      "api": "U+1F612",
+      "text": "😒",
+      "name": {
+        "th": "ไม่พอใจ",
+        "en": "Unamused Face"
+      }
+    },
+    {
+      "api": "U+1F644",
+      "text": "🙄",
+      "name": {
+        "th": "กลอกตา",
+        "en": "Face with Rolling Eyes"
+      }
+    },
+    {
+      "api": "U+1F62C",
+      "text": "😬",
+      "name": {
+        "th": "หน้ากัดฟัน",
+        "en": "Grimacing Face"
+      }
+    },
+    {
+      "api": "U+1F62E-200D-1F4A8",
+      "text": "😮‍💨",
+      "name": {
+        "th": "ถอนหายใจ",
+        "en": "Face Exhaling"
+      }
+    },
+    {
+      "api": "U+1F925",
+      "text": "🤥",
+      "name": {
+        "th": "โกหก",
+        "en": "Lying Face"
+      }
+    },
+    {
+      "api": "U+1FAE8",
+      "text": "🫨",
+      "name": {
+        "th": "หน้าสั่น",
+        "en": "Shaking Face"
+      }
+    },
+    {
+      "api": "U+1FAE9",
+      "text": "🫩",
+      "name": {
+        "th": "หน้าใต้ตาหม่น",
+        "en": "Face with Bags Under Eyes"
+      }
+    },
+    {
+      "api": "U+1F60C",
+      "text": "😌",
+      "name": {
+        "th": "โล่งใจ",
+        "en": "Relieved Face"
+      }
+    },
+    {
+      "api": "U+1F614",
+      "text": "😔",
+      "name": {
+        "th": "เศร้า",
+        "en": "Pensive Face"
+      }
+    },
+    {
+      "api": "U+1F62A",
+      "text": "😪",
+      "name": {
+        "th": "ง่วง",
+        "en": "Sleepy Face"
+      }
+    },
+    {
+      "api": "U+1F924",
+      "text": "🤤",
+      "name": {
+        "th": "น้ำลายไหล",
+        "en": "Drooling Face"
+      }
+    },
+    {
+      "api": "U+1F634",
+      "text": "😴",
+      "name": {
+        "th": "หลับ",
+        "en": "Sleeping Face"
+      }
+    },
+    {
+      "api": "U+1F637",
+      "text": "😷",
+      "name": {
+        "th": "หน้าป่วย",
+        "en": "Face with Medical Mask"
+      }
+    },
+    {
+      "api": "U+1F912",
+      "text": "🤒",
+      "name": {
+        "th": "ป่วย",
+        "en": "Face with Thermometer"
+      }
+    },
+    {
+      "api": "U+1F915",
+      "text": "🤕",
+      "name": {
+        "th": "บาดเจ็บ",
+        "en": "Face with Head-Bandage"
+      }
+    },
+    {
+      "api": "U+1F922",
+      "text": "🤢",
+      "name": {
+        "th": "คลื่นไส้",
+        "en": "Nauseated Face"
+      }
+    },
+    {
+      "api": "U+1F92E",
+      "text": "🤮",
+      "name": {
+        "th": "อาเจียน",
+        "en": "Face Vomiting"
+      }
+    },
+    {
+      "api": "U+1F927",
+      "text": "🤧",
+      "name": {
+        "th": "เป็นหวัด",
+        "en": "Sneezing Face"
+      }
+    },
+    {
+      "api": "U+1F975",
+      "text": "🥵",
+      "name": {
+        "th": "ร้อนจัด",
+        "en": "Hot Face"
+      }
+    },
+    {
+      "api": "U+1F976",
+      "text": "🥶",
+      "name": {
+        "th": "หนาวจัด",
+        "en": "Cold Face"
+      }
+    },
+    {
+      "api": "U+1F974",
+      "text": "🥴",
+      "name": {
+        "th": "มึนเมา",
+        "en": "Woozy Face"
+      }
+    },
+    {
+      "api": "U+1F635",
+      "text": "😵",
+      "name": {
+        "th": "หน้ามืด",
+        "en": "Dizzy Face"
+      }
+    },
+    {
+      "api": "U+1F635-200D-1F4AB",
+      "text": "😵‍💫",
+      "name": {
+        "th": "เวียนหัว",
+        "en": "Face with Spiral Eyes"
+      }
+    },
+    {
+      "api": "U+1F92F",
+      "text": "🤯",
+      "name": {
+        "th": "สมองระเบิด",
+        "en": "Exploding Head"
+      }
+    },
+    {
+      "api": "U+1F920",
+      "text": "🤠",
+      "name": {
+        "th": "ใส่หมวกคาวบอย",
+        "en": "Cowboy Hat Face"
+      }
+    },
+    {
+      "api": "U+1F973",
+      "text": "🥳",
+      "name": {
+        "th": "ใส่หมวกปาร์ตี้",
+        "en": "Partying Face"
+      }
+    },
+    {
+      "api": "U+1F978",
+      "text": "🥸",
+      "name": {
+        "th": "หน้าปลอมตัว",
+        "en": "Disguised Face"
+      }
+    },
+    {
+      "api": "U+1F60E",
+      "text": "😎",
+      "name": {
+        "th": "ใส่แว่นกันแดด",
+        "en": "Smiling Face with Sunglasses"
+      }
+    },
+    {
+      "api": "U+1F913",
+      "text": "🤓",
+      "name": {
+        "th": "หน้าเนิร์ด",
+        "en": "Nerd Face"
+      }
+    },
+    {
+      "api": "U+1F9D0",
+      "text": "🧐",
+      "name": {
+        "th": "แว่นขยาย",
+        "en": "Face with Monocle"
+      }
+    },
+    {
+      "api": "U+1F615",
+      "text": "😕",
+      "name": {
+        "th": "สับสน",
+        "en": "Confused Face"
+      }
+    },
+    {
+      "api": "U+1FAE4",
+      "text": "🫤",
+      "name": {
+        "th": "หน้างง",
+        "en": "Face with Diagonal Mouth"
+      }
+    },
+    {
+      "api": "U+1F61F",
+      "text": "😟",
+      "name": {
+        "th": "กังวล",
+        "en": "Worried Face"
+      }
+    },
+    {
+      "api": "U+1F641",
+      "text": "🙁",
+      "name": {
+        "th": "เศร้านิด ๆ",
+        "en": "Slightly Frowning Face"
+      }
+    },
+    {
+      "api": "U+2639-FE0F",
+      "text": "☹️",
+      "name": {
+        "th": "หน้าเศร้า",
+        "en": "Frowning Face"
+      }
+    },
+    {
+      "api": "U+1F62E",
+      "text": "😮",
+      "name": {
+        "th": "อ้าปาก",
+        "en": "Face with Open Mouth"
+      }
+    },
+    {
+      "api": "U+1F62F",
+      "text": "😯",
+      "name": {
+        "th": "ตกใจ",
+        "en": "Hushed Face"
+      }
+    },
+    {
+      "api": "U+1F632",
+      "text": "😲",
+      "name": {
+        "th": "ตกใจมาก",
+        "en": "Astonished Face"
+      }
+    },
+    {
+      "api": "U+1F633",
+      "text": "😳",
+      "name": {
+        "th": "หน้าแดง",
+        "en": "Flushed Face"
+      }
+    },
+    {
+      "api": "U+1F97A",
+      "text": "🥺",
+      "name": {
+        "th": "อ้อนวอน",
+        "en": "Pleading Face"
+      }
+    },
+    {
+      "api": "U+1F979",
+      "text": "🥹",
+      "name": {
+        "th": "หน้ากลั้นน้ำตา",
+        "en": "Face Holding Back Tears"
+      }
+    },
+    {
+      "api": "U+1F626",
+      "text": "😦",
+      "name": {
+        "th": "กังวล",
+        "en": "Frowning Face with Open Mouth"
+      }
+    },
+    {
+      "api": "U+1F627",
+      "text": "😧",
+      "name": {
+        "th": "วิตก",
+        "en": "Anguished Face"
+      }
+    },
+    {
+      "api": "U+1F628",
+      "text": "😨",
+      "name": {
+        "th": "กลัว",
+        "en": "Fearful Face"
+      }
+    },
+    {
+      "api": "U+1F630",
+      "text": "😰",
+      "name": {
+        "th": "กังวลเหงื่อแตก",
+        "en": "Anxious Face with Sweat"
+      }
+    },
+    {
+      "api": "U+1F625",
+      "text": "😥",
+      "name": {
+        "th": "โล่งใจเศร้า",
+        "en": "Sad but Relieved Face"
+      }
+    },
+    {
+      "api": "U+1F622",
+      "text": "😢",
+      "name": {
+        "th": "ร้องไห้",
+        "en": "Crying Face"
+      }
+    },
+    {
+      "api": "U+1F62D",
+      "text": "😭",
+      "name": {
+        "th": "ร้องไห้หนัก",
+        "en": "Loudly Crying Face"
+      }
+    },
+    {
+      "api": "U+1F631",
+      "text": "😱",
+      "name": {
+        "th": "กรีดร้อง",
+        "en": "Face Screaming in Fear"
+      }
+    },
+    {
+      "api": "U+1F616",
+      "text": "😖",
+      "name": {
+        "th": "ทรมาน",
+        "en": "Confounded Face"
+      }
+    },
+    {
+      "api": "U+1F623",
+      "text": "😣",
+      "name": {
+        "th": "กังวลมาก",
+        "en": "Persevering Face"
+      }
+    },
+    {
+      "api": "U+1F61E",
+      "text": "😞",
+      "name": {
+        "th": "ผิดหวัง",
+        "en": "Disappointed Face"
+      }
+    },
+    {
+      "api": "U+1F613",
+      "text": "😓",
+      "name": {
+        "th": "เหงื่อเย็น",
+        "en": "Downcast Face with Sweat"
+      }
+    },
+    {
+      "api": "U+1F629",
+      "text": "😩",
+      "name": {
+        "th": "เศร้าใจ",
+        "en": "Weary Face"
+      }
+    },
+    {
+      "api": "U+1F62B",
+      "text": "😫",
+      "name": {
+        "th": "เหนื่อยล้า",
+        "en": "Tired Face"
+      }
+    },
+    {
+      "api": "U+1F971",
+      "text": "🥱",
+      "name": {
+        "th": "หาว",
+        "en": "Yawning Face"
+      }
+    },
+    {
+      "api": "U+1F624",
+      "text": "😤",
+      "name": {
+        "th": "ฮึดฮัด",
+        "en": "Face with Steam From Nose"
+      }
+    },
+    {
+      "api": "U+1F621",
+      "text": "😡",
+      "name": {
+        "th": "โกรธจัด",
+        "en": "Pouting Face"
+      }
+    },
+    {
+      "api": "U+1F620",
+      "text": "😠",
+      "name": {
+        "th": "โกรธ",
+        "en": "Angry Face"
+      }
+    },
+    {
+      "api": "U+1F92C",
+      "text": "🤬",
+      "name": {
+        "th": "ด่าด้วยสัญลักษณ์",
+        "en": "Face with Symbols on Mouth"
+      }
+    },
+    {
+      "api": "U+1F608",
+      "text": "😈",
+      "name": {
+        "th": "ปีศาจยิ้ม",
+        "en": "Smiling Face with Horns"
+      }
+    },
+    {
+      "api": "U+1F47F",
+      "text": "👿",
+      "name": {
+        "th": "ปีศาจโกรธ",
+        "en": "Angry Face with Horns"
+      }
+    },
+    {
+      "api": "U+1F480",
+      "text": "💀",
+      "name": {
+        "th": "หัวกะโหลก",
+        "en": "Skull"
+      }
+    },
+    {
+      "api": "U+2620-FE0F",
+      "text": "☠️",
+      "name": {
+        "th": "กะโหลกไขว้",
+        "en": "Skull and Crossbones"
+      }
+    },
+    {
+      "api": "U+1F4A9",
+      "text": "💩",
+      "name": {
+        "th": "อึ",
+        "en": "Pile of Poo"
+      }
+    },
+    {
+      "api": "U+1F921",
+      "text": "🤡",
+      "name": {
+        "th": "ตัวตลก",
+        "en": "Clown Face"
+      }
+    },
+    {
+      "api": "U+1F479",
+      "text": "👹",
+      "name": {
+        "th": "ปีศาจโอนิ",
+        "en": "Ogre"
+      }
+    },
+    {
+      "api": "U+1F47A",
+      "text": "👺",
+      "name": {
+        "th": "โกบลิน/หน้ากาก",
+        "en": "Goblin"
+      }
+    },
+    {
+      "api": "U+1F47B",
+      "text": "👻",
+      "name": {
+        "th": "ผี",
+        "en": "Ghost"
+      }
+    },
+    {
+      "api": "U+1F47D",
+      "text": "👽",
+      "name": {
+        "th": "มนุษย์ต่างดาว",
+        "en": "Alien"
+      }
+    },
+    {
+      "api": "U+1F47E",
+      "text": "👾",
+      "name": {
+        "th": "เอเลี่ยนบุก",
+        "en": "Alien Monster"
+      }
+    },
+    {
+      "api": "U+1F916",
+      "text": "🤖",
+      "name": {
+        "th": "หุ่นยนต์",
+        "en": "Robot Face"
+      }
+    },
+    {
+      "api": "U+1F63A",
+      "text": "😺",
+      "name": {
+        "th": "แมวยิ้ม",
+        "en": "Grinning Cat"
+      }
+    },
+    {
+      "api": "U+1F638",
+      "text": "😸",
+      "name": {
+        "th": "แมวยิ้มตาหยี",
+        "en": "Grinning Cat with Smiling Eyes"
+      }
+    },
+    {
+      "api": "U+1F63B",
+      "text": "😻",
+      "name": {
+        "th": "แมวตาหัวใจ",
+        "en": "Smiling Cat with Heart-Eyes"
+      }
+    },
+    {
+      "api": "U+1F63C",
+      "text": "😼",
+      "name": {
+        "th": "แมวยิ้มมุมปาก",
+        "en": "Cat with Wry Smile"
+      }
+    },
+    {
+      "api": "U+1F63D",
+      "text": "😽",
+      "name": {
+        "th": "แมวจูบ",
+        "en": "Kissing Cat"
+      }
+    },
+    {
+      "api": "U+1F640",
+      "text": "🙀",
+      "name": {
+        "th": "แมวตกใจ",
+        "en": "Weary Cat"
+      }
+    },
+    {
+      "api": "U+1F63F",
+      "text": "😿",
+      "name": {
+        "th": "แมวร้องไห้",
+        "en": "Crying Cat"
+      }
+    },
+    {
+      "api": "U+1F63E",
+      "text": "😾",
+      "name": {
+        "th": "แมวโกรธ",
+        "en": "Pouting Cat"
+      }
+    },
+    {
+      "api": "U+1F648",
+      "text": "🙈",
+      "name": {
+        "th": "ลิงปิดตา",
+        "en": "See-No-Evil Monkey"
+      }
+    },
+    {
+      "api": "U+1F649",
+      "text": "🙉",
+      "name": {
+        "th": "ลิงปิดหู",
+        "en": "Hear-No-Evil Monkey"
+      }
+    },
+    {
+      "api": "U+1F64A",
+      "text": "🙊",
+      "name": {
+        "th": "ลิงปิดปาก",
+        "en": "Speak-No-Evil Monkey"
+      }
+    },
+    {
+      "api": "U+2764-FE0F",
+      "text": "❤️",
+      "name": {
+        "th": "หัวใจแดง",
+        "en": "Red Heart"
+      }
+    },
+    {
+      "api": "U+1F9E1",
+      "text": "🧡",
+      "name": {
+        "th": "หัวใจส้ม",
+        "en": "Orange Heart"
+      }
+    },
+    {
+      "api": "U+1F49B",
+      "text": "💛",
+      "name": {
+        "th": "หัวใจเหลือง",
+        "en": "Yellow Heart"
+      }
+    },
+    {
+      "api": "U+1F49A",
+      "text": "💚",
+      "name": {
+        "th": "หัวใจเขียว",
+        "en": "Green Heart"
+      }
+    },
+    {
+      "api": "U+1F499",
+      "text": "💙",
+      "name": {
+        "th": "หัวใจฟ้า",
+        "en": "Blue Heart"
+      }
+    },
+    {
+      "api": "U+1F49C",
+      "text": "💜",
+      "name": {
+        "th": "หัวใจม่วง",
+        "en": "Purple Heart"
+      }
+    },
+    {
+      "api": "U+1F90E",
+      "text": "🤎",
+      "name": {
+        "th": "หัวใจน้ำตาล",
+        "en": "Brown Heart"
+      }
+    },
+    {
+      "api": "U+1F5A4",
+      "text": "🖤",
+      "name": {
+        "th": "หัวใจดำ",
+        "en": "Black Heart"
+      }
+    },
+    {
+      "api": "U+1F90D",
+      "text": "🤍",
+      "name": {
+        "th": "หัวใจขาว",
+        "en": "White Heart"
+      }
+    },
+    {
+      "api": "U+1FA76",
+      "text": "🩶",
+      "name": {
+        "th": "หัวใจสีเทา",
+        "en": "Grey Heart"
+      }
+    },
+    {
+      "api": "U+1FA75",
+      "text": "🩵",
+      "name": {
+        "th": "หัวใจฟ้าอ่อน",
+        "en": "Light Blue Heart"
+      }
+    },
+    {
+      "api": "U+1FA77",
+      "text": "🩷",
+      "name": {
+        "th": "หัวใจชมพู",
+        "en": "Pink Heart"
+      }
+    },
+    {
+      "api": "U+1F494",
+      "text": "💔",
+      "name": {
+        "th": "หัวใจแตกสลาย",
+        "en": "Broken Heart"
+      }
+    },
+    {
+      "api": "U+2764-FE0F-200D-1F525",
+      "text": "❤️‍🔥",
+      "name": {
+        "th": "หัวใจลุกไฟ",
+        "en": "Heart on Fire"
+      }
+    },
+    {
+      "api": "U+2764-FE0F-200D-1FA79",
+      "text": "❤️‍🩹",
+      "name": {
+        "th": "หัวใจแผลเป็น/หาย",
+        "en": "Mending Heart"
+      }
+    },
+    {
+      "api": "U+2763-FE0F",
+      "text": "❣️",
+      "name": {
+        "th": "หัวใจอัศเจรีย์",
+        "en": "Heart Exclamation"
+      }
+    },
+    {
+      "api": "U+1F493",
+      "text": "💓",
+      "name": {
+        "th": "หัวใจเต้น",
+        "en": "Beating Heart"
+      }
+    },
+    {
+      "api": "U+1F495",
+      "text": "💕",
+      "name": {
+        "th": "หัวใจคู่",
+        "en": "Two Hearts"
+      }
+    },
+    {
+      "api": "U+1F49E",
+      "text": "💞",
+      "name": {
+        "th": "หัวใจหมุนวน",
+        "en": "Revolving Hearts"
+      }
+    },
+    {
+      "api": "U+1F497",
+      "text": "💗",
+      "name": {
+        "th": "หัวใจโต",
+        "en": "Growing Heart"
+      }
+    },
+    {
+      "api": "U+1F496",
+      "text": "💖",
+      "name": {
+        "th": "หัวใจประกาย",
+        "en": "Sparkling Heart"
+      }
+    },
+    {
+      "api": "U+1F498",
+      "text": "💘",
+      "name": {
+        "th": "หัวใจกับลูกศร",
+        "en": "Heart with Arrow"
+      }
+    },
+    {
+      "api": "U+1F49D",
+      "text": "💝",
+      "name": {
+        "th": "หัวใจของขวัญ",
+        "en": "Heart with Ribbon"
+      }
+    },
+    {
+      "api": "U+1F49F",
+      "text": "💟",
+      "name": {
+        "th": "หัวใจตกแต่ง",
+        "en": "Heart Decoration"
+      }
+    },
+    {
+      "api": "U+1F48B",
+      "text": "💋",
+      "name": {
+        "th": "รอยจูบ",
+        "en": "Kiss Mark"
+      }
+    },
+    {
+      "api": "U+1F48C",
+      "text": "💌",
+      "name": {
+        "th": "จดหมายรัก",
+        "en": "Love Letter"
+      }
+    },
+    {
+      "api": "U+1F4A4",
+      "text": "💤",
+      "name": {
+        "th": "งีบ/หลับ",
+        "en": "Zzz"
+      }
+    },
+    {
+      "api": "U+1F4A2",
+      "text": "💢",
+      "name": {
+        "th": "สัญลักษณ์โกรธ",
+        "en": "Anger Symbol"
+      }
+    },
+    {
+      "api": "U+1F4A3",
+      "text": "💣",
+      "name": {
+        "th": "ระเบิด",
+        "en": "Bomb"
+      }
+    },
+    {
+      "api": "U+1F4A5",
+      "text": "💥",
+      "name": {
+        "th": "ปะทะ/ระเบิด",
+        "en": "Collision"
+      }
+    },
+    {
+      "api": "U+1F4AB",
+      "text": "💫",
+      "name": {
+        "th": "เวียนหัว/ประกาย",
+        "en": "Dizzy"
+      }
+    },
+    {
+      "api": "U+1F4A6",
+      "text": "💦",
+      "name": {
+        "th": "หยดน้ำ/กระเซ็น",
+        "en": "Sweat Droplets"
+      }
+    },
+    {
+      "api": "U+1F4A8",
+      "text": "💨",
+      "name": {
+        "th": "ลมพัด/พลัง",
+        "en": "Dashing Away"
+      }
+    },
+    {
+      "api": "U+1F573-FE0F",
+      "text": "🕳️",
+      "name": {
+        "th": "หลุม",
+        "en": "Hole"
+      }
+    },
+    {
+      "api": "U+1F4AC",
+      "text": "💬",
+      "name": {
+        "th": "ฟองข้อความ",
+        "en": "Speech Balloon"
+      }
+    },
+    {
+      "api": "U+1F441-200D-1F5E8-FE0F",
+      "text": "👁️‍🗨️",
+      "name": {
+        "th": "ตาในฟองข้อความ",
+        "en": "Eye in Speech Bubble"
+      }
+    },
+    {
+      "api": "U+1F5E8-FE0F",
+      "text": "🗨️",
+      "name": {
+        "th": "ฟองข้อความซ้าย",
+        "en": "Left Speech Bubble"
+      }
+    },
+    {
+      "api": "U+1F5EF-FE0F",
+      "text": "🗯️",
+      "name": {
+        "th": "ฟองข้อความโกรธ",
+        "en": "Right Anger Bubble"
+      }
+    },
+    {
+      "api": "U+1F4AD",
+      "text": "💭",
+      "name": {
+        "th": "ฟองความคิด",
+        "en": "Thought Balloon"
+      }
+    },
+    {
+      "api": "U+2668-FE0F",
+      "text": "♨️",
+      "name": {
+        "th": "สปา/น้ำร้อน",
+        "en": "Hot Springs"
+      }
+    },
+    {
+      "api": "U+1FAE6",
+      "text": "🫦",
+      "name": {
+        "th": "กัดริมฝีปาก",
+        "en": "Biting Lip"
+      }
+    }
   ]
 }

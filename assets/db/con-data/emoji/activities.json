@@ -5,106 +5,821 @@
     "en": "Activities"
   },
   "data": [
-    { "api": "U+1F383", "text": "🎃", "name": { "th": "ฟักทองฮาโลวีน", "en": "Jack-O-Lantern" } },
-    { "api": "U+1F384", "text": "🎄", "name": { "th": "ต้นคริสต์มาส", "en": "Christmas Tree" } },
-    { "api": "U+1F386", "text": "🎆", "name": { "th": "พลุ", "en": "Fireworks" } },
-    { "api": "U+1F387", "text": "🎇", "name": { "th": "พลุประกาย", "en": "Sparkler" } },
-    { "api": "U+1F9E8", "text": "🧨", "name": { "th": "ประทัด/ดอกไม้ไฟ", "en": "Firecracker" } },
-    { "api": "U+2728", "text": "✨", "name": { "th": "ประกาย", "en": "Sparkles" } },
-    { "api": "U+1F388", "text": "🎈", "name": { "th": "ลูกโป่ง", "en": "Balloon" } },
-    { "api": "U+1F389", "text": "🎉", "name": { "th": "ปาร์ตี้/สเปรย์คอนเฟตติ", "en": "Party Popper" } },
-    { "api": "U+1F38A", "text": "🎊", "name": { "th": "คอนเฟตติ", "en": "Confetti Ball" } },
-    { "api": "U+1F38B", "text": "🎋", "name": { "th": "ต้นประดับตะกร้า (ทานาบาตะ)", "en": "Tanabata Tree" } },
-    { "api": "U+1F38D", "text": "🎍", "name": { "th": "ประดับปีใหม่ญี่ปุ่น", "en": "Pine Decoration" } },
-    { "api": "U+1F38E", "text": "🎎", "name": { "th": "ตุ๊กตาญี่ปุ่น", "en": "Japanese Dolls" } },
-    { "api": "U+1F38F", "text": "🎏", "name": { "th": "ธงปลาคาร์พ", "en": "Carp Streamer" } },
-    { "api": "U+1F390", "text": "🎐", "name": { "th": "กระดิ่งลม", "en": "Wind Chime" } },
-    { "api": "U+1F391", "text": "🎑", "name": { "th": "เทศกาลดวงจันทร์/ข้าว", "en": "Moon Viewing Ceremony" } },
-    { "api": "U+1F9E7", "text": "🧧", "name": { "th": "ซองอั่งเปา", "en": "Red Envelope" } },
-    { "api": "U+1F380", "text": "🎀", "name": { "th": "ริบบิ้น", "en": "Ribbon" } },
-    { "api": "U+1F381", "text": "🎁", "name": { "th": "ของขวัญ", "en": "Wrapped Gift" } },
-    { "api": "U+1F397", "text": "🎗️", "name": { "th": "ริบบิ้นรำลึก/รางวัล", "en": "Reminder Ribbon" } },
-    { "api": "U+1F39F", "text": "🎟️", "name": { "th": "ตั๋วเข้าชม", "en": "Admission Tickets" } },
-    { "api": "U+1F3AB", "text": "🎫", "name": { "th": "บัตรเข้าชม/บัตร", "en": "Ticket" } },
-    
-    { "api": "U+1F396-FE0F", "text": "🎖️", "name": { "th": "เหรียญประกาศเกียรติคุณ", "en": "Military Medal" } },
-    { "api": "U+1F3C6", "text": "🏆", "name": { "th": "ถ้วยรางวัล", "en": "Trophy" } },
-    { "api": "U+1F3C5", "text": "🏅", "name": { "th": "เหรียญรางวัล", "en": "Sports Medal" } },
-    { "api": "U+1F947", "text": "🥇", "name": { "th": "เหรียญทอง", "en": "1st Place Medal" } },
-    { "api": "U+1F948", "text": "🥈", "name": { "th": "เหรียญเงิน", "en": "2nd Place Medal" } },
-    { "api": "U+1F949", "text": "🥉", "name": { "th": "เหรียญทองแดง", "en": "3rd Place Medal" } },
-    
-    { "api": "U+26BD", "text": "⚽", "name": { "th": "ฟุตบอล", "en": "Soccer Ball" } },
-    { "api": "U+26BE", "text": "⚾", "name": { "th": "เบสบอล", "en": "Baseball" } },
-    { "api": "U+1F94E", "text": "🥎", "name": { "th": "บอลซอฟต์บอล", "en": "Softball" } },
-    { "api": "U+1F3C0", "text": "🏀", "name": { "th": "บาสเก็ตบอล", "en": "Basketball" } },
-    { "api": "U+1F3D0", "text": "🏐", "name": { "th": "วอลเลย์บอล", "en": "Volleyball" } },
-    { "api": "U+1F3C8", "text": "🏈", "name": { "th": "อเมริกันฟุตบอล", "en": "American Football" } },
-    { "api": "U+1F3C9", "text": "🏉", "name": { "th": "รักบี้", "en": "Rugby Football" } },
-    { "api": "U+1F3BE", "text": "🎾", "name": { "th": "เทนนิส", "en": "Tennis" } },
-    { "api": "U+1F3F8", "text": "🏸", "name": { "th": "แบดมินตัน", "en": "Badminton" } },
-    { "api": "U+1F3D2", "text": "🏒", "name": { "th": "ฮอกกี้น้ำแข็ง", "en": "Ice Hockey" } },
-    { "api": "U+1F3D1", "text": "🏑", "name": { "th": "ฮอกกี้พื้น", "en": "Field Hockey" } },
-    { "api": "U+1F3CF", "text": "🏏", "name": { "th": "คริกเก็ต", "en": "Cricket Game" } },
-    { "api": "U+1F94D", "text": "🥍", "name": { "th": "แลครอส", "en": "Lacrosse" } },
-    { "api": "U+1F3F9", "text": "🏹", "name": { "th": "ยิงธนู", "en": "Bow and Arrow" } },
-    { "api": "U+1F3A3", "text": "🎣", "name": { "th": "ตกปลา", "en": "Fishing Pole" } },
-    { "api": "U+1F93F", "text": "🤿", "name": { "th": "ดำน้ำ/หน้ากากดำน้ำ", "en": "Diving Mask" } },
-    { "api": "U+1F94A", "text": "🥊", "name": { "th": "มวย", "en": "Boxing Glove" } },
-    { "api": "U+1F94B", "text": "🥋", "name": { "th": "คาราเต้/เครื่องแต่งกายศิลปะการต่อสู้", "en": "Martial Arts Uniform" } },
-    { "api": "U+1F945", "text": "🥅", "name": { "th": "ประตู/ตาข่าย", "en": "Goal Net" } },
-    { "api": "U+26F3", "text": "⛳", "name": { "th": "กอล์ฟ", "en": "Flag in Hole" } },
-    { "api": "U+26F8-FE0F", "text": "⛸️", "name": { "th": "รองเท้าสเกตน้ำแข็ง", "en": "Ice Skate" } },
-    { "api": "U+1F6F7", "text": "🛷", "name": { "th": "เลื่อนหิมะ", "en": "Sled" } },
-    { "api": "U+1F94C", "text": "🥌", "name": { "th": "เคอร์ลิง", "en": "Curling Stone" } },
-    { "api": "U+1F3BF", "text": "🎿", "name": { "th": "สกี", "en": "Skis" } },
-    { "api": "U+1F6F9", "text": "🛹", "name": { "th": "สเก็ตบอร์ด", "en": "Skateboard" } },
-    { "api": "U+1F6FC", "text": "🛼", "name": { "th": "รองเท้าสเก็ตล้อ", "en": "Roller Skate" } },
-    { "api": "U+1F6F6", "text": "🛶", "name": { "th": "แคนนู/เรือคายัค", "en": "Canoe" } },
-    { "api": "U+1F3C4", "text": "🏄", "name": { "th": "โต้คลื่น", "en": "Surfer" } },
-    { "api": "U+1F3CA", "text": "🏊", "name": { "th": "ว่ายน้ำ", "en": "Swimmer" } },
-    { "api": "U+26F9-FE0F", "text": "⛹️", "name": { "th": "เล่นบาส/เล่นบอล", "en": "Person Bouncing Ball" } },
-    { "api": "U+1F3CB-FE0F", "text": "🏋️", "name": { "th": "ยกน้ำหนัก", "en": "Weight Lifter" } },
-    { "api": "U+1F6B4", "text": "🚴", "name": { "th": "ปั่นจักรยาน", "en": "Bicyclist" } },
-    { "api": "U+1F6B5", "text": "🚵", "name": { "th": "ปั่นจักรยานเสือภูเขา", "en": "Mountain Bicyclist" } },
-    { "api": "U+1F938", "text": "🤸", "name": { "th": "ยิมนาสติก/ตีลังกา", "en": "Person Cartwheeling" } },
-    { "api": "U+1F93C", "text": "🤼", "name": { "th": "มวยปล้ำ", "en": "People Wrestling" } },
-    { "api": "U+1F93D", "text": "🤽", "name": { "th": "โปโลน้ำ/เล่นน้ำ", "en": "Person Playing Water Polo" } },
-    { "api": "U+1F93E", "text": "🤾", "name": { "th": "แฮนด์บอล", "en": "Person Playing Handball" } },
-    { "api": "U+1F939", "text": "🤹", "name": { "th": "เล่นกล", "en": "Person Juggling" } },
-    
-    { "api": "U+1F3AF", "text": "🎯", "name": { "th": "เป้า/ดาร์ท", "en": "Direct Hit" } },
-    { "api": "U+1F3B0", "text": "🎰", "name": { "th": "ตู้สล็อต", "en": "Slot Machine" } },
-    { "api": "U+1F3B3", "text": "🎳", "name": { "th": "โบว์ลิ่ง", "en": "Bowling" } },
-    { "api": "U+1F3AE", "text": "🎮", "name": { "th": "เกมคอนโซล", "en": "Video Game" } },
-    { "api": "U+1F579-FE0F", "text": "🕹️", "name": { "th": "จอยสติก", "en": "Joystick" } },
-    { "api": "U+1F47E", "text": "👾", "name": { "th": "มนุษย์ต่างดาวเกม/พิกเซล", "en": "Alien Monster" } },
-    { "api": "U+1F52B", "text": "🔫", "name": { "th": "ปืน (สัญลักษณ์)", "en": "Pistol" } },
-    { "api": "U+1F3B2", "text": "🎲", "name": { "th": "ลูกเต๋า/เกมบอร์ด", "en": "Game Die" } },
-    { "api": "U+1F9E9", "text": "🧩", "name": { "th": "จิ๊กซอว์", "en": "Jigsaw Puzzle Piece" } },
-    { "api": "U+1F9F8", "text": "🧸", "name": { "th": "หมีเท็ดดี้", "en": "Teddy Bear" } },
-    { "api": "U+1FA85", "text": "🪅", "name": { "th": "พินยาต้า", "en": "Piñata" } },
-    { "api": "U+1FA9A", "text": "🪩", "name": { "th": "ดิสโก้บอล", "en": "Mirror Ball" } },
-    { "api": "U+1FA80", "text": "🪀", "name": { "th": "โยโย่", "en": "Yo-Yo" } },
-    { "api": "U+1FA81", "text": "🪁", "name": { "th": "ว่าว", "en": "Kite" } },
-    
-    { "api": "U+1F3A8", "text": "🎨", "name": { "th": "ศิลปะ/จานสี", "en": "Artist Palette" } },
-    { "api": "U+1F9F5", "text": "🧵", "name": { "th": "ด้าย/การเย็บ", "en": "Thread" } },
-    { "api": "U+1FAA1", "text": "🪡", "name": { "th": "เข็มเย็บผ้า", "en": "Sewing Needle" } },
-    { "api": "U+1F9F6", "text": "🧶", "name": { "th": "ไหมพรม", "en": "Yarn" } },
-    { "api": "U+1F3B8", "text": "🎸", "name": { "th": "กีตาร์", "en": "Guitar" } },
-    { "api": "U+1F3BB", "text": "🎻", "name": { "th": "ไวโอลิน", "en": "Violin" } },
-    { "api": "U+1F941", "text": "🥁", "name": { "th": "กลอง", "en": "Drum" } },
-    { "api": "U+1FA98", "text": "🪘", "name": { "th": "กลองยาว/กลองแบน", "en": "Long Drum" } },
-    { "api": "U+1F3B9", "text": "🎹", "name": { "th": "เปียโน/คีย์บอร์ด", "en": "Musical Keyboard" } },
-    { "api": "U+1F3B7", "text": "🎷", "name": { "th": "แซ็กโซโฟน", "en": "Saxophone" } },
-    { "api": "U+1F3BA", "text": "🎺", "name": { "th": "ทรัมเป็ต", "en": "Trumpet" } },
-    { "api": "U+1FA95", "text": "🪕", "name": { "th": "บันโจ", "en": "Banjo" } },
-    { "api": "U+1FA97", "text": "🪗", "name": { "th": "แอคคอร์เดียน/หีบเพลง", "en": "Accordion" } },
-    { "api": "U+1F3A4", "text": "🎤", "name": { "th": "ไมโครโฟน", "en": "Microphone" } },
-    { "api": "U+1F3A7", "text": "🎧", "name": { "th": "หูฟัง", "en": "Headphone" } },
-    { "api": "U+1F3AC", "text": "🎬", "name": { "th": "ภาพยนตร์/ฉาก", "en": "Clapper Board" } },
-    { "api": "U+1F3AD", "text": "🎭", "name": { "th": "ละคร/หน้ากาก", "en": "Performing Arts" } },
-    { "api": "U+265F-FE0F", "text": "♟️", "name": { "th": "หมากหมาก/หมากรุก", "en": "Chess Pawn" } }
+    {
+      "api": "U+1F383",
+      "text": "🎃",
+      "name": {
+        "th": "ฟักทองฮาโลวีน",
+        "en": "Jack-O-Lantern"
+      }
+    },
+    {
+      "api": "U+1F384",
+      "text": "🎄",
+      "name": {
+        "th": "ต้นคริสต์มาส",
+        "en": "Christmas Tree"
+      }
+    },
+    {
+      "api": "U+1F386",
+      "text": "🎆",
+      "name": {
+        "th": "พลุ",
+        "en": "Fireworks"
+      }
+    },
+    {
+      "api": "U+1F387",
+      "text": "🎇",
+      "name": {
+        "th": "พลุประกาย",
+        "en": "Sparkler"
+      }
+    },
+    {
+      "api": "U+1F9E8",
+      "text": "🧨",
+      "name": {
+        "th": "ประทัด/ดอกไม้ไฟ",
+        "en": "Firecracker"
+      }
+    },
+    {
+      "api": "U+2728",
+      "text": "✨",
+      "name": {
+        "th": "ประกาย",
+        "en": "Sparkles"
+      }
+    },
+    {
+      "api": "U+1F388",
+      "text": "🎈",
+      "name": {
+        "th": "ลูกโป่ง",
+        "en": "Balloon"
+      }
+    },
+    {
+      "api": "U+1F389",
+      "text": "🎉",
+      "name": {
+        "th": "ปาร์ตี้/สเปรย์คอนเฟตติ",
+        "en": "Party Popper"
+      }
+    },
+    {
+      "api": "U+1F38A",
+      "text": "🎊",
+      "name": {
+        "th": "คอนเฟตติ",
+        "en": "Confetti Ball"
+      }
+    },
+    {
+      "api": "U+1F38B",
+      "text": "🎋",
+      "name": {
+        "th": "ต้นประดับตะกร้า (ทานาบาตะ)",
+        "en": "Tanabata Tree"
+      }
+    },
+    {
+      "api": "U+1F38D",
+      "text": "🎍",
+      "name": {
+        "th": "ประดับปีใหม่ญี่ปุ่น",
+        "en": "Pine Decoration"
+      }
+    },
+    {
+      "api": "U+1F38E",
+      "text": "🎎",
+      "name": {
+        "th": "ตุ๊กตาญี่ปุ่น",
+        "en": "Japanese Dolls"
+      }
+    },
+    {
+      "api": "U+1F38F",
+      "text": "🎏",
+      "name": {
+        "th": "ธงปลาคาร์พ",
+        "en": "Carp Streamer"
+      }
+    },
+    {
+      "api": "U+1F390",
+      "text": "🎐",
+      "name": {
+        "th": "กระดิ่งลม",
+        "en": "Wind Chime"
+      }
+    },
+    {
+      "api": "U+1F391",
+      "text": "🎑",
+      "name": {
+        "th": "เทศกาลดวงจันทร์/ข้าว",
+        "en": "Moon Viewing Ceremony"
+      }
+    },
+    {
+      "api": "U+1F9E7",
+      "text": "🧧",
+      "name": {
+        "th": "ซองอั่งเปา",
+        "en": "Red Envelope"
+      }
+    },
+    {
+      "api": "U+1F380",
+      "text": "🎀",
+      "name": {
+        "th": "ริบบิ้น",
+        "en": "Ribbon"
+      }
+    },
+    {
+      "api": "U+1F381",
+      "text": "🎁",
+      "name": {
+        "th": "ของขวัญ",
+        "en": "Wrapped Gift"
+      }
+    },
+    {
+      "api": "U+1F397",
+      "text": "🎗️",
+      "name": {
+        "th": "ริบบิ้นรำลึก/รางวัล",
+        "en": "Reminder Ribbon"
+      }
+    },
+    {
+      "api": "U+1F39F",
+      "text": "🎟️",
+      "name": {
+        "th": "ตั๋วเข้าชม",
+        "en": "Admission Tickets"
+      }
+    },
+    {
+      "api": "U+1F3AB",
+      "text": "🎫",
+      "name": {
+        "th": "บัตรเข้าชม/บัตร",
+        "en": "Ticket"
+      }
+    },
+    {
+      "api": "U+1F396-FE0F",
+      "text": "🎖️",
+      "name": {
+        "th": "เหรียญประกาศเกียรติคุณ",
+        "en": "Military Medal"
+      }
+    },
+    {
+      "api": "U+1F3C6",
+      "text": "🏆",
+      "name": {
+        "th": "ถ้วยรางวัล",
+        "en": "Trophy"
+      }
+    },
+    {
+      "api": "U+1F3C5",
+      "text": "🏅",
+      "name": {
+        "th": "เหรียญรางวัล",
+        "en": "Sports Medal"
+      }
+    },
+    {
+      "api": "U+1F947",
+      "text": "🥇",
+      "name": {
+        "th": "เหรียญทอง",
+        "en": "1st Place Medal"
+      }
+    },
+    {
+      "api": "U+1F948",
+      "text": "🥈",
+      "name": {
+        "th": "เหรียญเงิน",
+        "en": "2nd Place Medal"
+      }
+    },
+    {
+      "api": "U+1F949",
+      "text": "🥉",
+      "name": {
+        "th": "เหรียญทองแดง",
+        "en": "3rd Place Medal"
+      }
+    },
+    {
+      "api": "U+26BD",
+      "text": "⚽",
+      "name": {
+        "th": "ฟุตบอล",
+        "en": "Soccer Ball"
+      }
+    },
+    {
+      "api": "U+26BE",
+      "text": "⚾",
+      "name": {
+        "th": "เบสบอล",
+        "en": "Baseball"
+      }
+    },
+    {
+      "api": "U+1F94E",
+      "text": "🥎",
+      "name": {
+        "th": "บอลซอฟต์บอล",
+        "en": "Softball"
+      }
+    },
+    {
+      "api": "U+1F3C0",
+      "text": "🏀",
+      "name": {
+        "th": "บาสเก็ตบอล",
+        "en": "Basketball"
+      }
+    },
+    {
+      "api": "U+1F3D0",
+      "text": "🏐",
+      "name": {
+        "th": "วอลเลย์บอล",
+        "en": "Volleyball"
+      }
+    },
+    {
+      "api": "U+1F3C8",
+      "text": "🏈",
+      "name": {
+        "th": "อเมริกันฟุตบอล",
+        "en": "American Football"
+      }
+    },
+    {
+      "api": "U+1F3C9",
+      "text": "🏉",
+      "name": {
+        "th": "รักบี้",
+        "en": "Rugby Football"
+      }
+    },
+    {
+      "api": "U+1F3BE",
+      "text": "🎾",
+      "name": {
+        "th": "เทนนิส",
+        "en": "Tennis"
+      }
+    },
+    {
+      "api": "U+1F3F8",
+      "text": "🏸",
+      "name": {
+        "th": "แบดมินตัน",
+        "en": "Badminton"
+      }
+    },
+    {
+      "api": "U+1F3D2",
+      "text": "🏒",
+      "name": {
+        "th": "ฮอกกี้น้ำแข็ง",
+        "en": "Ice Hockey"
+      }
+    },
+    {
+      "api": "U+1F3D1",
+      "text": "🏑",
+      "name": {
+        "th": "ฮอกกี้พื้น",
+        "en": "Field Hockey"
+      }
+    },
+    {
+      "api": "U+1F3CF",
+      "text": "🏏",
+      "name": {
+        "th": "คริกเก็ต",
+        "en": "Cricket Game"
+      }
+    },
+    {
+      "api": "U+1F94D",
+      "text": "🥍",
+      "name": {
+        "th": "แลครอส",
+        "en": "Lacrosse"
+      }
+    },
+    {
+      "api": "U+1F3F9",
+      "text": "🏹",
+      "name": {
+        "th": "ยิงธนู",
+        "en": "Bow and Arrow"
+      }
+    },
+    {
+      "api": "U+1F3A3",
+      "text": "🎣",
+      "name": {
+        "th": "ตกปลา",
+        "en": "Fishing Pole"
+      }
+    },
+    {
+      "api": "U+1F93F",
+      "text": "🤿",
+      "name": {
+        "th": "ดำน้ำ/หน้ากากดำน้ำ",
+        "en": "Diving Mask"
+      }
+    },
+    {
+      "api": "U+1F94A",
+      "text": "🥊",
+      "name": {
+        "th": "มวย",
+        "en": "Boxing Glove"
+      }
+    },
+    {
+      "api": "U+1F94B",
+      "text": "🥋",
+      "name": {
+        "th": "คาราเต้/เครื่องแต่งกายศิลปะการต่อสู้",
+        "en": "Martial Arts Uniform"
+      }
+    },
+    {
+      "api": "U+1F945",
+      "text": "🥅",
+      "name": {
+        "th": "ประตู/ตาข่าย",
+        "en": "Goal Net"
+      }
+    },
+    {
+      "api": "U+26F3",
+      "text": "⛳",
+      "name": {
+        "th": "กอล์ฟ",
+        "en": "Flag in Hole"
+      }
+    },
+    {
+      "api": "U+1F3B1",
+      "text": "🎱",
+      "name": {
+        "th": "บิลเลียด",
+        "en": "Pool 8 Ball"
+      }
+    },
+    {
+      "api": "U+26F8-FE0F",
+      "text": "⛸️",
+      "name": {
+        "th": "รองเท้าสเกตน้ำแข็ง",
+        "en": "Ice Skate"
+      }
+    },
+    {
+      "api": "U+1F6F7",
+      "text": "🛷",
+      "name": {
+        "th": "เลื่อนหิมะ",
+        "en": "Sled"
+      }
+    },
+    {
+      "api": "U+1F94C",
+      "text": "🥌",
+      "name": {
+        "th": "เคอร์ลิง",
+        "en": "Curling Stone"
+      }
+    },
+    {
+      "api": "U+1F3BF",
+      "text": "🎿",
+      "name": {
+        "th": "สกี",
+        "en": "Skis"
+      }
+    },
+    {
+      "api": "U+26F7-FE0F",
+      "text": "⛷️",
+      "name": {
+        "th": "นักสกี",
+        "en": "Skier"
+      }
+    },
+    {
+      "api": "U+26F9-FE0F",
+      "text": "⛹️",
+      "name": {
+        "th": "เล่นบาส/เล่นบอล",
+        "en": "Person Bouncing Ball"
+      }
+    },
+    {
+      "api": "U+1F3CB-FE0F",
+      "text": "🏋️",
+      "name": {
+        "th": "ยกน้ำหนัก",
+        "en": "Weight Lifter"
+      }
+    },
+    {
+      "api": "U+1F3AF",
+      "text": "🎯",
+      "name": {
+        "th": "เป้า/ดาร์ท",
+        "en": "Direct Hit"
+      }
+    },
+    {
+      "api": "U+1F3B0",
+      "text": "🎰",
+      "name": {
+        "th": "ตู้สล็อต",
+        "en": "Slot Machine"
+      }
+    },
+    {
+      "api": "U+1F3B3",
+      "text": "🎳",
+      "name": {
+        "th": "โบว์ลิ่ง",
+        "en": "Bowling"
+      }
+    },
+    {
+      "api": "U+1F3AE",
+      "text": "🎮",
+      "name": {
+        "th": "เกมคอนโซล",
+        "en": "Video Game"
+      }
+    },
+    {
+      "api": "U+1F579-FE0F",
+      "text": "🕹️",
+      "name": {
+        "th": "จอยสติก",
+        "en": "Joystick"
+      }
+    },
+    {
+      "api": "U+1F47E",
+      "text": "👾",
+      "name": {
+        "th": "มนุษย์ต่างดาวเกม/พิกเซล",
+        "en": "Alien Monster"
+      }
+    },
+    {
+      "api": "U+1F52B",
+      "text": "🔫",
+      "name": {
+        "th": "ปืน (สัญลักษณ์)",
+        "en": "Pistol"
+      }
+    },
+    {
+      "api": "U+1F3B2",
+      "text": "🎲",
+      "name": {
+        "th": "ลูกเต๋า/เกมบอร์ด",
+        "en": "Game Die"
+      }
+    },
+    {
+      "api": "U+1F9E9",
+      "text": "🧩",
+      "name": {
+        "th": "จิ๊กซอว์",
+        "en": "Jigsaw Puzzle Piece"
+      }
+    },
+    {
+      "api": "U+1F9F8",
+      "text": "🧸",
+      "name": {
+        "th": "หมีเท็ดดี้",
+        "en": "Teddy Bear"
+      }
+    },
+    {
+      "api": "U+1FA85",
+      "text": "🪅",
+      "name": {
+        "th": "พินยาต้า",
+        "en": "Piñata"
+      }
+    },
+    {
+      "api": "U+1FA86",
+      "text": "🪆",
+      "name": {
+        "th": "ตุ๊กตามาตริโอชก้า",
+        "en": "Matryoshka"
+      }
+    },
+    {
+      "api": "U+1FA9A",
+      "text": "🪩",
+      "name": {
+        "th": "ดิสโก้บอล",
+        "en": "Mirror Ball"
+      }
+    },
+    {
+      "api": "U+1FA80",
+      "text": "🪀",
+      "name": {
+        "th": "โยโย่",
+        "en": "Yo-Yo"
+      }
+    },
+    {
+      "api": "U+1FA81",
+      "text": "🪁",
+      "name": {
+        "th": "ว่าว",
+        "en": "Kite"
+      }
+    },
+    {
+      "api": "U+1FA84",
+      "text": "🪄",
+      "name": {
+        "th": "ไม้กายสิทธิ์",
+        "en": "Magic Wand"
+      }
+    },
+    {
+      "api": "U+1FA83",
+      "text": "🪃",
+      "name": {
+        "th": "บูมเมอแรง",
+        "en": "Boomerang"
+      }
+    },
+    {
+      "api": "U+265F-FE0F",
+      "text": "♟️",
+      "name": {
+        "th": "หมากหมาก/หมากรุก",
+        "en": "Chess Pawn"
+      }
+    },
+    {
+      "api": "U+1F9F5",
+      "text": "🧵",
+      "name": {
+        "th": "ด้าย/การเย็บ",
+        "en": "Thread"
+      }
+    },
+    {
+      "api": "U+1FAA1",
+      "text": "🪡",
+      "name": {
+        "th": "เข็มเย็บผ้า",
+        "en": "Sewing Needle"
+      }
+    },
+    {
+      "api": "U+1F9F6",
+      "text": "🧶",
+      "name": {
+        "th": "ไหมพรม",
+        "en": "Yarn"
+      }
+    },
+    {
+      "api": "U+1F3B8",
+      "text": "🎸",
+      "name": {
+        "th": "กีตาร์",
+        "en": "Guitar"
+      }
+    },
+    {
+      "api": "U+1F3BB",
+      "text": "🎻",
+      "name": {
+        "th": "ไวโอลิน",
+        "en": "Violin"
+      }
+    },
+    {
+      "api": "U+1F941",
+      "text": "🥁",
+      "name": {
+        "th": "กลอง",
+        "en": "Drum"
+      }
+    },
+    {
+      "api": "U+1FA98",
+      "text": "🪘",
+      "name": {
+        "th": "กลองยาว/กลองแบน",
+        "en": "Long Drum"
+      }
+    },
+    {
+      "api": "U+1F3B9",
+      "text": "🎹",
+      "name": {
+        "th": "เปียโน/คีย์บอร์ด",
+        "en": "Musical Keyboard"
+      }
+    },
+    {
+      "api": "U+1F3B7",
+      "text": "🎷",
+      "name": {
+        "th": "แซ็กโซโฟน",
+        "en": "Saxophone"
+      }
+    },
+    {
+      "api": "U+1F3BA",
+      "text": "🎺",
+      "name": {
+        "th": "ทรัมเป็ต",
+        "en": "Trumpet"
+      }
+    },
+    {
+      "api": "U+1FA95",
+      "text": "🪕",
+      "name": {
+        "th": "บันโจ",
+        "en": "Banjo"
+      }
+    },
+    {
+      "api": "U+1FA97",
+      "text": "🪗",
+      "name": {
+        "th": "แอคคอร์เดียน/หีบเพลง",
+        "en": "Accordion"
+      }
+    },
+    {
+      "api": "U+1F3A4",
+      "text": "🎤",
+      "name": {
+        "th": "ไมโครโฟน",
+        "en": "Microphone"
+      }
+    },
+    {
+      "api": "U+1F3A7",
+      "text": "🎧",
+      "name": {
+        "th": "หูฟัง",
+        "en": "Headphone"
+      }
+    },
+    {
+      "api": "U+1F3AC",
+      "text": "🎬",
+      "name": {
+        "th": "ภาพยนตร์/ฉาก",
+        "en": "Clapper Board"
+      }
+    },
+    {
+      "api": "U+1F3AD",
+      "text": "🎭",
+      "name": {
+        "th": "ละคร/หน้ากาก",
+        "en": "Performing Arts"
+      }
+    },
+    {
+      "api": "U+1F94F",
+      "text": "🥏",
+      "name": {
+        "th": "แฟรนจบี/จานร่อน",
+        "en": "Flying Disc"
+      }
+    },
+    {
+      "api": "U+1F3D3",
+      "text": "🏓",
+      "name": {
+        "th": "ปิงปอง",
+        "en": "Ping Pong"
+      }
+    },
+    {
+      "api": "U+1F3B4",
+      "text": "🎴",
+      "name": {
+        "th": "ไพ่ฮานาฟูดะ",
+        "en": "Flower Playing Cards"
+      }
+    },
+    {
+      "api": "U+1F004-FE0F",
+      "text": "🀄️",
+      "name": {
+        "th": "ไพ่มะฮจอง",
+        "en": "Mahjong Red Dragon"
+      }
+    },
+    {
+      "api": "U+1F3B5",
+      "text": "🎵",
+      "name": {
+        "th": "โน้ตเพลง",
+        "en": "Musical Note"
+      }
+    },
+    {
+      "api": "U+1F3B6",
+      "text": "🎶",
+      "name": {
+        "th": "โน้ตหลายตัว",
+        "en": "Multiple Musical Notes"
+      }
+    },
+    {
+      "api": "U+1F3A5",
+      "text": "🎥",
+      "name": {
+        "th": "กล้องวิดีโอ",
+        "en": "Movie Camera"
+      }
+    },
+    {
+      "api": "U+1F3BC",
+      "text": "🎼",
+      "name": {
+        "th": "บาร์โน้ต",
+        "en": "Musical Score"
+      }
+    },
+    {
+      "api": "U+1F9F9",
+      "text": "🧹",
+      "name": {
+        "th": "ไม้กวาด",
+        "en": "Broom"
+      }
+    },
+    {
+      "api": "U+1F38C",
+      "text": "🎌",
+      "name": {
+        "th": "ธงญี่ปุ่นไขว้",
+        "en": "Crossed Flags"
+      }
+    },
+    {
+      "api": "U+1F399-FE0F",
+      "text": "🎙️",
+      "name": {
+        "th": "ไมโครโฟนสตูดิโอ",
+        "en": "Studio Microphone"
+      }
+    },
+    {
+      "api": "U+1F39A-FE0F",
+      "text": "🎚️",
+      "name": {
+        "th": "สไลเดอร์ระดับ",
+        "en": "Level Slider"
+      }
+    },
+    {
+      "api": "U+1F39B-FE0F",
+      "text": "🎛️",
+      "name": {
+        "th": "ปุ่มควบคุม",
+        "en": "Control Knobs"
+      }
+    }
   ]
 }

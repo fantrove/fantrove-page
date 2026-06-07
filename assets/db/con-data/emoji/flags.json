@@ -5,25 +5,2061 @@
     "en": "Flags"
   },
   "data": [
-    { "api": "U+1F3C1", "text": "🏁", "name": { "th": "ธงตาหมากรุก", "en": "Chequered Flag" } },
-    { "api": "U+1F6A9", "text": "🚩", "name": { "th": "ธงสามเหลี่ยม", "en": "Triangular Flag" } },
-    { "api": "U+1F38C", "text": "🎌", "name": { "th": "ธงญี่ปุ่นไขว้", "en": "Crossed Flags" } },
-    { "api": "U+1F3F4", "text": "🏴", "name": { "th": "ธงดำ", "en": "Black Flag" } },
-    { "api": "U+1F3F3-FE0F", "text": "🏳️", "name": { "th": "ธงขาว", "en": "White Flag" } },
-    { "api": "U+1F3F3-FE0F-200D-1F308", "text": "🏳️‍🌈", "name": { "th": "ธงสายรุ้ง (LGBTQ+)", "en": "Rainbow Flag" } },
-    { "api": "U+1F3F3-FE0F-200D-26A7-FE0F", "text": "🏳️‍⚧️", "name": { "th": "ธงคนข้ามเพศ", "en": "Transgender Flag" } },
-    { "api": "U+1F3F4-200D-2620-FE0F", "text": "🏴‍☠️", "name": { "th": "ธงโจรสลัด", "en": "Pirate Flag" } },
-    
-    { "api": "U+1F1F9-1F1ED", "text": "🇹🇭", "name": { "th": "ธงชาติไทย", "en": "Flag: Thailand" } },
-    { "api": "U+1F1FA-1F1F8", "text": "🇺🇸", "name": { "th": "ธงชาติสหรัฐอเมริกา", "en": "Flag: United States" } },
-    { "api": "U+1F1EF-1F1F5", "text": "🇯🇵", "name": { "th": "ธงชาติเจ้าหน้าที่ญี่ปุ่น", "en": "Flag: Japan" } },
-    { "api": "U+1F1F0-1F1F7", "text": "🇰🇷", "name": { "th": "ธงชาติสาธารณรัฐเกาหลี", "en": "Flag: South Korea" } },
-    { "api": "U+1F1E8-1F1F3", "text": "🇨🇳", "name": { "th": "ธงชาติจีน", "en": "Flag: China" } },
-    { "api": "U+1F1EC-1F1E7", "text": "🇬🇧", "name": { "th": "ธงสหราชอาณาจักร", "en": "Flag: United Kingdom" } },
-    { "api": "U+1F1EB-1F1F7", "text": "🇫🇷", "name": { "th": "ธงชาติฝรั่งเศส", "en": "Flag: France" } },
-    { "api": "U+1F1E9-1F1EA", "text": "🇩🇪", "name": { "th": "ธงชาติเยอรมนี", "en": "Flag: Germany" } },
-    { "api": "U+1F1EE-1F1F3", "text": "🇮🇳", "name": { "th": "ธงชาติอินเดีย", "en": "Flag: India" } },
-    { "api": "U+1F1E7-1F1F7", "text": "🇧🇷", "name": { "th": "ธงชาติบราซิล", "en": "Flag: Brazil" } },
-    { "api": "U+1F1E6-1F1FA", "text": "🇦🇺", "name": { "th": "ธงชาติออสเตรเลีย", "en": "Flag: Australia" } }
+    {
+      "api": "U+1F3C1",
+      "text": "🏁",
+      "name": {
+        "th": "ธงตาหมากรุก",
+        "en": "Chequered Flag"
+      }
+    },
+    {
+      "api": "U+1F6A9",
+      "text": "🚩",
+      "name": {
+        "th": "ธงสามเหลี่ยม",
+        "en": "Triangular Flag"
+      }
+    },
+    {
+      "api": "U+1F38C",
+      "text": "🎌",
+      "name": {
+        "th": "ธงญี่ปุ่นไขว้",
+        "en": "Crossed Flags"
+      }
+    },
+    {
+      "api": "U+1F3F4",
+      "text": "🏴",
+      "name": {
+        "th": "ธงดำ",
+        "en": "Black Flag"
+      }
+    },
+    {
+      "api": "U+1F3F3-FE0F",
+      "text": "🏳️",
+      "name": {
+        "th": "ธงขาว",
+        "en": "White Flag"
+      }
+    },
+    {
+      "api": "U+1F3F3-FE0F-200D-1F308",
+      "text": "🏳️‍🌈",
+      "name": {
+        "th": "ธงสายรุ้ง (LGBTQ+)",
+        "en": "Rainbow Flag"
+      }
+    },
+    {
+      "api": "U+1F3F3-FE0F-200D-26A7-FE0F",
+      "text": "🏳️‍⚧️",
+      "name": {
+        "th": "ธงคนข้ามเพศ",
+        "en": "Transgender Flag"
+      }
+    },
+    {
+      "api": "U+1F3F4-200D-2620-FE0F",
+      "text": "🏴‍☠️",
+      "name": {
+        "th": "ธงโจรสลัด",
+        "en": "Pirate Flag"
+      }
+    },
+    {
+      "api": "U+1F1E6-1F1EB",
+      "text": "🇦🇫",
+      "name": {
+        "th": "ธงชาติอัฟกานิสถาน",
+        "en": "Flag: Afghanistan"
+      }
+    },
+    {
+      "api": "U+1F1E6-1F1F1",
+      "text": "🇦🇱",
+      "name": {
+        "th": "ธงชาติแอลเบเนีย",
+        "en": "Flag: Albania"
+      }
+    },
+    {
+      "api": "U+1F1E9-1F1FF",
+      "text": "🇩🇿",
+      "name": {
+        "th": "ธงชาติแอลจีเรีย",
+        "en": "Flag: Algeria"
+      }
+    },
+    {
+      "api": "U+1F1E6-1F1F8",
+      "text": "🇦🇸",
+      "name": {
+        "th": "ธงอเมริกันซามัว",
+        "en": "Flag: American Samoa"
+      }
+    },
+    {
+      "api": "U+1F1E6-1F1E9",
+      "text": "🇦🇩",
+      "name": {
+        "th": "ธงชาติอันดอร์รา",
+        "en": "Flag: Andorra"
+      }
+    },
+    {
+      "api": "U+1F1E6-1F1F4",
+      "text": "🇦🇴",
+      "name": {
+        "th": "ธงชาติแองโกลา",
+        "en": "Flag: Angola"
+      }
+    },
+    {
+      "api": "U+1F1E6-1F1EE",
+      "text": "🇦🇮",
+      "name": {
+        "th": "ธงแองกวิลลา",
+        "en": "Flag: Anguilla"
+      }
+    },
+    {
+      "api": "U+1F1E6-1F1F6",
+      "text": "🇦🇶",
+      "name": {
+        "th": "ธงทวีปแอนตาร์กติกา",
+        "en": "Flag: Antarctica"
+      }
+    },
+    {
+      "api": "U+1F1E6-1F1EC",
+      "text": "🇦🇬",
+      "name": {
+        "th": "ธงชาติแอนทิกาและบาร์บิวดา",
+        "en": "Flag: Antigua & Barbuda"
+      }
+    },
+    {
+      "api": "U+1F1E6-1F1F7",
+      "text": "🇦🇷",
+      "name": {
+        "th": "ธงชาติอาร์เจนตินา",
+        "en": "Flag: Argentina"
+      }
+    },
+    {
+      "api": "U+1F1E6-1F1F2",
+      "text": "🇦🇲",
+      "name": {
+        "th": "ธงชาติอาร์เมเนีย",
+        "en": "Flag: Armenia"
+      }
+    },
+    {
+      "api": "U+1F1E6-1F1FC",
+      "text": "🇦🇼",
+      "name": {
+        "th": "ธงอารูบา",
+        "en": "Flag: Aruba"
+      }
+    },
+    {
+      "api": "U+1F1E6-1F1FA",
+      "text": "🇦🇺",
+      "name": {
+        "th": "ธงชาติออสเตรเลีย",
+        "en": "Flag: Australia"
+      }
+    },
+    {
+      "api": "U+1F1E6-1F1F9",
+      "text": "🇦🇹",
+      "name": {
+        "th": "ธงชาติออสเตรีย",
+        "en": "Flag: Austria"
+      }
+    },
+    {
+      "api": "U+1F1E6-1F1FF",
+      "text": "🇦🇿",
+      "name": {
+        "th": "ธงชาติอาเซอร์ไบจาน",
+        "en": "Flag: Azerbaijan"
+      }
+    },
+    {
+      "api": "U+1F1E7-1F1F8",
+      "text": "🇧🇸",
+      "name": {
+        "th": "ธงชาติบาฮามาส",
+        "en": "Flag: Bahamas"
+      }
+    },
+    {
+      "api": "U+1F1E7-1F1ED",
+      "text": "🇧🇭",
+      "name": {
+        "th": "ธงชาติบาห์เรน",
+        "en": "Flag: Bahrain"
+      }
+    },
+    {
+      "api": "U+1F1E7-1F1E9",
+      "text": "🇧🇩",
+      "name": {
+        "th": "ธงชาติบังกลาเทศ",
+        "en": "Flag: Bangladesh"
+      }
+    },
+    {
+      "api": "U+1F1E7-1F1E7",
+      "text": "🇧🇧",
+      "name": {
+        "th": "ธงชาติบาร์เบโดส",
+        "en": "Flag: Barbados"
+      }
+    },
+    {
+      "api": "U+1F1E7-1F1FE",
+      "text": "🇧🇾",
+      "name": {
+        "th": "ธงชาติเบลารุส",
+        "en": "Flag: Belarus"
+      }
+    },
+    {
+      "api": "U+1F1E7-1F1EA",
+      "text": "🇧🇪",
+      "name": {
+        "th": "ธงชาติเบลเยียม",
+        "en": "Flag: Belgium"
+      }
+    },
+    {
+      "api": "U+1F1E7-1F1FF",
+      "text": "🇧🇿",
+      "name": {
+        "th": "ธงชาติเบลีซ",
+        "en": "Flag: Belize"
+      }
+    },
+    {
+      "api": "U+1F1E7-1F1EF",
+      "text": "🇧🇯",
+      "name": {
+        "th": "ธงชาติเบนิน",
+        "en": "Flag: Benin"
+      }
+    },
+    {
+      "api": "U+1F1E7-1F1F2",
+      "text": "🇧🇲",
+      "name": {
+        "th": "ธงเบอร์มิวดา",
+        "en": "Flag: Bermuda"
+      }
+    },
+    {
+      "api": "U+1F1E7-1F1F9",
+      "text": "🇧🇹",
+      "name": {
+        "th": "ธงชาติภูฏาน",
+        "en": "Flag: Bhutan"
+      }
+    },
+    {
+      "api": "U+1F1E7-1F1F4",
+      "text": "🇧🇴",
+      "name": {
+        "th": "ธงชาติโบลิเวีย",
+        "en": "Flag: Bolivia"
+      }
+    },
+    {
+      "api": "U+1F1E7-1F1E6",
+      "text": "🇧🇦",
+      "name": {
+        "th": "ธงชาติบอสเนียและเฮอร์เซโกวีนา",
+        "en": "Flag: Bosnia & Herzegovina"
+      }
+    },
+    {
+      "api": "U+1F1E7-1F1FC",
+      "text": "🇧🇼",
+      "name": {
+        "th": "ธงชาติบอตสวานา",
+        "en": "Flag: Botswana"
+      }
+    },
+    {
+      "api": "U+1F1E7-1F1F7",
+      "text": "🇧🇷",
+      "name": {
+        "th": "ธงชาติบราซิล",
+        "en": "Flag: Brazil"
+      }
+    },
+    {
+      "api": "U+1F1EE-1F1F4",
+      "text": "🇮🇴",
+      "name": {
+        "th": "ธงบริติชอินเดียนโอเชียนเทร์ริทอรี",
+        "en": "Flag: British Indian Ocean Territory"
+      }
+    },
+    {
+      "api": "U+1F1FB-1F1EC",
+      "text": "🇻🇬",
+      "name": {
+        "th": "ธงหมู่เกาะบริติชเวอร์จิน",
+        "en": "Flag: British Virgin Islands"
+      }
+    },
+    {
+      "api": "U+1F1E7-1F1F3",
+      "text": "🇧🇳",
+      "name": {
+        "th": "ธงชาติบรูไน",
+        "en": "Flag: Brunei"
+      }
+    },
+    {
+      "api": "U+1F1E7-1F1EC",
+      "text": "🇧🇬",
+      "name": {
+        "th": "ธงชาติบัลแกเรีย",
+        "en": "Flag: Bulgaria"
+      }
+    },
+    {
+      "api": "U+1F1E7-1F1EB",
+      "text": "🇧🇫",
+      "name": {
+        "th": "ธงชาติเบอร์กินาฟาโซ",
+        "en": "Flag: Burkina Faso"
+      }
+    },
+    {
+      "api": "U+1F1E7-1F1EE",
+      "text": "🇧🇮",
+      "name": {
+        "th": "ธงชาติบุรุนดี",
+        "en": "Flag: Burundi"
+      }
+    },
+    {
+      "api": "U+1F1F0-1F1ED",
+      "text": "🇰🇭",
+      "name": {
+        "th": "ธงชาติกัมพูชา",
+        "en": "Flag: Cambodia"
+      }
+    },
+    {
+      "api": "U+1F1E8-1F1F2",
+      "text": "🇨🇲",
+      "name": {
+        "th": "ธงชาติแคเมอรูน",
+        "en": "Flag: Cameroon"
+      }
+    },
+    {
+      "api": "U+1F1E8-1F1E6",
+      "text": "🇨🇦",
+      "name": {
+        "th": "ธงชาติแคนาดา",
+        "en": "Flag: Canada"
+      }
+    },
+    {
+      "api": "U+1F1EE-1F1E8",
+      "text": "🇮🇨",
+      "name": {
+        "th": "ธงหมู่เกาะคานารี",
+        "en": "Flag: Canary Islands"
+      }
+    },
+    {
+      "api": "U+1F1E8-1F1FB",
+      "text": "🇨🇻",
+      "name": {
+        "th": "ธงชาติเคปเวิร์ด",
+        "en": "Flag: Cape Verde"
+      }
+    },
+    {
+      "api": "U+1F1E7-1F1F6",
+      "text": "🇧🇶",
+      "name": {
+        "th": "ธงเนเธอร์แลนด์แคริบเบียน",
+        "en": "Flag: Caribbean Netherlands"
+      }
+    },
+    {
+      "api": "U+1F1F0-1F1FE",
+      "text": "🇰🇾",
+      "name": {
+        "th": "ธงหมู่เกาะเคย์แมน",
+        "en": "Flag: Cayman Islands"
+      }
+    },
+    {
+      "api": "U+1F1E8-1F1EB",
+      "text": "🇨🇫",
+      "name": {
+        "th": "ธงชาติสาธารณรัฐแอฟริกากลาง",
+        "en": "Flag: Central African Republic"
+      }
+    },
+    {
+      "api": "U+1F1F9-1F1E9",
+      "text": "🇹🇩",
+      "name": {
+        "th": "ธงชาติชาด",
+        "en": "Flag: Chad"
+      }
+    },
+    {
+      "api": "U+1F1E8-1F1F1",
+      "text": "🇨🇱",
+      "name": {
+        "th": "ธงชาติชิลี",
+        "en": "Flag: Chile"
+      }
+    },
+    {
+      "api": "U+1F1E8-1F1F3",
+      "text": "🇨🇳",
+      "name": {
+        "th": "ธงชาติจีน",
+        "en": "Flag: China"
+      }
+    },
+    {
+      "api": "U+1F1E8-1F1FD",
+      "text": "🇨🇽",
+      "name": {
+        "th": "ธงเกาะคริสต์มาส",
+        "en": "Flag: Christmas Island"
+      }
+    },
+    {
+      "api": "U+1F1E8-1F1E8",
+      "text": "🇨🇨",
+      "name": {
+        "th": "ธงหมู่เกาะโคโคส",
+        "en": "Flag: Cocos Islands"
+      }
+    },
+    {
+      "api": "U+1F1E8-1F1F4",
+      "text": "🇨🇴",
+      "name": {
+        "th": "ธงชาติโคลอมเบีย",
+        "en": "Flag: Colombia"
+      }
+    },
+    {
+      "api": "U+1F1F0-1F1F2",
+      "text": "🇰🇲",
+      "name": {
+        "th": "ธงชาติคอโมโรส",
+        "en": "Flag: Comoros"
+      }
+    },
+    {
+      "api": "U+1F1E8-1F1EC",
+      "text": "🇨🇬",
+      "name": {
+        "th": "ธงชาติคองโก-บราซซาวิล",
+        "en": "Flag: Congo - Brazzaville"
+      }
+    },
+    {
+      "api": "U+1F1E8-1F1E9",
+      "text": "🇨🇩",
+      "name": {
+        "th": "ธงชาติคองโก-กินชาซา",
+        "en": "Flag: Congo - Kinshasa"
+      }
+    },
+    {
+      "api": "U+1F1E8-1F1F0",
+      "text": "🇨🇰",
+      "name": {
+        "th": "ธงหมู่เกาะคุก",
+        "en": "Flag: Cook Islands"
+      }
+    },
+    {
+      "api": "U+1F1E8-1F1F7",
+      "text": "🇨🇷",
+      "name": {
+        "th": "ธงชาติคอสตาริกา",
+        "en": "Flag: Costa Rica"
+      }
+    },
+    {
+      "api": "U+1F1ED-1F1F7",
+      "text": "🇭🇷",
+      "name": {
+        "th": "ธงชาติโครเอเชีย",
+        "en": "Flag: Croatia"
+      }
+    },
+    {
+      "api": "U+1F1E8-1F1FA",
+      "text": "🇨🇺",
+      "name": {
+        "th": "ธงชาติคิวบา",
+        "en": "Flag: Cuba"
+      }
+    },
+    {
+      "api": "U+1F1E8-1F1FC",
+      "text": "🇨🇼",
+      "name": {
+        "th": "ธงคิวราเซา",
+        "en": "Flag: Curaçao"
+      }
+    },
+    {
+      "api": "U+1F1E8-1F1FE",
+      "text": "🇨🇾",
+      "name": {
+        "th": "ธงชาติไซปรัส",
+        "en": "Flag: Cyprus"
+      }
+    },
+    {
+      "api": "U+1F1E8-1F1FF",
+      "text": "🇨🇿",
+      "name": {
+        "th": "ธงชาติเช็กเกีย",
+        "en": "Flag: Czech Republic"
+      }
+    },
+    {
+      "api": "U+1F1E8-1F1EE",
+      "text": "🇨🇮",
+      "name": {
+        "th": "ธงชาติโกตดิวัวร์",
+        "en": "Flag: Côte d'Ivoire"
+      }
+    },
+    {
+      "api": "U+1F1E9-1F1F0",
+      "text": "🇩🇰",
+      "name": {
+        "th": "ธงชาติเดนมาร์ก",
+        "en": "Flag: Denmark"
+      }
+    },
+    {
+      "api": "U+1F1E9-1F1EC",
+      "text": "🇩🇬",
+      "name": {
+        "th": "ธงดิเอโกการ์เซีย",
+        "en": "Flag: Diego Garcia"
+      }
+    },
+    {
+      "api": "U+1F1E9-1F1EF",
+      "text": "🇩🇯",
+      "name": {
+        "th": "ธงชาติจิบูตี",
+        "en": "Flag: Djibouti"
+      }
+    },
+    {
+      "api": "U+1F1E9-1F1F2",
+      "text": "🇩🇲",
+      "name": {
+        "th": "ธงชาติโดมินิกา",
+        "en": "Flag: Dominica"
+      }
+    },
+    {
+      "api": "U+1F1E9-1F1F4",
+      "text": "🇩🇴",
+      "name": {
+        "th": "ธงชาติสาธารณรัฐโดมินิกัน",
+        "en": "Flag: Dominican Republic"
+      }
+    },
+    {
+      "api": "U+1F1EA-1F1E8",
+      "text": "🇪🇨",
+      "name": {
+        "th": "ธงชาติเอกวาดอร์",
+        "en": "Flag: Ecuador"
+      }
+    },
+    {
+      "api": "U+1F1EA-1F1EC",
+      "text": "🇪🇬",
+      "name": {
+        "th": "ธงชาติอียิปต์",
+        "en": "Flag: Egypt"
+      }
+    },
+    {
+      "api": "U+1F1F8-1F1FB",
+      "text": "🇸🇻",
+      "name": {
+        "th": "ธงชาติเอลซัลวาดอร์",
+        "en": "Flag: El Salvador"
+      }
+    },
+    {
+      "api": "U+1F1EC-1F1F6",
+      "text": "🇬🇶",
+      "name": {
+        "th": "ธงชาติอิเควทอเรียลกินี",
+        "en": "Flag: Equatorial Guinea"
+      }
+    },
+    {
+      "api": "U+1F1EA-1F1F7",
+      "text": "🇪🇷",
+      "name": {
+        "th": "ธงชาติเอริเทรีย",
+        "en": "Flag: Eritrea"
+      }
+    },
+    {
+      "api": "U+1F1EA-1F1EA",
+      "text": "🇪🇪",
+      "name": {
+        "th": "ธงชาติเอสโตเนีย",
+        "en": "Flag: Estonia"
+      }
+    },
+    {
+      "api": "U+1F1F8-1F1FF",
+      "text": "🇸🇿",
+      "name": {
+        "th": "ธงชาติเอสวาตินี",
+        "en": "Flag: Eswatini"
+      }
+    },
+    {
+      "api": "U+1F1EA-1F1F9",
+      "text": "🇪🇹",
+      "name": {
+        "th": "ธงชาติเอธิโอเปีย",
+        "en": "Flag: Ethiopia"
+      }
+    },
+    {
+      "api": "U+1F1EA-1F1FA",
+      "text": "🇪🇺",
+      "name": {
+        "th": "ธงสหภาพยุโรป",
+        "en": "Flag: European Union"
+      }
+    },
+    {
+      "api": "U+1F1EB-1F1F0",
+      "text": "🇫🇰",
+      "name": {
+        "th": "ธงหมู่เกาะฟอล์กแลนด์",
+        "en": "Flag: Falkland Islands"
+      }
+    },
+    {
+      "api": "U+1F1EB-1F1F4",
+      "text": "🇫🇴",
+      "name": {
+        "th": "ธงหมู่เกาะแฟโร",
+        "en": "Flag: Faroe Islands"
+      }
+    },
+    {
+      "api": "U+1F1EB-1F1EF",
+      "text": "🇫🇯",
+      "name": {
+        "th": "ธงชาติฟิจิ",
+        "en": "Flag: Fiji"
+      }
+    },
+    {
+      "api": "U+1F1EB-1F1EE",
+      "text": "🇫🇮",
+      "name": {
+        "th": "ธงชาติฟินแลนด์",
+        "en": "Flag: Finland"
+      }
+    },
+    {
+      "api": "U+1F1EB-1F1F7",
+      "text": "🇫🇷",
+      "name": {
+        "th": "ธงชาติฝรั่งเศส",
+        "en": "Flag: France"
+      }
+    },
+    {
+      "api": "U+1F1EC-1F1EB",
+      "text": "🇬🇫",
+      "name": {
+        "th": "ธงเฟรนช์เกียนา",
+        "en": "Flag: French Guiana"
+      }
+    },
+    {
+      "api": "U+1F1F5-1F1EB",
+      "text": "🇵🇫",
+      "name": {
+        "th": "ธงเฟรนช์โปลินีเซีย",
+        "en": "Flag: French Polynesia"
+      }
+    },
+    {
+      "api": "U+1F1F9-1F1EB",
+      "text": "🇹🇫",
+      "name": {
+        "th": "ธงเฟรนช์เซาเทิร์นเทร์ริทอรีส",
+        "en": "Flag: French Southern Territories"
+      }
+    },
+    {
+      "api": "U+1F1EC-1F1E6",
+      "text": "🇬🇦",
+      "name": {
+        "th": "ธงชาติกาบอง",
+        "en": "Flag: Gabon"
+      }
+    },
+    {
+      "api": "U+1F1EC-1F1F2",
+      "text": "🇬🇲",
+      "name": {
+        "th": "ธงชาติแกมเบีย",
+        "en": "Flag: Gambia"
+      }
+    },
+    {
+      "api": "U+1F1EC-1F1EA",
+      "text": "🇬🇪",
+      "name": {
+        "th": "ธงชาติจอร์เจีย",
+        "en": "Flag: Georgia"
+      }
+    },
+    {
+      "api": "U+1F1E9-1F1EA",
+      "text": "🇩🇪",
+      "name": {
+        "th": "ธงชาติเยอรมนี",
+        "en": "Flag: Germany"
+      }
+    },
+    {
+      "api": "U+1F1EC-1F1ED",
+      "text": "🇬🇭",
+      "name": {
+        "th": "ธงชาติกานา",
+        "en": "Flag: Ghana"
+      }
+    },
+    {
+      "api": "U+1F1EC-1F1EE",
+      "text": "🇬🇮",
+      "name": {
+        "th": "ธงยิบรอลตาร์",
+        "en": "Flag: Gibraltar"
+      }
+    },
+    {
+      "api": "U+1F1EC-1F1F7",
+      "text": "🇬🇷",
+      "name": {
+        "th": "ธงชาติกรีซ",
+        "en": "Flag: Greece"
+      }
+    },
+    {
+      "api": "U+1F1EC-1F1F1",
+      "text": "🇬🇱",
+      "name": {
+        "th": "ธงกรีนแลนด์",
+        "en": "Flag: Greenland"
+      }
+    },
+    {
+      "api": "U+1F1EC-1F1E9",
+      "text": "🇬🇩",
+      "name": {
+        "th": "ธงชาติเกรเนดา",
+        "en": "Flag: Grenada"
+      }
+    },
+    {
+      "api": "U+1F1EC-1F1F5",
+      "text": "🇬🇵",
+      "name": {
+        "th": "ธงกวาเดอลูป",
+        "en": "Flag: Guadeloupe"
+      }
+    },
+    {
+      "api": "U+1F1EC-1F1FA",
+      "text": "🇬🇺",
+      "name": {
+        "th": "ธงกวม",
+        "en": "Flag: Guam"
+      }
+    },
+    {
+      "api": "U+1F1EC-1F1F9",
+      "text": "🇬🇹",
+      "name": {
+        "th": "ธงชาติกัวเตมาลา",
+        "en": "Flag: Guatemala"
+      }
+    },
+    {
+      "api": "U+1F1EC-1F1EC",
+      "text": "🇬🇬",
+      "name": {
+        "th": "ธงเกิร์นซีย์",
+        "en": "Flag: Guernsey"
+      }
+    },
+    {
+      "api": "U+1F1EC-1F1F3",
+      "text": "🇬🇳",
+      "name": {
+        "th": "ธงชาติกินี",
+        "en": "Flag: Guinea"
+      }
+    },
+    {
+      "api": "U+1F1EC-1F1FC",
+      "text": "🇬🇼",
+      "name": {
+        "th": "ธงชาติกินี-บิสเซา",
+        "en": "Flag: Guinea-Bissau"
+      }
+    },
+    {
+      "api": "U+1F1EC-1F1FE",
+      "text": "🇬🇾",
+      "name": {
+        "th": "ธงชาติกายอานา",
+        "en": "Flag: Guyana"
+      }
+    },
+    {
+      "api": "U+1F1ED-1F1F9",
+      "text": "🇭🇹",
+      "name": {
+        "th": "ธงชาติเฮติ",
+        "en": "Flag: Haiti"
+      }
+    },
+    {
+      "api": "U+1F1ED-1F1F3",
+      "text": "🇭🇳",
+      "name": {
+        "th": "ธงชาติฮอนดูรัส",
+        "en": "Flag: Honduras"
+      }
+    },
+    {
+      "api": "U+1F1ED-1F1F0",
+      "text": "🇭🇰",
+      "name": {
+        "th": "ธงฮ่องกง",
+        "en": "Flag: Hong Kong"
+      }
+    },
+    {
+      "api": "U+1F1ED-1F1FA",
+      "text": "🇭🇺",
+      "name": {
+        "th": "ธงชาติฮังการี",
+        "en": "Flag: Hungary"
+      }
+    },
+    {
+      "api": "U+1F1EE-1F1F8",
+      "text": "🇮🇸",
+      "name": {
+        "th": "ธงชาติไอซ์แลนด์",
+        "en": "Flag: Iceland"
+      }
+    },
+    {
+      "api": "U+1F1EE-1F1F3",
+      "text": "🇮🇳",
+      "name": {
+        "th": "ธงชาติอินเดีย",
+        "en": "Flag: India"
+      }
+    },
+    {
+      "api": "U+1F1EE-1F1E9",
+      "text": "🇮🇩",
+      "name": {
+        "th": "ธงชาติอินโดนีเซีย",
+        "en": "Flag: Indonesia"
+      }
+    },
+    {
+      "api": "U+1F1EE-1F1F7",
+      "text": "🇮🇷",
+      "name": {
+        "th": "ธงชาติอิหร่าน",
+        "en": "Flag: Iran"
+      }
+    },
+    {
+      "api": "U+1F1EE-1F1F6",
+      "text": "🇮🇶",
+      "name": {
+        "th": "ธงชาติอิรัก",
+        "en": "Flag: Iraq"
+      }
+    },
+    {
+      "api": "U+1F1EE-1F1EA",
+      "text": "🇮🇪",
+      "name": {
+        "th": "ธงชาติไอร์แลนด์",
+        "en": "Flag: Ireland"
+      }
+    },
+    {
+      "api": "U+1F1EE-1F1F2",
+      "text": "🇮🇲",
+      "name": {
+        "th": "ธงไอล์ออฟแมน",
+        "en": "Flag: Isle of Man"
+      }
+    },
+    {
+      "api": "U+1F1EE-1F1F1",
+      "text": "🇮🇱",
+      "name": {
+        "th": "ธงชาติอิสราเอล",
+        "en": "Flag: Israel"
+      }
+    },
+    {
+      "api": "U+1F1EE-1F1F9",
+      "text": "🇮🇹",
+      "name": {
+        "th": "ธงชาติอิตาลี",
+        "en": "Flag: Italy"
+      }
+    },
+    {
+      "api": "U+1F1EF-1F1F2",
+      "text": "🇯🇲",
+      "name": {
+        "th": "ธงชาติจาเมกา",
+        "en": "Flag: Jamaica"
+      }
+    },
+    {
+      "api": "U+1F1EF-1F1F5",
+      "text": "🇯🇵",
+      "name": {
+        "th": "ธงชาติญี่ปุ่น",
+        "en": "Flag: Japan"
+      }
+    },
+    {
+      "api": "U+1F1EF-1F1EA",
+      "text": "🇯🇪",
+      "name": {
+        "th": "ธงเจอร์ซีย์",
+        "en": "Flag: Jersey"
+      }
+    },
+    {
+      "api": "U+1F1EF-1F1F4",
+      "text": "🇯🇴",
+      "name": {
+        "th": "ธงชาติจอร์แดน",
+        "en": "Flag: Jordan"
+      }
+    },
+    {
+      "api": "U+1F1F0-1F1FF",
+      "text": "🇰🇿",
+      "name": {
+        "th": "ธงชาติคาซัคสถาน",
+        "en": "Flag: Kazakhstan"
+      }
+    },
+    {
+      "api": "U+1F1F0-1F1EA",
+      "text": "🇰🇪",
+      "name": {
+        "th": "ธงชาติเคนยา",
+        "en": "Flag: Kenya"
+      }
+    },
+    {
+      "api": "U+1F1F0-1F1EE",
+      "text": "🇰🇮",
+      "name": {
+        "th": "ธงชาติคิริบาส",
+        "en": "Flag: Kiribati"
+      }
+    },
+    {
+      "api": "U+1F1FD-1F1F0",
+      "text": "🇽🇰",
+      "name": {
+        "th": "ธงชาติโคโซโว",
+        "en": "Flag: Kosovo"
+      }
+    },
+    {
+      "api": "U+1F1F0-1F1FC",
+      "text": "🇰🇼",
+      "name": {
+        "th": "ธงชาติคูเวต",
+        "en": "Flag: Kuwait"
+      }
+    },
+    {
+      "api": "U+1F1F0-1F1EC",
+      "text": "🇰🇬",
+      "name": {
+        "th": "ธงชาติคีร์กีซสถาน",
+        "en": "Flag: Kyrgyzstan"
+      }
+    },
+    {
+      "api": "U+1F1F1-1F1E6",
+      "text": "🇱🇦",
+      "name": {
+        "th": "ธงชาติลาว",
+        "en": "Flag: Laos"
+      }
+    },
+    {
+      "api": "U+1F1F1-1F1FB",
+      "text": "🇱🇻",
+      "name": {
+        "th": "ธงชาติลัตเวีย",
+        "en": "Flag: Latvia"
+      }
+    },
+    {
+      "api": "U+1F1F1-1F1E7",
+      "text": "🇱🇧",
+      "name": {
+        "th": "ธงชาติเลบานอน",
+        "en": "Flag: Lebanon"
+      }
+    },
+    {
+      "api": "U+1F1F1-1F1F8",
+      "text": "🇱🇸",
+      "name": {
+        "th": "ธงชาติเลโซโท",
+        "en": "Flag: Lesotho"
+      }
+    },
+    {
+      "api": "U+1F1F1-1F1F7",
+      "text": "🇱🇷",
+      "name": {
+        "th": "ธงชาติไลบีเรีย",
+        "en": "Flag: Liberia"
+      }
+    },
+    {
+      "api": "U+1F1F1-1F1FE",
+      "text": "🇱🇾",
+      "name": {
+        "th": "ธงชาติลิเบีย",
+        "en": "Flag: Libya"
+      }
+    },
+    {
+      "api": "U+1F1F1-1F1EE",
+      "text": "🇱🇮",
+      "name": {
+        "th": "ธงชาติลิกเตนสไตน์",
+        "en": "Flag: Liechtenstein"
+      }
+    },
+    {
+      "api": "U+1F1F1-1F1F9",
+      "text": "🇱🇹",
+      "name": {
+        "th": "ธงชาติลิทัวเนีย",
+        "en": "Flag: Lithuania"
+      }
+    },
+    {
+      "api": "U+1F1F1-1F1FA",
+      "text": "🇱🇺",
+      "name": {
+        "th": "ธงชาติลักเซมเบิร์ก",
+        "en": "Flag: Luxembourg"
+      }
+    },
+    {
+      "api": "U+1F1F2-1F1F4",
+      "text": "🇲🇴",
+      "name": {
+        "th": "ธงมาเก๊า",
+        "en": "Flag: Macau"
+      }
+    },
+    {
+      "api": "U+1F1F2-1F1EC",
+      "text": "🇲🇬",
+      "name": {
+        "th": "ธงชาติมาดากัสการ์",
+        "en": "Flag: Madagascar"
+      }
+    },
+    {
+      "api": "U+1F1F2-1F1FC",
+      "text": "🇲🇼",
+      "name": {
+        "th": "ธงชาติมาลาวี",
+        "en": "Flag: Malawi"
+      }
+    },
+    {
+      "api": "U+1F1F2-1F1FE",
+      "text": "🇲🇾",
+      "name": {
+        "th": "ธงชาติมาเลเซีย",
+        "en": "Flag: Malaysia"
+      }
+    },
+    {
+      "api": "U+1F1F2-1F1FB",
+      "text": "🇲🇻",
+      "name": {
+        "th": "ธงชาติมัลดีฟส์",
+        "en": "Flag: Maldives"
+      }
+    },
+    {
+      "api": "U+1F1F2-1F1F1",
+      "text": "🇲🇱",
+      "name": {
+        "th": "ธงชาติมาลี",
+        "en": "Flag: Mali"
+      }
+    },
+    {
+      "api": "U+1F1F2-1F1F9",
+      "text": "🇲🇹",
+      "name": {
+        "th": "ธงชาติมอลตา",
+        "en": "Flag: Malta"
+      }
+    },
+    {
+      "api": "U+1F1F2-1F1ED",
+      "text": "🇲🇭",
+      "name": {
+        "th": "ธงหมู่เกาะมาร์แชลล์",
+        "en": "Flag: Marshall Islands"
+      }
+    },
+    {
+      "api": "U+1F1F2-1F1F6",
+      "text": "🇲🇶",
+      "name": {
+        "th": "ธงมาร์ตินีก",
+        "en": "Flag: Martinique"
+      }
+    },
+    {
+      "api": "U+1F1F2-1F1F7",
+      "text": "🇲🇷",
+      "name": {
+        "th": "ธงชาติมอริเตเนีย",
+        "en": "Flag: Mauritania"
+      }
+    },
+    {
+      "api": "U+1F1F2-1F1FA",
+      "text": "🇲🇺",
+      "name": {
+        "th": "ธงชาติมอริเชียส",
+        "en": "Flag: Mauritius"
+      }
+    },
+    {
+      "api": "U+1F1FE-1F1F9",
+      "text": "🇾🇹",
+      "name": {
+        "th": "ธงมายอต",
+        "en": "Flag: Mayotte"
+      }
+    },
+    {
+      "api": "U+1F1F2-1F1FD",
+      "text": "🇲🇽",
+      "name": {
+        "th": "ธงชาติเม็กซิโก",
+        "en": "Flag: Mexico"
+      }
+    },
+    {
+      "api": "U+1F1EB-1F1F2",
+      "text": "🇫🇲",
+      "name": {
+        "th": "ธงชาติไมโครนีเซีย",
+        "en": "Flag: Micronesia"
+      }
+    },
+    {
+      "api": "U+1F1F2-1F1E9",
+      "text": "🇲🇩",
+      "name": {
+        "th": "ธงชาติมอลโดวา",
+        "en": "Flag: Moldova"
+      }
+    },
+    {
+      "api": "U+1F1F2-1F1E8",
+      "text": "🇲🇨",
+      "name": {
+        "th": "ธงชาติโมนาโก",
+        "en": "Flag: Monaco"
+      }
+    },
+    {
+      "api": "U+1F1F2-1F1F3",
+      "text": "🇲🇳",
+      "name": {
+        "th": "ธงชาติมองโกเลีย",
+        "en": "Flag: Mongolia"
+      }
+    },
+    {
+      "api": "U+1F1F2-1F1EA",
+      "text": "🇲🇪",
+      "name": {
+        "th": "ธงชาติมอนเตเนโกร",
+        "en": "Flag: Montenegro"
+      }
+    },
+    {
+      "api": "U+1F1F2-1F1F8",
+      "text": "🇲🇸",
+      "name": {
+        "th": "ธงมอนต์เซอร์รัต",
+        "en": "Flag: Montserrat"
+      }
+    },
+    {
+      "api": "U+1F1F2-1F1E6",
+      "text": "🇲🇦",
+      "name": {
+        "th": "ธงชาติโมร็อกโก",
+        "en": "Flag: Morocco"
+      }
+    },
+    {
+      "api": "U+1F1F2-1F1FF",
+      "text": "🇲🇿",
+      "name": {
+        "th": "ธงชาติโมซัมบิก",
+        "en": "Flag: Mozambique"
+      }
+    },
+    {
+      "api": "U+1F1F2-1F1F2",
+      "text": "🇲🇲",
+      "name": {
+        "th": "ธงชาติพม่า",
+        "en": "Flag: Myanmar"
+      }
+    },
+    {
+      "api": "U+1F1F3-1F1E6",
+      "text": "🇳🇦",
+      "name": {
+        "th": "ธงชาตินามิเบีย",
+        "en": "Flag: Namibia"
+      }
+    },
+    {
+      "api": "U+1F1F3-1F1F7",
+      "text": "🇳🇷",
+      "name": {
+        "th": "ธงชาตินาอูรู",
+        "en": "Flag: Nauru"
+      }
+    },
+    {
+      "api": "U+1F1F3-1F1F5",
+      "text": "🇳🇵",
+      "name": {
+        "th": "ธงชาติเนปาล",
+        "en": "Flag: Nepal"
+      }
+    },
+    {
+      "api": "U+1F1F3-1F1F1",
+      "text": "🇳🇱",
+      "name": {
+        "th": "ธงชาติเนเธอร์แลนด์",
+        "en": "Flag: Netherlands"
+      }
+    },
+    {
+      "api": "U+1F1F3-1F1E8",
+      "text": "🇳🇨",
+      "name": {
+        "th": "ธงนิวแคลิโดเนีย",
+        "en": "Flag: New Caledonia"
+      }
+    },
+    {
+      "api": "U+1F1F3-1F1FF",
+      "text": "🇳🇿",
+      "name": {
+        "th": "ธงชาตินิวซีแลนด์",
+        "en": "Flag: New Zealand"
+      }
+    },
+    {
+      "api": "U+1F1F3-1F1EE",
+      "text": "🇳🇮",
+      "name": {
+        "th": "ธงชาตินิการากัว",
+        "en": "Flag: Nicaragua"
+      }
+    },
+    {
+      "api": "U+1F1F3-1F1EA",
+      "text": "🇳🇪",
+      "name": {
+        "th": "ธงชาติไนเจอร์",
+        "en": "Flag: Niger"
+      }
+    },
+    {
+      "api": "U+1F1F3-1F1EC",
+      "text": "🇳🇬",
+      "name": {
+        "th": "ธงชาติไนจีเรีย",
+        "en": "Flag: Nigeria"
+      }
+    },
+    {
+      "api": "U+1F1F3-1F1FA",
+      "text": "🇳🇺",
+      "name": {
+        "th": "ธงนีอูเอ",
+        "en": "Flag: Niue"
+      }
+    },
+    {
+      "api": "U+1F1F3-1F1EB",
+      "text": "🇳🇫",
+      "name": {
+        "th": "ธงเกาะนอร์ฟอล์ก",
+        "en": "Flag: Norfolk Island"
+      }
+    },
+    {
+      "api": "U+1F1F0-1F1F5",
+      "text": "🇰🇵",
+      "name": {
+        "th": "ธงชาติเกาหลีเหนือ",
+        "en": "Flag: North Korea"
+      }
+    },
+    {
+      "api": "U+1F1F2-1F1F0",
+      "text": "🇲🇰",
+      "name": {
+        "th": "ธงชาติมาซิโดเนียเหนือ",
+        "en": "Flag: North Macedonia"
+      }
+    },
+    {
+      "api": "U+1F1F2-1F1F5",
+      "text": "🇲🇵",
+      "name": {
+        "th": "ธงหมู่เกาะนอร์เทิร์นมาเรียนา",
+        "en": "Flag: Northern Mariana Islands"
+      }
+    },
+    {
+      "api": "U+1F1F3-1F1F4",
+      "text": "🇳🇴",
+      "name": {
+        "th": "ธงชาตินอร์เวย์",
+        "en": "Flag: Norway"
+      }
+    },
+    {
+      "api": "U+1F1F4-1F1F2",
+      "text": "🇴🇲",
+      "name": {
+        "th": "ธงชาติโอมาน",
+        "en": "Flag: Oman"
+      }
+    },
+    {
+      "api": "U+1F1F5-1F1F0",
+      "text": "🇵🇰",
+      "name": {
+        "th": "ธงชาติปากีสถาน",
+        "en": "Flag: Pakistan"
+      }
+    },
+    {
+      "api": "U+1F1F5-1F1FC",
+      "text": "🇵🇼",
+      "name": {
+        "th": "ธงชาติปาเลา",
+        "en": "Flag: Palau"
+      }
+    },
+    {
+      "api": "U+1F1F5-1F1F8",
+      "text": "🇵🇸",
+      "name": {
+        "th": "ธงชาติปาเลสไตน์",
+        "en": "Flag: Palestine"
+      }
+    },
+    {
+      "api": "U+1F1F5-1F1E6",
+      "text": "🇵🇦",
+      "name": {
+        "th": "ธงชาติปานามา",
+        "en": "Flag: Panama"
+      }
+    },
+    {
+      "api": "U+1F1F5-1F1EC",
+      "text": "🇵🇬",
+      "name": {
+        "th": "ธงชาติปาปัวนิวกินี",
+        "en": "Flag: Papua New Guinea"
+      }
+    },
+    {
+      "api": "U+1F1F5-1F1FE",
+      "text": "🇵🇾",
+      "name": {
+        "th": "ธงชาติปารากวัย",
+        "en": "Flag: Paraguay"
+      }
+    },
+    {
+      "api": "U+1F1F5-1F1EA",
+      "text": "🇵🇪",
+      "name": {
+        "th": "ธงชาติเปรู",
+        "en": "Flag: Peru"
+      }
+    },
+    {
+      "api": "U+1F1F5-1F1ED",
+      "text": "🇵🇭",
+      "name": {
+        "th": "ธงชาติฟิลิปปินส์",
+        "en": "Flag: Philippines"
+      }
+    },
+    {
+      "api": "U+1F1F5-1F1F3",
+      "text": "🇵🇳",
+      "name": {
+        "th": "ธงหมู่เกาะพิตแคร์น",
+        "en": "Flag: Pitcairn Islands"
+      }
+    },
+    {
+      "api": "U+1F1F5-1F1F1",
+      "text": "🇵🇱",
+      "name": {
+        "th": "ธงชาติโปแลนด์",
+        "en": "Flag: Poland"
+      }
+    },
+    {
+      "api": "U+1F1F5-1F1F9",
+      "text": "🇵🇹",
+      "name": {
+        "th": "ธงชาติโปรตุเกส",
+        "en": "Flag: Portugal"
+      }
+    },
+    {
+      "api": "U+1F1F5-1F1F7",
+      "text": "🇵🇷",
+      "name": {
+        "th": "ธงปวยร์โตรีโก",
+        "en": "Flag: Puerto Rico"
+      }
+    },
+    {
+      "api": "U+1F1F6-1F1E6",
+      "text": "🇶🇦",
+      "name": {
+        "th": "ธงชาติกาตาร์",
+        "en": "Flag: Qatar"
+      }
+    },
+    {
+      "api": "U+1F1F7-1F1F4",
+      "text": "🇷🇴",
+      "name": {
+        "th": "ธงชาติโรมาเนีย",
+        "en": "Flag: Romania"
+      }
+    },
+    {
+      "api": "U+1F1F7-1F1FA",
+      "text": "🇷🇺",
+      "name": {
+        "th": "ธงชาติรัสเซีย",
+        "en": "Flag: Russia"
+      }
+    },
+    {
+      "api": "U+1F1F7-1F1FC",
+      "text": "🇷🇼",
+      "name": {
+        "th": "ธงชาติรวันดา",
+        "en": "Flag: Rwanda"
+      }
+    },
+    {
+      "api": "U+1F1F7-1F1EA",
+      "text": "🇷🇪",
+      "name": {
+        "th": "ธงเรอูนียง",
+        "en": "Flag: Réunion"
+      }
+    },
+    {
+      "api": "U+1F1E7-1F1F1",
+      "text": "🇧🇱",
+      "name": {
+        "th": "ธงแซงบาร์เตเลอมี",
+        "en": "Flag: Saint Barthélemy"
+      }
+    },
+    {
+      "api": "U+1F1F8-1F1ED",
+      "text": "🇸🇭",
+      "name": {
+        "th": "ธงเซนต์เฮเลนา",
+        "en": "Flag: Saint Helena"
+      }
+    },
+    {
+      "api": "U+1F1F0-1F1F3",
+      "text": "🇰🇳",
+      "name": {
+        "th": "ธงชาติเซนต์คิตส์และเนวิส",
+        "en": "Flag: Saint Kitts & Nevis"
+      }
+    },
+    {
+      "api": "U+1F1F1-1F1E8",
+      "text": "🇱🇨",
+      "name": {
+        "th": "ธงชาติเซนต์ลูเซีย",
+        "en": "Flag: Saint Lucia"
+      }
+    },
+    {
+      "api": "U+1F1F2-1F1EB",
+      "text": "🇲🇫",
+      "name": {
+        "th": "ธงแซงมาร์แต็ง",
+        "en": "Flag: Saint Martin"
+      }
+    },
+    {
+      "api": "U+1F1F5-1F1F2",
+      "text": "🇵🇲",
+      "name": {
+        "th": "ธงแซงปีแยร์และมีเกอลง",
+        "en": "Flag: Saint Pierre & Miquelon"
+      }
+    },
+    {
+      "api": "U+1F1FB-1F1E8",
+      "text": "🇻🇨",
+      "name": {
+        "th": "ธงชาติเซนต์วินเซนต์และเกรนาดีนส์",
+        "en": "Flag: Saint Vincent & Grenadines"
+      }
+    },
+    {
+      "api": "U+1F1FC-1F1F8",
+      "text": "🇼🇸",
+      "name": {
+        "th": "ธงชาติซามัว",
+        "en": "Flag: Samoa"
+      }
+    },
+    {
+      "api": "U+1F1F8-1F1F2",
+      "text": "🇸🇲",
+      "name": {
+        "th": "ธงชาติซานมารีโน",
+        "en": "Flag: San Marino"
+      }
+    },
+    {
+      "api": "U+1F1F8-1F1E6",
+      "text": "🇸🇦",
+      "name": {
+        "th": "ธงชาติซาอุดีอาระเบีย",
+        "en": "Flag: Saudi Arabia"
+      }
+    },
+    {
+      "api": "U+1F1F8-1F1F3",
+      "text": "🇸🇳",
+      "name": {
+        "th": "ธงชาติเซเนกัล",
+        "en": "Flag: Senegal"
+      }
+    },
+    {
+      "api": "U+1F1F7-1F1F8",
+      "text": "🇷🇸",
+      "name": {
+        "th": "ธงชาติเซอร์เบีย",
+        "en": "Flag: Serbia"
+      }
+    },
+    {
+      "api": "U+1F1F8-1F1E8",
+      "text": "🇸🇨",
+      "name": {
+        "th": "ธงชาติเซเชลส์",
+        "en": "Flag: Seychelles"
+      }
+    },
+    {
+      "api": "U+1F1F8-1F1F1",
+      "text": "🇸🇱",
+      "name": {
+        "th": "ธงชาติเซียร์ราลีโอน",
+        "en": "Flag: Sierra Leone"
+      }
+    },
+    {
+      "api": "U+1F1F8-1F1EC",
+      "text": "🇸🇬",
+      "name": {
+        "th": "ธงชาติสิงคโปร์",
+        "en": "Flag: Singapore"
+      }
+    },
+    {
+      "api": "U+1F1F8-1F1FD",
+      "text": "🇸🇽",
+      "name": {
+        "th": "ธงซินต์มาร์เทน",
+        "en": "Flag: Sint Maarten"
+      }
+    },
+    {
+      "api": "U+1F1F8-1F1F0",
+      "text": "🇸🇰",
+      "name": {
+        "th": "ธงชาติสโลวาเกีย",
+        "en": "Flag: Slovakia"
+      }
+    },
+    {
+      "api": "U+1F1F8-1F1EE",
+      "text": "🇸🇮",
+      "name": {
+        "th": "ธงชาติสโลวีเนีย",
+        "en": "Flag: Slovenia"
+      }
+    },
+    {
+      "api": "U+1F1F8-1F1E7",
+      "text": "🇸🇧",
+      "name": {
+        "th": "ธงหมู่เกาะโซโลมอน",
+        "en": "Flag: Solomon Islands"
+      }
+    },
+    {
+      "api": "U+1F1F8-1F1F4",
+      "text": "🇸🇴",
+      "name": {
+        "th": "ธงชาติโซมาเลีย",
+        "en": "Flag: Somalia"
+      }
+    },
+    {
+      "api": "U+1F1FF-1F1E6",
+      "text": "🇿🇦",
+      "name": {
+        "th": "ธงชาติแอฟริกาใต้",
+        "en": "Flag: South Africa"
+      }
+    },
+    {
+      "api": "U+1F1F0-1F1F7",
+      "text": "🇰🇷",
+      "name": {
+        "th": "ธงชาติสาธารณรัฐเกาหลี",
+        "en": "Flag: South Korea"
+      }
+    },
+    {
+      "api": "U+1F1F8-1F1F8",
+      "text": "🇸🇸",
+      "name": {
+        "th": "ธงชาติซูดานใต้",
+        "en": "Flag: South Sudan"
+      }
+    },
+    {
+      "api": "U+1F1EA-1F1F8",
+      "text": "🇪🇸",
+      "name": {
+        "th": "ธงชาติสเปน",
+        "en": "Flag: Spain"
+      }
+    },
+    {
+      "api": "U+1F1F1-1F1F0",
+      "text": "🇱🇰",
+      "name": {
+        "th": "ธงชาติศรีลังกา",
+        "en": "Flag: Sri Lanka"
+      }
+    },
+    {
+      "api": "U+1F1F8-1F1E9",
+      "text": "🇸🇩",
+      "name": {
+        "th": "ธงชาติซูดาน",
+        "en": "Flag: Sudan"
+      }
+    },
+    {
+      "api": "U+1F1F8-1F1F7",
+      "text": "🇸🇷",
+      "name": {
+        "th": "ธงชาติซูรินาม",
+        "en": "Flag: Suriname"
+      }
+    },
+    {
+      "api": "U+1F1F8-1F1EF",
+      "text": "🇸🇯",
+      "name": {
+        "th": "ธงสฟาลบาร์และยานไมเอน",
+        "en": "Flag: Svalbard & Jan Mayen"
+      }
+    },
+    {
+      "api": "U+1F1F8-1F1EA",
+      "text": "🇸🇪",
+      "name": {
+        "th": "ธงชาติสวีเดน",
+        "en": "Flag: Sweden"
+      }
+    },
+    {
+      "api": "U+1F1E8-1F1ED",
+      "text": "🇨🇭",
+      "name": {
+        "th": "ธงชาติสวิตเซอร์แลนด์",
+        "en": "Flag: Switzerland"
+      }
+    },
+    {
+      "api": "U+1F1F8-1F1FE",
+      "text": "🇸🇾",
+      "name": {
+        "th": "ธงชาติซีเรีย",
+        "en": "Flag: Syria"
+      }
+    },
+    {
+      "api": "U+1F1F8-1F1F9",
+      "text": "🇸🇹",
+      "name": {
+        "th": "ธงชาติเซาตูเมและปรินซิปี",
+        "en": "Flag: São Tomé & Príncipe"
+      }
+    },
+    {
+      "api": "U+1F1F9-1F1FC",
+      "text": "🇹🇼",
+      "name": {
+        "th": "ธงชาติไต้หวัน",
+        "en": "Flag: Taiwan"
+      }
+    },
+    {
+      "api": "U+1F1F9-1F1EF",
+      "text": "🇹🇯",
+      "name": {
+        "th": "ธงชาติทาจิกิสถาน",
+        "en": "Flag: Tajikistan"
+      }
+    },
+    {
+      "api": "U+1F1F9-1F1FF",
+      "text": "🇹🇿",
+      "name": {
+        "th": "ธงชาติแทนซาเนีย",
+        "en": "Flag: Tanzania"
+      }
+    },
+    {
+      "api": "U+1F1F9-1F1ED",
+      "text": "🇹🇭",
+      "name": {
+        "th": "ธงชาติไทย",
+        "en": "Flag: Thailand"
+      }
+    },
+    {
+      "api": "U+1F1F9-1F1F1",
+      "text": "🇹🇱",
+      "name": {
+        "th": "ธงชาติติมอร์-เลสเต",
+        "en": "Flag: Timor-Leste"
+      }
+    },
+    {
+      "api": "U+1F1F9-1F1EC",
+      "text": "🇹🇬",
+      "name": {
+        "th": "ธงชาติโตโก",
+        "en": "Flag: Togo"
+      }
+    },
+    {
+      "api": "U+1F1F9-1F1F0",
+      "text": "🇹🇰",
+      "name": {
+        "th": "ธงโตเกเลา",
+        "en": "Flag: Tokelau"
+      }
+    },
+    {
+      "api": "U+1F1F9-1F1F4",
+      "text": "🇹🇴",
+      "name": {
+        "th": "ธงชาติตองกา",
+        "en": "Flag: Tonga"
+      }
+    },
+    {
+      "api": "U+1F1F9-1F1F9",
+      "text": "🇹🇹",
+      "name": {
+        "th": "ธงชาติตรินิแดดและโตเบโก",
+        "en": "Flag: Trinidad & Tobago"
+      }
+    },
+    {
+      "api": "U+1F1F9-1F1F3",
+      "text": "🇹🇳",
+      "name": {
+        "th": "ธงชาติตูนิเซีย",
+        "en": "Flag: Tunisia"
+      }
+    },
+    {
+      "api": "U+1F1F9-1F1F7",
+      "text": "🇹🇷",
+      "name": {
+        "th": "ธงชาติตุรกี",
+        "en": "Flag: Turkey"
+      }
+    },
+    {
+      "api": "U+1F1F9-1F1F2",
+      "text": "🇹🇲",
+      "name": {
+        "th": "ธงชาติเติร์กเมนิสถาน",
+        "en": "Flag: Turkmenistan"
+      }
+    },
+    {
+      "api": "U+1F1F9-1F1E8",
+      "text": "🇹🇨",
+      "name": {
+        "th": "ธงหมู่เกาะเติกส์และเคคอส",
+        "en": "Flag: Turks & Caicos Islands"
+      }
+    },
+    {
+      "api": "U+1F1F9-1F1FB",
+      "text": "🇹🇻",
+      "name": {
+        "th": "ธงชาติตูวาลู",
+        "en": "Flag: Tuvalu"
+      }
+    },
+    {
+      "api": "U+1F1FA-1F1F2",
+      "text": "🇺🇲",
+      "name": {
+        "th": "ธงหมู่เกาะรอบนอนของสหรัฐ",
+        "en": "Flag: U.S. Outlying Islands"
+      }
+    },
+    {
+      "api": "U+1F1FB-1F1EE",
+      "text": "🇻🇮",
+      "name": {
+        "th": "ธงหมู่เกาะเวอร์จินของสหรัฐ",
+        "en": "Flag: U.S. Virgin Islands"
+      }
+    },
+    {
+      "api": "U+1F1FA-1F1EC",
+      "text": "🇺🇬",
+      "name": {
+        "th": "ธงชาติยูกันดา",
+        "en": "Flag: Uganda"
+      }
+    },
+    {
+      "api": "U+1F1FA-1F1E6",
+      "text": "🇺🇦",
+      "name": {
+        "th": "ธงชาติยูเครน",
+        "en": "Flag: Ukraine"
+      }
+    },
+    {
+      "api": "U+1F1E6-1F1EA",
+      "text": "🇦🇪",
+      "name": {
+        "th": "ธงชาติสหรัฐอาหรับเอมิเรตส์",
+        "en": "Flag: United Arab Emirates"
+      }
+    },
+    {
+      "api": "U+1F1EC-1F1E7",
+      "text": "🇬🇧",
+      "name": {
+        "th": "ธงสหราชอาณาจักร",
+        "en": "Flag: United Kingdom"
+      }
+    },
+    {
+      "api": "U+1F1FA-1F1F8",
+      "text": "🇺🇸",
+      "name": {
+        "th": "ธงชาติสหรัฐอเมริกา",
+        "en": "Flag: United States"
+      }
+    },
+    {
+      "api": "U+1F1FA-1F1FE",
+      "text": "🇺🇾",
+      "name": {
+        "th": "ธงชาติอุรุกวัย",
+        "en": "Flag: Uruguay"
+      }
+    },
+    {
+      "api": "U+1F1FA-1F1FF",
+      "text": "🇺🇿",
+      "name": {
+        "th": "ธงชาติอุซเบกิสถาน",
+        "en": "Flag: Uzbekistan"
+      }
+    },
+    {
+      "api": "U+1F1FB-1F1FA",
+      "text": "🇻🇺",
+      "name": {
+        "th": "ธงชาติวานูอาตู",
+        "en": "Flag: Vanuatu"
+      }
+    },
+    {
+      "api": "U+1F1FB-1F1E6",
+      "text": "🇻🇦",
+      "name": {
+        "th": "ธงนครวาติกัน",
+        "en": "Flag: Vatican City"
+      }
+    },
+    {
+      "api": "U+1F1FB-1F1EA",
+      "text": "🇻🇪",
+      "name": {
+        "th": "ธงชาติเวเนซุเอลา",
+        "en": "Flag: Venezuela"
+      }
+    },
+    {
+      "api": "U+1F1FB-1F1F3",
+      "text": "🇻🇳",
+      "name": {
+        "th": "ธงชาติเวียดนาม",
+        "en": "Flag: Vietnam"
+      }
+    },
+    {
+      "api": "U+1F1FC-1F1EB",
+      "text": "🇼🇫",
+      "name": {
+        "th": "ธงวาลลิสและฟูตูนา",
+        "en": "Flag: Wallis & Futuna"
+      }
+    },
+    {
+      "api": "U+1F1FE-1F1EA",
+      "text": "🇾🇪",
+      "name": {
+        "th": "ธงชาติเยเมน",
+        "en": "Flag: Yemen"
+      }
+    },
+    {
+      "api": "U+1F1FF-1F1F2",
+      "text": "🇿🇲",
+      "name": {
+        "th": "ธงชาติแซมเบีย",
+        "en": "Flag: Zambia"
+      }
+    },
+    {
+      "api": "U+1F1FF-1F1FC",
+      "text": "🇿🇼",
+      "name": {
+        "th": "ธงชาติซิมบับเว",
+        "en": "Flag: Zimbabwe"
+      }
+    },
+    {
+      "api": "U+1F1E6-1F1FD",
+      "text": "🇦🇽",
+      "name": {
+        "th": "ธงหมู่เกาะโอลันด์",
+        "en": "Flag: Åland Islands"
+      }
+    }
   ]
 }

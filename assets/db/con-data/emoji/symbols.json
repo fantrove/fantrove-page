@@ -5,159 +5,1317 @@
     "en": "Symbols"
   },
   "data": [
-    { "api": "U+1F3E7", "text": "🏧", "name": { "th": "ตู้ ATM", "en": "ATM Sign" } },
-    { "api": "U+1F6AE", "text": "🚮", "name": { "th": "ทิ้งขยะที่ถัง", "en": "Litter in Bin Sign" } },
-    { "api": "U+1F6B0", "text": "🚰", "name": { "th": "น้ำดื่ม", "en": "Potable Water" } },
-    { "api": "U+267F", "text": "♿", "name": { "th": "ผู้ใช้รถเข็น (ผู้พิการ)", "en": "Wheelchair Symbol" } },
-    { "api": "U+1F6B9", "text": "🚹", "name": { "th": "ห้องน้ำชาย", "en": "Mens Room" } },
-    { "api": "U+1F6BA", "text": "🚺", "name": { "th": "ห้องน้ำหญิง", "en": "Womens Room" } },
-    { "api": "U+1F6BB", "text": "🚻", "name": { "th": "ห้องน้ำสาธารณะ", "en": "Restroom" } },
-    { "api": "U+1F6BC", "text": "🚼", "name": { "th": "เปลี่ยนผ้าอ้อม/พื้นที่เด็ก", "en": "Baby Symbol" } },
-    { "api": "U+1F6BE", "text": "🚾", "name": { "th": "ห้องน้ำสาธารณะ (สัญลักษณ์)", "en": "Water Closet" } },
-    { "api": "U+1F6C2", "text": "🛂", "name": { "th": "ด่านตรวจคนเข้าเมือง", "en": "Passport Control" } },
-    { "api": "U+1F6C3", "text": "🛃", "name": { "th": "ศุลกากร", "en": "Customs" } },
-    { "api": "U+1F6C4", "text": "🛄", "name": { "th": "กระเป๋าสัมภาระ", "en": "Baggage Claim" } },
-    { "api": "U+1F6C5", "text": "🛅", "name": { "th": "ตู้ฝากของ", "en": "Left Luggage" } },
-    
-    { "api": "U+26A0-FE0F", "text": "⚠️", "name": { "th": "คำเตือน", "en": "Warning" } },
-    { "api": "U+1F6B8", "text": "🚸", "name": { "th": "ระวังเด็ก", "en": "Children Crossing" } },
-    { "api": "U+26D4", "text": "⛔", "name": { "th": "ห้ามเข้า", "en": "No Entry" } },
-    { "api": "U+1F6AB", "text": "🚫", "name": { "th": "ห้าม", "en": "Prohibited" } },
-    { "api": "U+1F6B3", "text": "🚳", "name": { "th": "ห้ามปั่นจักรยาน", "en": "No Bicycles" } },
-    { "api": "U+1F6AD", "text": "🚭", "name": { "th": "ห้ามสูบบุหรี่", "en": "No Smoking" } },
-    { "api": "U+1F6AF", "text": "🚯", "name": { "th": "ห้ามทิ้งขยะ", "en": "No Littering" } },
-    { "api": "U+1F6B1", "text": "🚱", "name": { "th": "ห้ามดื่มน้ำ", "en": "Non-Potable Water" } },
-    { "api": "U+1F6B7", "text": "🚷", "name": { "th": "ห้ามคนเดิน", "en": "No Pedestrians" } },
-    { "api": "U+2668-FE0F", "text": "♨️", "name": { "th": "น้ำพุร้อน/สปา", "en": "Hot Springs" } },
-    { "api": "U+1F51E", "text": "🔞", "name": { "th": "ห้ามผู้เยาว์", "en": "No One Under Eighteen" } },
-    
-    { "api": "U+2B05-FE0F", "text": "⬅️", "name": { "th": "ซ้าย", "en": "Left Arrow" } },
-    { "api": "U+2B06-FE0F", "text": "⬆️", "name": { "th": "ขึ้น", "en": "Up Arrow" } },
-    { "api": "U+27A1-FE0F", "text": "➡️", "name": { "th": "ขวา", "en": "Right Arrow" } },
-    { "api": "U+2B07-FE0F", "text": "⬇️", "name": { "th": "ลง", "en": "Down Arrow" } },
-    { "api": "U+2197-FE0F", "text": "↗️", "name": { "th": "ขึ้นขวา", "en": "Up-Right Arrow" } },
-    { "api": "U+2198-FE0F", "text": "↘️", "name": { "th": "ลงขวา", "en": "Down-Right Arrow" } },
-    { "api": "U+2199-FE0F", "text": "↙️", "name": { "th": "ลงซ้าย", "en": "Down-Left Arrow" } },
-    { "api": "U+2196-FE0F", "text": "↖️", "name": { "th": "ขึ้นซ้าย", "en": "Up-Left Arrow" } },
-    { "api": "U+2195-FE0F", "text": "↕️", "name": { "th": "บน-ล่าง", "en": "Up-Down Arrow" } },
-    { "api": "U+2194-FE0F", "text": "↔️", "name": { "th": "ซ้าย-ขวา", "en": "Left-Right Arrow" } },
-    { "api": "U+21A9-FE0F", "text": "↩️", "name": { "th": "ย้อนกลับซ้าย", "en": "Leftwards Arrow with Hook" } },
-    { "api": "U+21AA-FE0F", "text": "↪️", "name": { "th": "กลับขวา", "en": "Rightwards Arrow with Hook" } },
-    { "api": "U+2934-FE0F", "text": "⤴️", "name": { "th": "เลี้ยวขึ้น", "en": "Arrow Pointing Rightwards Then Curving Upwards" } },
-    { "api": "U+2935-FE0F", "text": "⤵️", "name": { "th": "เลี้ยวลง", "en": "Arrow Pointing Rightwards Then Curving Downwards" } },
-    
-    { "api": "U+1F549-FE0F", "text": "🕉️", "name": { "th": "โอม (สัญลักษณ์ฮินดู)", "en": "Om Symbol" } },
-    { "api": "U+2721-FE0F", "text": "✡️", "name": { "th": "ดาวแห่งดาวิด (ยิว)", "en": "Star of David" } },
-    { "api": "U+2638-FE0F", "text": "☸️", "name": { "th": "ธรรมจักร (พุทธ)", "en": "Wheel of Dharma" } },
-    { "api": "U+262F-FE0F", "text": "☯️", "name": { "th": "หยินหยาง", "en": "Yin Yang" } },
-    { "api": "U+271D-FE0F", "text": "✝️", "name": { "th": "ไม้กางเขน", "en": "Latin Cross" } },
-    { "api": "U+2626-FE0F", "text": "☦️", "name": { "th": "ไม้กางเขนออร์โธดอกซ์", "en": "Orthodox Cross" } },
-    { "api": "U+262A-FE0F", "text": "☪️", "name": { "th": "ดาวและพระจันทร์ (อิสลาม)", "en": "Star and Crescent" } },
-    { "api": "U+262E-FE0F", "text": "☮️", "name": { "th": "สัญลักษณ์สันติภาพ", "en": "Peace Symbol" } },
-    { "api": "U+1F54E", "text": "🕎", "name": { "th": "เชนโนราห์/ตะเกียง (ยิว)", "en": "Menorah" } },
-    { "api": "U+1F52F", "text": "🔯", "name": { "th": "ดาวหกแฉกแบบสัญลักษณ์", "en": "Six Pointed Star with Middle Dot" } },
-    { "api": "U+1FAAF", "text": "🪯", "name": { "th": "สัญลักษณ์ทางศาสนา/พิธีกรรม (ใหม่)", "en": "Ceremonial Symbol (new)" } },
-    
-    { "api": "U+2648", "text": "♈", "name": { "th": "ราศีเมษ", "en": "Aries" } },
-    { "api": "U+2649", "text": "♉", "name": { "th": "ราศีพฤษภ", "en": "Taurus" } },
-    { "api": "U+264A", "text": "♊", "name": { "th": "ราศีเมถุน", "en": "Gemini" } },
-    { "api": "U+264B", "text": "♋", "name": { "th": "ราศีกรกฎ", "en": "Cancer" } },
-    { "api": "U+264C", "text": "♌", "name": { "th": "ราศีสิงห์", "en": "Leo" } },
-    { "api": "U+264D", "text": "♍", "name": { "th": "ราศีกันย์", "en": "Virgo" } },
-    { "api": "U+264E", "text": "♎", "name": { "th": "ราศีตุลย์", "en": "Libra" } },
-    { "api": "U+264F", "text": "♏", "name": { "th": "ราศีพิจิก", "en": "Scorpio" } },
-    { "api": "U+2650", "text": "♐", "name": { "th": "ราศีธนู", "en": "Sagittarius" } },
-    { "api": "U+2651", "text": "♑", "name": { "th": "ราศีมังกร", "en": "Capricorn" } },
-    { "api": "U+2652", "text": "♒", "name": { "th": "ราศีกุมภ์", "en": "Aquarius" } },
-    { "api": "U+2653", "text": "♓", "name": { "th": "ราศีมีน", "en": "Pisces" } },
-    { "api": "U+26CE", "text": "⛎", "name": { "th": "ราศีงูใหญ่ (Ophiuchus)", "en": "Ophiuchus" } },
-    
-    { "api": "U+25B6-FE0F", "text": "▶️", "name": { "th": "เล่น", "en": "Play Button" } },
-    { "api": "U+23E9", "text": "⏩", "name": { "th": "ข้ามไปข้างหน้า", "en": "Fast-Forward Button" } },
-    { "api": "U+23ED", "text": "⏭️", "name": { "th": "ถัดไป (ท่อน)", "en": "Next Track Button" } },
-    { "api": "U+23EF", "text": "⏯️", "name": { "th": "เล่น/หยุดพัก", "en": "Play or Pause Button" } },
-    { "api": "U+25C0-FE0F", "text": "◀️", "name": { "th": "ย้อนกลับ", "en": "Reverse Button" } },
-    { "api": "U+23EA", "text": "⏪", "name": { "th": "ย้อนกลับอย่างรวดเร็ว", "en": "Fast Reverse Button" } },
-    { "api": "U+23EE", "text": "⏮️", "name": { "th": "ย้อนกลับไปต้น", "en": "Previous Track Button" } },
-    { "api": "U+1F53C", "text": "🔼", "name": { "th": "ปุ่มขึ้น", "en": "Upwards Button" } },
-    { "api": "U+1F53D", "text": "🔽", "name": { "th": "ปุ่มลง", "en": "Downwards Button" } },
-    { "api": "U+23EB", "text": "⏫", "name": { "th": "ก้าวขึ้นสองขั้น", "en": "Fast Up Button" } },
-    { "api": "U+23EC", "text": "⏬", "name": { "th": "ก้าวลงสองขั้น", "en": "Fast Down Button" } },
-    { "api": "U+23F8-FE0F", "text": "⏸️", "name": { "th": "หยุดชั่วคราว", "en": "Pause Button" } },
-    { "api": "U+23F9-FE0F", "text": "⏹️", "name": { "th": "หยุด", "en": "Stop Button" } },
-    { "api": "U+23FA", "text": "⏺️", "name": { "th": "บันทึก", "en": "Record Button" } },
-    { "api": "U+23CF", "text": "⏏️", "name": { "th": "ยกขึ้น/ถอด", "en": "Eject Button" } },
-    { "api": "U+1F3A6", "text": "🎦", "name": { "th": "โรงภาพยนตร์/ภาพยนตร์", "en": "Cinema" } },
-    { "api": "U+1F505", "text": "🔅", "name": { "th": "ความสว่างต่ำ", "en": "Dim Button" } },
-    { "api": "U+1F506", "text": "🔆", "name": { "th": "ความสว่างสูง", "en": "Bright Button" } },
-    { "api": "U+1F4F6", "text": "📶", "name": { "th": "สัญญาณเครือข่าย", "en": "Antenna Bars" } },
-    { "api": "U+1F4F3", "text": "📳", "name": { "th": "โหมดสั่น/โทรศัพท์แจ้งเตือน", "en": "Vibration Mode" } },
-    { "api": "U+1F4F4", "text": "📴", "name": { "th": "ปิดโทรศัพท์", "en": "Mobile Phone Off" } },
-    
-    { "api": "U+2716-FE0F", "text": "✖️", "name": { "th": "คูณ/ผิดพลาด", "en": "Heavy Multiplication X" } },
-    { "api": "U+2795", "text": "➕", "name": { "th": "บวก", "en": "Heavy Plus Sign" } },
-    { "api": "U+2796", "text": "➖", "name": { "th": "ลบ", "en": "Heavy Minus Sign" } },
-    { "api": "U+2797", "text": "➗", "name": { "th": "หาร", "en": "Heavy Division Sign" } },
-    { "api": "U+267E-FE0F", "text": "♾️", "name": { "th": "อินฟินิตี้", "en": "Infinity" } },
-    { "api": "U+203C-FE0F", "text": "‼️", "name": { "th": "ตกใจ/เน้น", "en": "Double Exclamation Mark" } },
-    { "api": "U+2049-FE0F", "text": "⁉️", "name": { "th": "คำถาม/ตกใจ", "en": "Exclamation Question Mark" } },
-    { "api": "U+2753", "text": "❓", "name": { "th": "เครื่องหมายคำถาม", "en": "Question Mark" } },
-    { "api": "U+2754", "text": "❔", "name": { "th": "เครื่องหมายคำถาม (อ่อน)", "en": "White Question Mark" } },
-    { "api": "U+2755", "text": "❕", "name": { "th": "เครื่องหมายอัศเจรีย์ (อ่อน)", "en": "White Exclamation Mark" } },
-    { "api": "U+2757", "text": "❗️", "name": { "th": "เครื่องหมายอัศเจรีย์", "en": "Exclamation Mark" } },
-    { "api": "U+3030-FE0F", "text": "〰️", "name": { "th": "เส้นคลื่น", "en": "Wavy Dash" } },
-    { "api": "U+1F4B1", "text": "💱", "name": { "th": "อัตราแลกเปลี่ยน", "en": "Currency Exchange" } },
-    { "api": "U+1F4B2", "text": "💲", "name": { "th": "สัญลักษณ์ดอลลาร์", "en": "Heavy Dollar Sign" } },
-    { "api": "U+2695-FE0F", "text": "⚕️", "name": { "th": "สัญลักษณ์การแพทย์", "en": "Medical Symbol" } },
-    { "api": "U+2696-FE0F", "text": "⚖️", "name": { "th": "ตราชั่ง/กฎหมาย", "en": "Scales" } },
-    { "api": "U+267B-FE0F", "text": "♻️", "name": { "th": "รีไซเคิล", "en": "Recycling Symbol" } },
-    { "api": "U+269C-FE0F", "text": "⚜️", "name": { "th": "ฟลอเรออน/เครื่องหมาย", "en": "Fleur-De-Lis" } },
-    { "api": "U+1F531", "text": "🔱", "name": { "th": "ตรีศูล/ตรา", "en": "Trident Emblem" } },
-    { "api": "U+1F4DB", "text": "📛", "name": { "th": "ป้ายชื่อ", "en": "Name Badge" } },
-    { "api": "U+1F530", "text": "🔰", "name": { "th": "ป้ายเริ่มต้น/สัญลักษณ์", "en": "Japanese Symbol for Beginner" } },
-    
-    { "api": "U+0030-FE0F-20E3", "text": "0️⃣", "name": { "th": "ศูนย์ (keycap)", "en": "Digit Zero Keycap" } },
-    { "api": "U+0031-FE0F-20E3", "text": "1️⃣", "name": { "th": "หนึ่ง (keycap)", "en": "Digit One Keycap" } },
-    { "api": "U+0032-FE0F-20E3", "text": "2️⃣", "name": { "th": "สอง (keycap)", "en": "Digit Two Keycap" } },
-    { "api": "U+0033-FE0F-20E3", "text": "3️⃣", "name": { "th": "สาม (keycap)", "en": "Digit Three Keycap" } },
-    { "api": "U+0034-FE0F-20E3", "text": "4️⃣", "name": { "th": "สี่ (keycap)", "en": "Digit Four Keycap" } },
-    { "api": "U+0035-FE0F-20E3", "text": "5️⃣", "name": { "th": "ห้า (keycap)", "en": "Digit Five Keycap" } },
-    { "api": "U+0036-FE0F-20E3", "text": "6️⃣", "name": { "th": "หก (keycap)", "en": "Digit Six Keycap" } },
-    { "api": "U+0037-FE0F-20E3", "text": "7️⃣", "name": { "th": "เจ็ด (keycap)", "en": "Digit Seven Keycap" } },
-    { "api": "U+0038-FE0F-20E3", "text": "8️⃣", "name": { "th": "แปด (keycap)", "en": "Digit Eight Keycap" } },
-    { "api": "U+0039-FE0F-20E3", "text": "9️⃣", "name": { "th": "เก้า (keycap)", "en": "Digit Nine Keycap" } },
-    { "api": "U+1F51F", "text": "🔟", "name": { "th": "สิบ (keycap)", "en": "Keycap Ten" } },
-    
-    { "api": "U+1F7E5", "text": "🟥", "name": { "th": "สี่เหลี่ยมสีแดง", "en": "Red Square" } },
-    { "api": "U+1F7E7", "text": "🟧", "name": { "th": "สี่เหลี่ยมสีส้ม", "en": "Orange Square" } },
-    { "api": "U+1F7E8", "text": "🟨", "name": { "th": "สี่เหลี่ยมสีเหลือง", "en": "Yellow Square" } },
-    { "api": "U+1F7E9", "text": "🟩", "name": { "th": "สี่เหลี่ยมสีเขียว", "en": "Green Square" } },
-    { "api": "U+1F7E6", "text": "🟦", "name": { "th": "สี่เหลี่ยมสีน้ำเงิน", "en": "Blue Square" } },
-    { "api": "U+1F7EA", "text": "🟪", "name": { "th": "สี่เหลี่ยมสีม่วง", "en": "Purple Square" } },
-    { "api": "U+1F7EB", "text": "🟫", "name": { "th": "สี่เหลี่ยมสีน้ำตาล", "en": "Brown Square" } },
-    { "api": "U+2B1B", "text": "⬛", "name": { "th": "สี่เหลี่ยมดำ", "en": "Black Large Square" } },
-    { "api": "U+2B1C", "text": "⬜", "name": { "th": "สี่เหลี่ยมขาว", "en": "White Large Square" } },
-    { "api": "U+1F7F0", "text": "🟰", "name": { "th": "สัญลักษณ์สีเทา (ใหม่)", "en": "Gray Square (new)" } },
-    
-    { "api": "U+1F534", "text": "🔴", "name": { "th": "จุดสีแดง", "en": "Large Red Circle" } },
-    { "api": "U+1F7E0", "text": "🟠", "name": { "th": "จุดสีส้ม", "en": "Large Orange Circle" } },
-    { "api": "U+1F7E1", "text": "🟡", "name": { "th": "จุดสีเหลือง", "en": "Large Yellow Circle" } },
-    { "api": "U+1F7E2", "text": "🟢", "name": { "th": "จุดสีเขียว", "en": "Large Green Circle" } },
-    { "api": "U+1F535", "text": "🔵", "name": { "th": "จุดสีน้ำเงิน", "en": "Large Blue Circle" } },
-    { "api": "U+1F7E3", "text": "🟣", "name": { "th": "จุดสีม่วง", "en": "Large Purple Circle" } },
-    { "api": "U+1F7E4", "text": "🟤", "name": { "th": "จุดสีน้ำตาล", "en": "Large Brown Circle" } },
-    { "api": "U+26AB", "text": "⚫", "name": { "th": "จุดสีดำเล็ก", "en": "Medium Black Circle" } },
-    { "api": "U+26AA", "text": "⚪", "name": { "th": "จุดสีขาวเล็ก", "en": "Medium White Circle" } },
-    
-    { "api": "U+1F536", "text": "🔶", "name": { "th": "รูปสี่เหลี่ยมข้าวหลามตัดส้ม", "en": "Large Orange Diamond" } },
-    { "api": "U+1F537", "text": "🔷", "name": { "th": "รูปสี่เหลี่ยมข้าวหลามตัดน้ำเงิน", "en": "Large Blue Diamond" } },
-    { "api": "U+1F538", "text": "🔸", "name": { "th": "รูปข้าวหลามตัดเล็ก", "en": "Small Orange Diamond" } },
-    { "api": "U+1F539", "text": "🔹", "name": { "th": "รูปข้าวหลามตัดเล็กน้ำเงิน", "en": "Small Blue Diamond" } },
-    { "api": "U+1F53A", "text": "🔺", "name": { "th": "สามเหลี่ยมขึ้น", "en": "Upwards Button" } },
-    { "api": "U+1F53B", "text": "🔻", "name": { "th": "สามเหลี่ยมลง", "en": "Downwards Button" } },
-    { "api": "U+1F4A0", "text": "💠", "name": { "th": "รูปเพชรสัญลักษณ์", "en": "Diamond with a Dot" } },
-    { "api": "U+1F518", "text": "🔘", "name": { "th": "ปุ่มวงกลม", "en": "Radio Button" } },
-    { "api": "U+1F533", "text": "🔳", "name": { "th": "ปุ่มสี่เหลี่ยมขาว", "en": "White Square Button" } },
-    { "api": "U+1F532", "text": "🔲", "name": { "th": "ปุ่มสี่เหลี่ยมดำ", "en": "Black Square Button" } }
+    {
+      "api": "U+1F3E7",
+      "text": "🏧",
+      "name": {
+        "th": "ตู้ ATM",
+        "en": "ATM Sign"
+      }
+    },
+    {
+      "api": "U+1F6AE",
+      "text": "🚮",
+      "name": {
+        "th": "ทิ้งขยะที่ถัง",
+        "en": "Litter in Bin Sign"
+      }
+    },
+    {
+      "api": "U+1F6B0",
+      "text": "🚰",
+      "name": {
+        "th": "น้ำดื่ม",
+        "en": "Potable Water"
+      }
+    },
+    {
+      "api": "U+267F",
+      "text": "♿",
+      "name": {
+        "th": "ผู้ใช้รถเข็น (ผู้พิการ)",
+        "en": "Wheelchair Symbol"
+      }
+    },
+    {
+      "api": "U+1F6B9",
+      "text": "🚹",
+      "name": {
+        "th": "ห้องน้ำชาย",
+        "en": "Mens Room"
+      }
+    },
+    {
+      "api": "U+1F6BA",
+      "text": "🚺",
+      "name": {
+        "th": "ห้องน้ำหญิง",
+        "en": "Womens Room"
+      }
+    },
+    {
+      "api": "U+1F6BB",
+      "text": "🚻",
+      "name": {
+        "th": "ห้องน้ำสาธารณะ",
+        "en": "Restroom"
+      }
+    },
+    {
+      "api": "U+1F6BC",
+      "text": "🚼",
+      "name": {
+        "th": "เปลี่ยนผ้าอ้อม/พื้นที่เด็ก",
+        "en": "Baby Symbol"
+      }
+    },
+    {
+      "api": "U+1F6BE",
+      "text": "🚾",
+      "name": {
+        "th": "ห้องน้ำสาธารณะ (สัญลักษณ์)",
+        "en": "Water Closet"
+      }
+    },
+    {
+      "api": "U+1F6C2",
+      "text": "🛂",
+      "name": {
+        "th": "ด่านตรวจคนเข้าเมือง",
+        "en": "Passport Control"
+      }
+    },
+    {
+      "api": "U+1F6C3",
+      "text": "🛃",
+      "name": {
+        "th": "ศุลกากร",
+        "en": "Customs"
+      }
+    },
+    {
+      "api": "U+1F6C4",
+      "text": "🛄",
+      "name": {
+        "th": "กระเป๋าสัมภาระ",
+        "en": "Baggage Claim"
+      }
+    },
+    {
+      "api": "U+1F6C5",
+      "text": "🛅",
+      "name": {
+        "th": "ตู้ฝากของ",
+        "en": "Left Luggage"
+      }
+    },
+    {
+      "api": "U+26A0-FE0F",
+      "text": "⚠️",
+      "name": {
+        "th": "คำเตือน",
+        "en": "Warning"
+      }
+    },
+    {
+      "api": "U+1F6B8",
+      "text": "🚸",
+      "name": {
+        "th": "ระวังเด็ก",
+        "en": "Children Crossing"
+      }
+    },
+    {
+      "api": "U+26D4",
+      "text": "⛔",
+      "name": {
+        "th": "ห้ามเข้า",
+        "en": "No Entry"
+      }
+    },
+    {
+      "api": "U+1F6AB",
+      "text": "🚫",
+      "name": {
+        "th": "ห้าม",
+        "en": "Prohibited"
+      }
+    },
+    {
+      "api": "U+1F6B3",
+      "text": "🚳",
+      "name": {
+        "th": "ห้ามปั่นจักรยาน",
+        "en": "No Bicycles"
+      }
+    },
+    {
+      "api": "U+1F6AD",
+      "text": "🚭",
+      "name": {
+        "th": "ห้ามสูบบุหรี่",
+        "en": "No Smoking"
+      }
+    },
+    {
+      "api": "U+1F6AF",
+      "text": "🚯",
+      "name": {
+        "th": "ห้ามทิ้งขยะ",
+        "en": "No Littering"
+      }
+    },
+    {
+      "api": "U+1F6B1",
+      "text": "🚱",
+      "name": {
+        "th": "ห้ามดื่มน้ำ",
+        "en": "Non-Potable Water"
+      }
+    },
+    {
+      "api": "U+1F6B7",
+      "text": "🚷",
+      "name": {
+        "th": "ห้ามคนเดิน",
+        "en": "No Pedestrians"
+      }
+    },
+    {
+      "api": "U+2668-FE0F",
+      "text": "♨️",
+      "name": {
+        "th": "น้ำพุร้อน/สปา",
+        "en": "Hot Springs"
+      }
+    },
+    {
+      "api": "U+1F51E",
+      "text": "🔞",
+      "name": {
+        "th": "ห้ามผู้เยาว์",
+        "en": "No One Under Eighteen"
+      }
+    },
+    {
+      "api": "U+2B05-FE0F",
+      "text": "⬅️",
+      "name": {
+        "th": "ซ้าย",
+        "en": "Left Arrow"
+      }
+    },
+    {
+      "api": "U+2B06-FE0F",
+      "text": "⬆️",
+      "name": {
+        "th": "ขึ้น",
+        "en": "Up Arrow"
+      }
+    },
+    {
+      "api": "U+27A1-FE0F",
+      "text": "➡️",
+      "name": {
+        "th": "ขวา",
+        "en": "Right Arrow"
+      }
+    },
+    {
+      "api": "U+2B07-FE0F",
+      "text": "⬇️",
+      "name": {
+        "th": "ลง",
+        "en": "Down Arrow"
+      }
+    },
+    {
+      "api": "U+2197-FE0F",
+      "text": "↗️",
+      "name": {
+        "th": "ขึ้นขวา",
+        "en": "Up-Right Arrow"
+      }
+    },
+    {
+      "api": "U+2198-FE0F",
+      "text": "↘️",
+      "name": {
+        "th": "ลงขวา",
+        "en": "Down-Right Arrow"
+      }
+    },
+    {
+      "api": "U+2199-FE0F",
+      "text": "↙️",
+      "name": {
+        "th": "ลงซ้าย",
+        "en": "Down-Left Arrow"
+      }
+    },
+    {
+      "api": "U+2196-FE0F",
+      "text": "↖️",
+      "name": {
+        "th": "ขึ้นซ้าย",
+        "en": "Up-Left Arrow"
+      }
+    },
+    {
+      "api": "U+2195-FE0F",
+      "text": "↕️",
+      "name": {
+        "th": "บน-ล่าง",
+        "en": "Up-Down Arrow"
+      }
+    },
+    {
+      "api": "U+2194-FE0F",
+      "text": "↔️",
+      "name": {
+        "th": "ซ้าย-ขวา",
+        "en": "Left-Right Arrow"
+      }
+    },
+    {
+      "api": "U+21A9-FE0F",
+      "text": "↩️",
+      "name": {
+        "th": "ย้อนกลับซ้าย",
+        "en": "Leftwards Arrow with Hook"
+      }
+    },
+    {
+      "api": "U+21AA-FE0F",
+      "text": "↪️",
+      "name": {
+        "th": "กลับขวา",
+        "en": "Rightwards Arrow with Hook"
+      }
+    },
+    {
+      "api": "U+2934-FE0F",
+      "text": "⤴️",
+      "name": {
+        "th": "เลี้ยวขึ้น",
+        "en": "Arrow Pointing Rightwards Then Curving Upwards"
+      }
+    },
+    {
+      "api": "U+2935-FE0F",
+      "text": "⤵️",
+      "name": {
+        "th": "เลี้ยวลง",
+        "en": "Arrow Pointing Rightwards Then Curving Downwards"
+      }
+    },
+    {
+      "api": "U+1F549-FE0F",
+      "text": "🕉️",
+      "name": {
+        "th": "โอม (สัญลักษณ์ฮินดู)",
+        "en": "Om Symbol"
+      }
+    },
+    {
+      "api": "U+2721-FE0F",
+      "text": "✡️",
+      "name": {
+        "th": "ดาวแห่งดาวิด (ยิว)",
+        "en": "Star of David"
+      }
+    },
+    {
+      "api": "U+2638-FE0F",
+      "text": "☸️",
+      "name": {
+        "th": "ธรรมจักร (พุทธ)",
+        "en": "Wheel of Dharma"
+      }
+    },
+    {
+      "api": "U+262F-FE0F",
+      "text": "☯️",
+      "name": {
+        "th": "หยินหยาง",
+        "en": "Yin Yang"
+      }
+    },
+    {
+      "api": "U+271D-FE0F",
+      "text": "✝️",
+      "name": {
+        "th": "ไม้กางเขน",
+        "en": "Latin Cross"
+      }
+    },
+    {
+      "api": "U+2626-FE0F",
+      "text": "☦️",
+      "name": {
+        "th": "ไม้กางเขนออร์โธดอกซ์",
+        "en": "Orthodox Cross"
+      }
+    },
+    {
+      "api": "U+262A-FE0F",
+      "text": "☪️",
+      "name": {
+        "th": "ดาวและพระจันทร์ (อิสลาม)",
+        "en": "Star and Crescent"
+      }
+    },
+    {
+      "api": "U+262E-FE0F",
+      "text": "☮️",
+      "name": {
+        "th": "สัญลักษณ์สันติภาพ",
+        "en": "Peace Symbol"
+      }
+    },
+    {
+      "api": "U+1F54E",
+      "text": "🕎",
+      "name": {
+        "th": "เชนโนราห์/ตะเกียง (ยิว)",
+        "en": "Menorah"
+      }
+    },
+    {
+      "api": "U+1F52F",
+      "text": "🔯",
+      "name": {
+        "th": "ดาวหกแฉกแบบสัญลักษณ์",
+        "en": "Six Pointed Star with Middle Dot"
+      }
+    },
+    {
+      "api": "U+1FAAF",
+      "text": "🪯",
+      "name": {
+        "th": "สัญลักษณ์ทางศาสนา/พิธีกรรม (ใหม่)",
+        "en": "Ceremonial Symbol (new)"
+      }
+    },
+    {
+      "api": "U+2648",
+      "text": "♈",
+      "name": {
+        "th": "ราศีเมษ",
+        "en": "Aries"
+      }
+    },
+    {
+      "api": "U+2649",
+      "text": "♉",
+      "name": {
+        "th": "ราศีพฤษภ",
+        "en": "Taurus"
+      }
+    },
+    {
+      "api": "U+264A",
+      "text": "♊",
+      "name": {
+        "th": "ราศีเมถุน",
+        "en": "Gemini"
+      }
+    },
+    {
+      "api": "U+264B",
+      "text": "♋",
+      "name": {
+        "th": "ราศีกรกฎ",
+        "en": "Cancer"
+      }
+    },
+    {
+      "api": "U+264C",
+      "text": "♌",
+      "name": {
+        "th": "ราศีสิงห์",
+        "en": "Leo"
+      }
+    },
+    {
+      "api": "U+264D",
+      "text": "♍",
+      "name": {
+        "th": "ราศีกันย์",
+        "en": "Virgo"
+      }
+    },
+    {
+      "api": "U+264E",
+      "text": "♎",
+      "name": {
+        "th": "ราศีตุลย์",
+        "en": "Libra"
+      }
+    },
+    {
+      "api": "U+264F",
+      "text": "♏",
+      "name": {
+        "th": "ราศีพิจิก",
+        "en": "Scorpio"
+      }
+    },
+    {
+      "api": "U+2650",
+      "text": "♐",
+      "name": {
+        "th": "ราศีธนู",
+        "en": "Sagittarius"
+      }
+    },
+    {
+      "api": "U+2651",
+      "text": "♑",
+      "name": {
+        "th": "ราศีมังกร",
+        "en": "Capricorn"
+      }
+    },
+    {
+      "api": "U+2652",
+      "text": "♒",
+      "name": {
+        "th": "ราศีกุมภ์",
+        "en": "Aquarius"
+      }
+    },
+    {
+      "api": "U+2653",
+      "text": "♓",
+      "name": {
+        "th": "ราศีมีน",
+        "en": "Pisces"
+      }
+    },
+    {
+      "api": "U+26CE",
+      "text": "⛎",
+      "name": {
+        "th": "ราศีงูใหญ่ (Ophiuchus)",
+        "en": "Ophiuchus"
+      }
+    },
+    {
+      "api": "U+25B6-FE0F",
+      "text": "▶️",
+      "name": {
+        "th": "เล่น",
+        "en": "Play Button"
+      }
+    },
+    {
+      "api": "U+23E9",
+      "text": "⏩",
+      "name": {
+        "th": "ข้ามไปข้างหน้า",
+        "en": "Fast-Forward Button"
+      }
+    },
+    {
+      "api": "U+23ED",
+      "text": "⏭️",
+      "name": {
+        "th": "ถัดไป (ท่อน)",
+        "en": "Next Track Button"
+      }
+    },
+    {
+      "api": "U+23EF",
+      "text": "⏯️",
+      "name": {
+        "th": "เล่น/หยุดพัก",
+        "en": "Play or Pause Button"
+      }
+    },
+    {
+      "api": "U+25C0-FE0F",
+      "text": "◀️",
+      "name": {
+        "th": "ย้อนกลับ",
+        "en": "Reverse Button"
+      }
+    },
+    {
+      "api": "U+23EA",
+      "text": "⏪",
+      "name": {
+        "th": "ย้อนกลับอย่างรวดเร็ว",
+        "en": "Fast Reverse Button"
+      }
+    },
+    {
+      "api": "U+23EE",
+      "text": "⏮️",
+      "name": {
+        "th": "ย้อนกลับไปต้น",
+        "en": "Previous Track Button"
+      }
+    },
+    {
+      "api": "U+1F53C",
+      "text": "🔼",
+      "name": {
+        "th": "ปุ่มขึ้น",
+        "en": "Upwards Button"
+      }
+    },
+    {
+      "api": "U+1F53D",
+      "text": "🔽",
+      "name": {
+        "th": "ปุ่มลง",
+        "en": "Downwards Button"
+      }
+    },
+    {
+      "api": "U+23EB",
+      "text": "⏫",
+      "name": {
+        "th": "ก้าวขึ้นสองขั้น",
+        "en": "Fast Up Button"
+      }
+    },
+    {
+      "api": "U+23EC",
+      "text": "⏬",
+      "name": {
+        "th": "ก้าวลงสองขั้น",
+        "en": "Fast Down Button"
+      }
+    },
+    {
+      "api": "U+23F8-FE0F",
+      "text": "⏸️",
+      "name": {
+        "th": "หยุดชั่วคราว",
+        "en": "Pause Button"
+      }
+    },
+    {
+      "api": "U+23F9-FE0F",
+      "text": "⏹️",
+      "name": {
+        "th": "หยุด",
+        "en": "Stop Button"
+      }
+    },
+    {
+      "api": "U+23FA",
+      "text": "⏺️",
+      "name": {
+        "th": "บันทึก",
+        "en": "Record Button"
+      }
+    },
+    {
+      "api": "U+23CF",
+      "text": "⏏️",
+      "name": {
+        "th": "ยกขึ้น/ถอด",
+        "en": "Eject Button"
+      }
+    },
+    {
+      "api": "U+1F3A6",
+      "text": "🎦",
+      "name": {
+        "th": "โรงภาพยนตร์/ภาพยนตร์",
+        "en": "Cinema"
+      }
+    },
+    {
+      "api": "U+1F505",
+      "text": "🔅",
+      "name": {
+        "th": "ความสว่างต่ำ",
+        "en": "Dim Button"
+      }
+    },
+    {
+      "api": "U+1F506",
+      "text": "🔆",
+      "name": {
+        "th": "ความสว่างสูง",
+        "en": "Bright Button"
+      }
+    },
+    {
+      "api": "U+1F4F6",
+      "text": "📶",
+      "name": {
+        "th": "สัญญาณเครือข่าย",
+        "en": "Antenna Bars"
+      }
+    },
+    {
+      "api": "U+1F4F3",
+      "text": "📳",
+      "name": {
+        "th": "โหมดสั่น/โทรศัพท์แจ้งเตือน",
+        "en": "Vibration Mode"
+      }
+    },
+    {
+      "api": "U+1F4F4",
+      "text": "📴",
+      "name": {
+        "th": "ปิดโทรศัพท์",
+        "en": "Mobile Phone Off"
+      }
+    },
+    {
+      "api": "U+2716-FE0F",
+      "text": "✖️",
+      "name": {
+        "th": "คูณ/ผิดพลาด",
+        "en": "Heavy Multiplication X"
+      }
+    },
+    {
+      "api": "U+2795",
+      "text": "➕",
+      "name": {
+        "th": "บวก",
+        "en": "Heavy Plus Sign"
+      }
+    },
+    {
+      "api": "U+2796",
+      "text": "➖",
+      "name": {
+        "th": "ลบ",
+        "en": "Heavy Minus Sign"
+      }
+    },
+    {
+      "api": "U+2797",
+      "text": "➗",
+      "name": {
+        "th": "หาร",
+        "en": "Heavy Division Sign"
+      }
+    },
+    {
+      "api": "U+267E-FE0F",
+      "text": "♾️",
+      "name": {
+        "th": "อินฟินิตี้",
+        "en": "Infinity"
+      }
+    },
+    {
+      "api": "U+203C-FE0F",
+      "text": "‼️",
+      "name": {
+        "th": "ตกใจ/เน้น",
+        "en": "Double Exclamation Mark"
+      }
+    },
+    {
+      "api": "U+2049-FE0F",
+      "text": "⁉️",
+      "name": {
+        "th": "คำถาม/ตกใจ",
+        "en": "Exclamation Question Mark"
+      }
+    },
+    {
+      "api": "U+2753",
+      "text": "❓",
+      "name": {
+        "th": "เครื่องหมายคำถาม",
+        "en": "Question Mark"
+      }
+    },
+    {
+      "api": "U+2754",
+      "text": "❔",
+      "name": {
+        "th": "เครื่องหมายคำถาม (อ่อน)",
+        "en": "White Question Mark"
+      }
+    },
+    {
+      "api": "U+2755",
+      "text": "❕",
+      "name": {
+        "th": "เครื่องหมายอัศเจรีย์ (อ่อน)",
+        "en": "White Exclamation Mark"
+      }
+    },
+    {
+      "api": "U+2757",
+      "text": "❗️",
+      "name": {
+        "th": "เครื่องหมายอัศเจรีย์",
+        "en": "Exclamation Mark"
+      }
+    },
+    {
+      "api": "U+3030-FE0F",
+      "text": "〰️",
+      "name": {
+        "th": "เส้นคลื่น",
+        "en": "Wavy Dash"
+      }
+    },
+    {
+      "api": "U+1F4B1",
+      "text": "💱",
+      "name": {
+        "th": "อัตราแลกเปลี่ยน",
+        "en": "Currency Exchange"
+      }
+    },
+    {
+      "api": "U+1F4B2",
+      "text": "💲",
+      "name": {
+        "th": "สัญลักษณ์ดอลลาร์",
+        "en": "Heavy Dollar Sign"
+      }
+    },
+    {
+      "api": "U+2695-FE0F",
+      "text": "⚕️",
+      "name": {
+        "th": "สัญลักษณ์การแพทย์",
+        "en": "Medical Symbol"
+      }
+    },
+    {
+      "api": "U+2696-FE0F",
+      "text": "⚖️",
+      "name": {
+        "th": "ตราชั่ง/กฎหมาย",
+        "en": "Scales"
+      }
+    },
+    {
+      "api": "U+267B-FE0F",
+      "text": "♻️",
+      "name": {
+        "th": "รีไซเคิล",
+        "en": "Recycling Symbol"
+      }
+    },
+    {
+      "api": "U+269C-FE0F",
+      "text": "⚜️",
+      "name": {
+        "th": "ฟลอเรออน/เครื่องหมาย",
+        "en": "Fleur-De-Lis"
+      }
+    },
+    {
+      "api": "U+1F531",
+      "text": "🔱",
+      "name": {
+        "th": "ตรีศูล/ตรา",
+        "en": "Trident Emblem"
+      }
+    },
+    {
+      "api": "U+1F4DB",
+      "text": "📛",
+      "name": {
+        "th": "ป้ายชื่อ",
+        "en": "Name Badge"
+      }
+    },
+    {
+      "api": "U+1F530",
+      "text": "🔰",
+      "name": {
+        "th": "ป้ายเริ่มต้น/สัญลักษณ์",
+        "en": "Japanese Symbol for Beginner"
+      }
+    },
+    {
+      "api": "U+0030-FE0F-20E3",
+      "text": "0️⃣",
+      "name": {
+        "th": "ศูนย์ (keycap)",
+        "en": "Digit Zero Keycap"
+      }
+    },
+    {
+      "api": "U+0031-FE0F-20E3",
+      "text": "1️⃣",
+      "name": {
+        "th": "หนึ่ง (keycap)",
+        "en": "Digit One Keycap"
+      }
+    },
+    {
+      "api": "U+0032-FE0F-20E3",
+      "text": "2️⃣",
+      "name": {
+        "th": "สอง (keycap)",
+        "en": "Digit Two Keycap"
+      }
+    },
+    {
+      "api": "U+0033-FE0F-20E3",
+      "text": "3️⃣",
+      "name": {
+        "th": "สาม (keycap)",
+        "en": "Digit Three Keycap"
+      }
+    },
+    {
+      "api": "U+0034-FE0F-20E3",
+      "text": "4️⃣",
+      "name": {
+        "th": "สี่ (keycap)",
+        "en": "Digit Four Keycap"
+      }
+    },
+    {
+      "api": "U+0035-FE0F-20E3",
+      "text": "5️⃣",
+      "name": {
+        "th": "ห้า (keycap)",
+        "en": "Digit Five Keycap"
+      }
+    },
+    {
+      "api": "U+0036-FE0F-20E3",
+      "text": "6️⃣",
+      "name": {
+        "th": "หก (keycap)",
+        "en": "Digit Six Keycap"
+      }
+    },
+    {
+      "api": "U+0037-FE0F-20E3",
+      "text": "7️⃣",
+      "name": {
+        "th": "เจ็ด (keycap)",
+        "en": "Digit Seven Keycap"
+      }
+    },
+    {
+      "api": "U+0038-FE0F-20E3",
+      "text": "8️⃣",
+      "name": {
+        "th": "แปด (keycap)",
+        "en": "Digit Eight Keycap"
+      }
+    },
+    {
+      "api": "U+0039-FE0F-20E3",
+      "text": "9️⃣",
+      "name": {
+        "th": "เก้า (keycap)",
+        "en": "Digit Nine Keycap"
+      }
+    },
+    {
+      "api": "U+1F51F",
+      "text": "🔟",
+      "name": {
+        "th": "สิบ (keycap)",
+        "en": "Keycap Ten"
+      }
+    },
+    {
+      "api": "U+1F7E5",
+      "text": "🟥",
+      "name": {
+        "th": "สี่เหลี่ยมสีแดง",
+        "en": "Red Square"
+      }
+    },
+    {
+      "api": "U+1F7E7",
+      "text": "🟧",
+      "name": {
+        "th": "สี่เหลี่ยมสีส้ม",
+        "en": "Orange Square"
+      }
+    },
+    {
+      "api": "U+1F7E8",
+      "text": "🟨",
+      "name": {
+        "th": "สี่เหลี่ยมสีเหลือง",
+        "en": "Yellow Square"
+      }
+    },
+    {
+      "api": "U+1F7E9",
+      "text": "🟩",
+      "name": {
+        "th": "สี่เหลี่ยมสีเขียว",
+        "en": "Green Square"
+      }
+    },
+    {
+      "api": "U+1F7E6",
+      "text": "🟦",
+      "name": {
+        "th": "สี่เหลี่ยมสีน้ำเงิน",
+        "en": "Blue Square"
+      }
+    },
+    {
+      "api": "U+1F7EA",
+      "text": "🟪",
+      "name": {
+        "th": "สี่เหลี่ยมสีม่วง",
+        "en": "Purple Square"
+      }
+    },
+    {
+      "api": "U+1F7EB",
+      "text": "🟫",
+      "name": {
+        "th": "สี่เหลี่ยมสีน้ำตาล",
+        "en": "Brown Square"
+      }
+    },
+    {
+      "api": "U+2B1B",
+      "text": "⬛",
+      "name": {
+        "th": "สี่เหลี่ยมดำ",
+        "en": "Black Large Square"
+      }
+    },
+    {
+      "api": "U+2B1C",
+      "text": "⬜",
+      "name": {
+        "th": "สี่เหลี่ยมขาว",
+        "en": "White Large Square"
+      }
+    },
+    {
+      "api": "U+1F7F0",
+      "text": "🟰",
+      "name": {
+        "th": "สัญลักษณ์สีเทา (ใหม่)",
+        "en": "Gray Square (new)"
+      }
+    },
+    {
+      "api": "U+1F534",
+      "text": "🔴",
+      "name": {
+        "th": "จุดสีแดง",
+        "en": "Large Red Circle"
+      }
+    },
+    {
+      "api": "U+1F7E0",
+      "text": "🟠",
+      "name": {
+        "th": "จุดสีส้ม",
+        "en": "Large Orange Circle"
+      }
+    },
+    {
+      "api": "U+1F7E1",
+      "text": "🟡",
+      "name": {
+        "th": "จุดสีเหลือง",
+        "en": "Large Yellow Circle"
+      }
+    },
+    {
+      "api": "U+1F7E2",
+      "text": "🟢",
+      "name": {
+        "th": "จุดสีเขียว",
+        "en": "Large Green Circle"
+      }
+    },
+    {
+      "api": "U+1F535",
+      "text": "🔵",
+      "name": {
+        "th": "จุดสีน้ำเงิน",
+        "en": "Large Blue Circle"
+      }
+    },
+    {
+      "api": "U+1F7E3",
+      "text": "🟣",
+      "name": {
+        "th": "จุดสีม่วง",
+        "en": "Large Purple Circle"
+      }
+    },
+    {
+      "api": "U+1F7E4",
+      "text": "🟤",
+      "name": {
+        "th": "จุดสีน้ำตาล",
+        "en": "Large Brown Circle"
+      }
+    },
+    {
+      "api": "U+26AB",
+      "text": "⚫",
+      "name": {
+        "th": "จุดสีดำเล็ก",
+        "en": "Medium Black Circle"
+      }
+    },
+    {
+      "api": "U+26AA",
+      "text": "⚪",
+      "name": {
+        "th": "จุดสีขาวเล็ก",
+        "en": "Medium White Circle"
+      }
+    },
+    {
+      "api": "U+1F536",
+      "text": "🔶",
+      "name": {
+        "th": "รูปสี่เหลี่ยมข้าวหลามตัดส้ม",
+        "en": "Large Orange Diamond"
+      }
+    },
+    {
+      "api": "U+1F537",
+      "text": "🔷",
+      "name": {
+        "th": "รูปสี่เหลี่ยมข้าวหลามตัดน้ำเงิน",
+        "en": "Large Blue Diamond"
+      }
+    },
+    {
+      "api": "U+1F538",
+      "text": "🔸",
+      "name": {
+        "th": "รูปข้าวหลามตัดเล็ก",
+        "en": "Small Orange Diamond"
+      }
+    },
+    {
+      "api": "U+1F539",
+      "text": "🔹",
+      "name": {
+        "th": "รูปข้าวหลามตัดเล็กน้ำเงิน",
+        "en": "Small Blue Diamond"
+      }
+    },
+    {
+      "api": "U+1F53A",
+      "text": "🔺",
+      "name": {
+        "th": "สามเหลี่ยมขึ้น",
+        "en": "Upwards Button"
+      }
+    },
+    {
+      "api": "U+1F53B",
+      "text": "🔻",
+      "name": {
+        "th": "สามเหลี่ยมลง",
+        "en": "Downwards Button"
+      }
+    },
+    {
+      "api": "U+1F4A0",
+      "text": "💠",
+      "name": {
+        "th": "รูปเพชรสัญลักษณ์",
+        "en": "Diamond with a Dot"
+      }
+    },
+    {
+      "api": "U+1F518",
+      "text": "🔘",
+      "name": {
+        "th": "ปุ่มวงกลม",
+        "en": "Radio Button"
+      }
+    },
+    {
+      "api": "U+1F533",
+      "text": "🔳",
+      "name": {
+        "th": "ปุ่มสี่เหลี่ยมขาว",
+        "en": "White Square Button"
+      }
+    },
+    {
+      "api": "U+1F532",
+      "text": "🔲",
+      "name": {
+        "th": "ปุ่มสี่เหลี่ยมดำ",
+        "en": "Black Square Button"
+      }
+    },
+    {
+      "api": "U+1F3F4-200D-2620-FE0F",
+      "text": "🏴‍☠️",
+      "name": {
+        "th": "ธงโจรสลัด",
+        "en": "Pirate Flag"
+      }
+    },
+    {
+      "api": "U+1F3F3-FE0F-200D-1F308",
+      "text": "🏳️‍🌈",
+      "name": {
+        "th": "ธงสายรุ้ง",
+        "en": "Rainbow Flag"
+      }
+    },
+    {
+      "api": "U+1F3F3-FE0F-200D-26A7-FE0F",
+      "text": "🏳️‍⚧️",
+      "name": {
+        "th": "ธงคนข้ามเพศ",
+        "en": "Transgender Flag"
+      }
+    },
+    {
+      "api": "U+0023-FE0F-20E3",
+      "text": "#️⃣",
+      "name": {
+        "th": "สี่เหลี่ยมปุ่ม #",
+        "en": "Hash Keycap"
+      }
+    },
+    {
+      "api": "U+002A-FE0F-20E3",
+      "text": "*️⃣",
+      "name": {
+        "th": "สี่เหลี่ยมปุ่ม *",
+        "en": "Asterisk Keycap"
+      }
+    },
+    {
+      "api": "U+1F6D1",
+      "text": "🛑",
+      "name": {
+        "th": "ป้ายหยุด",
+        "en": "Stop Sign"
+      }
+    },
+    {
+      "api": "U+1F6A8",
+      "text": "🚨",
+      "name": {
+        "th": "ไฟฉุกเฉิน",
+        "en": "Police Car Light"
+      }
+    },
+    {
+      "api": "U+2622-FE0F",
+      "text": "☢️",
+      "name": {
+        "th": "สัญลักษณ์รังสี",
+        "en": "Radioactive Sign"
+      }
+    },
+    {
+      "api": "U+2623-FE0F",
+      "text": "☣️",
+      "name": {
+        "th": "สัญลักษณ์ชีวภัย",
+        "en": "Biohazard Sign"
+      }
+    },
+    {
+      "api": "U+2B55",
+      "text": "⭕",
+      "name": {
+        "th": "วงกลมใหญ่",
+        "en": "Heavy Large Circle"
+      }
+    },
+    {
+      "api": "U+2705",
+      "text": "✅",
+      "name": {
+        "th": "เช็คเขียว",
+        "en": "Check Mark Button"
+      }
+    },
+    {
+      "api": "U+274C",
+      "text": "❌",
+      "name": {
+        "th": "กากะบะที่แดง",
+        "en": "Cross Mark"
+      }
+    },
+    {
+      "api": "U+274E",
+      "text": "❎",
+      "name": {
+        "th": "กากะบะที่ในกรอบ",
+        "en": "Cross Mark Button"
+      }
+    },
+    {
+      "api": "U+1F6DE",
+      "text": "🛞",
+      "name": {
+        "th": "ล้อ",
+        "en": "Wheel"
+      }
+    },
+    {
+      "api": "U+1FAAA",
+      "text": "🪪",
+      "name": {
+        "th": "บัตรประจำตัว",
+        "en": "Identification Card"
+      }
+    },
+    {
+      "api": "U+1F3F4",
+      "text": "🏴",
+      "name": {
+        "th": "ธงดำ",
+        "en": "Black Flag"
+      }
+    },
+    {
+      "api": "U+1F3F3-FE0F",
+      "text": "🏳️",
+      "name": {
+        "th": "ธงขาว",
+        "en": "White Flag"
+      }
+    },
+    {
+      "api": "U+1F3C1",
+      "text": "🏁",
+      "name": {
+        "th": "ธงตาหมากรุก",
+        "en": "Chequered Flag"
+      }
+    },
+    {
+      "api": "U+1F6A9",
+      "text": "🚩",
+      "name": {
+        "th": "ธงสามเหลี่ยม",
+        "en": "Triangular Flag"
+      }
+    },
+    {
+      "api": "U+1F38C",
+      "text": "🎌",
+      "name": {
+        "th": "ธงญี่ปุ่นไขว้",
+        "en": "Crossed Flags"
+      }
+    }
   ]
 }

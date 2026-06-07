@@ -11,6 +11,11 @@
       "file": "symbol.json"
     },
     {
+      "id": "fancy",
+      "name": { "th": "ข้อความแฟนซี", "en": "Fancy Text" },
+      "file": "fancy.json"
+    },
+    {
       "id": "cards",
       "name": { "th": "คอลเลกชัน", "en": "Collections" },
       "file": "cards.json"

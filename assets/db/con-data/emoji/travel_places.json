@@ -5,169 +5,1277 @@
     "en": "Travel & Places"
   },
   "data": [
-    { "api": "U+1F5FA-FE0F", "text": "🗺️", "name": { "th": "แผนที่", "en": "World Map" } },
-    { "api": "U+1F5FE", "text": "🗾", "name": { "th": "แผนที่ประเทศ", "en": "Map of Japan" } },
-    { "api": "U+1F3D4-FE0F", "text": "🏔️", "name": { "th": "ภูเขาหิมะ", "en": "Snow-Capped Mountain" } },
-    { "api": "U+26F0-FE0F", "text": "⛰️", "name": { "th": "ภูเขา", "en": "Mountain" } },
-    { "api": "U+1F30B", "text": "🌋", "name": { "th": "ภูเขาไฟ", "en": "Volcano" } },
-    { "api": "U+1F5FB", "text": "🗻", "name": { "th": "ภูเขาฟูจิ", "en": "Mount Fuji" } },
-    { "api": "U+1F3D5-FE0F", "text": "🏕️", "name": { "th": "ตั้งแคมป์", "en": "Camping" } },
-    { "api": "U+1F3D6-FE0F", "text": "🏖️", "name": { "th": "ชายหาด", "en": "Beach with Umbrella" } },
-    { "api": "U+1F3DC-FE0F", "text": "🏜️", "name": { "th": "ทะเลทราย", "en": "Desert" } },
-    { "api": "U+1F3DD-FE0F", "text": "🏝️", "name": { "th": "เกาะร้าง", "en": "Desert Island" } },
-    { "api": "U+1F3DE-FE0F", "text": "🏞️", "name": { "th": "อุทยาน/ทิวทัศน์", "en": "National Park" } },
-    
-    { "api": "U+26EA", "text": "⛪", "name": { "th": "โบสถ์", "en": "Church" } },
-    { "api": "U+1F54C", "text": "🕌", "name": { "th": "มัสยิด", "en": "Mosque" } },
-    { "api": "U+1F6D5", "text": "🛕", "name": { "th": "ศาสนสถาน (ฮินดู)", "en": "Hindu Temple" } },
-    { "api": "U+1F54D", "text": "🕍", "name": { "th": "ซินาโกรก้า/วิหาร", "en": "Synagogue" } },
-    { "api": "U+26E9-FE0F", "text": "⛩️", "name": { "th": "ศาลเจ้าชินโต", "en": "Shinto Shrine" } },
-    { "api": "U+1F54B", "text": "🕋", "name": { "th": "กะอ์บะ/กะอ์บะห์", "en": "Kaaba" } },
-    
-    { "api": "U+1F3DF-FE0F", "text": "🏟️", "name": { "th": "สนามกีฬา", "en": "Stadium" } },
-    { "api": "U+1F3DB-FE0F", "text": "🏛️", "name": { "th": "อาคารโบราณ", "en": "Classical Building" } },
-    { "api": "U+1F3D7-FE0F", "text": "🏗️", "name": { "th": "ก่อสร้าง/เครน", "en": "Building Construction" } },
-    { "api": "U+1F9F1", "text": "🧱", "name": { "th": "อิฐ", "en": "Brick" } },
-    { "api": "U+1F3D8-FE0F", "text": "🏘️", "name": { "th": "ย่านที่อยู่อาศัย", "en": "Houses" } },
-    { "api": "U+1F3DA-FE0F", "text": "🏚️", "name": { "th": "บ้านร้าง", "en": "Derelict House" } },
-    { "api": "U+1F3E0", "text": "🏠", "name": { "th": "บ้าน", "en": "House" } },
-    { "api": "U+1F3E1", "text": "🏡", "name": { "th": "บ้านพร้อมสวน", "en": "House with Garden" } },
-    { "api": "U+1F3E2", "text": "🏢", "name": { "th": "อาคารสำนักงาน", "en": "Office Building" } },
-    { "api": "U+1F3E3", "text": "🏣", "name": { "th": "ธนาคาร/ไปรษณีย์ (ญี่ปุ่น)", "en": "Japanese Post Office" } },
-    { "api": "U+1F3E4", "text": "🏤", "name": { "th": "อาคารพาณิชย์", "en": "Post Office" } },
-    { "api": "U+1F3E5", "text": "🏥", "name": { "th": "โรงพยาบาล", "en": "Hospital" } },
-    { "api": "U+1F3E6", "text": "🏦", "name": { "th": "ธนาคาร", "en": "Bank" } },
-    { "api": "U+1F3E8", "text": "🏨", "name": { "th": "โรงแรม", "en": "Hotel" } },
-    { "api": "U+1F3E9", "text": "🏩", "name": { "th": "โรงแรมรัก", "en": "Love Hotel" } },
-    { "api": "U+1F3EA", "text": "🏪", "name": { "th": "ร้านสะดวกซื้อ", "en": "Convenience Store" } },
-    { "api": "U+1F3EB", "text": "🏫", "name": { "th": "โรงเรียน", "en": "School" } },
-    { "api": "U+1F3EC", "text": "🏬", "name": { "th": "ห้างสรรพสินค้า", "en": "Department Store" } },
-    { "api": "U+1F3ED", "text": "🏭", "name": { "th": "โรงงาน", "en": "Factory" } },
-    { "api": "U+1F3EF", "text": "🏯", "name": { "th": "ปราสาทแบบญี่ปุ่น", "en": "Japanese Castle" } },
-    { "api": "U+1F3F0", "text": "🏰", "name": { "th": "ปราสาท", "en": "Castle" } },
-    { "api": "U+1F492", "text": "💒", "name": { "th": "โบสถ์แต่งงาน", "en": "Wedding" } },
-    { "api": "U+1F5FC", "text": "🗼", "name": { "th": "หอคอย (เช่น โตเกียว ทาวเวอร์)", "en": "Tokyo Tower" } },
-    { "api": "U+1F5FD", "text": "🗽", "name": { "th": "เทพีเสรีภาพ", "en": "Statue of Liberty" } },
-    
-    { "api": "U+26F2", "text": "⛲", "name": { "th": "น้ำพุ", "en": "Fountain" } },
-    { "api": "U+26FA", "text": "⛺", "name": { "th": "เต็นท์", "en": "Tent" } },
-    { "api": "U+1F301", "text": "🌁", "name": { "th": "เมืองในหมอก", "en": "Foggy" } },
-    { "api": "U+1F303", "text": "🌃", "name": { "th": "ทิวทัศน์กลางคืนของเมือง", "en": "Night with Stars" } },
-    { "api": "U+1F3D9-FE0F", "text": "🏙️", "name": { "th": "ทิวทัศน์เมือง", "en": "Cityscape" } },
-    { "api": "U+1F304", "text": "🌄", "name": { "th": "พระอาทิตย์ขึ้นเหนือภูเขา", "en": "Sunrise over Mountains" } },
-    { "api": "U+1F305", "text": "🌅", "name": { "th": "พระอาทิตย์ขึ้นที่ทะเล", "en": "Sunrise" } },
-    { "api": "U+1F306", "text": "🌆", "name": { "th": "เมืองยามพลบค่ำ", "en": "Cityscape at Dusk" } },
-    { "api": "U+1F307", "text": "🌇", "name": { "th": "พระอาทิตย์ตกที่เมือง", "en": "Sunset over Buildings" } },
-    { "api": "U+1F309", "text": "🌉", "name": { "th": "สะพานยามค่ำ", "en": "Bridge at Night" } },
-    { "api": "U+1F3A0", "text": "🎠", "name": { "th": "ม้าหมุน", "en": "Carousel Horse" } },
-    { "api": "U+1F3A1", "text": "🎡", "name": { "th": "ชิงช้า", "en": "Ferris Wheel" } },
-    { "api": "U+1F3A2", "text": "🎢", "name": { "th": "รถไฟเหาะ", "en": "Roller Coaster" } },
-    { "api": "U+1F488", "text": "💈", "name": { "th": "เสาบาร์เบอร์", "en": "Barber Pole" } },
-    { "api": "U+1F3AA", "text": "🎪", "name": { "th": "คณะละครสัตว์", "en": "Circus Tent" } },
-    
-    { "api": "U+1F682", "text": "🚂", "name": { "th": "รถจักรไอน้ำ", "en": "Steam Locomotive" } },
-    { "api": "U+1F683", "text": "🚃", "name": { "th": "ตู้รถไฟ", "en": "Railway Car" } },
-    { "api": "U+1F684", "text": "🚄", "name": { "th": "ชินคันเซ็น/รถไฟความเร็วสูง", "en": "High-Speed Train" } },
-    { "api": "U+1F685", "text": "🚅", "name": { "th": "รถไฟความเร็วสูง (อื่นๆ)", "en": "High-Speed Train with Bullet Nose" } },
-    { "api": "U+1F686", "text": "🚆", "name": { "th": "รถไฟ", "en": "Train" } },
-    { "api": "U+1F687", "text": "🚇", "name": { "th": "รถไฟใต้ดิน", "en": "Metro" } },
-    { "api": "U+1F688", "text": "🚈", "name": { "th": "รถไฟฟ้า", "en": "Light Rail" } },
-    { "api": "U+1F689", "text": "🚉", "name": { "th": "สถานีรถไฟ", "en": "Station" } },
-    { "api": "U+1F68A", "text": "🚊", "name": { "th": "รถราง", "en": "Tram" } },
-    { "api": "U+1F69D", "text": "🚝", "name": { "th": "รถไฟสนาม", "en": "Monorail" } },
-    { "api": "U+1F69E", "text": "🚞", "name": { "th": "รถไฟภูเขา", "en": "Mountain Railway" } },
-    { "api": "U+1F68B", "text": "🚋", "name": { "th": "รถราง/รถไฟ", "en": "Tram Car" } },
-    { "api": "U+1F68C", "text": "🚌", "name": { "th": "รถบัส", "en": "Bus" } },
-    { "api": "U+1F68D", "text": "🚍", "name": { "th": "รถบัสเมือง", "en": "Oncoming Bus" } },
-    { "api": "U+1F68E", "text": "🚎", "name": { "th": "รถรางไฟฟ้า", "en": "Trolleybus" } },
-    { "api": "U+1F690", "text": "🚐", "name": { "th": "รถตู้", "en": "Minibus" } },
-    { "api": "U+1F691", "text": "🚑", "name": { "th": "รถพยาบาล", "en": "Ambulance" } },
-    { "api": "U+1F692", "text": "🚒", "name": { "th": "รถดับเพลิง", "en": "Fire Engine" } },
-    { "api": "U+1F693", "text": "🚓", "name": { "th": "รถตำรวจ", "en": "Police Car" } },
-    { "api": "U+1F694", "text": "🚔", "name": { "th": "รถตำรวจวิ่ง", "en": "Oncoming Police Car" } },
-    { "api": "U+1F695", "text": "🚕", "name": { "th": "แท็กซี่", "en": "Taxi" } },
-    { "api": "U+1F696", "text": "🚖", "name": { "th": "แท็กซี่วิ่ง", "en": "Oncoming Taxi" } },
-    { "api": "U+1F697", "text": "🚗", "name": { "th": "รถยนต์", "en": "Automobile" } },
-    { "api": "U+1F698", "text": "🚘", "name": { "th": "รถยนต์หน้า", "en": "Oncoming Automobile" } },
-    { "api": "U+1F699", "text": "🚙", "name": { "th": "รถ SUV/ครอบครัว", "en": "Sport Utility Vehicle" } },
-    { "api": "U+1F6FB", "text": "🛻", "name": { "th": "รถกระบะ", "en": "Pickup Truck" } },
-    { "api": "U+1F69A", "text": "🚚", "name": { "th": "รถส่งของ", "en": "Delivery Truck" } },
-    { "api": "U+1F69B", "text": "🚛", "name": { "th": "รถบรรทุกขนาดใหญ่", "en": "Articulated Lorry" } },
-    { "api": "U+1F69C", "text": "🚜", "name": { "th": "รถไถ/การเกษตร", "en": "Tractor" } },
-    { "api": "U+1F3CE-FE0F", "text": "🏎️", "name": { "th": "รถแข่ง", "en": "Racing Car" } },
-    { "api": "U+1F3CD-FE0F", "text": "🏍️", "name": { "th": "มอเตอร์ไซค์", "en": "Motorcycle" } },
-    { "api": "U+1F6F5", "text": "🛵", "name": { "th": "สกู๊ตเตอร์", "en": "Motor Scooter" } },
-    { "api": "U+1F9BD", "text": "🦽", "name": { "th": "รถเข็น (ด้วยมือ)", "en": "Manual Wheelchair" } },
-    { "api": "U+1F9BC", "text": "🦼", "name": { "th": "รถเข็นไฟฟ้า", "en": "Motorized Wheelchair" } },
-    { "api": "U+1F6FA", "text": "🛺", "name": { "th": "ตุ๊กตุ๊ก/รถสามล้อ", "en": "Auto Rickshaw" } },
-    { "api": "U+1F6B2", "text": "🚲", "name": { "th": "จักรยาน", "en": "Bicycle" } },
-    { "api": "U+1F6F4", "text": "🛴", "name": { "th": "สกูตเตอร์ไฟฟ้า", "en": "Scooter" } },
-    { "api": "U+1F6F9", "text": "🛹", "name": { "th": "สเก็ตบอร์ด", "en": "Skateboard" } },
-    { "api": "U+1F6FC", "text": "🛼", "name": { "th": "รองเท้าสเก็ต", "en": "Roller Skate" } },
-    { "api": "U+1F68F", "text": "🚏", "name": { "th": "ป้ายรถเมล์/จุดจอด", "en": "Bus Stop" } },
-    
-    { "api": "U+2693", "text": "⚓", "name": { "th": "สมอ", "en": "Anchor" } },
-    { "api": "U+1F6DF", "text": "🛟", "name": { "th": "ห่วงชูชีพ", "en": "Ring Buoy" } },
-    { "api": "U+26F5", "text": "⛵", "name": { "th": "เรือใบ", "en": "Sailboat" } },
-    { "api": "U+1F6F6", "text": "🛶", "name": { "th": "เรือคายัค/แคนู", "en": "Canoe" } },
-    { "api": "U+1F6A4", "text": "🚤", "name": { "th": "เรือสปีดโบ๊ท", "en": "Speedboat" } },
-    { "api": "U+1F6F3", "text": "🛳️", "name": { "th": "เรือสำราญ", "en": "Passenger Ship" } },
-    { "api": "U+26F4-FE0F", "text": "⛴️", "name": { "th": "เรือเฟอร์รี่", "en": "Ferry" } },
-    { "api": "U+1F6A2", "text": "🚢", "name": { "th": "เรือขนส่ง", "en": "Ship" } },
-    { "api": "U+2708-FE0F", "text": "✈️", "name": { "th": "เครื่องบิน", "en": "Airplane" } },
-    { "api": "U+1F6EB", "text": "🛫", "name": { "th": "ขึ้นบิน/ออกเดินทาง", "en": "Airplane Departure" } },
-    { "api": "U+1F6EC", "text": "🛬", "name": { "th": "ลงจอด", "en": "Airplane Arrival" } },
-    { "api": "U+1FA82", "text": "🪂", "name": { "th": "ร่มชูชีพ", "en": "Parachute" } },
-    { "api": "U+1F4BA", "text": "💺", "name": { "th": "ที่นั่งเครื่องบิน", "en": "Seat" } },
-    { "api": "U+1F681", "text": "🚁", "name": { "th": "เฮลิคอปเตอร์", "en": "Helicopter" } },
-    { "api": "U+1F69F", "text": "🚟", "name": { "th": "รถรางแขวน/รถไฟแขวน", "en": "Suspension Railway" } },
-    { "api": "U+1F6A0", "text": "🚠", "name": { "th": "กระเช้าพาขึ้นภูเขา", "en": "Mountain Cableway" } },
-    { "api": "U+1F6A1", "text": "🚡", "name": { "th": "กระเช้าไฟฟ้า", "en": "Aerial Tramway" } },
-    { "api": "U+1F6F0", "text": "🛰️", "name": { "th": "ดาวเทียม", "en": "Satellite" } },
-    { "api": "U+1F680", "text": "🚀", "name": { "th": "จรวด", "en": "Rocket" } },
-    { "api": "U+1F6F8", "text": "🛸", "name": { "th": "จานบิน", "en": "Flying Saucer" } },
-    
-    { "api": "U+1F6CE-FE0F", "text": "🛎️", "name": { "th": "กระดิ่งบริการ", "en": "Bellhop Bell" } },
-    { "api": "U+1F9F3", "text": "🧳", "name": { "th": "กระเป๋าเดินทาง", "en": "Luggage" } },
-    { "api": "U+1F6E3-FE0F", "text": "🛣️", "name": { "th": "ทางหลวง", "en": "Motorway" } },
-    { "api": "U+1F6E4-FE0F", "text": "🛤️", "name": { "th": "รางรถไฟ", "en": "Railway Track" } },
-    { "api": "U+26FD", "text": "⛽", "name": { "th": "ปั๊มน้ำมัน", "en": "Fuel Pump" } },
-    { "api": "U+1F6A8", "text": "🚨", "name": { "th": "สัญญาณเตือน", "en": "Police Car Light" } },
-    { "api": "U+1F6A5", "text": "🚥", "name": { "th": "สัญญาณไฟจราจรแนวตั้ง", "en": "Horizontal Traffic Light" } },
-    { "api": "U+1F6A6", "text": "🚦", "name": { "th": "สัญญาณไฟจราจร", "en": "Vertical Traffic Light" } },
-    { "api": "U+1F6D1", "text": "🛑", "name": { "th": "ป้ายหยุด", "en": "Stop Sign" } },
-    { "api": "U+1F6A7", "text": "🚧", "name": { "th": "การก่อสร้าง/ปิดถนน", "en": "Construction" } },
-    
-    { "api": "U+231B", "text": "⌛", "name": { "th": "นาฬิกาทราย", "en": "Hourglass Done" } },
-    { "api": "U+23F3", "text": "⏳", "name": { "th": "นาฬิกาทรายหมุน", "en": "Hourglass Not Done" } },
-    { "api": "U+231A", "text": "⌚", "name": { "th": "นาฬิกาข้อมือ", "en": "Watch" } },
-    { "api": "U+23F0", "text": "⏰", "name": { "th": "นาฬิกาปลุก", "en": "Alarm Clock" } },
-    { "api": "U+23F1-FE0F", "text": "⏱️", "name": { "th": "ตัวตั้งเวลา", "en": "Stopwatch" } },
-    { "api": "U+23F2-FE0F", "text": "⏲️", "name": { "th": "นาฬิกาจับเวลา", "en": "Timer Clock" } },
-    { "api": "U+1F570-FE0F", "text": "🕰️", "name": { "th": "นาฬิกาตั้งโต๊ะ", "en": "Mantelpiece Clock" } },
-    { "api": "U+1F55B", "text": "🕛", "name": { "th": "เที่ยงคืน", "en": "Clock Face Twelve O’Clock" } },
-    { "api": "U+1F567", "text": "🕧", "name": { "th": "เที่ยงครึ่ง", "en": "Clock Face Twelve-Thirty" } },
-    { "api": "U+1F550", "text": "🕐", "name": { "th": "หนึ่งโมง", "en": "Clock Face One O’Clock" } },
-    { "api": "U+1F55C", "text": "🕜", "name": { "th": "หนึ่งโมงครึ่ง", "en": "Clock Face One-Thirty" } },
-    { "api": "U+1F551", "text": "🕑", "name": { "th": "สองโมง", "en": "Clock Face Two O’Clock" } },
-    { "api": "U+1F55D", "text": "🕝", "name": { "th": "สองโมงครึ่ง", "en": "Clock Face Two-Thirty" } },
-    { "api": "U+1F552", "text": "🕒", "name": { "th": "สามโมง", "en": "Clock Face Three O’Clock" } },
-    { "api": "U+1F55E", "text": "🕞", "name": { "th": "สามโมงครึ่ง", "en": "Clock Face Three-Thirty" } },
-    { "api": "U+1F553", "text": "🕓", "name": { "th": "สี่โมง", "en": "Clock Face Four O’Clock" } },
-    { "api": "U+1F55F", "text": "🕟", "name": { "th": "สี่โมงครึ่ง", "en": "Clock Face Four-Thirty" } },
-    { "api": "U+1F554", "text": "🕔", "name": { "th": "ห้าโมง", "en": "Clock Face Five O’Clock" } },
-    { "api": "U+1F560", "text": "🕠", "name": { "th": "ห้าโมงครึ่ง", "en": "Clock Face Five-Thirty" } },
-    { "api": "U+1F555", "text": "🕕", "name": { "th": "หกโมง", "en": "Clock Face Six O’Clock" } },
-    { "api": "U+1F561", "text": "🕡", "name": { "th": "หกโมงครึ่ง", "en": "Clock Face Six-Thirty" } },
-    { "api": "U+1F556", "text": "🕖", "name": { "th": "เจ็ดโมง", "en": "Clock Face Seven O’Clock" } },
-    { "api": "U+1F562", "text": "🕢", "name": { "th": "เจ็ดโมงครึ่ง", "en": "Clock Face Seven-Thirty" } },
-    { "api": "U+1F557", "text": "🕗", "name": { "th": "แปดโมง", "en": "Clock Face Eight O’Clock" } },
-    { "api": "U+1F563", "text": "🕣", "name": { "th": "แปดโมงครึ่ง", "en": "Clock Face Eight-Thirty" } },
-    { "api": "U+1F558", "text": "🕘", "name": { "th": "เก้าโมง", "en": "Clock Face Nine O’Clock" } },
-    { "api": "U+1F564", "text": "🕤", "name": { "th": "เก้าโมงครึ่ง", "en": "Clock Face Nine-Thirty" } },
-    { "api": "U+1F559", "text": "🕙", "name": { "th": "สิบโมง", "en": "Clock Face Ten O’Clock" } },
-    { "api": "U+1F565", "text": "🕥", "name": { "th": "สิบโมงครึ่ง", "en": "Clock Face Ten-Thirty" } },
-    { "api": "U+1F55A", "text": "🕚", "name": { "th": "สิบเอ็ดโมง", "en": "Clock Face Eleven O’Clock" } },
-    { "api": "U+1F566", "text": "🕦", "name": { "th": "สิบเอ็ดโมงครึ่ง", "en": "Clock Face Eleven-Thirty" } }
+    {
+      "api": "U+1F5FA-FE0F",
+      "text": "🗺️",
+      "name": {
+        "th": "แผนที่",
+        "en": "World Map"
+      }
+    },
+    {
+      "api": "U+1F5FE",
+      "text": "🗾",
+      "name": {
+        "th": "แผนที่ประเทศ",
+        "en": "Map of Japan"
+      }
+    },
+    {
+      "api": "U+1F3D4-FE0F",
+      "text": "🏔️",
+      "name": {
+        "th": "ภูเขาหิมะ",
+        "en": "Snow-Capped Mountain"
+      }
+    },
+    {
+      "api": "U+26F0-FE0F",
+      "text": "⛰️",
+      "name": {
+        "th": "ภูเขา",
+        "en": "Mountain"
+      }
+    },
+    {
+      "api": "U+1F30B",
+      "text": "🌋",
+      "name": {
+        "th": "ภูเขาไฟ",
+        "en": "Volcano"
+      }
+    },
+    {
+      "api": "U+1F5FB",
+      "text": "🗻",
+      "name": {
+        "th": "ภูเขาฟูจิ",
+        "en": "Mount Fuji"
+      }
+    },
+    {
+      "api": "U+1F3D5-FE0F",
+      "text": "🏕️",
+      "name": {
+        "th": "ตั้งแคมป์",
+        "en": "Camping"
+      }
+    },
+    {
+      "api": "U+1F3D6-FE0F",
+      "text": "🏖️",
+      "name": {
+        "th": "ชายหาด",
+        "en": "Beach with Umbrella"
+      }
+    },
+    {
+      "api": "U+1F3DC-FE0F",
+      "text": "🏜️",
+      "name": {
+        "th": "ทะเลทราย",
+        "en": "Desert"
+      }
+    },
+    {
+      "api": "U+1F3DD-FE0F",
+      "text": "🏝️",
+      "name": {
+        "th": "เกาะร้าง",
+        "en": "Desert Island"
+      }
+    },
+    {
+      "api": "U+1F3DE-FE0F",
+      "text": "🏞️",
+      "name": {
+        "th": "อุทยาน/ทิวทัศน์",
+        "en": "National Park"
+      }
+    },
+    {
+      "api": "U+26EA",
+      "text": "⛪",
+      "name": {
+        "th": "โบสถ์",
+        "en": "Church"
+      }
+    },
+    {
+      "api": "U+1F54C",
+      "text": "🕌",
+      "name": {
+        "th": "มัสยิด",
+        "en": "Mosque"
+      }
+    },
+    {
+      "api": "U+1F6D5",
+      "text": "🛕",
+      "name": {
+        "th": "ศาสนสถาน (ฮินดู)",
+        "en": "Hindu Temple"
+      }
+    },
+    {
+      "api": "U+1F54D",
+      "text": "🕍",
+      "name": {
+        "th": "ซินาโกรก้า/วิหาร",
+        "en": "Synagogue"
+      }
+    },
+    {
+      "api": "U+26E9-FE0F",
+      "text": "⛩️",
+      "name": {
+        "th": "ศาลเจ้าชินโต",
+        "en": "Shinto Shrine"
+      }
+    },
+    {
+      "api": "U+1F54B",
+      "text": "🕋",
+      "name": {
+        "th": "กะอ์บะ/กะอ์บะห์",
+        "en": "Kaaba"
+      }
+    },
+    {
+      "api": "U+1F3DF-FE0F",
+      "text": "🏟️",
+      "name": {
+        "th": "สนามกีฬา",
+        "en": "Stadium"
+      }
+    },
+    {
+      "api": "U+1F3DB-FE0F",
+      "text": "🏛️",
+      "name": {
+        "th": "อาคารโบราณ",
+        "en": "Classical Building"
+      }
+    },
+    {
+      "api": "U+1F3D7-FE0F",
+      "text": "🏗️",
+      "name": {
+        "th": "ก่อสร้าง/เครน",
+        "en": "Building Construction"
+      }
+    },
+    {
+      "api": "U+1F9F1",
+      "text": "🧱",
+      "name": {
+        "th": "อิฐ",
+        "en": "Brick"
+      }
+    },
+    {
+      "api": "U+1F3D8-FE0F",
+      "text": "🏘️",
+      "name": {
+        "th": "ย่านที่อยู่อาศัย",
+        "en": "Houses"
+      }
+    },
+    {
+      "api": "U+1F3DA-FE0F",
+      "text": "🏚️",
+      "name": {
+        "th": "บ้านร้าง",
+        "en": "Derelict House"
+      }
+    },
+    {
+      "api": "U+1F3E0",
+      "text": "🏠",
+      "name": {
+        "th": "บ้าน",
+        "en": "House"
+      }
+    },
+    {
+      "api": "U+1F3E1",
+      "text": "🏡",
+      "name": {
+        "th": "บ้านพร้อมสวน",
+        "en": "House with Garden"
+      }
+    },
+    {
+      "api": "U+1F3E2",
+      "text": "🏢",
+      "name": {
+        "th": "อาคารสำนักงาน",
+        "en": "Office Building"
+      }
+    },
+    {
+      "api": "U+1F3E3",
+      "text": "🏣",
+      "name": {
+        "th": "ธนาคาร/ไปรษณีย์ (ญี่ปุ่น)",
+        "en": "Japanese Post Office"
+      }
+    },
+    {
+      "api": "U+1F3E4",
+      "text": "🏤",
+      "name": {
+        "th": "อาคารพาณิชย์",
+        "en": "Post Office"
+      }
+    },
+    {
+      "api": "U+1F3E5",
+      "text": "🏥",
+      "name": {
+        "th": "โรงพยาบาล",
+        "en": "Hospital"
+      }
+    },
+    {
+      "api": "U+1F3E6",
+      "text": "🏦",
+      "name": {
+        "th": "ธนาคาร",
+        "en": "Bank"
+      }
+    },
+    {
+      "api": "U+1F3E8",
+      "text": "🏨",
+      "name": {
+        "th": "โรงแรม",
+        "en": "Hotel"
+      }
+    },
+    {
+      "api": "U+1F3E9",
+      "text": "🏩",
+      "name": {
+        "th": "โรงแรมรัก",
+        "en": "Love Hotel"
+      }
+    },
+    {
+      "api": "U+1F3EA",
+      "text": "🏪",
+      "name": {
+        "th": "ร้านสะดวกซื้อ",
+        "en": "Convenience Store"
+      }
+    },
+    {
+      "api": "U+1F3EB",
+      "text": "🏫",
+      "name": {
+        "th": "โรงเรียน",
+        "en": "School"
+      }
+    },
+    {
+      "api": "U+1F3EC",
+      "text": "🏬",
+      "name": {
+        "th": "ห้างสรรพสินค้า",
+        "en": "Department Store"
+      }
+    },
+    {
+      "api": "U+1F3ED",
+      "text": "🏭",
+      "name": {
+        "th": "โรงงาน",
+        "en": "Factory"
+      }
+    },
+    {
+      "api": "U+1F3EF",
+      "text": "🏯",
+      "name": {
+        "th": "ปราสาทแบบญี่ปุ่น",
+        "en": "Japanese Castle"
+      }
+    },
+    {
+      "api": "U+1F3F0",
+      "text": "🏰",
+      "name": {
+        "th": "ปราสาท",
+        "en": "Castle"
+      }
+    },
+    {
+      "api": "U+1F492",
+      "text": "💒",
+      "name": {
+        "th": "โบสถ์แต่งงาน",
+        "en": "Wedding"
+      }
+    },
+    {
+      "api": "U+1F5FC",
+      "text": "🗼",
+      "name": {
+        "th": "หอคอย (เช่น โตเกียว ทาวเวอร์)",
+        "en": "Tokyo Tower"
+      }
+    },
+    {
+      "api": "U+1F5FD",
+      "text": "🗽",
+      "name": {
+        "th": "เทพีเสรีภาพ",
+        "en": "Statue of Liberty"
+      }
+    },
+    {
+      "api": "U+26F2",
+      "text": "⛲",
+      "name": {
+        "th": "น้ำพุ",
+        "en": "Fountain"
+      }
+    },
+    {
+      "api": "U+26FA",
+      "text": "⛺",
+      "name": {
+        "th": "เต็นท์",
+        "en": "Tent"
+      }
+    },
+    {
+      "api": "U+1F301",
+      "text": "🌁",
+      "name": {
+        "th": "เมืองในหมอก",
+        "en": "Foggy"
+      }
+    },
+    {
+      "api": "U+1F303",
+      "text": "🌃",
+      "name": {
+        "th": "ทิวทัศน์กลางคืนของเมือง",
+        "en": "Night with Stars"
+      }
+    },
+    {
+      "api": "U+1F3D9-FE0F",
+      "text": "🏙️",
+      "name": {
+        "th": "ทิวทัศน์เมือง",
+        "en": "Cityscape"
+      }
+    },
+    {
+      "api": "U+1F304",
+      "text": "🌄",
+      "name": {
+        "th": "พระอาทิตย์ขึ้นเหนือภูเขา",
+        "en": "Sunrise over Mountains"
+      }
+    },
+    {
+      "api": "U+1F305",
+      "text": "🌅",
+      "name": {
+        "th": "พระอาทิตย์ขึ้นที่ทะเล",
+        "en": "Sunrise"
+      }
+    },
+    {
+      "api": "U+1F306",
+      "text": "🌆",
+      "name": {
+        "th": "เมืองยามพลบค่ำ",
+        "en": "Cityscape at Dusk"
+      }
+    },
+    {
+      "api": "U+1F307",
+      "text": "🌇",
+      "name": {
+        "th": "พระอาทิตย์ตกที่เมือง",
+        "en": "Sunset over Buildings"
+      }
+    },
+    {
+      "api": "U+1F309",
+      "text": "🌉",
+      "name": {
+        "th": "สะพานยามค่ำ",
+        "en": "Bridge at Night"
+      }
+    },
+    {
+      "api": "U+1F3A0",
+      "text": "🎠",
+      "name": {
+        "th": "ม้าหมุน",
+        "en": "Carousel Horse"
+      }
+    },
+    {
+      "api": "U+1F3A1",
+      "text": "🎡",
+      "name": {
+        "th": "ชิงช้า",
+        "en": "Ferris Wheel"
+      }
+    },
+    {
+      "api": "U+1F3A2",
+      "text": "🎢",
+      "name": {
+        "th": "รถไฟเหาะ",
+        "en": "Roller Coaster"
+      }
+    },
+    {
+      "api": "U+1F488",
+      "text": "💈",
+      "name": {
+        "th": "เสาบาร์เบอร์",
+        "en": "Barber Pole"
+      }
+    },
+    {
+      "api": "U+1F3AA",
+      "text": "🎪",
+      "name": {
+        "th": "คณะละครสัตว์",
+        "en": "Circus Tent"
+      }
+    },
+    {
+      "api": "U+1F682",
+      "text": "🚂",
+      "name": {
+        "th": "รถจักรไอน้ำ",
+        "en": "Steam Locomotive"
+      }
+    },
+    {
+      "api": "U+1F683",
+      "text": "🚃",
+      "name": {
+        "th": "ตู้รถไฟ",
+        "en": "Railway Car"
+      }
+    },
+    {
+      "api": "U+1F684",
+      "text": "🚄",
+      "name": {
+        "th": "ชินคันเซ็น/รถไฟความเร็วสูง",
+        "en": "High-Speed Train"
+      }
+    },
+    {
+      "api": "U+1F685",
+      "text": "🚅",
+      "name": {
+        "th": "รถไฟความเร็วสูง (อื่นๆ)",
+        "en": "High-Speed Train with Bullet Nose"
+      }
+    },
+    {
+      "api": "U+1F686",
+      "text": "🚆",
+      "name": {
+        "th": "รถไฟ",
+        "en": "Train"
+      }
+    },
+    {
+      "api": "U+1F687",
+      "text": "🚇",
+      "name": {
+        "th": "รถไฟใต้ดิน",
+        "en": "Metro"
+      }
+    },
+    {
+      "api": "U+1F688",
+      "text": "🚈",
+      "name": {
+        "th": "รถไฟฟ้า",
+        "en": "Light Rail"
+      }
+    },
+    {
+      "api": "U+1F689",
+      "text": "🚉",
+      "name": {
+        "th": "สถานีรถไฟ",
+        "en": "Station"
+      }
+    },
+    {
+      "api": "U+1F68A",
+      "text": "🚊",
+      "name": {
+        "th": "รถราง",
+        "en": "Tram"
+      }
+    },
+    {
+      "api": "U+1F69D",
+      "text": "🚝",
+      "name": {
+        "th": "รถไฟสนาม",
+        "en": "Monorail"
+      }
+    },
+    {
+      "api": "U+1F69E",
+      "text": "🚞",
+      "name": {
+        "th": "รถไฟภูเขา",
+        "en": "Mountain Railway"
+      }
+    },
+    {
+      "api": "U+1F68B",
+      "text": "🚋",
+      "name": {
+        "th": "รถราง/รถไฟ",
+        "en": "Tram Car"
+      }
+    },
+    {
+      "api": "U+1F68C",
+      "text": "🚌",
+      "name": {
+        "th": "รถบัส",
+        "en": "Bus"
+      }
+    },
+    {
+      "api": "U+1F68D",
+      "text": "🚍",
+      "name": {
+        "th": "รถบัสเมือง",
+        "en": "Oncoming Bus"
+      }
+    },
+    {
+      "api": "U+1F68E",
+      "text": "🚎",
+      "name": {
+        "th": "รถรางไฟฟ้า",
+        "en": "Trolleybus"
+      }
+    },
+    {
+      "api": "U+1F690",
+      "text": "🚐",
+      "name": {
+        "th": "รถตู้",
+        "en": "Minibus"
+      }
+    },
+    {
+      "api": "U+1F691",
+      "text": "🚑",
+      "name": {
+        "th": "รถพยาบาล",
+        "en": "Ambulance"
+      }
+    },
+    {
+      "api": "U+1F692",
+      "text": "🚒",
+      "name": {
+        "th": "รถดับเพลิง",
+        "en": "Fire Engine"
+      }
+    },
+    {
+      "api": "U+1F693",
+      "text": "🚓",
+      "name": {
+        "th": "รถตำรวจ",
+        "en": "Police Car"
+      }
+    },
+    {
+      "api": "U+1F694",
+      "text": "🚔",
+      "name": {
+        "th": "รถตำรวจวิ่ง",
+        "en": "Oncoming Police Car"
+      }
+    },
+    {
+      "api": "U+1F695",
+      "text": "🚕",
+      "name": {
+        "th": "แท็กซี่",
+        "en": "Taxi"
+      }
+    },
+    {
+      "api": "U+1F696",
+      "text": "🚖",
+      "name": {
+        "th": "แท็กซี่วิ่ง",
+        "en": "Oncoming Taxi"
+      }
+    },
+    {
+      "api": "U+1F697",
+      "text": "🚗",
+      "name": {
+        "th": "รถยนต์",
+        "en": "Automobile"
+      }
+    },
+    {
+      "api": "U+1F698",
+      "text": "🚘",
+      "name": {
+        "th": "รถยนต์หน้า",
+        "en": "Oncoming Automobile"
+      }
+    },
+    {
+      "api": "U+1F699",
+      "text": "🚙",
+      "name": {
+        "th": "รถ SUV/ครอบครัว",
+        "en": "Sport Utility Vehicle"
+      }
+    },
+    {
+      "api": "U+1F6FB",
+      "text": "🛻",
+      "name": {
+        "th": "รถกระบะ",
+        "en": "Pickup Truck"
+      }
+    },
+    {
+      "api": "U+1F69A",
+      "text": "🚚",
+      "name": {
+        "th": "รถส่งของ",
+        "en": "Delivery Truck"
+      }
+    },
+    {
+      "api": "U+1F69B",
+      "text": "🚛",
+      "name": {
+        "th": "รถบรรทุกขนาดใหญ่",
+        "en": "Articulated Lorry"
+      }
+    },
+    {
+      "api": "U+1F69C",
+      "text": "🚜",
+      "name": {
+        "th": "รถไถ/การเกษตร",
+        "en": "Tractor"
+      }
+    },
+    {
+      "api": "U+1F3CE-FE0F",
+      "text": "🏎️",
+      "name": {
+        "th": "รถแข่ง",
+        "en": "Racing Car"
+      }
+    },
+    {
+      "api": "U+1F3CD-FE0F",
+      "text": "🏍️",
+      "name": {
+        "th": "มอเตอร์ไซค์",
+        "en": "Motorcycle"
+      }
+    },
+    {
+      "api": "U+1F6F5",
+      "text": "🛵",
+      "name": {
+        "th": "สกู๊ตเตอร์",
+        "en": "Motor Scooter"
+      }
+    },
+    {
+      "api": "U+1F9BD",
+      "text": "🦽",
+      "name": {
+        "th": "รถเข็น (ด้วยมือ)",
+        "en": "Manual Wheelchair"
+      }
+    },
+    {
+      "api": "U+1F9BC",
+      "text": "🦼",
+      "name": {
+        "th": "รถเข็นไฟฟ้า",
+        "en": "Motorized Wheelchair"
+      }
+    },
+    {
+      "api": "U+1F6FA",
+      "text": "🛺",
+      "name": {
+        "th": "ตุ๊กตุ๊ก/รถสามล้อ",
+        "en": "Auto Rickshaw"
+      }
+    },
+    {
+      "api": "U+1F6B2",
+      "text": "🚲",
+      "name": {
+        "th": "จักรยาน",
+        "en": "Bicycle"
+      }
+    },
+    {
+      "api": "U+1F6F4",
+      "text": "🛴",
+      "name": {
+        "th": "สกูตเตอร์ไฟฟ้า",
+        "en": "Scooter"
+      }
+    },
+    {
+      "api": "U+1F6F9",
+      "text": "🛹",
+      "name": {
+        "th": "สเก็ตบอร์ด",
+        "en": "Skateboard"
+      }
+    },
+    {
+      "api": "U+1F6FC",
+      "text": "🛼",
+      "name": {
+        "th": "รองเท้าสเก็ต",
+        "en": "Roller Skate"
+      }
+    },
+    {
+      "api": "U+1F68F",
+      "text": "🚏",
+      "name": {
+        "th": "ป้ายรถเมล์/จุดจอด",
+        "en": "Bus Stop"
+      }
+    },
+    {
+      "api": "U+2693",
+      "text": "⚓",
+      "name": {
+        "th": "สมอ",
+        "en": "Anchor"
+      }
+    },
+    {
+      "api": "U+1F6DF",
+      "text": "🛟",
+      "name": {
+        "th": "ห่วงชูชีพ",
+        "en": "Ring Buoy"
+      }
+    },
+    {
+      "api": "U+26F5",
+      "text": "⛵",
+      "name": {
+        "th": "เรือใบ",
+        "en": "Sailboat"
+      }
+    },
+    {
+      "api": "U+1F6F6",
+      "text": "🛶",
+      "name": {
+        "th": "เรือคายัค/แคนู",
+        "en": "Canoe"
+      }
+    },
+    {
+      "api": "U+1F6A4",
+      "text": "🚤",
+      "name": {
+        "th": "เรือสปีดโบ๊ท",
+        "en": "Speedboat"
+      }
+    },
+    {
+      "api": "U+1F6F3",
+      "text": "🛳️",
+      "name": {
+        "th": "เรือสำราญ",
+        "en": "Passenger Ship"
+      }
+    },
+    {
+      "api": "U+26F4-FE0F",
+      "text": "⛴️",
+      "name": {
+        "th": "เรือเฟอร์รี่",
+        "en": "Ferry"
+      }
+    },
+    {
+      "api": "U+1F6A2",
+      "text": "🚢",
+      "name": {
+        "th": "เรือขนส่ง",
+        "en": "Ship"
+      }
+    },
+    {
+      "api": "U+2708-FE0F",
+      "text": "✈️",
+      "name": {
+        "th": "เครื่องบิน",
+        "en": "Airplane"
+      }
+    },
+    {
+      "api": "U+1F6EB",
+      "text": "🛫",
+      "name": {
+        "th": "ขึ้นบิน/ออกเดินทาง",
+        "en": "Airplane Departure"
+      }
+    },
+    {
+      "api": "U+1F6EC",
+      "text": "🛬",
+      "name": {
+        "th": "ลงจอด",
+        "en": "Airplane Arrival"
+      }
+    },
+    {
+      "api": "U+1FA82",
+      "text": "🪂",
+      "name": {
+        "th": "ร่มชูชีพ",
+        "en": "Parachute"
+      }
+    },
+    {
+      "api": "U+1F4BA",
+      "text": "💺",
+      "name": {
+        "th": "ที่นั่งเครื่องบิน",
+        "en": "Seat"
+      }
+    },
+    {
+      "api": "U+1F681",
+      "text": "🚁",
+      "name": {
+        "th": "เฮลิคอปเตอร์",
+        "en": "Helicopter"
+      }
+    },
+    {
+      "api": "U+1F69F",
+      "text": "🚟",
+      "name": {
+        "th": "รถรางแขวน/รถไฟแขวน",
+        "en": "Suspension Railway"
+      }
+    },
+    {
+      "api": "U+1F6A0",
+      "text": "🚠",
+      "name": {
+        "th": "กระเช้าพาขึ้นภูเขา",
+        "en": "Mountain Cableway"
+      }
+    },
+    {
+      "api": "U+1F6A1",
+      "text": "🚡",
+      "name": {
+        "th": "กระเช้าไฟฟ้า",
+        "en": "Aerial Tramway"
+      }
+    },
+    {
+      "api": "U+1F6F0",
+      "text": "🛰️",
+      "name": {
+        "th": "ดาวเทียม",
+        "en": "Satellite"
+      }
+    },
+    {
+      "api": "U+1F680",
+      "text": "🚀",
+      "name": {
+        "th": "จรวด",
+        "en": "Rocket"
+      }
+    },
+    {
+      "api": "U+1F6F8",
+      "text": "🛸",
+      "name": {
+        "th": "จานบิน",
+        "en": "Flying Saucer"
+      }
+    },
+    {
+      "api": "U+1F6CE-FE0F",
+      "text": "🛎️",
+      "name": {
+        "th": "กระดิ่งบริการ",
+        "en": "Bellhop Bell"
+      }
+    },
+    {
+      "api": "U+1F9F3",
+      "text": "🧳",
+      "name": {
+        "th": "กระเป๋าเดินทาง",
+        "en": "Luggage"
+      }
+    },
+    {
+      "api": "U+1F6E3-FE0F",
+      "text": "🛣️",
+      "name": {
+        "th": "ทางหลวง",
+        "en": "Motorway"
+      }
+    },
+    {
+      "api": "U+1F6E4-FE0F",
+      "text": "🛤️",
+      "name": {
+        "th": "รางรถไฟ",
+        "en": "Railway Track"
+      }
+    },
+    {
+      "api": "U+26FD",
+      "text": "⛽",
+      "name": {
+        "th": "ปั๊มน้ำมัน",
+        "en": "Fuel Pump"
+      }
+    },
+    {
+      "api": "U+1F6A8",
+      "text": "🚨",
+      "name": {
+        "th": "สัญญาณเตือน",
+        "en": "Police Car Light"
+      }
+    },
+    {
+      "api": "U+1F6A5",
+      "text": "🚥",
+      "name": {
+        "th": "สัญญาณไฟจราจรแนวตั้ง",
+        "en": "Horizontal Traffic Light"
+      }
+    },
+    {
+      "api": "U+1F6A6",
+      "text": "🚦",
+      "name": {
+        "th": "สัญญาณไฟจราจร",
+        "en": "Vertical Traffic Light"
+      }
+    },
+    {
+      "api": "U+1F6D1",
+      "text": "🛑",
+      "name": {
+        "th": "ป้ายหยุด",
+        "en": "Stop Sign"
+      }
+    },
+    {
+      "api": "U+1F6A7",
+      "text": "🚧",
+      "name": {
+        "th": "การก่อสร้าง/ปิดถนน",
+        "en": "Construction"
+      }
+    },
+    {
+      "api": "U+231B",
+      "text": "⌛",
+      "name": {
+        "th": "นาฬิกาทราย",
+        "en": "Hourglass Done"
+      }
+    },
+    {
+      "api": "U+23F3",
+      "text": "⏳",
+      "name": {
+        "th": "นาฬิกาทรายหมุน",
+        "en": "Hourglass Not Done"
+      }
+    },
+    {
+      "api": "U+231A",
+      "text": "⌚",
+      "name": {
+        "th": "นาฬิกาข้อมือ",
+        "en": "Watch"
+      }
+    },
+    {
+      "api": "U+23F0",
+      "text": "⏰",
+      "name": {
+        "th": "นาฬิกาปลุก",
+        "en": "Alarm Clock"
+      }
+    },
+    {
+      "api": "U+23F1-FE0F",
+      "text": "⏱️",
+      "name": {
+        "th": "ตัวตั้งเวลา",
+        "en": "Stopwatch"
+      }
+    },
+    {
+      "api": "U+23F2-FE0F",
+      "text": "⏲️",
+      "name": {
+        "th": "นาฬิกาจับเวลา",
+        "en": "Timer Clock"
+      }
+    },
+    {
+      "api": "U+1F570-FE0F",
+      "text": "🕰️",
+      "name": {
+        "th": "นาฬิกาตั้งโต๊ะ",
+        "en": "Mantelpiece Clock"
+      }
+    },
+    {
+      "api": "U+1F55B",
+      "text": "🕛",
+      "name": {
+        "th": "เที่ยงคืน",
+        "en": "Clock Face Twelve O’Clock"
+      }
+    },
+    {
+      "api": "U+1F567",
+      "text": "🕧",
+      "name": {
+        "th": "เที่ยงครึ่ง",
+        "en": "Clock Face Twelve-Thirty"
+      }
+    },
+    {
+      "api": "U+1F550",
+      "text": "🕐",
+      "name": {
+        "th": "หนึ่งโมง",
+        "en": "Clock Face One O’Clock"
+      }
+    },
+    {
+      "api": "U+1F55C",
+      "text": "🕜",
+      "name": {
+        "th": "หนึ่งโมงครึ่ง",
+        "en": "Clock Face One-Thirty"
+      }
+    },
+    {
+      "api": "U+1F551",
+      "text": "🕑",
+      "name": {
+        "th": "สองโมง",
+        "en": "Clock Face Two O’Clock"
+      }
+    },
+    {
+      "api": "U+1F55D",
+      "text": "🕝",
+      "name": {
+        "th": "สองโมงครึ่ง",
+        "en": "Clock Face Two-Thirty"
+      }
+    },
+    {
+      "api": "U+1F552",
+      "text": "🕒",
+      "name": {
+        "th": "สามโมง",
+        "en": "Clock Face Three O’Clock"
+      }
+    },
+    {
+      "api": "U+1F55E",
+      "text": "🕞",
+      "name": {
+        "th": "สามโมงครึ่ง",
+        "en": "Clock Face Three-Thirty"
+      }
+    },
+    {
+      "api": "U+1F553",
+      "text": "🕓",
+      "name": {
+        "th": "สี่โมง",
+        "en": "Clock Face Four O’Clock"
+      }
+    },
+    {
+      "api": "U+1F55F",
+      "text": "🕟",
+      "name": {
+        "th": "สี่โมงครึ่ง",
+        "en": "Clock Face Four-Thirty"
+      }
+    },
+    {
+      "api": "U+1F554",
+      "text": "🕔",
+      "name": {
+        "th": "ห้าโมง",
+        "en": "Clock Face Five O’Clock"
+      }
+    },
+    {
+      "api": "U+1F560",
+      "text": "🕠",
+      "name": {
+        "th": "ห้าโมงครึ่ง",
+        "en": "Clock Face Five-Thirty"
+      }
+    },
+    {
+      "api": "U+1F555",
+      "text": "🕕",
+      "name": {
+        "th": "หกโมง",
+        "en": "Clock Face Six O’Clock"
+      }
+    },
+    {
+      "api": "U+1F561",
+      "text": "🕡",
+      "name": {
+        "th": "หกโมงครึ่ง",
+        "en": "Clock Face Six-Thirty"
+      }
+    },
+    {
+      "api": "U+1F556",
+      "text": "🕖",
+      "name": {
+        "th": "เจ็ดโมง",
+        "en": "Clock Face Seven O’Clock"
+      }
+    },
+    {
+      "api": "U+1F562",
+      "text": "🕢",
+      "name": {
+        "th": "เจ็ดโมงครึ่ง",
+        "en": "Clock Face Seven-Thirty"
+      }
+    },
+    {
+      "api": "U+1F557",
+      "text": "🕗",
+      "name": {
+        "th": "แปดโมง",
+        "en": "Clock Face Eight O’Clock"
+      }
+    },
+    {
+      "api": "U+1F563",
+      "text": "🕣",
+      "name": {
+        "th": "แปดโมงครึ่ง",
+        "en": "Clock Face Eight-Thirty"
+      }
+    },
+    {
+      "api": "U+1F558",
+      "text": "🕘",
+      "name": {
+        "th": "เก้าโมง",
+        "en": "Clock Face Nine O’Clock"
+      }
+    },
+    {
+      "api": "U+1F564",
+      "text": "🕤",
+      "name": {
+        "th": "เก้าโมงครึ่ง",
+        "en": "Clock Face Nine-Thirty"
+      }
+    },
+    {
+      "api": "U+1F559",
+      "text": "🕙",
+      "name": {
+        "th": "สิบโมง",
+        "en": "Clock Face Ten O’Clock"
+      }
+    },
+    {
+      "api": "U+1F565",
+      "text": "🕥",
+      "name": {
+        "th": "สิบโมงครึ่ง",
+        "en": "Clock Face Ten-Thirty"
+      }
+    },
+    {
+      "api": "U+1F55A",
+      "text": "🕚",
+      "name": {
+        "th": "สิบเอ็ดโมง",
+        "en": "Clock Face Eleven O’Clock"
+      }
+    },
+    {
+      "api": "U+1F566",
+      "text": "🕦",
+      "name": {
+        "th": "สิบเอ็ดโมงครึ่ง",
+        "en": "Clock Face Eleven-Thirty"
+      }
+    },
+    {
+      "api": "U+1F6F7",
+      "text": "🛷",
+      "name": {
+        "th": "เลื่อนหิมะ",
+        "en": "Sled"
+      }
+    },
+    {
+      "api": "U+1F6DE",
+      "text": "🛞",
+      "name": {
+        "th": "ล้อ",
+        "en": "Wheel"
+      }
+    }
   ]
 }

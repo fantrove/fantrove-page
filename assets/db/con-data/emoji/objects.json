@@ -5,248 +5,1965 @@
     "en": "Objects"
   },
   "data": [
-    { "api": "U+1F453", "text": "👓", "name": { "th": "แว่นตา", "en": "Glasses" } },
-    { "api": "U+1F576-FE0F", "text": "🕶️", "name": { "th": "แว่นกันแดด", "en": "Sunglasses" } },
-    { "api": "U+1F97D", "text": "🥽", "name": { "th": "แว่นครอบหน้า", "en": "Goggles" } },
-    { "api": "U+1F97C", "text": "🥼", "name": { "th": "เสื้อคลุมห้องปฏิบัติการ", "en": "Lab Coat" } },
-    { "api": "U+1F9BA", "text": "🦺", "name": { "th": "เสื้อกั๊กสะท้อนแสง", "en": "Safety Vest" } },
-    { "api": "U+1F454", "text": "👔", "name": { "th": "เนกไท", "en": "Necktie" } },
-    { "api": "U+1F455", "text": "👕", "name": { "th": "เสื้อยืด", "en": "T-Shirt" } },
-    { "api": "U+1F456", "text": "👖", "name": { "th": "กางเกง", "en": "Jeans" } },
-    { "api": "U+1F9E3", "text": "🧣", "name": { "th": "ผ้าพันคอ", "en": "Scarf" } },
-    { "api": "U+1F9E4", "text": "🧤", "name": { "th": "ถุงมือ", "en": "Gloves" } },
-    { "api": "U+1F9E5", "text": "🧥", "name": { "th": "เสื้อโค้ท", "en": "Coat" } },
-    { "api": "U+1F9E6", "text": "🧦", "name": { "th": "ถุงเท้า", "en": "Socks" } },
-    { "api": "U+1F457", "text": "👗", "name": { "th": "ชุดเดรส", "en": "Dress" } },
-    { "api": "U+1F458", "text": "👘", "name": { "th": "ชุดกิโมโน", "en": "Kimono" } },
-    { "api": "U+1FA7B", "text": "🥻", "name": { "th": "ส่าหรี/ชุดแบบดั้งเดิม", "en": "Sari" } },
-    { "api": "U+1FA71", "text": "🩱", "name": { "th": "ชุดว่ายน้ำแบบชิ้นเดียว", "en": "One-Piece Swimsuit" } },
-    { "api": "U+1FA72", "text": "🩲", "name": { "th": "กางเกงชั้นใน", "en": "Briefs" } },
-    { "api": "U+1FA73", "text": "🩳", "name": { "th": "กางเกงขาสั้น", "en": "Shorts" } },
-    { "api": "U+1F459", "text": "👙", "name": { "th": "บิกินี่", "en": "Bikini" } },
-    { "api": "U+1F45A", "text": "👚", "name": { "th": "เสื้อเบลาส์", "en": "Woman's Clothes" } },
-    { "api": "U+1F45B", "text": "👛", "name": { "th": "กระเป๋าสตางค์", "en": "Purse" } },
-    { "api": "U+1F45C", "text": "👜", "name": { "th": "กระเป๋าถือ", "en": "Handbag" } },
-    { "api": "U+1F45D", "text": "👝", "name": { "th": "กระเป๋าถือเล็ก", "en": "Clutch Bag" } },
-    { "api": "U+1F6CD-FE0F", "text": "🛍️", "name": { "th": "ถุงช้อปปิ้ง", "en": "Shopping Bags" } },
-    { "api": "U+1F392", "text": "🎒", "name": { "th": "กระเป๋าเป้", "en": "Backpack" } },
-    { "api": "U+1FA74", "text": "🩴", "name": { "th": "รองเท้าแตะ", "en": "Thong Sandal" } },
-    { "api": "U+1F45E", "text": "👞", "name": { "th": "รองเท้าหนัง", "en": "Men's Shoe" } },
-    { "api": "U+1F45F", "text": "👟", "name": { "th": "รองเท้าผ้าใบ", "en": "Running Shoe" } },
-    { "api": "U+1F97E", "text": "🥾", "name": { "th": "รองเท้าบู๊ท", "en": "Hiking Boot" } },
-    { "api": "U+1F97F", "text": "🥿", "name": { "th": "รองเท้าส้นแบน", "en": "Flat Shoe" } },
-    { "api": "U+1F460", "text": "👠", "name": { "th": "รองเท้าส้นสูง", "en": "High-Heeled Shoe" } },
-    { "api": "U+1F461", "text": "👡", "name": { "th": "รองเท้าแตะส้นพื้น", "en": "Woman's Sandal" } },
-    { "api": "U+1F462", "text": "👢", "name": { "th": "รองเท้าบู๊ทสตรี", "en": "Woman's Boot" } },
-    { "api": "U+1F451", "text": "👑", "name": { "th": "มงกุฎ", "en": "Crown" } },
-    { "api": "U+1F452", "text": "👒", "name": { "th": "หมวกผู้หญิง", "en": "Woman's Hat" } },
-    { "api": "U+1F3A9", "text": "🎩", "name": { "th": "หมวกทรงสูง", "en": "Top Hat" } },
-    { "api": "U+1F393", "text": "🎓", "name": { "th": "หมวกบัณฑิต", "en": "Graduation Cap" } },
-    { "api": "U+1F9E2", "text": "🧢", "name": { "th": "หมวกแก๊ป", "en": "Billed Cap" } },
-    { "api": "U+1FA96", "text": "🪖", "name": { "th": "หมวกเหล็ก/หมวกทหาร", "en": "Military Helmet" } },
-    { "api": "U+26D1-FE0F", "text": "⛑️", "name": { "th": "หมวกนิรภัยทางการแพทย์", "en": "Rescue Helmet" } },
-    { "api": "U+1F484", "text": "💄", "name": { "th": "ลิปสติก", "en": "Lipstick" } },
-    { "api": "U+1F48D", "text": "💍", "name": { "th": "แหวน", "en": "Ring" } },
-    { "api": "U+1F4BC", "text": "💼", "name": { "th": "กระเป๋าทำงาน", "en": "Briefcase" } },
-    
-    { "api": "U+1F507", "text": "🔇", "name": { "th": "ปิดเสียง", "en": "Muted Speaker" } },
-    { "api": "U+1F508", "text": "🔈", "name": { "th": "ลำโพงต่ำ", "en": "Low Volume Speaker" } },
-    { "api": "U+1F509", "text": "🔉", "name": { "th": "ลำโพงกลาง", "en": "Medium Volume Speaker" } },
-    { "api": "U+1F50A", "text": "🔊", "name": { "th": "ลำโพงดัง", "en": "Loudspeaker" } },
-    { "api": "U+1F4E2", "text": "📢", "name": { "th": "เครื่องขยายเสียง", "en": "Loudspeaker" } },
-    { "api": "U+1F4E3", "text": "📣", "name": { "th": "แตรประกาศ", "en": "Megaphone" } },
-    { "api": "U+1F4EF", "text": "📯", "name": { "th": "แตรส่งข่าว", "en": "Postal Horn" } },
-    { "api": "U+1F514", "text": "🔔", "name": { "th": "ระฆัง", "en": "Bell" } },
-    { "api": "U+1F515", "text": "🔕", "name": { "th": "ปิดระฆัง", "en": "Bell with Slash" } },
-    { "api": "U+1F3BC", "text": "🎼", "name": { "th": "บาร์โน้ต", "en": "Musical Score" } },
-    { "api": "U+1F3B5", "text": "🎵", "name": { "th": "โน้ตเพลง", "en": "Musical Note" } },
-    { "api": "U+1F3B6", "text": "🎶", "name": { "th": "โน้ตหลายตัว", "en": "Multiple Musical Notes" } },
-    { "api": "U+1F399-FE0F", "text": "🎙️", "name": { "th": "ไมโครโฟนสตูดิโอ", "en": "Studio Microphone" } },
-    { "api": "U+1F39A-FE0F", "text": "🎚️", "name": { "th": "สไลเดอร์ระดับ", "en": "Level Slider" } },
-    { "api": "U+1F39B-FE0F", "text": "🎛️", "name": { "th": "ปุ่มควบคุม", "en": "Control Knobs" } },
-    { "api": "U+1F3A4", "text": "🎤", "name": { "th": "ไมโครโฟน", "en": "Microphone" } },
-    { "api": "U+1F3A7", "text": "🎧", "name": { "th": "หูฟัง", "en": "Headphone" } },
-    { "api": "U+1F4FB", "text": "📻", "name": { "th": "วิทยุ", "en": "Radio" } },
-    { "api": "U+1F3B7", "text": "🎷", "name": { "th": "แซ็กโซโฟน", "en": "Saxophone" } },
-    { "api": "U+1FA97", "text": "🪗", "name": { "th": "แอคคอร์เดียน/หีบเพลง", "en": "Accordion" } },
-    { "api": "U+1F3B8", "text": "🎸", "name": { "th": "กีตาร์", "en": "Guitar" } },
-    { "api": "U+1F3B9", "text": "🎹", "name": { "th": "เปียโน/คีย์บอร์ด", "en": "Musical Keyboard" } },
-    { "api": "U+1F3BA", "text": "🎺", "name": { "th": "ทรัมเป็ต", "en": "Trumpet" } },
-    { "api": "U+1F3BB", "text": "🎻", "name": { "th": "ไวโอลิน", "en": "Violin" } },
-    { "api": "U+1FA95", "text": "🪕", "name": { "th": "บันโจ", "en": "Banjo" } },
-    { "api": "U+1F941", "text": "🥁", "name": { "th": "กลอง", "en": "Drum" } },
-    { "api": "U+1FA98", "text": "🪘", "name": { "th": "กลองยาว", "en": "Long Drum" } },
-    { "api": "U+1F4F1", "text": "📱", "name": { "th": "โทรศัพท์มือถือ", "en": "Mobile Phone" } },
-    { "api": "U+1F4F2", "text": "📲", "name": { "th": "โทรออก/เข้า", "en": "Mobile Phone with Arrow" } },
-    { "api": "U+260E-FE0F", "text": "☎️", "name": { "th": "โทรศัพท์", "en": "Telephone" } },
-    { "api": "U+1F4DE", "text": "📞", "name": { "th": "หูฟังโทรศัพท์", "en": "Telephone Receiver" } },
-    { "api": "U+1F4DF", "text": "📟", "name": { "th": "เพจเจอร์", "en": "Pager" } },
-    { "api": "U+1F4E0", "text": "📠", "name": { "th": "แฟกซ์", "en": "Fax Machine" } },
-    { "api": "U+1F50B", "text": "🔋", "name": { "th": "แบตเตอรี่", "en": "Battery" } },
-    { "api": "U+1FAAB", "text": "🪫", "name": { "th": "แบตเตอรี่อ่อน", "en": "Low Battery" } },
-    { "api": "U+1F50C", "text": "🔌", "name": { "th": "ปลั๊ก", "en": "Electric Plug" } },
-    { "api": "U+1F4BB", "text": "💻", "name": { "th": "แล็ปท็อป", "en": "Laptop Computer" } },
-    { "api": "U+1F5A5-FE0F", "text": "🖥️", "name": { "th": "คอมพิวเตอร์ตั้งโต๊ะ", "en": "Desktop Computer" } },
-    { "api": "U+1F5A8-FE0F", "text": "🖨️", "name": { "th": "เครื่องพิมพ์", "en": "Printer" } },
-    { "api": "U+2328-FE0F", "text": "⌨️", "name": { "th": "แป้นพิมพ์", "en": "Keyboard" } },
-    { "api": "U+1F5B1-FE0F", "text": "🖱️", "name": { "th": "เมาส์คอมพิวเตอร์", "en": "Computer Mouse" } },
-    { "api": "U+1F5B2-FE0F", "text": "🖲️", "name": { "th": "เมาส์ลูกกลิ้ง", "en": "Trackball" } },
-    { "api": "U+1F4BD", "text": "💽", "name": { "th": "ดิสก์คอมแพค", "en": "Optical Disk" } },
-    { "api": "U+1F4BE", "text": "💾", "name": { "th": "ดิสก์เซฟ", "en": "Floppy Disk" } },
-    { "api": "U+1F4BF", "text": "💿", "name": { "th": "แผ่นดีวีดี", "en": "Optical Disk" } },
-    { "api": "U+1F4C0", "text": "📀", "name": { "th": "ไดส์ค์/ซีดี", "en": "DVD" } },
-    { "api": "U+1F3A5", "text": "🎥", "name": { "th": "กล้องวิดีโอ", "en": "Movie Camera" } },
-    { "api": "U+1F39E-FE0F", "text": "🎞️", "name": { "th": "ฟิล์มภาพยนตร์", "en": "Film Frames" } },
-    { "api": "U+1F4FD-FE0F", "text": "📽️", "name": { "th": "เครื่องฉาย", "en": "Film Projector" } },
-    { "api": "U+1F4FA", "text": "📺", "name": { "th": "โทรทัศน์", "en": "Television" } },
-    { "api": "U+1F4F7", "text": "📷", "name": { "th": "กล้องถ่ายรูป", "en": "Camera" } },
-    { "api": "U+1F4F8", "text": "📸", "name": { "th": "กล้องถ่ายรูปพร้อมแฟลช", "en": "Camera with Flash" } },
-    { "api": "U+1F4F9", "text": "📹", "name": { "th": "กล้องวิดีโอมือถือ", "en": "Video Camera" } },
-    { "api": "U+1F4FC", "text": "📼", "name": { "th": "เทปวิดีโอ", "en": "Videocassette" } },
-    
-    { "api": "U+1F50D", "text": "🔍", "name": { "th": "แว่นขยาย", "en": "Magnifying Glass Tilted Left" } },
-    { "api": "U+1F50E", "text": "🔎", "name": { "th": "แว่นขยายอีกแบบ", "en": "Magnifying Glass Tilted Right" } },
-    { "api": "U+1F56F-FE0F", "text": "🕯️", "name": { "th": "เทียนไข", "en": "Candle" } },
-    { "api": "U+1F4A1", "text": "💡", "name": { "th": "หลอดไฟ", "en": "Light Bulb" } },
-    { "api": "U+1F526", "text": "🔦", "name": { "th": "ไฟฉาย", "en": "Flashlight" } },
-    { "api": "U+1F3EE", "text": "🏮", "name": { "th": "โคมไฟแบบญี่ปุ่น", "en": "Red Paper Lantern" } },
-    { "api": "U+1FA94", "text": "🪔", "name": { "th": "ตะเกียงน้ำมัน", "en": "Diya Lamp" } },
-    { "api": "U+1F4D4", "text": "📔", "name": { "th": "สมุดบันทึก", "en": "Notebook with Decorative Cover" } },
-    { "api": "U+1F4D5", "text": "📕", "name": { "th": "หนังสือปกแดง", "en": "Closed Book" } },
-    { "api": "U+1F4D6", "text": "📖", "name": { "th": "หนังสือเปิด", "en": "Open Book" } },
-    { "api": "U+1F4D7", "text": "📗", "name": { "th": "หนังสือปกเขียว", "en": "Green Book" } },
-    { "api": "U+1F4D8", "text": "📘", "name": { "th": "หนังสือปกน้ำเงิน", "en": "Blue Book" } },
-    { "api": "U+1F4D9", "text": "📙", "name": { "th": "หนังสือปกส้ม", "en": "Orange Book" } },
-    { "api": "U+1F4DA", "text": "📚", "name": { "th": "หนังสือกอง", "en": "Books" } },
-    { "api": "U+1F4D3", "text": "📓", "name": { "th": "สมุดบันทึก", "en": "Notebook" } },
-    { "api": "U+1F4D2", "text": "📒", "name": { "th": "สมุดบัญชี", "en": "Ledger" } },
-    { "api": "U+1F4C3", "text": "📃", "name": { "th": "เอกสาร", "en": "Page with Curl" } },
-    { "api": "U+1F4DC", "text": "📜", "name": { "th": "ม้วนกระดาษ", "en": "Scroll" } },
-    { "api": "U+1F4C4", "text": "📄", "name": { "th": "เอกสารหน้าเดียว", "en": "Page Facing Up" } },
-    { "api": "U+1F4F0", "text": "📰", "name": { "th": "หนังสือพิมพ์", "en": "Newspaper" } },
-    { "api": "U+1F5DE-FE0F", "text": "🗞️", "name": { "th": "ม้วนข่าว/นสพ.", "en": "Rolled-Up Newspaper" } },
-    { "api": "U+1F4C1", "text": "📁", "name": { "th": "โฟลเดอร์เอกสาร", "en": "File Folder" } },
-    { "api": "U+1F4C2", "text": "📂", "name": { "th": "โฟลเดอร์เปิด", "en": "Open File Folder" } },
-    { "api": "U+1F4C5", "text": "📅", "name": { "th": "ปฏิทิน", "en": "Calendar" } },
-    { "api": "U+1F4C6", "text": "📆", "name": { "th": "ปฏิทินแบบหน้าวัน", "en": "Tear-Off Calendar" } },
-    { "api": "U+1F4C7", "text": "📇", "name": { "th": "บัตรรายชื่อ", "en": "Card Index" } },
-    
-    { "api": "U+1F4B0", "text": "💰", "name": { "th": "ถุงเงิน", "en": "Money Bag" } },
-    { "api": "U+1FA99", "text": "🪙", "name": { "th": "เหรียญ", "en": "Coin" } },
-    { "api": "U+1F4B4", "text": "💴", "name": { "th": "เงินเยน/ธนบัตรเยน", "en": "Yen Banknote" } },
-    { "api": "U+1F4B5", "text": "💵", "name": { "th": "เหรียญดอลลาร์/ธนบัตร", "en": "Dollar Banknote" } },
-    { "api": "U+1F4B6", "text": "💶", "name": { "th": "ยูโร", "en": "Euro Banknote" } },
-    { "api": "U+1F4B7", "text": "💷", "name": { "th": "ปอนด์สเตอร์ลิง", "en": "Pound Banknote" } },
-    { "api": "U+1F4B8", "text": "💸", "name": { "th": "เงินปลิว", "en": "Money with Wings" } },
-    { "api": "U+1F4B3", "text": "💳", "name": { "th": "บัตรเครดิต", "en": "Credit Card" } },
-    { "api": "U+1F9FE", "text": "🧾", "name": { "th": "ใบเสร็จ/รายการ", "en": "Receipt" } },
-    { "api": "U+1F4B9", "text": "💹", "name": { "th": "ดัชนีหุ้น/กราฟ", "en": "Chart Increasing with Yen" } },
-    { "api": "U+2709-FE0F", "text": "✉️", "name": { "th": "จดหมาย", "en": "Envelope" } },
-    { "api": "U+1F4E7", "text": "📧", "name": { "th": "อีเมล", "en": "E-Mail" } },
-    { "api": "U+1F4E8", "text": "📨", "name": { "th": "จดหมายเข้าพร้อมลูกศร", "en": "Incoming Envelope" } },
-    { "api": "U+1F4E9", "text": "📩", "name": { "th": "ส่งจดหมาย", "en": "Envelope with Arrow" } },
-    { "api": "U+1F4E4", "text": "📤", "name": { "th": "ส่งออก", "en": "Outbox Tray" } },
-    { "api": "U+1F4E5", "text": "📥", "name": { "th": "รับเข้า", "en": "Inbox Tray" } },
-    { "api": "U+1F4E6", "text": "📦", "name": { "th": "กล่องพัสดุ", "en": "Package" } },
-    { "api": "U+1F4EB", "text": "📫", "name": { "th": "ตู้ไปรษณีย์ว่าง", "en": "Closed Mailbox with Lowered Flag" } },
-    { "api": "U+1F4ED", "text": "📭", "name": { "th": "ตู้ไปรษณีย์มีจดหมาย", "en": "Open Mailbox with Raised Flag" } },
-    { "api": "U+1F4EC", "text": "📬", "name": { "th": "จดหมายถึง", "en": "Open Mailbox with Lowered Flag" } },
-    { "api": "U+1F4EA", "text": "📪", "name": { "th": "ตู้ไปรษณีย์มีจดหมาย", "en": "Closed Mailbox with Raised Flag" } },
-    { "api": "U+1F4EE", "text": "📮", "name": { "th": "ตู้ฝากจดหมาย", "en": "Postbox" } },
-    { "api": "U+1F5F3-FE0F", "text": "🗳️", "name": { "th": "หีบบัตรเลือกตั้ง", "en": "Ballot Box with Ballot" } },
-    { "api": "U+270F-FE0F", "text": "✏️", "name": { "th": "ดินสอ", "en": "Pencil" } },
-    { "api": "U+2712-FE0F", "text": "✒️", "name": { "th": "ปากกาหมึก", "en": "Black Nib" } },
-    { "api": "U+1F58B-FE0F", "text": "🖋️", "name": { "th": "ปากกาแบบคลาสสิก", "en": "Fountain Pen" } },
-    { "api": "U+1F58A-FE0F", "text": "🖊️", "name": { "th": "ปากกาลูกลื่น", "en": "Ballpoint Pen" } },
-    { "api": "U+1F58C-FE0F", "text": "🖌️", "name": { "th": "พู่กัน", "en": "Paintbrush" } },
-    { "api": "U+1F58D-FE0F", "text": "🖍️", "name": { "th": "ชอล์ก/สีเทียน", "en": "Crayon" } },
-    { "api": "U+1F4DD", "text": "📝", "name": { "th": "โน้ต/บันทึก", "en": "Memo" } },
-    { "api": "U+1F4C1", "text": "📁", "name": { "th": "โฟลเดอร์", "en": "File Folder" } },
-    { "api": "U+1F4C2", "text": "📂", "name": { "th": "โฟลเดอร์เปิด", "en": "Open File Folder" } },
-    { "api": "U+1F5C2-FE0F", "text": "🗂️", "name": { "th": "แฟ้มจัดเอกสาร", "en": "Card Index Dividers" } },
-    { "api": "U+1F4C5", "text": "📅", "name": { "th": "ปฏิทิน", "en": "Calendar" } },
-    { "api": "U+1F4CA", "text": "📊", "name": { "th": "แผนภูมิ", "en": "Bar Chart" } },
-    { "api": "U+1F4CB", "text": "📋", "name": { "th": "คลิปบอร์ด", "en": "Clipboard" } },
-    { "api": "U+1F4CC", "text": "📌", "name": { "th": "หมุดปัก", "en": "Pushpin" } },
-    { "api": "U+1F4CD", "text": "📍", "name": { "th": "หมุดแผนที่", "en": "Round Pushpin" } },
-    { "api": "U+1F4CE", "text": "📎", "name": { "th": "กระดุมหนีบกระดาษ", "en": "Paperclip" } },
-    { "api": "U+1F587-FE0F", "text": "🖇️", "name": { "th": "คลิปหนีบคู่", "en": "Linked Paperclips" } },
-    { "api": "U+1F4CF", "text": "📏", "name": { "th": "ไม้บรรทัด", "en": "Straight Ruler" } },
-    { "api": "U+1F4D0", "text": "📐", "name": { "th": "วงเวียน/รูปทรง", "en": "Triangular Ruler" } },
-    { "api": "U+2702-FE0F", "text": "✂️", "name": { "th": "กรรไกร", "en": "Scissors" } },
-    { "api": "U+1F5C3-FE0F", "text": "🗃️", "name": { "th": "ลิ้นชักเก็บเอกสาร", "en": "Card File Box" } },
-    { "api": "U+1F5C4-FE0F", "text": "🗄️", "name": { "th": "ตู้เก็บเอกสาร", "en": "File Cabinet" } },
-    { "api": "U+1F5D1-FE0F", "text": "🗑️", "name": { "th": "ถังขยะ", "en": "Wastebasket" } },
-    
-    { "api": "U+1F512", "text": "🔒", "name": { "th": "กุญแจล็อก", "en": "Locked" } },
-    { "api": "U+1F513", "text": "🔓", "name": { "th": "ปลดล็อก", "en": "Unlocked" } },
-    { "api": "U+1F50F", "text": "🔏", "name": { "th": "ล็อกพร้อมปากกา", "en": "Locked with Pen" } },
-    { "api": "U+1F510", "text": "🔐", "name": { "th": "ล็อกด้วยกุญแจ", "en": "Locked with Key" } },
-    { "api": "U+1F511", "text": "🔑", "name": { "th": "กุญแจ", "en": "Key" } },
-    { "api": "U+1F5DD-FE0F", "text": "🗝️", "name": { "th": "กุญแจเก่า", "en": "Old Key" } },
-    { "api": "U+1F528", "text": "🔨", "name": { "th": "ค้อน", "en": "Hammer" } },
-    { "api": "U+1FA93", "text": "🪓", "name": { "th": "ขวาน", "en": "Axe" } },
-    { "api": "U+26CF-FE0F", "text": "⛏️", "name": { "th": "จอบ", "en": "Pick" } },
-    { "api": "U+2692-FE0F", "text": "⚒️", "name": { "th": "คราด/ค้อนคู่", "en": "Hammer and Pick" } },
-    { "api": "U+1F6E0-FE0F", "text": "🛠️", "name": { "th": "เครื่องมือ", "en": "Hammer and Wrench" } },
-    { "api": "U+1F5E1-FE0F", "text": "🗡️", "name": { "th": "ดาบสั้น", "en": "Dagger" } },
-    { "api": "U+2694-FE0F", "text": "⚔️", "name": { "th": "ดาบคู่", "en": "Crossed Swords" } },
-    { "api": "U+1F4A3", "text": "💣", "name": { "th": "ระเบิด", "en": "Bomb" } },
-    { "api": "U+1FA83", "text": "🪃", "name": { "th": "บุรูก้า/บุรูก้า", "en": "Boomerang" } },
-    { "api": "U+1F3F9", "text": "🏹", "name": { "th": "คันธนูและลูกธนู", "en": "Bow and Arrow" } },
-    { "api": "U+1F6E1-FE0F", "text": "🛡️", "name": { "th": "โล่", "en": "Shield" } },
-    { "api": "U+1FA9A", "text": "🪚", "name": { "th": "เลื่อย", "en": "Wood Saw" } },
-    { "api": "U+1F527", "text": "🔧", "name": { "th": "ประแจ", "en": "Wrench" } },
-    { "api": "U+1FA9B", "text": "🪛", "name": { "th": "ไขควง", "en": "Screwdriver" } },
-    { "api": "U+1F529", "text": "🔩", "name": { "th": "น็อต/สกรู", "en": "Nut and Bolt" } },
-    { "api": "U+2699-FE0F", "text": "⚙️", "name": { "th": "เฟือง/การตั้งค่า", "en": "Gear" } },
-    { "api": "U+1F5DC-FE0F", "text": "🗜️", "name": { "th": "ปากคีบ", "en": "Clamp" } },
-    { "api": "U+2696-FE0F", "text": "⚖️", "name": { "th": "ตราชั่ง", "en": "Scales" } },
-    { "api": "U+1F9AF", "text": "🦯", "name": { "th": "ไม้เท้าคนตาบอด", "en": "White Cane" } },
-    { "api": "U+1F517", "text": "🔗", "name": { "th": "โซ่เชื่อม", "en": "Link" } },
-    { "api": "U+26D3", "text": "⛓️", "name": { "th": "โซ่", "en": "Chains" } },
-    { "api": "U+1FA9D", "text": "🪝", "name": { "th": "ตะขอ", "en": "Hook" } },
-    { "api": "U+1F9F0", "text": "🧰", "name": { "th": "กล่องเครื่องมือ", "en": "Toolbox" } },
-    { "api": "U+1F9FF", "text": "🧲", "name": { "th": "แม่เหล็ก", "en": "Magnet" } },
-    { "api": "U+1FA9C", "text": "🪜", "name": { "th": "บันไดพับ", "en": "Ladder" } },
-    { "api": "U+1F9EA", "text": "🧪", "name": { "th": "หลอดทดลอง", "en": "Test Tube" } },
-    { "api": "U+1F9EB", "text": "🧫", "name": { "th": "จานเพาะเชื้อ", "en": "Petri Dish" } },
-    { "api": "U+1F9EC", "text": "🧬", "name": { "th": "ดีเอ็นเอ", "en": "DNA" } },
-    { "api": "U+1F52C", "text": "🔬", "name": { "th": "กล้องจุลทรรศน์", "en": "Microscope" } },
-    { "api": "U+1F52D", "text": "🔭", "name": { "th": "กล้องโทรทรรศน์", "en": "Telescope" } },
-    { "api": "U+1F4E1", "text": "📡", "name": { "th": "จานส่งสัญญาณ", "en": "Satellite Antenna" } },
-    { "api": "U+1F489", "text": "💉", "name": { "th": "เข็มฉีดยา", "en": "Syringe" } },
-    { "api": "U+1FA78", "text": "🩸", "name": { "th": "หยดเลือด", "en": "Drop of Blood" } },
-    { "api": "U+1F48A", "text": "💊", "name": { "th": "ยา/เม็ด", "en": "Pill" } },
-    { "api": "U+1FA79", "text": "🩹", "name": { "th": "พลาสเตอร์/แผ่นปิดแผล", "en": "Adhesive Bandage" } },
-    { "api": "U+1FA7C", "text": "🩼", "name": { "th": "อุปกรณ์ช่วยเดิน", "en": "Crutch" } },
-    { "api": "U+1FA7A", "text": "🩺", "name": { "th": "เครื่องฟังคลื่นหัวใจ/สเตโทสโคป", "en": "Stethoscope" } },
-    { "api": "U+1FA91", "text": "🪑", "name": { "th": "เก้าอี้", "en": "Chair" } },
-    { "api": "U+1F9F9", "text": "🧹", "name": { "th": "ไม้กวาด", "en": "Broom" } },
-    { "api": "U+1F9FA", "text": "🧺", "name": { "th": "ตะกร้าซักผ้า", "en": "Basket" } },
-    { "api": "U+1F9FB", "text": "🧻", "name": { "th": "กระดาษชำระ", "en": "Roll of Paper" } },
-    { "api": "U+1F9FC", "text": "🧼", "name": { "th": "สบู่", "en": "Soap" } },
-    { "api": "U+1FAA0", "text": "🪠", "name": { "th": "ที่กดส้วม", "en": "Plunger" } },
-    { "api": "U+1F9FD", "text": "🧽", "name": { "th": "ฟองน้ำ", "en": "Sponge" } },
-    { "api": "U+1F9FB", "text": "🧻", "name": { "th": "กระดาษชำระ", "en": "Toilet Paper" } },
-    { "api": "U+1F9FC", "text": "🧼", "name": { "th": "สบู่", "en": "Soap" } },
-    { "api": "U+1F9F4", "text": "🧴", "name": { "th": "ขวดสเปรย์/โลชั่น", "en": "Lotion Bottle" } },
-    
-    { "api": "U+1F6AC", "text": "🚬", "name": { "th": "บุหรี่", "en": "Cigarette" } },
-    { "api": "U+2694-FE0F", "text": "⚰️", "name": { "th": "หีบศพ", "en": "Coffin" } },
-    { "api": "U+1FAA6", "text": "🪦", "name": { "th": "หลุมฝังศพ", "en": "Headstone" } },
-    { "api": "U+26B1-FE0F", "text": "⚱️", "name": { "th": "โถเถ้ากระดูก", "en": "Funeral Urn" } },
-    { "api": "U+1F9FF", "text": "🧿", "name": { "th": "ตาโชคดี/มณี", "en": "Nazar Amulet" } },
-    { "api": "U+1FAAC", "text": "🪬", "name": { "th": "เครื่องราง", "en": "Hamsa with Eye / Talisman" } },
-    { "api": "U+1FA9A", "text": "🪩", "name": { "th": "ดิสโก้บอล", "en": "Mirror Ball" } },
-    { "api": "U+1FA85", "text": "🪅", "name": { "th": "พินยาต้า", "en": "Piñata" } },
-    { "api": "U+1FA86", "text": "🪆", "name": { "th": "ตุ๊กตามาโตรชกา", "en": "Matryoshka Doll" } },
-    { "api": "U+1F9E7", "text": "🧧", "name": { "th": "ซองอั่งเปา", "en": "Red Envelope" } },
-    { "api": "U+1F390", "text": "🎐", "name": { "th": "กระดิ่งลม", "en": "Wind Chime" } },
-    { "api": "U+1FA84", "text": "🪄", "name": { "th": "ไม้กายสิทธิ์", "en": "Magic Wand" } },
-    { "api": "U+1F9F8", "text": "🧸", "name": { "th": "หมีเท็ดดี้", "en": "Teddy Bear" } },
-    { "api": "U+1F5BC-FE0F", "text": "🖼️", "name": { "th": "กรอบรูป/ภาพวาด", "en": "Framed Picture" } },
-    { "api": "U+1F9F5", "text": "🧵", "name": { "th": "ด้าย", "en": "Thread" } },
-    { "api": "U+1F9F6", "text": "🧶", "name": { "th": "ไหมพรม", "en": "Yarn" } }
+    {
+      "api": "U+1F453",
+      "text": "👓",
+      "name": {
+        "th": "แว่นตา",
+        "en": "Glasses"
+      }
+    },
+    {
+      "api": "U+1F576-FE0F",
+      "text": "🕶️",
+      "name": {
+        "th": "แว่นกันแดด",
+        "en": "Sunglasses"
+      }
+    },
+    {
+      "api": "U+1F97D",
+      "text": "🥽",
+      "name": {
+        "th": "แว่นครอบหน้า",
+        "en": "Goggles"
+      }
+    },
+    {
+      "api": "U+1F97C",
+      "text": "🥼",
+      "name": {
+        "th": "เสื้อคลุมห้องปฏิบัติการ",
+        "en": "Lab Coat"
+      }
+    },
+    {
+      "api": "U+1F9BA",
+      "text": "🦺",
+      "name": {
+        "th": "เสื้อกั๊กสะท้อนแสง",
+        "en": "Safety Vest"
+      }
+    },
+    {
+      "api": "U+1F454",
+      "text": "👔",
+      "name": {
+        "th": "เนกไท",
+        "en": "Necktie"
+      }
+    },
+    {
+      "api": "U+1F455",
+      "text": "👕",
+      "name": {
+        "th": "เสื้อยืด",
+        "en": "T-Shirt"
+      }
+    },
+    {
+      "api": "U+1F456",
+      "text": "👖",
+      "name": {
+        "th": "กางเกง",
+        "en": "Jeans"
+      }
+    },
+    {
+      "api": "U+1F9E3",
+      "text": "🧣",
+      "name": {
+        "th": "ผ้าพันคอ",
+        "en": "Scarf"
+      }
+    },
+    {
+      "api": "U+1F9E4",
+      "text": "🧤",
+      "name": {
+        "th": "ถุงมือ",
+        "en": "Gloves"
+      }
+    },
+    {
+      "api": "U+1F9E5",
+      "text": "🧥",
+      "name": {
+        "th": "เสื้อโค้ท",
+        "en": "Coat"
+      }
+    },
+    {
+      "api": "U+1F9E6",
+      "text": "🧦",
+      "name": {
+        "th": "ถุงเท้า",
+        "en": "Socks"
+      }
+    },
+    {
+      "api": "U+1F457",
+      "text": "👗",
+      "name": {
+        "th": "ชุดเดรส",
+        "en": "Dress"
+      }
+    },
+    {
+      "api": "U+1F458",
+      "text": "👘",
+      "name": {
+        "th": "ชุดกิโมโน",
+        "en": "Kimono"
+      }
+    },
+    {
+      "api": "U+1FA7B",
+      "text": "🥻",
+      "name": {
+        "th": "ส่าหรี/ชุดแบบดั้งเดิม",
+        "en": "Sari"
+      }
+    },
+    {
+      "api": "U+1FA71",
+      "text": "🩱",
+      "name": {
+        "th": "ชุดว่ายน้ำแบบชิ้นเดียว",
+        "en": "One-Piece Swimsuit"
+      }
+    },
+    {
+      "api": "U+1FA72",
+      "text": "🩲",
+      "name": {
+        "th": "กางเกงชั้นใน",
+        "en": "Briefs"
+      }
+    },
+    {
+      "api": "U+1FA73",
+      "text": "🩳",
+      "name": {
+        "th": "กางเกงขาสั้น",
+        "en": "Shorts"
+      }
+    },
+    {
+      "api": "U+1F459",
+      "text": "👙",
+      "name": {
+        "th": "บิกินี่",
+        "en": "Bikini"
+      }
+    },
+    {
+      "api": "U+1F45A",
+      "text": "👚",
+      "name": {
+        "th": "เสื้อเบลาส์",
+        "en": "Woman's Clothes"
+      }
+    },
+    {
+      "api": "U+1F45B",
+      "text": "👛",
+      "name": {
+        "th": "กระเป๋าสตางค์",
+        "en": "Purse"
+      }
+    },
+    {
+      "api": "U+1F45C",
+      "text": "👜",
+      "name": {
+        "th": "กระเป๋าถือ",
+        "en": "Handbag"
+      }
+    },
+    {
+      "api": "U+1F45D",
+      "text": "👝",
+      "name": {
+        "th": "กระเป๋าถือเล็ก",
+        "en": "Clutch Bag"
+      }
+    },
+    {
+      "api": "U+1F6CD-FE0F",
+      "text": "🛍️",
+      "name": {
+        "th": "ถุงช้อปปิ้ง",
+        "en": "Shopping Bags"
+      }
+    },
+    {
+      "api": "U+1F392",
+      "text": "🎒",
+      "name": {
+        "th": "กระเป๋าเป้",
+        "en": "Backpack"
+      }
+    },
+    {
+      "api": "U+1FA74",
+      "text": "🩴",
+      "name": {
+        "th": "รองเท้าแตะ",
+        "en": "Thong Sandal"
+      }
+    },
+    {
+      "api": "U+1F45E",
+      "text": "👞",
+      "name": {
+        "th": "รองเท้าหนัง",
+        "en": "Men's Shoe"
+      }
+    },
+    {
+      "api": "U+1F45F",
+      "text": "👟",
+      "name": {
+        "th": "รองเท้าผ้าใบ",
+        "en": "Running Shoe"
+      }
+    },
+    {
+      "api": "U+1F97E",
+      "text": "🥾",
+      "name": {
+        "th": "รองเท้าบู๊ท",
+        "en": "Hiking Boot"
+      }
+    },
+    {
+      "api": "U+1F97F",
+      "text": "🥿",
+      "name": {
+        "th": "รองเท้าส้นแบน",
+        "en": "Flat Shoe"
+      }
+    },
+    {
+      "api": "U+1F460",
+      "text": "👠",
+      "name": {
+        "th": "รองเท้าส้นสูง",
+        "en": "High-Heeled Shoe"
+      }
+    },
+    {
+      "api": "U+1F461",
+      "text": "👡",
+      "name": {
+        "th": "รองเท้าแตะส้นพื้น",
+        "en": "Woman's Sandal"
+      }
+    },
+    {
+      "api": "U+1F462",
+      "text": "👢",
+      "name": {
+        "th": "รองเท้าบู๊ทสตรี",
+        "en": "Woman's Boot"
+      }
+    },
+    {
+      "api": "U+1F451",
+      "text": "👑",
+      "name": {
+        "th": "มงกุฎ",
+        "en": "Crown"
+      }
+    },
+    {
+      "api": "U+1F452",
+      "text": "👒",
+      "name": {
+        "th": "หมวกผู้หญิง",
+        "en": "Woman's Hat"
+      }
+    },
+    {
+      "api": "U+1F3A9",
+      "text": "🎩",
+      "name": {
+        "th": "หมวกทรงสูง",
+        "en": "Top Hat"
+      }
+    },
+    {
+      "api": "U+1F393",
+      "text": "🎓",
+      "name": {
+        "th": "หมวกบัณฑิต",
+        "en": "Graduation Cap"
+      }
+    },
+    {
+      "api": "U+1F9E2",
+      "text": "🧢",
+      "name": {
+        "th": "หมวกแก๊ป",
+        "en": "Billed Cap"
+      }
+    },
+    {
+      "api": "U+1FA96",
+      "text": "🪖",
+      "name": {
+        "th": "หมวกเหล็ก/หมวกทหาร",
+        "en": "Military Helmet"
+      }
+    },
+    {
+      "api": "U+26D1-FE0F",
+      "text": "⛑️",
+      "name": {
+        "th": "หมวกนิรภัยทางการแพทย์",
+        "en": "Rescue Helmet"
+      }
+    },
+    {
+      "api": "U+1F484",
+      "text": "💄",
+      "name": {
+        "th": "ลิปสติก",
+        "en": "Lipstick"
+      }
+    },
+    {
+      "api": "U+1F48D",
+      "text": "💍",
+      "name": {
+        "th": "แหวน",
+        "en": "Ring"
+      }
+    },
+    {
+      "api": "U+1F4BC",
+      "text": "💼",
+      "name": {
+        "th": "กระเป๋าทำงาน",
+        "en": "Briefcase"
+      }
+    },
+    {
+      "api": "U+1F507",
+      "text": "🔇",
+      "name": {
+        "th": "ปิดเสียง",
+        "en": "Muted Speaker"
+      }
+    },
+    {
+      "api": "U+1F508",
+      "text": "🔈",
+      "name": {
+        "th": "ลำโพงต่ำ",
+        "en": "Low Volume Speaker"
+      }
+    },
+    {
+      "api": "U+1F509",
+      "text": "🔉",
+      "name": {
+        "th": "ลำโพงกลาง",
+        "en": "Medium Volume Speaker"
+      }
+    },
+    {
+      "api": "U+1F50A",
+      "text": "🔊",
+      "name": {
+        "th": "ลำโพงดัง",
+        "en": "Loudspeaker"
+      }
+    },
+    {
+      "api": "U+1F4E2",
+      "text": "📢",
+      "name": {
+        "th": "เครื่องขยายเสียง",
+        "en": "Loudspeaker"
+      }
+    },
+    {
+      "api": "U+1F4E3",
+      "text": "📣",
+      "name": {
+        "th": "แตรประกาศ",
+        "en": "Megaphone"
+      }
+    },
+    {
+      "api": "U+1F4EF",
+      "text": "📯",
+      "name": {
+        "th": "แตรส่งข่าว",
+        "en": "Postal Horn"
+      }
+    },
+    {
+      "api": "U+1F514",
+      "text": "🔔",
+      "name": {
+        "th": "ระฆัง",
+        "en": "Bell"
+      }
+    },
+    {
+      "api": "U+1F515",
+      "text": "🔕",
+      "name": {
+        "th": "ปิดระฆัง",
+        "en": "Bell with Slash"
+      }
+    },
+    {
+      "api": "U+1F3BC",
+      "text": "🎼",
+      "name": {
+        "th": "บาร์โน้ต",
+        "en": "Musical Score"
+      }
+    },
+    {
+      "api": "U+1F3B5",
+      "text": "🎵",
+      "name": {
+        "th": "โน้ตเพลง",
+        "en": "Musical Note"
+      }
+    },
+    {
+      "api": "U+1F3B6",
+      "text": "🎶",
+      "name": {
+        "th": "โน้ตหลายตัว",
+        "en": "Multiple Musical Notes"
+      }
+    },
+    {
+      "api": "U+1F399-FE0F",
+      "text": "🎙️",
+      "name": {
+        "th": "ไมโครโฟนสตูดิโอ",
+        "en": "Studio Microphone"
+      }
+    },
+    {
+      "api": "U+1F39A-FE0F",
+      "text": "🎚️",
+      "name": {
+        "th": "สไลเดอร์ระดับ",
+        "en": "Level Slider"
+      }
+    },
+    {
+      "api": "U+1F39B-FE0F",
+      "text": "🎛️",
+      "name": {
+        "th": "ปุ่มควบคุม",
+        "en": "Control Knobs"
+      }
+    },
+    {
+      "api": "U+1F3A4",
+      "text": "🎤",
+      "name": {
+        "th": "ไมโครโฟน",
+        "en": "Microphone"
+      }
+    },
+    {
+      "api": "U+1F3A7",
+      "text": "🎧",
+      "name": {
+        "th": "หูฟัง",
+        "en": "Headphone"
+      }
+    },
+    {
+      "api": "U+1F4FB",
+      "text": "📻",
+      "name": {
+        "th": "วิทยุ",
+        "en": "Radio"
+      }
+    },
+    {
+      "api": "U+1F3B7",
+      "text": "🎷",
+      "name": {
+        "th": "แซ็กโซโฟน",
+        "en": "Saxophone"
+      }
+    },
+    {
+      "api": "U+1FA97",
+      "text": "🪗",
+      "name": {
+        "th": "แอคคอร์เดียน/หีบเพลง",
+        "en": "Accordion"
+      }
+    },
+    {
+      "api": "U+1F3B8",
+      "text": "🎸",
+      "name": {
+        "th": "กีตาร์",
+        "en": "Guitar"
+      }
+    },
+    {
+      "api": "U+1F3B9",
+      "text": "🎹",
+      "name": {
+        "th": "เปียโน/คีย์บอร์ด",
+        "en": "Musical Keyboard"
+      }
+    },
+    {
+      "api": "U+1F3BA",
+      "text": "🎺",
+      "name": {
+        "th": "ทรัมเป็ต",
+        "en": "Trumpet"
+      }
+    },
+    {
+      "api": "U+1F3BB",
+      "text": "🎻",
+      "name": {
+        "th": "ไวโอลิน",
+        "en": "Violin"
+      }
+    },
+    {
+      "api": "U+1FA95",
+      "text": "🪕",
+      "name": {
+        "th": "บันโจ",
+        "en": "Banjo"
+      }
+    },
+    {
+      "api": "U+1F941",
+      "text": "🥁",
+      "name": {
+        "th": "กลอง",
+        "en": "Drum"
+      }
+    },
+    {
+      "api": "U+1FA98",
+      "text": "🪘",
+      "name": {
+        "th": "กลองยาว",
+        "en": "Long Drum"
+      }
+    },
+    {
+      "api": "U+1F4F1",
+      "text": "📱",
+      "name": {
+        "th": "โทรศัพท์มือถือ",
+        "en": "Mobile Phone"
+      }
+    },
+    {
+      "api": "U+1F4F2",
+      "text": "📲",
+      "name": {
+        "th": "โทรออก/เข้า",
+        "en": "Mobile Phone with Arrow"
+      }
+    },
+    {
+      "api": "U+260E-FE0F",
+      "text": "☎️",
+      "name": {
+        "th": "โทรศัพท์",
+        "en": "Telephone"
+      }
+    },
+    {
+      "api": "U+1F4DE",
+      "text": "📞",
+      "name": {
+        "th": "หูฟังโทรศัพท์",
+        "en": "Telephone Receiver"
+      }
+    },
+    {
+      "api": "U+1F4DF",
+      "text": "📟",
+      "name": {
+        "th": "เพจเจอร์",
+        "en": "Pager"
+      }
+    },
+    {
+      "api": "U+1F4E0",
+      "text": "📠",
+      "name": {
+        "th": "แฟกซ์",
+        "en": "Fax Machine"
+      }
+    },
+    {
+      "api": "U+1F50B",
+      "text": "🔋",
+      "name": {
+        "th": "แบตเตอรี่",
+        "en": "Battery"
+      }
+    },
+    {
+      "api": "U+1FAAB",
+      "text": "🪫",
+      "name": {
+        "th": "แบตเตอรี่อ่อน",
+        "en": "Low Battery"
+      }
+    },
+    {
+      "api": "U+1F50C",
+      "text": "🔌",
+      "name": {
+        "th": "ปลั๊ก",
+        "en": "Electric Plug"
+      }
+    },
+    {
+      "api": "U+1F4BB",
+      "text": "💻",
+      "name": {
+        "th": "แล็ปท็อป",
+        "en": "Laptop Computer"
+      }
+    },
+    {
+      "api": "U+1F5A5-FE0F",
+      "text": "🖥️",
+      "name": {
+        "th": "คอมพิวเตอร์ตั้งโต๊ะ",
+        "en": "Desktop Computer"
+      }
+    },
+    {
+      "api": "U+1F5A8-FE0F",
+      "text": "🖨️",
+      "name": {
+        "th": "เครื่องพิมพ์",
+        "en": "Printer"
+      }
+    },
+    {
+      "api": "U+2328-FE0F",
+      "text": "⌨️",
+      "name": {
+        "th": "แป้นพิมพ์",
+        "en": "Keyboard"
+      }
+    },
+    {
+      "api": "U+1F5B1-FE0F",
+      "text": "🖱️",
+      "name": {
+        "th": "เมาส์คอมพิวเตอร์",
+        "en": "Computer Mouse"
+      }
+    },
+    {
+      "api": "U+1F5B2-FE0F",
+      "text": "🖲️",
+      "name": {
+        "th": "เมาส์ลูกกลิ้ง",
+        "en": "Trackball"
+      }
+    },
+    {
+      "api": "U+1F4BD",
+      "text": "💽",
+      "name": {
+        "th": "ดิสก์คอมแพค",
+        "en": "Optical Disk"
+      }
+    },
+    {
+      "api": "U+1F4BE",
+      "text": "💾",
+      "name": {
+        "th": "ดิสก์เซฟ",
+        "en": "Floppy Disk"
+      }
+    },
+    {
+      "api": "U+1F4BF",
+      "text": "💿",
+      "name": {
+        "th": "แผ่นดีวีดี",
+        "en": "Optical Disk"
+      }
+    },
+    {
+      "api": "U+1F4C0",
+      "text": "📀",
+      "name": {
+        "th": "ไดส์ค์/ซีดี",
+        "en": "DVD"
+      }
+    },
+    {
+      "api": "U+1F3A5",
+      "text": "🎥",
+      "name": {
+        "th": "กล้องวิดีโอ",
+        "en": "Movie Camera"
+      }
+    },
+    {
+      "api": "U+1F39E-FE0F",
+      "text": "🎞️",
+      "name": {
+        "th": "ฟิล์มภาพยนตร์",
+        "en": "Film Frames"
+      }
+    },
+    {
+      "api": "U+1F4FD-FE0F",
+      "text": "📽️",
+      "name": {
+        "th": "เครื่องฉาย",
+        "en": "Film Projector"
+      }
+    },
+    {
+      "api": "U+1F4FA",
+      "text": "📺",
+      "name": {
+        "th": "โทรทัศน์",
+        "en": "Television"
+      }
+    },
+    {
+      "api": "U+1F4F7",
+      "text": "📷",
+      "name": {
+        "th": "กล้องถ่ายรูป",
+        "en": "Camera"
+      }
+    },
+    {
+      "api": "U+1F4F8",
+      "text": "📸",
+      "name": {
+        "th": "กล้องถ่ายรูปพร้อมแฟลช",
+        "en": "Camera with Flash"
+      }
+    },
+    {
+      "api": "U+1F4F9",
+      "text": "📹",
+      "name": {
+        "th": "กล้องวิดีโอมือถือ",
+        "en": "Video Camera"
+      }
+    },
+    {
+      "api": "U+1F4FC",
+      "text": "📼",
+      "name": {
+        "th": "เทปวิดีโอ",
+        "en": "Videocassette"
+      }
+    },
+    {
+      "api": "U+1F50D",
+      "text": "🔍",
+      "name": {
+        "th": "แว่นขยาย",
+        "en": "Magnifying Glass Tilted Left"
+      }
+    },
+    {
+      "api": "U+1F50E",
+      "text": "🔎",
+      "name": {
+        "th": "แว่นขยายอีกแบบ",
+        "en": "Magnifying Glass Tilted Right"
+      }
+    },
+    {
+      "api": "U+1F56F-FE0F",
+      "text": "🕯️",
+      "name": {
+        "th": "เทียนไข",
+        "en": "Candle"
+      }
+    },
+    {
+      "api": "U+1F4A1",
+      "text": "💡",
+      "name": {
+        "th": "หลอดไฟ",
+        "en": "Light Bulb"
+      }
+    },
+    {
+      "api": "U+1F526",
+      "text": "🔦",
+      "name": {
+        "th": "ไฟฉาย",
+        "en": "Flashlight"
+      }
+    },
+    {
+      "api": "U+1F3EE",
+      "text": "🏮",
+      "name": {
+        "th": "โคมไฟแบบญี่ปุ่น",
+        "en": "Red Paper Lantern"
+      }
+    },
+    {
+      "api": "U+1FA94",
+      "text": "🪔",
+      "name": {
+        "th": "ตะเกียงน้ำมัน",
+        "en": "Diya Lamp"
+      }
+    },
+    {
+      "api": "U+1F4D4",
+      "text": "📔",
+      "name": {
+        "th": "สมุดบันทึก",
+        "en": "Notebook with Decorative Cover"
+      }
+    },
+    {
+      "api": "U+1F4D5",
+      "text": "📕",
+      "name": {
+        "th": "หนังสือปกแดง",
+        "en": "Closed Book"
+      }
+    },
+    {
+      "api": "U+1F4D6",
+      "text": "📖",
+      "name": {
+        "th": "หนังสือเปิด",
+        "en": "Open Book"
+      }
+    },
+    {
+      "api": "U+1F4D7",
+      "text": "📗",
+      "name": {
+        "th": "หนังสือปกเขียว",
+        "en": "Green Book"
+      }
+    },
+    {
+      "api": "U+1F4D8",
+      "text": "📘",
+      "name": {
+        "th": "หนังสือปกน้ำเงิน",
+        "en": "Blue Book"
+      }
+    },
+    {
+      "api": "U+1F4D9",
+      "text": "📙",
+      "name": {
+        "th": "หนังสือปกส้ม",
+        "en": "Orange Book"
+      }
+    },
+    {
+      "api": "U+1F4DA",
+      "text": "📚",
+      "name": {
+        "th": "หนังสือกอง",
+        "en": "Books"
+      }
+    },
+    {
+      "api": "U+1F4D3",
+      "text": "📓",
+      "name": {
+        "th": "สมุดบันทึก",
+        "en": "Notebook"
+      }
+    },
+    {
+      "api": "U+1F4D2",
+      "text": "📒",
+      "name": {
+        "th": "สมุดบัญชี",
+        "en": "Ledger"
+      }
+    },
+    {
+      "api": "U+1F4C3",
+      "text": "📃",
+      "name": {
+        "th": "เอกสาร",
+        "en": "Page with Curl"
+      }
+    },
+    {
+      "api": "U+1F4DC",
+      "text": "📜",
+      "name": {
+        "th": "ม้วนกระดาษ",
+        "en": "Scroll"
+      }
+    },
+    {
+      "api": "U+1F4C4",
+      "text": "📄",
+      "name": {
+        "th": "เอกสารหน้าเดียว",
+        "en": "Page Facing Up"
+      }
+    },
+    {
+      "api": "U+1F4F0",
+      "text": "📰",
+      "name": {
+        "th": "หนังสือพิมพ์",
+        "en": "Newspaper"
+      }
+    },
+    {
+      "api": "U+1F5DE-FE0F",
+      "text": "🗞️",
+      "name": {
+        "th": "ม้วนข่าว/นสพ.",
+        "en": "Rolled-Up Newspaper"
+      }
+    },
+    {
+      "api": "U+1F4C1",
+      "text": "📁",
+      "name": {
+        "th": "โฟลเดอร์เอกสาร",
+        "en": "File Folder"
+      }
+    },
+    {
+      "api": "U+1F4C2",
+      "text": "📂",
+      "name": {
+        "th": "โฟลเดอร์เปิด",
+        "en": "Open File Folder"
+      }
+    },
+    {
+      "api": "U+1F4C5",
+      "text": "📅",
+      "name": {
+        "th": "ปฏิทิน",
+        "en": "Calendar"
+      }
+    },
+    {
+      "api": "U+1F4C6",
+      "text": "📆",
+      "name": {
+        "th": "ปฏิทินแบบหน้าวัน",
+        "en": "Tear-Off Calendar"
+      }
+    },
+    {
+      "api": "U+1F4C7",
+      "text": "📇",
+      "name": {
+        "th": "บัตรรายชื่อ",
+        "en": "Card Index"
+      }
+    },
+    {
+      "api": "U+1F4B0",
+      "text": "💰",
+      "name": {
+        "th": "ถุงเงิน",
+        "en": "Money Bag"
+      }
+    },
+    {
+      "api": "U+1FA99",
+      "text": "🪙",
+      "name": {
+        "th": "เหรียญ",
+        "en": "Coin"
+      }
+    },
+    {
+      "api": "U+1F4B4",
+      "text": "💴",
+      "name": {
+        "th": "เงินเยน/ธนบัตรเยน",
+        "en": "Yen Banknote"
+      }
+    },
+    {
+      "api": "U+1F4B5",
+      "text": "💵",
+      "name": {
+        "th": "เหรียญดอลลาร์/ธนบัตร",
+        "en": "Dollar Banknote"
+      }
+    },
+    {
+      "api": "U+1F4B6",
+      "text": "💶",
+      "name": {
+        "th": "ยูโร",
+        "en": "Euro Banknote"
+      }
+    },
+    {
+      "api": "U+1F4B7",
+      "text": "💷",
+      "name": {
+        "th": "ปอนด์สเตอร์ลิง",
+        "en": "Pound Banknote"
+      }
+    },
+    {
+      "api": "U+1F4B8",
+      "text": "💸",
+      "name": {
+        "th": "เงินปลิว",
+        "en": "Money with Wings"
+      }
+    },
+    {
+      "api": "U+1F4B3",
+      "text": "💳",
+      "name": {
+        "th": "บัตรเครดิต",
+        "en": "Credit Card"
+      }
+    },
+    {
+      "api": "U+1F9FE",
+      "text": "🧾",
+      "name": {
+        "th": "ใบเสร็จ/รายการ",
+        "en": "Receipt"
+      }
+    },
+    {
+      "api": "U+1F4B9",
+      "text": "💹",
+      "name": {
+        "th": "ดัชนีหุ้น/กราฟ",
+        "en": "Chart Increasing with Yen"
+      }
+    },
+    {
+      "api": "U+2709-FE0F",
+      "text": "✉️",
+      "name": {
+        "th": "จดหมาย",
+        "en": "Envelope"
+      }
+    },
+    {
+      "api": "U+1F4E7",
+      "text": "📧",
+      "name": {
+        "th": "อีเมล",
+        "en": "E-Mail"
+      }
+    },
+    {
+      "api": "U+1F4E8",
+      "text": "📨",
+      "name": {
+        "th": "จดหมายเข้าพร้อมลูกศร",
+        "en": "Incoming Envelope"
+      }
+    },
+    {
+      "api": "U+1F4E9",
+      "text": "📩",
+      "name": {
+        "th": "ส่งจดหมาย",
+        "en": "Envelope with Arrow"
+      }
+    },
+    {
+      "api": "U+1F4E4",
+      "text": "📤",
+      "name": {
+        "th": "ส่งออก",
+        "en": "Outbox Tray"
+      }
+    },
+    {
+      "api": "U+1F4E5",
+      "text": "📥",
+      "name": {
+        "th": "รับเข้า",
+        "en": "Inbox Tray"
+      }
+    },
+    {
+      "api": "U+1F4E6",
+      "text": "📦",
+      "name": {
+        "th": "กล่องพัสดุ",
+        "en": "Package"
+      }
+    },
+    {
+      "api": "U+1F4EB",
+      "text": "📫",
+      "name": {
+        "th": "ตู้ไปรษณีย์ว่าง",
+        "en": "Closed Mailbox with Lowered Flag"
+      }
+    },
+    {
+      "api": "U+1F4ED",
+      "text": "📭",
+      "name": {
+        "th": "ตู้ไปรษณีย์มีจดหมาย",
+        "en": "Open Mailbox with Raised Flag"
+      }
+    },
+    {
+      "api": "U+1F4EC",
+      "text": "📬",
+      "name": {
+        "th": "จดหมายถึง",
+        "en": "Open Mailbox with Lowered Flag"
+      }
+    },
+    {
+      "api": "U+1F4EA",
+      "text": "📪",
+      "name": {
+        "th": "ตู้ไปรษณีย์มีจดหมาย",
+        "en": "Closed Mailbox with Raised Flag"
+      }
+    },
+    {
+      "api": "U+1F4EE",
+      "text": "📮",
+      "name": {
+        "th": "ตู้ฝากจดหมาย",
+        "en": "Postbox"
+      }
+    },
+    {
+      "api": "U+1F5F3-FE0F",
+      "text": "🗳️",
+      "name": {
+        "th": "หีบบัตรเลือกตั้ง",
+        "en": "Ballot Box with Ballot"
+      }
+    },
+    {
+      "api": "U+270F-FE0F",
+      "text": "✏️",
+      "name": {
+        "th": "ดินสอ",
+        "en": "Pencil"
+      }
+    },
+    {
+      "api": "U+2712-FE0F",
+      "text": "✒️",
+      "name": {
+        "th": "ปากกาหมึก",
+        "en": "Black Nib"
+      }
+    },
+    {
+      "api": "U+1F58B-FE0F",
+      "text": "🖋️",
+      "name": {
+        "th": "ปากกาแบบคลาสสิก",
+        "en": "Fountain Pen"
+      }
+    },
+    {
+      "api": "U+1F58A-FE0F",
+      "text": "🖊️",
+      "name": {
+        "th": "ปากกาลูกลื่น",
+        "en": "Ballpoint Pen"
+      }
+    },
+    {
+      "api": "U+1F58C-FE0F",
+      "text": "🖌️",
+      "name": {
+        "th": "พู่กัน",
+        "en": "Paintbrush"
+      }
+    },
+    {
+      "api": "U+1F58D-FE0F",
+      "text": "🖍️",
+      "name": {
+        "th": "ชอล์ก/สีเทียน",
+        "en": "Crayon"
+      }
+    },
+    {
+      "api": "U+1F4DD",
+      "text": "📝",
+      "name": {
+        "th": "โน้ต/บันทึก",
+        "en": "Memo"
+      }
+    },
+    {
+      "api": "U+1F5C2-FE0F",
+      "text": "🗂️",
+      "name": {
+        "th": "แฟ้มจัดเอกสาร",
+        "en": "Card Index Dividers"
+      }
+    },
+    {
+      "api": "U+1F4CA",
+      "text": "📊",
+      "name": {
+        "th": "แผนภูมิ",
+        "en": "Bar Chart"
+      }
+    },
+    {
+      "api": "U+1F4CB",
+      "text": "📋",
+      "name": {
+        "th": "คลิปบอร์ด",
+        "en": "Clipboard"
+      }
+    },
+    {
+      "api": "U+1F4CC",
+      "text": "📌",
+      "name": {
+        "th": "หมุดปัก",
+        "en": "Pushpin"
+      }
+    },
+    {
+      "api": "U+1F4CD",
+      "text": "📍",
+      "name": {
+        "th": "หมุดแผนที่",
+        "en": "Round Pushpin"
+      }
+    },
+    {
+      "api": "U+1F4CE",
+      "text": "📎",
+      "name": {
+        "th": "กระดุมหนีบกระดาษ",
+        "en": "Paperclip"
+      }
+    },
+    {
+      "api": "U+1F587-FE0F",
+      "text": "🖇️",
+      "name": {
+        "th": "คลิปหนีบคู่",
+        "en": "Linked Paperclips"
+      }
+    },
+    {
+      "api": "U+1F4CF",
+      "text": "📏",
+      "name": {
+        "th": "ไม้บรรทัด",
+        "en": "Straight Ruler"
+      }
+    },
+    {
+      "api": "U+1F4D0",
+      "text": "📐",
+      "name": {
+        "th": "วงเวียน/รูปทรง",
+        "en": "Triangular Ruler"
+      }
+    },
+    {
+      "api": "U+2702-FE0F",
+      "text": "✂️",
+      "name": {
+        "th": "กรรไกร",
+        "en": "Scissors"
+      }
+    },
+    {
+      "api": "U+1F5C3-FE0F",
+      "text": "🗃️",
+      "name": {
+        "th": "ลิ้นชักเก็บเอกสาร",
+        "en": "Card File Box"
+      }
+    },
+    {
+      "api": "U+1F5C4-FE0F",
+      "text": "🗄️",
+      "name": {
+        "th": "ตู้เก็บเอกสาร",
+        "en": "File Cabinet"
+      }
+    },
+    {
+      "api": "U+1F5D1-FE0F",
+      "text": "🗑️",
+      "name": {
+        "th": "ถังขยะ",
+        "en": "Wastebasket"
+      }
+    },
+    {
+      "api": "U+1F512",
+      "text": "🔒",
+      "name": {
+        "th": "กุญแจล็อก",
+        "en": "Locked"
+      }
+    },
+    {
+      "api": "U+1F513",
+      "text": "🔓",
+      "name": {
+        "th": "ปลดล็อก",
+        "en": "Unlocked"
+      }
+    },
+    {
+      "api": "U+1F50F",
+      "text": "🔏",
+      "name": {
+        "th": "ล็อกพร้อมปากกา",
+        "en": "Locked with Pen"
+      }
+    },
+    {
+      "api": "U+1F510",
+      "text": "🔐",
+      "name": {
+        "th": "ล็อกด้วยกุญแจ",
+        "en": "Locked with Key"
+      }
+    },
+    {
+      "api": "U+1F511",
+      "text": "🔑",
+      "name": {
+        "th": "กุญแจ",
+        "en": "Key"
+      }
+    },
+    {
+      "api": "U+1F5DD-FE0F",
+      "text": "🗝️",
+      "name": {
+        "th": "กุญแจเก่า",
+        "en": "Old Key"
+      }
+    },
+    {
+      "api": "U+1F528",
+      "text": "🔨",
+      "name": {
+        "th": "ค้อน",
+        "en": "Hammer"
+      }
+    },
+    {
+      "api": "U+1FA93",
+      "text": "🪓",
+      "name": {
+        "th": "ขวาน",
+        "en": "Axe"
+      }
+    },
+    {
+      "api": "U+26CF-FE0F",
+      "text": "⛏️",
+      "name": {
+        "th": "จอบ",
+        "en": "Pick"
+      }
+    },
+    {
+      "api": "U+2692-FE0F",
+      "text": "⚒️",
+      "name": {
+        "th": "คราด/ค้อนคู่",
+        "en": "Hammer and Pick"
+      }
+    },
+    {
+      "api": "U+1F6E0-FE0F",
+      "text": "🛠️",
+      "name": {
+        "th": "เครื่องมือ",
+        "en": "Hammer and Wrench"
+      }
+    },
+    {
+      "api": "U+1F5E1-FE0F",
+      "text": "🗡️",
+      "name": {
+        "th": "ดาบสั้น",
+        "en": "Dagger"
+      }
+    },
+    {
+      "api": "U+2694-FE0F",
+      "text": "⚔️",
+      "name": {
+        "th": "ดาบคู่",
+        "en": "Crossed Swords"
+      }
+    },
+    {
+      "api": "U+1F4A3",
+      "text": "💣",
+      "name": {
+        "th": "ระเบิด",
+        "en": "Bomb"
+      }
+    },
+    {
+      "api": "U+1FA83",
+      "text": "🪃",
+      "name": {
+        "th": "บุรูก้า/บุรูก้า",
+        "en": "Boomerang"
+      }
+    },
+    {
+      "api": "U+1F3F9",
+      "text": "🏹",
+      "name": {
+        "th": "คันธนูและลูกธนู",
+        "en": "Bow and Arrow"
+      }
+    },
+    {
+      "api": "U+1F6E1-FE0F",
+      "text": "🛡️",
+      "name": {
+        "th": "โล่",
+        "en": "Shield"
+      }
+    },
+    {
+      "api": "U+1FA9A",
+      "text": "🪚",
+      "name": {
+        "th": "เลื่อย",
+        "en": "Wood Saw"
+      }
+    },
+    {
+      "api": "U+1F527",
+      "text": "🔧",
+      "name": {
+        "th": "ประแจ",
+        "en": "Wrench"
+      }
+    },
+    {
+      "api": "U+1FA9B",
+      "text": "🪛",
+      "name": {
+        "th": "ไขควง",
+        "en": "Screwdriver"
+      }
+    },
+    {
+      "api": "U+1F529",
+      "text": "🔩",
+      "name": {
+        "th": "น็อต/สกรู",
+        "en": "Nut and Bolt"
+      }
+    },
+    {
+      "api": "U+2699-FE0F",
+      "text": "⚙️",
+      "name": {
+        "th": "เฟือง/การตั้งค่า",
+        "en": "Gear"
+      }
+    },
+    {
+      "api": "U+1F5DC-FE0F",
+      "text": "🗜️",
+      "name": {
+        "th": "ปากคีบ",
+        "en": "Clamp"
+      }
+    },
+    {
+      "api": "U+2696-FE0F",
+      "text": "⚖️",
+      "name": {
+        "th": "ตราชั่ง",
+        "en": "Scales"
+      }
+    },
+    {
+      "api": "U+1F9AF",
+      "text": "🦯",
+      "name": {
+        "th": "ไม้เท้าคนตาบอด",
+        "en": "White Cane"
+      }
+    },
+    {
+      "api": "U+1F517",
+      "text": "🔗",
+      "name": {
+        "th": "โซ่เชื่อม",
+        "en": "Link"
+      }
+    },
+    {
+      "api": "U+26D3",
+      "text": "⛓️",
+      "name": {
+        "th": "โซ่",
+        "en": "Chains"
+      }
+    },
+    {
+      "api": "U+1FA9D",
+      "text": "🪝",
+      "name": {
+        "th": "ตะขอ",
+        "en": "Hook"
+      }
+    },
+    {
+      "api": "U+1F9F0",
+      "text": "🧰",
+      "name": {
+        "th": "กล่องเครื่องมือ",
+        "en": "Toolbox"
+      }
+    },
+    {
+      "api": "U+1F9F2",
+      "text": "🧲",
+      "name": {
+        "th": "แม่เหล็ก",
+        "en": "Magnet"
+      }
+    },
+    {
+      "api": "U+1FA9C",
+      "text": "🪜",
+      "name": {
+        "th": "บันไดพับ",
+        "en": "Ladder"
+      }
+    },
+    {
+      "api": "U+1F9EA",
+      "text": "🧪",
+      "name": {
+        "th": "หลอดทดลอง",
+        "en": "Test Tube"
+      }
+    },
+    {
+      "api": "U+1F9EB",
+      "text": "🧫",
+      "name": {
+        "th": "จานเพาะเชื้อ",
+        "en": "Petri Dish"
+      }
+    },
+    {
+      "api": "U+1F9EC",
+      "text": "🧬",
+      "name": {
+        "th": "ดีเอ็นเอ",
+        "en": "DNA"
+      }
+    },
+    {
+      "api": "U+1F52C",
+      "text": "🔬",
+      "name": {
+        "th": "กล้องจุลทรรศน์",
+        "en": "Microscope"
+      }
+    },
+    {
+      "api": "U+1F52D",
+      "text": "🔭",
+      "name": {
+        "th": "กล้องโทรทรรศน์",
+        "en": "Telescope"
+      }
+    },
+    {
+      "api": "U+1F4E1",
+      "text": "📡",
+      "name": {
+        "th": "จานส่งสัญญาณ",
+        "en": "Satellite Antenna"
+      }
+    },
+    {
+      "api": "U+1F489",
+      "text": "💉",
+      "name": {
+        "th": "เข็มฉีดยา",
+        "en": "Syringe"
+      }
+    },
+    {
+      "api": "U+1FA78",
+      "text": "🩸",
+      "name": {
+        "th": "หยดเลือด",
+        "en": "Drop of Blood"
+      }
+    },
+    {
+      "api": "U+1F48A",
+      "text": "💊",
+      "name": {
+        "th": "ยา/เม็ด",
+        "en": "Pill"
+      }
+    },
+    {
+      "api": "U+1FA79",
+      "text": "🩹",
+      "name": {
+        "th": "พลาสเตอร์/แผ่นปิดแผล",
+        "en": "Adhesive Bandage"
+      }
+    },
+    {
+      "api": "U+1FA7C",
+      "text": "🩼",
+      "name": {
+        "th": "อุปกรณ์ช่วยเดิน",
+        "en": "Crutch"
+      }
+    },
+    {
+      "api": "U+1FA7A",
+      "text": "🩺",
+      "name": {
+        "th": "เครื่องฟังคลื่นหัวใจ/สเตโทสโคป",
+        "en": "Stethoscope"
+      }
+    },
+    {
+      "api": "U+1FA91",
+      "text": "🪑",
+      "name": {
+        "th": "เก้าอี้",
+        "en": "Chair"
+      }
+    },
+    {
+      "api": "U+1F9F9",
+      "text": "🧹",
+      "name": {
+        "th": "ไม้กวาด",
+        "en": "Broom"
+      }
+    },
+    {
+      "api": "U+1F9FA",
+      "text": "🧺",
+      "name": {
+        "th": "ตะกร้าซักผ้า",
+        "en": "Basket"
+      }
+    },
+    {
+      "api": "U+1F9FB",
+      "text": "🧻",
+      "name": {
+        "th": "กระดาษชำระ",
+        "en": "Roll of Paper"
+      }
+    },
+    {
+      "api": "U+1F9FC",
+      "text": "🧼",
+      "name": {
+        "th": "สบู่",
+        "en": "Soap"
+      }
+    },
+    {
+      "api": "U+1FAA0",
+      "text": "🪠",
+      "name": {
+        "th": "ที่กดส้วม",
+        "en": "Plunger"
+      }
+    },
+    {
+      "api": "U+1F9FD",
+      "text": "🧽",
+      "name": {
+        "th": "ฟองน้ำ",
+        "en": "Sponge"
+      }
+    },
+    {
+      "api": "U+1F9F4",
+      "text": "🧴",
+      "name": {
+        "th": "ขวดสเปรย์/โลชั่น",
+        "en": "Lotion Bottle"
+      }
+    },
+    {
+      "api": "U+1F6AC",
+      "text": "🚬",
+      "name": {
+        "th": "บุหรี่",
+        "en": "Cigarette"
+      }
+    },
+    {
+      "api": "U+26B0-FE0F",
+      "text": "⚰️",
+      "name": {
+        "th": "หีบศพ",
+        "en": "Coffin"
+      }
+    },
+    {
+      "api": "U+1FAA6",
+      "text": "🪦",
+      "name": {
+        "th": "หลุมฝังศพ",
+        "en": "Headstone"
+      }
+    },
+    {
+      "api": "U+26B1-FE0F",
+      "text": "⚱️",
+      "name": {
+        "th": "โถเถ้ากระดูก",
+        "en": "Funeral Urn"
+      }
+    },
+    {
+      "api": "U+1F9FF",
+      "text": "🧿",
+      "name": {
+        "th": "ตาโชคดี/มณี",
+        "en": "Nazar Amulet"
+      }
+    },
+    {
+      "api": "U+1FAAC",
+      "text": "🪬",
+      "name": {
+        "th": "เครื่องราง",
+        "en": "Hamsa with Eye / Talisman"
+      }
+    },
+    {
+      "api": "U+1FAA9",
+      "text": "🪩",
+      "name": {
+        "th": "ดิสโก้บอล",
+        "en": "Mirror Ball"
+      }
+    },
+    {
+      "api": "U+1FA85",
+      "text": "🪅",
+      "name": {
+        "th": "พินยาต้า",
+        "en": "Piñata"
+      }
+    },
+    {
+      "api": "U+1FA86",
+      "text": "🪆",
+      "name": {
+        "th": "ตุ๊กตามาโตรชกา",
+        "en": "Matryoshka Doll"
+      }
+    },
+    {
+      "api": "U+1F9E7",
+      "text": "🧧",
+      "name": {
+        "th": "ซองอั่งเปา",
+        "en": "Red Envelope"
+      }
+    },
+    {
+      "api": "U+1F390",
+      "text": "🎐",
+      "name": {
+        "th": "กระดิ่งลม",
+        "en": "Wind Chime"
+      }
+    },
+    {
+      "api": "U+1FA84",
+      "text": "🪄",
+      "name": {
+        "th": "ไม้กายสิทธิ์",
+        "en": "Magic Wand"
+      }
+    },
+    {
+      "api": "U+1F9F8",
+      "text": "🧸",
+      "name": {
+        "th": "หมีเท็ดดี้",
+        "en": "Teddy Bear"
+      }
+    },
+    {
+      "api": "U+1F5BC-FE0F",
+      "text": "🖼️",
+      "name": {
+        "th": "กรอบรูป/ภาพวาด",
+        "en": "Framed Picture"
+      }
+    },
+    {
+      "api": "U+1F9F5",
+      "text": "🧵",
+      "name": {
+        "th": "ด้าย",
+        "en": "Thread"
+      }
+    },
+    {
+      "api": "U+1F9F6",
+      "text": "🧶",
+      "name": {
+        "th": "ไหมพรม",
+        "en": "Yarn"
+      }
+    },
+    {
+      "api": "U+1FA9E",
+      "text": "🪞",
+      "name": {
+        "th": "กระจก",
+        "en": "Mirror"
+      }
+    },
+    {
+      "api": "U+1FA9F",
+      "text": "🪟",
+      "name": {
+        "th": "หน้าต่าง",
+        "en": "Window"
+      }
+    },
+    {
+      "api": "U+1FAA2",
+      "text": "🪢",
+      "name": {
+        "th": "เงื่อน",
+        "en": "Knot"
+      }
+    },
+    {
+      "api": "U+1FAA7",
+      "text": "🪧",
+      "name": {
+        "th": "ป้ายประกาศ",
+        "en": "Placard"
+      }
+    },
+    {
+      "api": "U+1F9F1",
+      "text": "🧱",
+      "name": {
+        "th": "อิฐ",
+        "en": "Brick"
+      }
+    },
+    {
+      "api": "U+1FAAA",
+      "text": "🪪",
+      "name": {
+        "th": "บัตรประจำตัว",
+        "en": "Identification Card"
+      }
+    },
+    {
+      "api": "U+1F9F3",
+      "text": "🧳",
+      "name": {
+        "th": "กระเป๋าเดินทาง",
+        "en": "Luggage"
+      }
+    },
+    {
+      "api": "U+1FAA1",
+      "text": "🪡",
+      "name": {
+        "th": "เข็มเย็บผ้า",
+        "en": "Sewing Needle"
+      }
+    },
+    {
+      "api": "U+1F4F3",
+      "text": "📳",
+      "name": {
+        "th": "โหมดสั่น",
+        "en": "Vibration Mode"
+      }
+    },
+    {
+      "api": "U+1F4F4",
+      "text": "📴",
+      "name": {
+        "th": "ปิดโทรศัพท์",
+        "en": "Mobile Phone Off"
+      }
+    },
+    {
+      "api": "U+1F4F6",
+      "text": "📶",
+      "name": {
+        "th": "สัญญาณเครือข่าย",
+        "en": "Antenna Bars"
+      }
+    },
+    {
+      "api": "U+1F6CE-FE0F",
+      "text": "🛎️",
+      "name": {
+        "th": "กระดิ่งบริการ",
+        "en": "Bellhop Bell"
+      }
+    }
   ]
 }

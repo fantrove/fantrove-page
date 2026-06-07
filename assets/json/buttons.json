@@ -12,6 +12,12 @@
       "th_label": "อีโมจิ",
       "jsonFile": "/assets/json/content/emojis-page1.json",
       "url": "emojis"
+    },
+    {
+      "en_label": "Fancy Text",
+      "th_label": "ข้อความแฟนซี",
+      "jsonFile": "/assets/json/content/fancy.json",
+      "url": "fancy"
     }
   ]
 }

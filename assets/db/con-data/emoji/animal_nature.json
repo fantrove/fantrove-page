@@ -5,209 +5,1597 @@
     "en": "Animals & Nature"
   },
   "data": [
-    { "api": "U+1F30D", "text": "🌍", "name": { "th": "โลก (ยุโรป/แอฟริกา)", "en": "Globe Showing Europe-Africa" } },
-    { "api": "U+1F30E", "text": "🌎", "name": { "th": "โลก (อเมริกา)", "en": "Globe Showing Americas" } },
-    { "api": "U+1F30F", "text": "🌏", "name": { "th": "โลก (เอเชีย/ออสเตรเลีย)", "en": "Globe Showing Asia-Australia" } },
-    { "api": "U+1F310", "text": "🌐", "name": { "th": "โลกอินเทอร์เน็ต", "en": "Globe with Meridians" } },
-    { "api": "U+1F311", "text": "🌑", "name": { "th": "ดวงจันทร์ใหม่", "en": "New Moon Symbol" } },
-    { "api": "U+1F312", "text": "🌒", "name": { "th": "พระจันทร์เสี้ยวขึ้น", "en": "Waxing Crescent Moon Symbol" } },
-    { "api": "U+1F313", "text": "🌓", "name": { "th": "ครึ่งซีกขึ้น", "en": "First Quarter Moon Symbol" } },
-    { "api": "U+1F314", "text": "🌔", "name": { "th": "พระจันทร์ครึ่งซีก", "en": "Waxing Gibbous Moon Symbol" } },
-    { "api": "U+1F315", "text": "🌕", "name": { "th": "พระจันทร์เต็มดวง", "en": "Full Moon Symbol" } },
-    { "api": "U+1F316", "text": "🌖", "name": { "th": "พระจันทร์ลดลง", "en": "Waning Gibbous Moon Symbol" } },
-    { "api": "U+1F317", "text": "🌗", "name": { "th": "ครึ่งซีกลดลง", "en": "Last Quarter Moon Symbol" } },
-    { "api": "U+1F318", "text": "🌘", "name": { "th": "พระจันทร์เสี้ยวลด", "en": "Waning Crescent Moon Symbol" } },
-    { "api": "U+1F319", "text": "🌙", "name": { "th": "พระจันทร์เสี้ยว", "en": "Crescent Moon" } },
-    { "api": "U+1F31A", "text": "🌚", "name": { "th": "พระจันทร์หน้าเงียบ", "en": "New Moon Face" } },
-    { "api": "U+1F31B", "text": "🌛", "name": { "th": "พระจันทร์ครึ่งหน้าซ้าย", "en": "First Quarter Moon with Face" } },
-    { "api": "U+1F31C", "text": "🌜", "name": { "th": "พระจันทร์ครึ่งหน้าขวา", "en": "Last Quarter Moon with Face" } },
-    { "api": "U+2600-FE0F", "text": "☀️", "name": { "th": "ดวงอาทิตย์", "en": "Sun" } },
-    { "api": "U+1F31D", "text": "🌝", "name": { "th": "พระจันทร์เต็มดวงยิ้ม", "en": "Full Moon Face" } },
-    { "api": "U+1F31E", "text": "🌞", "name": { "th": "พระอาทิตย์มีหน้า", "en": "Sun with Face" } },
-    { "api": "U+1FA90", "text": "🪐", "name": { "th": "ดาวเคราะห์", "en": "Ringed Planet" } },
-    { "api": "U+2B50", "text": "⭐", "name": { "th": "ดาว", "en": "Star" } },
-    { "api": "U+1F31F", "text": "🌟", "name": { "th": "ดาวส่องแสง", "en": "Glowing Star" } },
-    { "api": "U+2728", "text": "✨", "name": { "th": "ประกาย", "en": "Sparkles" } },
-    { "api": "U+2604-FE0F", "text": "☄️", "name": { "th": "ดาวตก/ดาวหาง", "en": "Comet" } },
-    
-    { "api": "U+1F324-FE0F", "text": "🌤️", "name": { "th": "แดดและเมฆเล็กน้อย", "en": "Sun Behind Small Cloud" } },
-    { "api": "U+26C5", "text": "⛅", "name": { "th": "เมฆกับดวงอาทิตย์", "en": "Sun Behind Cloud" } },
-    { "api": "U+1F325-FE0F", "text": "🌥️", "name": { "th": "ดวงอาทิตย์หลังเมฆ", "en": "Sun Behind Large Cloud" } },
-    { "api": "U+1F326-FE0F", "text": "🌦️", "name": { "th": "ฝนกับแดด", "en": "Sun Behind Rain Cloud" } },
-    { "api": "U+2601-FE0F", "text": "☁️", "name": { "th": "เมฆ", "en": "Cloud" } },
-    { "api": "U+1F327-FE0F", "text": "🌧️", "name": { "th": "เมฆฝน", "en": "Cloud with Rain" } },
-    { "api": "U+26C8-FE0F", "text": "⛈️", "name": { "th": "พายุฝนฟ้าคะนอง", "en": "Cloud with Lightning and Rain" } },
-    { "api": "U+1F329-FE0F", "text": "🌩️", "name": { "th": "ฟ้าผ่า", "en": "Cloud with Lightning" } },
-    { "api": "U+26A1", "text": "⚡", "name": { "th": "ฟ้าแลบ", "en": "High Voltage" } },
-    { "api": "U+1F525", "text": "🔥", "name": { "th": "ไฟ", "en": "Fire" } },
-    { "api": "U+1F4A5", "text": "💥", "name": { "th": "ระเบิด/ปะทะ", "en": "Collision" } },
-    { "api": "U+2744-FE0F", "text": "❄️", "name": { "th": "เกล็ดหิมะ", "en": "Snowflake" } },
-    { "api": "U+1F328-FE0F", "text": "🌨️", "name": { "th": "เมฆกับหิมะ", "en": "Cloud with Snow" } },
-    { "api": "U+2603-FE0F", "text": "☃️", "name": { "th": "ตุ๊กตาหิมะ", "en": "Snowman" } },
-    { "api": "U+26C4", "text": "⛄", "name": { "th": "ตุ๊กตาหิมะ (ไม่มีหมวก)", "en": "Snowman Without Snow" } },
-    { "api": "U+1F32C-FE0F", "text": "🌬️", "name": { "th": "ลม", "en": "Wind Face" } },
-    { "api": "U+1F4A8", "text": "💨", "name": { "th": "ลมพัด", "en": "Dashing Away" } },
-    { "api": "U+1F32A-FE0F", "text": "🌪️", "name": { "th": "พายุทอร์นาโด", "en": "Tornado" } },
-    { "api": "U+1F32B-FE0F", "text": "🌫️", "name": { "th": "หมอก", "en": "Fog" } },
-    { "api": "U+1F308", "text": "🌈", "name": { "th": "รุ้ง", "en": "Rainbow" } },
-    { "api": "U+2614", "text": "☔", "name": { "th": "ร่มกับฝน", "en": "Umbrella with Rain Drops" } },
-    { "api": "U+1F4A7", "text": "💧", "name": { "th": "หยดน้ำ", "en": "Droplet" } },
-    { "api": "U+1F4A6", "text": "💦", "name": { "th": "หยดน้ำ/กระเซ็น", "en": "Sweat Droplets" } },
-    { "api": "U+1F30A", "text": "🌊", "name": { "th": "คลื่น", "en": "Water Wave" } },
-    
-    { "api": "U+1F490", "text": "💐", "name": { "th": "ช่อดอกไม้", "en": "Bouquet" } },
-    { "api": "U+1F338", "text": "🌸", "name": { "th": "ดอกซากุระ", "en": "Cherry Blossom" } },
-    { "api": "U+1F4AE", "text": "💮", "name": { "th": "ดอกไม้ดีเด่น", "en": "White Flower" } },
-    { "api": "U+1FAB7", "text": "🪷", "name": { "th": "ดอกบัว", "en": "Lotus" } },
-    { "api": "U+1F3F5-FE0F", "text": "🏵️", "name": { "th": "ดอกไม้รอบ", "en": "Rosette" } },
-    { "api": "U+1F339", "text": "🌹", "name": { "th": "ดอกกุหลาบ", "en": "Rose" } },
-    { "api": "U+1F940", "text": "🥀", "name": { "th": "ดอกแห้ง", "en": "Wilted Flower" } },
-    { "api": "U+1F33A", "text": "🌺", "name": { "th": "ดอกชบา", "en": "Hibiscus" } },
-    { "api": "U+1F33B", "text": "🌻", "name": { "th": "ดอกทานตะวัน", "en": "Sunflower" } },
-    { "api": "U+1F33C", "text": "🌼", "name": { "th": "ดอกไม้ป่า", "en": "Blossom" } },
-    { "api": "U+1F337", "text": "🌷", "name": { "th": "ดอกทิวลิป", "en": "Tulip" } },
-    { "api": "U+1F9BB", "text": "🪻", "name": { "th": "ไฮยาซินธ์", "en": "Hyacinth" } },
-    
-    { "api": "U+1F331", "text": "🌱", "name": { "th": "ต้นอ่อน", "en": "Seedling" } },
-    { "api": "U+1FAB4", "text": "🪴", "name": { "th": "ต้นในกระถาง", "en": "Potted Plant" } },
-    { "api": "U+1F332", "text": "🌲", "name": { "th": "ต้นสน", "en": "Evergreen Tree" } },
-    { "api": "U+1F333", "text": "🌳", "name": { "th": "ต้นไม้ผลัดใบ", "en": "Deciduous Tree" } },
-    { "api": "U+1F334", "text": "🌴", "name": { "th": "ต้นปาล์ม", "en": "Palm Tree" } },
-    { "api": "U+1F335", "text": "🌵", "name": { "th": "ต้นกระบองเพชร", "en": "Cactus" } },
-    { "api": "U+1F33E", "text": "🌾", "name": { "th": "รวงข้าว", "en": "Sheaf of Rice" } },
-    { "api": "U+1F33F", "text": "🌿", "name": { "th": "ใบไม้", "en": "Herb" } },
-    { "api": "U+2618-FE0F", "text": "☘️", "name": { "th": "โคลเวอร์", "en": "Shamrock" } },
-    { "api": "U+1F340", "text": "🍀", "name": { "th": "ใบโคลเวอร์สี่แฉก", "en": "Four Leaf Clover" } },
-    { "api": "U+1F341", "text": "🍁", "name": { "th": "ใบไม้สีส้ม", "en": "Maple Leaf" } },
-    { "api": "U+1F342", "text": "🍂", "name": { "th": "ใบไม้ร่วง", "en": "Fallen Leaf" } },
-    { "api": "U+1F343", "text": "🍃", "name": { "th": "ใบไม้พัด", "en": "Leaf Fluttering in Wind" } },
-    { "api": "U+1F344", "text": "🍄", "name": { "th": "เห็ด", "en": "Mushroom" } },
-    { "api": "U+1FAB9", "text": "🪹", "name": { "th": "รังนกเปล่า", "en": "Empty Nest" } },
-    { "api": "U+1FABA", "text": "🪺", "name": { "th": "รังนกมีไข่", "en": "Nest with Eggs" } },
-    
-    { "api": "U+1F412", "text": "🐒", "name": { "th": "ลิง", "en": "Monkey" } },
-    { "api": "U+1F98D", "text": "🦍", "name": { "th": "กอริลลา", "en": "Gorilla" } },
-    { "api": "U+1F9A7", "text": "🦧", "name": { "th": "อุรังกอทัง", "en": "Orangutan" } },
-    { "api": "U+1F436", "text": "🐶", "name": { "th": "สุนัขหน้า", "en": "Dog Face" } },
-    { "api": "U+1F415", "text": "🐕", "name": { "th": "สุนัข", "en": "Dog" } },
-    { "api": "U+1F9AE", "text": "🦮", "name": { "th": "สุนัขนำทาง", "en": "Guide Dog" } },
-    { "api": "U+1F415-200D-1F9BA", "text": "🐕‍🦺", "name": { "th": "สุนัขพร้อมอุปกรณ์", "en": "Service Dog" } },
-    { "api": "U+1F429", "text": "🐩", "name": { "th": "พุดเดิ้ล", "en": "Poodle" } },
-    { "api": "U+1F43A", "text": "🐺", "name": { "th": "หมาป่า", "en": "Wolf" } },
-    { "api": "U+1F98A", "text": "🦊", "name": { "th": "สุนัขจิ้งจอก", "en": "Fox" } },
-    { "api": "U+1F99D", "text": "🦝", "name": { "th": "แรคคูน", "en": "Raccoon" } },
-    { "api": "U+1F431", "text": "🐱", "name": { "th": "แมวหน้า", "en": "Cat Face" } },
-    { "api": "U+1F408", "text": "🐈", "name": { "th": "แมว", "en": "Cat" } },
-    { "api": "U+1F408-200D-2B1B", "text": "🐈‍⬛", "name": { "th": "แมวดำ", "en": "Black Cat" } },
-    { "api": "U+1F981", "text": "🦁", "name": { "th": "สิงโต", "en": "Lion" } },
-    { "api": "U+1F42F", "text": "🐯", "name": { "th": "หน้าเสือ", "en": "Tiger Face" } },
-    { "api": "U+1F405", "text": "🐅", "name": { "th": "เสือ", "en": "Tiger" } },
-    { "api": "U+1F406", "text": "🐆", "name": { "th": "เสือดาว", "en": "Leopard" } },
-    { "api": "U+1F434", "text": "🐴", "name": { "th": "ม้า", "en": "Horse Face" } },
-    { "api": "U+1F9A9", "text": "🫏", "name": { "th": "ลา", "en": "Donkey" } },
-    { "api": "U+1F40E", "text": "🐎", "name": { "th": "ม้า (สัตว์)", "en": "Horse" } },
-    { "api": "U+1F984", "text": "🦄", "name": { "th": "ยูนิคอร์น", "en": "Unicorn" } },
-    { "api": "U+1F993", "text": "🦓", "name": { "th": "ม้าลาย", "en": "Zebra" } },
-    { "api": "U+1F98C", "text": "🦌", "name": { "th": "กวาง", "en": "Deer" } },
-    { "api": "U+1F9AC", "text": "🦬", "name": { "th": "ควาย/บิสัน", "en": "Bison" } },
-    { "api": "U+1F42E", "text": "🐮", "name": { "th": "วัว", "en": "Cow Face" } },
-    { "api": "U+1F402", "text": "🐂", "name": { "th": "วัวตัวผู้", "en": "Ox" } },
-    { "api": "U+1F403", "text": "🐃", "name": { "th": "ควาย", "en": "Water Buffalo" } },
-    { "api": "U+1F404", "text": "🐄", "name": { "th": "วัวทั่วไป", "en": "Cow" } },
-    { "api": "U+1F437", "text": "🐷", "name": { "th": "หมู", "en": "Pig Face" } },
-    { "api": "U+1F416", "text": "🐖", "name": { "th": "หมูตัวผู้/หมูบ้าน", "en": "Pig" } },
-    { "api": "U+1F417", "text": "🐗", "name": { "th": "หมูป่า", "en": "Boar" } },
-    { "api": "U+1F43D", "text": "🐽", "name": { "th": "จมูกหมู", "en": "Pig Nose" } },
-    { "api": "U+1F40F", "text": "🐏", "name": { "th": "แกะตัวผู้", "en": "Ram" } },
-    { "api": "U+1F411", "text": "🐑", "name": { "th": "แกะ", "en": "Sheep" } },
-    { "api": "U+1F410", "text": "🐐", "name": { "th": "แพะ", "en": "Goat" } },
-    { "api": "U+1F42A", "text": "🐪", "name": { "th": "อูฐตัวเดียว", "en": "Dromedary Camel" } },
-    { "api": "U+1F42B", "text": "🐫", "name": { "th": "อูฐสองหนอก", "en": "Bactrian Camel" } },
-    { "api": "U+1F999", "text": "🦙", "name": { "th": "ลามะ/อัลปากา", "en": "Llama" } },
-    { "api": "U+1F992", "text": "🦒", "name": { "th": "ยีราฟ", "en": "Giraffe" } },
-    { "api": "U+1F418", "text": "🐘", "name": { "th": "ช้าง", "en": "Elephant" } },
-    { "api": "U+1F9A3", "text": "🦣", "name": { "th": "แมมมอธ", "en": "Mammoth" } },
-    { "api": "U+1F98F", "text": "🦏", "name": { "th": "แรด", "en": "Rhinoceros" } },
-    { "api": "U+1F98B", "text": "🦛", "name": { "th": "ฮิปโป", "en": "Hippopotamus" } },
-    { "api": "U+1F42D", "text": "🐭", "name": { "th": "หน้าเมาส์", "en": "Mouse Face" } },
-    { "api": "U+1F401", "text": "🐁", "name": { "th": "หนู", "en": "Mouse" } },
-    { "api": "U+1F400", "text": "🐀", "name": { "th": "หนูใหญ่", "en": "Rat" } },
-    { "api": "U+1F439", "text": "🐹", "name": { "th": "หนูแฮมสเตอร์", "en": "Hamster" } },
-    { "api": "U+1F430", "text": "🐰", "name": { "th": "กระต่ายหน้า", "en": "Rabbit Face" } },
-    { "api": "U+1F407", "text": "🐇", "name": { "th": "กระต่าย", "en": "Rabbit" } },
-    { "api": "U+1F43F", "text": "🐿️", "name": { "th": "กระรอก", "en": "Chipmunk" } },
-    { "api": "U+1F9AB", "text": "🦫", "name": { "th": "บีเวอร์", "en": "Beaver" } },
-    { "api": "U+1F994", "text": "🦔", "name": { "th": "เม่น", "en": "Hedgehog" } },
-    { "api": "U+1F987", "text": "🦇", "name": { "th": "ค้างคาว", "en": "Bat" } },
-    { "api": "U+1F43B", "text": "🐻", "name": { "th": "หมี", "en": "Bear" } },
-    { "api": "U+1F43B-200D-2744-FE0F", "text": "🐻‍❄️", "name": { "th": "หมีขาว", "en": "Polar Bear" } },
-    { "api": "U+1F428", "text": "🐨", "name": { "th": "โคอาล่า", "en": "Koala" } },
-    { "api": "U+1F43C", "text": "🐼", "name": { "th": "แพนด้า", "en": "Panda" } },
-    { "api": "U+1F9A5", "text": "🦥", "name": { "th": "สลอธ", "en": "Sloth" } },
-    { "api": "U+1F9A6", "text": "🦦", "name": { "th": "นาก", "en": "Otter" } },
-    { "api": "U+1F9A8", "text": "🦨", "name": { "th": "สกังก์", "en": "Skunk" } },
-    { "api": "U+1F998", "text": "🦘", "name": { "th": "จิงโจ้", "en": "Kangaroo" } },
-    { "api": "U+1F9A1", "text": "🦡", "name": { "th": "อีเทล/แบดเจอร์", "en": "Badger" } },
-    
-    { "api": "U+1F983", "text": "🦃", "name": { "th": "ไก่งวง", "en": "Turkey" } },
-    { "api": "U+1F414", "text": "🐔", "name": { "th": "ไก่", "en": "Chicken" } },
-    { "api": "U+1F413", "text": "🐓", "name": { "th": "ไก่ตัวผู้", "en": "Rooster" } },
-    { "api": "U+1F423", "text": "🐣", "name": { "th": "ลูกไก่", "en": "Hatching Chick" } },
-    { "api": "U+1F424", "text": "🐤", "name": { "th": "ลูกนก", "en": "Baby Chick" } },
-    { "api": "U+1F425", "text": "🐥", "name": { "th": "ลูกนกหน้า", "en": "Front-Facing Baby Chick" } },
-    { "api": "U+1F426", "text": "🐦", "name": { "th": "นก", "en": "Bird" } },
-    { "api": "U+1F427", "text": "🐧", "name": { "th": "เพนกวิน", "en": "Penguin" } },
-    { "api": "U+1F54A", "text": "🕊️", "name": { "th": "นกพิราบ", "en": "Dove" } },
-    { "api": "U+1F985", "text": "🦅", "name": { "th": "นกอินทรี", "en": "Eagle" } },
-    { "api": "U+1F986", "text": "🦆", "name": { "th": "เป็ด", "en": "Duck" } },
-    { "api": "U+1F9A2", "text": "🦢", "name": { "th": "หงส์", "en": "Swan" } },
-    { "api": "U+1F989", "text": "🦉", "name": { "th": "นกฮูก", "en": "Owl" } },
-    { "api": "U+1F99C", "text": "🦤", "name": { "th": "โดโด", "en": "Dodo" } },
-    { "api": "U+1FAB6", "text": "🪶", "name": { "th": "ขน", "en": "Feather" } },
-    { "api": "U+1F9A9", "text": "🦩", "name": { "th": "ฟลามิงโก", "en": "Flamingo" } },
-    { "api": "U+1F99A", "text": "🦚", "name": { "th": "นกยูง", "en": "Peacock" } },
-    { "api": "U+1F99C", "text": "🦜", "name": { "th": "นกแก้ว", "en": "Parrot" } },
-    { "api": "U+1FAB8", "text": "🪽", "name": { "th": "ปีก", "en": "Wing" } },
-    { "api": "U+1F426-200D-2B1B", "text": "🐦‍⬛", "name": { "th": "นกสีดำ", "en": "Black Bird" } },
-    { "api": "U+1F426-200D-1F525", "text": "🐦‍🔥", "name": { "th": "นกไฟ/ฟีนิกซ์", "en": "Firebird" } },
-    
-    { "api": "U+1F438", "text": "🐸", "name": { "th": "กบ", "en": "Frog" } },
-    { "api": "U+1F40A", "text": "🐊", "name": { "th": "จระเข้", "en": "Crocodile" } },
-    { "api": "U+1F422", "text": "🐢", "name": { "th": "เต่า", "en": "Turtle" } },
-    { "api": "U+1F98E", "text": "🦎", "name": { "th": "กิ้งก่า", "en": "Lizard" } },
-    { "api": "U+1F40D", "text": "🐍", "name": { "th": "งู", "en": "Snake" } },
-    { "api": "U+1F432", "text": "🐲", "name": { "th": "มังกรหน้า", "en": "Dragon Face" } },
-    { "api": "U+1F409", "text": "🐉", "name": { "th": "มังกร", "en": "Dragon" } },
-    { "api": "U+1F996", "text": "🦖", "name": { "th": "ไดโนเสาร์ (ทีเร็กซ์)", "en": "T-Rex" } },
-    { "api": "U+1F995", "text": "🦕", "name": { "th": "ไดโนเสาร์ (ซอโรพอด)", "en": "Sauropod" } },
-    
-    { "api": "U+1F433", "text": "🐳", "name": { "th": "วาฬพ่นน้ำ", "en": "Spouting Whale" } },
-    { "api": "U+1F40B", "text": "🐋", "name": { "th": "วาฬ", "en": "Whale" } },
-    { "api": "U+1F42C", "text": "🐬", "name": { "th": "ปลาโลมา", "en": "Dolphin" } },
-    { "api": "U+1F9AD", "text": "🦭", "name": { "th": "แมวน้ำ", "en": "Seal" } },
-    { "api": "U+1F41F", "text": "🐟", "name": { "th": "ปลา", "en": "Fish" } },
-    { "api": "U+1F420", "text": "🐠", "name": { "th": "ปลาเขตร้อน", "en": "Tropical Fish" } },
-    { "api": "U+1F421", "text": "🐡", "name": { "th": "ปลาปักเป้า", "en": "Blowfish" } },
-    { "api": "U+1F988", "text": "🦈", "name": { "th": "ฉลาม", "en": "Shark" } },
-    { "api": "U+1F419", "text": "🐙", "name": { "th": "ปลาหมึก", "en": "Octopus" } },
-    { "api": "U+1F41A", "text": "🐚", "name": { "th": "หอย", "en": "Spiral Shell" } },
-    { "api": "U+1F9F8", "text": "🪸", "name": { "th": "ปะการัง", "en": "Coral" } },
-    { "api": "U+1F9FC", "text": "🪼", "name": { "th": "แมงกะพรุน", "en": "Jellyfish" } },
-    
-    { "api": "U+1F40C", "text": "🐌", "name": { "th": "หอยทาก", "en": "Snail" } },
-    { "api": "U+1F98B", "text": "🦋", "name": { "th": "ผีเสื้อ", "en": "Butterfly" } },
-    { "api": "U+1F41B", "text": "🐛", "name": { "th": "หนอน", "en": "Bug" } },
-    { "api": "U+1F41C", "text": "🐜", "name": { "th": "มด", "en": "Ant" } },
-    { "api": "U+1F41D", "text": "🐝", "name": { "th": "ผึ้ง", "en": "Honeybee" } },
-    { "api": "U+1FAB2", "text": "🪲", "name": { "th": "ด้วง", "en": "Beetle" } },
-    { "api": "U+1F41E", "text": "🐞", "name": { "th": "เต่าทอง", "en": "Lady Beetle" } },
-    { "api": "U+1F997", "text": "🦗", "name": { "th": "ตั๊กแตน", "en": "Cricket" } },
-    { "api": "U+1F98F", "text": "🪳", "name": { "th": "แมลงสาบ", "en": "Cockroach" } },
-    { "api": "U+1F577-FE0F", "text": "🕷️", "name": { "th": "แมงมุม", "en": "Spider" } },
-    { "api": "U+1F578-FE0F", "text": "🕸️", "name": { "th": "ใยแมงมุม", "en": "Spider Web" } },
-    { "api": "U+1F982", "text": "🦂", "name": { "th": "แมงป่อง", "en": "Scorpion" } },
-    { "api": "U+1F99F", "text": "🦟", "name": { "th": "ยุง", "en": "Mosquito" } },
-    { "api": "U+1FAB0", "text": "🪰", "name": { "th": "แมลงวัน", "en": "Fly" } },
-    { "api": "U+1F9C1", "text": "🪱", "name": { "th": "หนอน/ไส้เดือน", "en": "Worm" } }
+    {
+      "api": "U+1F30D",
+      "text": "🌍",
+      "name": {
+        "th": "โลก (ยุโรป/แอฟริกา)",
+        "en": "Globe Showing Europe-Africa"
+      }
+    },
+    {
+      "api": "U+1F30E",
+      "text": "🌎",
+      "name": {
+        "th": "โลก (อเมริกา)",
+        "en": "Globe Showing Americas"
+      }
+    },
+    {
+      "api": "U+1F30F",
+      "text": "🌏",
+      "name": {
+        "th": "โลก (เอเชีย/ออสเตรเลีย)",
+        "en": "Globe Showing Asia-Australia"
+      }
+    },
+    {
+      "api": "U+1F310",
+      "text": "🌐",
+      "name": {
+        "th": "โลกอินเทอร์เน็ต",
+        "en": "Globe with Meridians"
+      }
+    },
+    {
+      "api": "U+1F311",
+      "text": "🌑",
+      "name": {
+        "th": "ดวงจันทร์ใหม่",
+        "en": "New Moon Symbol"
+      }
+    },
+    {
+      "api": "U+1F312",
+      "text": "🌒",
+      "name": {
+        "th": "พระจันทร์เสี้ยวขึ้น",
+        "en": "Waxing Crescent Moon Symbol"
+      }
+    },
+    {
+      "api": "U+1F313",
+      "text": "🌓",
+      "name": {
+        "th": "ครึ่งซีกขึ้น",
+        "en": "First Quarter Moon Symbol"
+      }
+    },
+    {
+      "api": "U+1F314",
+      "text": "🌔",
+      "name": {
+        "th": "พระจันทร์ครึ่งซีก",
+        "en": "Waxing Gibbous Moon Symbol"
+      }
+    },
+    {
+      "api": "U+1F315",
+      "text": "🌕",
+      "name": {
+        "th": "พระจันทร์เต็มดวง",
+        "en": "Full Moon Symbol"
+      }
+    },
+    {
+      "api": "U+1F316",
+      "text": "🌖",
+      "name": {
+        "th": "พระจันทร์ลดลง",
+        "en": "Waning Gibbous Moon Symbol"
+      }
+    },
+    {
+      "api": "U+1F317",
+      "text": "🌗",
+      "name": {
+        "th": "ครึ่งซีกลดลง",
+        "en": "Last Quarter Moon Symbol"
+      }
+    },
+    {
+      "api": "U+1F318",
+      "text": "🌘",
+      "name": {
+        "th": "พระจันทร์เสี้ยวลด",
+        "en": "Waning Crescent Moon Symbol"
+      }
+    },
+    {
+      "api": "U+1F319",
+      "text": "🌙",
+      "name": {
+        "th": "พระจันทร์เสี้ยว",
+        "en": "Crescent Moon"
+      }
+    },
+    {
+      "api": "U+1F31A",
+      "text": "🌚",
+      "name": {
+        "th": "พระจันทร์หน้าเงียบ",
+        "en": "New Moon Face"
+      }
+    },
+    {
+      "api": "U+1F31B",
+      "text": "🌛",
+      "name": {
+        "th": "พระจันทร์ครึ่งหน้าซ้าย",
+        "en": "First Quarter Moon with Face"
+      }
+    },
+    {
+      "api": "U+1F31C",
+      "text": "🌜",
+      "name": {
+        "th": "พระจันทร์ครึ่งหน้าขวา",
+        "en": "Last Quarter Moon with Face"
+      }
+    },
+    {
+      "api": "U+2600-FE0F",
+      "text": "☀️",
+      "name": {
+        "th": "ดวงอาทิตย์",
+        "en": "Sun"
+      }
+    },
+    {
+      "api": "U+1F31D",
+      "text": "🌝",
+      "name": {
+        "th": "พระจันทร์เต็มดวงยิ้ม",
+        "en": "Full Moon Face"
+      }
+    },
+    {
+      "api": "U+1F31E",
+      "text": "🌞",
+      "name": {
+        "th": "พระอาทิตย์มีหน้า",
+        "en": "Sun with Face"
+      }
+    },
+    {
+      "api": "U+1FA90",
+      "text": "🪐",
+      "name": {
+        "th": "ดาวเคราะห์",
+        "en": "Ringed Planet"
+      }
+    },
+    {
+      "api": "U+2B50",
+      "text": "⭐",
+      "name": {
+        "th": "ดาว",
+        "en": "Star"
+      }
+    },
+    {
+      "api": "U+1F31F",
+      "text": "🌟",
+      "name": {
+        "th": "ดาวส่องแสง",
+        "en": "Glowing Star"
+      }
+    },
+    {
+      "api": "U+2728",
+      "text": "✨",
+      "name": {
+        "th": "ประกาย",
+        "en": "Sparkles"
+      }
+    },
+    {
+      "api": "U+2604-FE0F",
+      "text": "☄️",
+      "name": {
+        "th": "ดาวตก/ดาวหาง",
+        "en": "Comet"
+      }
+    },
+    {
+      "api": "U+1F324-FE0F",
+      "text": "🌤️",
+      "name": {
+        "th": "แดดและเมฆเล็กน้อย",
+        "en": "Sun Behind Small Cloud"
+      }
+    },
+    {
+      "api": "U+26C5",
+      "text": "⛅",
+      "name": {
+        "th": "เมฆกับดวงอาทิตย์",
+        "en": "Sun Behind Cloud"
+      }
+    },
+    {
+      "api": "U+1F325-FE0F",
+      "text": "🌥️",
+      "name": {
+        "th": "ดวงอาทิตย์หลังเมฆ",
+        "en": "Sun Behind Large Cloud"
+      }
+    },
+    {
+      "api": "U+1F326-FE0F",
+      "text": "🌦️",
+      "name": {
+        "th": "ฝนกับแดด",
+        "en": "Sun Behind Rain Cloud"
+      }
+    },
+    {
+      "api": "U+2601-FE0F",
+      "text": "☁️",
+      "name": {
+        "th": "เมฆ",
+        "en": "Cloud"
+      }
+    },
+    {
+      "api": "U+1F327-FE0F",
+      "text": "🌧️",
+      "name": {
+        "th": "เมฆฝน",
+        "en": "Cloud with Rain"
+      }
+    },
+    {
+      "api": "U+26C8-FE0F",
+      "text": "⛈️",
+      "name": {
+        "th": "พายุฝนฟ้าคะนอง",
+        "en": "Cloud with Lightning and Rain"
+      }
+    },
+    {
+      "api": "U+1F329-FE0F",
+      "text": "🌩️",
+      "name": {
+        "th": "ฟ้าผ่า",
+        "en": "Cloud with Lightning"
+      }
+    },
+    {
+      "api": "U+26A1",
+      "text": "⚡",
+      "name": {
+        "th": "ฟ้าแลบ",
+        "en": "High Voltage"
+      }
+    },
+    {
+      "api": "U+1F525",
+      "text": "🔥",
+      "name": {
+        "th": "ไฟ",
+        "en": "Fire"
+      }
+    },
+    {
+      "api": "U+1F4A5",
+      "text": "💥",
+      "name": {
+        "th": "ระเบิด/ปะทะ",
+        "en": "Collision"
+      }
+    },
+    {
+      "api": "U+2744-FE0F",
+      "text": "❄️",
+      "name": {
+        "th": "เกล็ดหิมะ",
+        "en": "Snowflake"
+      }
+    },
+    {
+      "api": "U+1F328-FE0F",
+      "text": "🌨️",
+      "name": {
+        "th": "เมฆกับหิมะ",
+        "en": "Cloud with Snow"
+      }
+    },
+    {
+      "api": "U+2603-FE0F",
+      "text": "☃️",
+      "name": {
+        "th": "ตุ๊กตาหิมะ",
+        "en": "Snowman"
+      }
+    },
+    {
+      "api": "U+26C4",
+      "text": "⛄",
+      "name": {
+        "th": "ตุ๊กตาหิมะ (ไม่มีหมวก)",
+        "en": "Snowman Without Snow"
+      }
+    },
+    {
+      "api": "U+1F32C-FE0F",
+      "text": "🌬️",
+      "name": {
+        "th": "ลม",
+        "en": "Wind Face"
+      }
+    },
+    {
+      "api": "U+1F4A8",
+      "text": "💨",
+      "name": {
+        "th": "ลมพัด",
+        "en": "Dashing Away"
+      }
+    },
+    {
+      "api": "U+1F32A-FE0F",
+      "text": "🌪️",
+      "name": {
+        "th": "พายุทอร์นาโด",
+        "en": "Tornado"
+      }
+    },
+    {
+      "api": "U+1F32B-FE0F",
+      "text": "🌫️",
+      "name": {
+        "th": "หมอก",
+        "en": "Fog"
+      }
+    },
+    {
+      "api": "U+1F308",
+      "text": "🌈",
+      "name": {
+        "th": "รุ้ง",
+        "en": "Rainbow"
+      }
+    },
+    {
+      "api": "U+2614",
+      "text": "☔",
+      "name": {
+        "th": "ร่มกับฝน",
+        "en": "Umbrella with Rain Drops"
+      }
+    },
+    {
+      "api": "U+1F4A7",
+      "text": "💧",
+      "name": {
+        "th": "หยดน้ำ",
+        "en": "Droplet"
+      }
+    },
+    {
+      "api": "U+1F4A6",
+      "text": "💦",
+      "name": {
+        "th": "หยดน้ำ/กระเซ็น",
+        "en": "Sweat Droplets"
+      }
+    },
+    {
+      "api": "U+1F30A",
+      "text": "🌊",
+      "name": {
+        "th": "คลื่น",
+        "en": "Water Wave"
+      }
+    },
+    {
+      "api": "U+1F490",
+      "text": "💐",
+      "name": {
+        "th": "ช่อดอกไม้",
+        "en": "Bouquet"
+      }
+    },
+    {
+      "api": "U+1F338",
+      "text": "🌸",
+      "name": {
+        "th": "ดอกซากุระ",
+        "en": "Cherry Blossom"
+      }
+    },
+    {
+      "api": "U+1F4AE",
+      "text": "💮",
+      "name": {
+        "th": "ดอกไม้ดีเด่น",
+        "en": "White Flower"
+      }
+    },
+    {
+      "api": "U+1FAB7",
+      "text": "🪷",
+      "name": {
+        "th": "ดอกบัว",
+        "en": "Lotus"
+      }
+    },
+    {
+      "api": "U+1F3F5-FE0F",
+      "text": "🏵️",
+      "name": {
+        "th": "ดอกไม้รอบ",
+        "en": "Rosette"
+      }
+    },
+    {
+      "api": "U+1F339",
+      "text": "🌹",
+      "name": {
+        "th": "ดอกกุหลาบ",
+        "en": "Rose"
+      }
+    },
+    {
+      "api": "U+1F940",
+      "text": "🥀",
+      "name": {
+        "th": "ดอกแห้ง",
+        "en": "Wilted Flower"
+      }
+    },
+    {
+      "api": "U+1F33A",
+      "text": "🌺",
+      "name": {
+        "th": "ดอกชบา",
+        "en": "Hibiscus"
+      }
+    },
+    {
+      "api": "U+1F33B",
+      "text": "🌻",
+      "name": {
+        "th": "ดอกทานตะวัน",
+        "en": "Sunflower"
+      }
+    },
+    {
+      "api": "U+1F33C",
+      "text": "🌼",
+      "name": {
+        "th": "ดอกไม้ป่า",
+        "en": "Blossom"
+      }
+    },
+    {
+      "api": "U+1F337",
+      "text": "🌷",
+      "name": {
+        "th": "ดอกทิวลิป",
+        "en": "Tulip"
+      }
+    },
+    {
+      "api": "U+1FABB",
+      "text": "🪻",
+      "name": {
+        "th": "ไฮยาซินธ์",
+        "en": "Hyacinth"
+      }
+    },
+    {
+      "api": "U+1F331",
+      "text": "🌱",
+      "name": {
+        "th": "ต้นอ่อน",
+        "en": "Seedling"
+      }
+    },
+    {
+      "api": "U+1FAB4",
+      "text": "🪴",
+      "name": {
+        "th": "ต้นในกระถาง",
+        "en": "Potted Plant"
+      }
+    },
+    {
+      "api": "U+1F332",
+      "text": "🌲",
+      "name": {
+        "th": "ต้นสน",
+        "en": "Evergreen Tree"
+      }
+    },
+    {
+      "api": "U+1F333",
+      "text": "🌳",
+      "name": {
+        "th": "ต้นไม้ผลัดใบ",
+        "en": "Deciduous Tree"
+      }
+    },
+    {
+      "api": "U+1F334",
+      "text": "🌴",
+      "name": {
+        "th": "ต้นปาล์ม",
+        "en": "Palm Tree"
+      }
+    },
+    {
+      "api": "U+1F335",
+      "text": "🌵",
+      "name": {
+        "th": "ต้นกระบองเพชร",
+        "en": "Cactus"
+      }
+    },
+    {
+      "api": "U+1F33E",
+      "text": "🌾",
+      "name": {
+        "th": "รวงข้าว",
+        "en": "Sheaf of Rice"
+      }
+    },
+    {
+      "api": "U+1F33F",
+      "text": "🌿",
+      "name": {
+        "th": "ใบไม้",
+        "en": "Herb"
+      }
+    },
+    {
+      "api": "U+2618-FE0F",
+      "text": "☘️",
+      "name": {
+        "th": "โคลเวอร์",
+        "en": "Shamrock"
+      }
+    },
+    {
+      "api": "U+1F340",
+      "text": "🍀",
+      "name": {
+        "th": "ใบโคลเวอร์สี่แฉก",
+        "en": "Four Leaf Clover"
+      }
+    },
+    {
+      "api": "U+1F341",
+      "text": "🍁",
+      "name": {
+        "th": "ใบไม้สีส้ม",
+        "en": "Maple Leaf"
+      }
+    },
+    {
+      "api": "U+1F342",
+      "text": "🍂",
+      "name": {
+        "th": "ใบไม้ร่วง",
+        "en": "Fallen Leaf"
+      }
+    },
+    {
+      "api": "U+1F343",
+      "text": "🍃",
+      "name": {
+        "th": "ใบไม้พัด",
+        "en": "Leaf Fluttering in Wind"
+      }
+    },
+    {
+      "api": "U+1F344",
+      "text": "🍄",
+      "name": {
+        "th": "เห็ด",
+        "en": "Mushroom"
+      }
+    },
+    {
+      "api": "U+1FAB9",
+      "text": "🪹",
+      "name": {
+        "th": "รังนกเปล่า",
+        "en": "Empty Nest"
+      }
+    },
+    {
+      "api": "U+1FABA",
+      "text": "🪺",
+      "name": {
+        "th": "รังนกมีไข่",
+        "en": "Nest with Eggs"
+      }
+    },
+    {
+      "api": "U+1F412",
+      "text": "🐒",
+      "name": {
+        "th": "ลิง",
+        "en": "Monkey"
+      }
+    },
+    {
+      "api": "U+1F98D",
+      "text": "🦍",
+      "name": {
+        "th": "กอริลลา",
+        "en": "Gorilla"
+      }
+    },
+    {
+      "api": "U+1F9A7",
+      "text": "🦧",
+      "name": {
+        "th": "อุรังกอทัง",
+        "en": "Orangutan"
+      }
+    },
+    {
+      "api": "U+1F436",
+      "text": "🐶",
+      "name": {
+        "th": "สุนัขหน้า",
+        "en": "Dog Face"
+      }
+    },
+    {
+      "api": "U+1F415",
+      "text": "🐕",
+      "name": {
+        "th": "สุนัข",
+        "en": "Dog"
+      }
+    },
+    {
+      "api": "U+1F9AE",
+      "text": "🦮",
+      "name": {
+        "th": "สุนัขนำทาง",
+        "en": "Guide Dog"
+      }
+    },
+    {
+      "api": "U+1F415-200D-1F9BA",
+      "text": "🐕‍🦺",
+      "name": {
+        "th": "สุนัขพร้อมอุปกรณ์",
+        "en": "Service Dog"
+      }
+    },
+    {
+      "api": "U+1F429",
+      "text": "🐩",
+      "name": {
+        "th": "พุดเดิ้ล",
+        "en": "Poodle"
+      }
+    },
+    {
+      "api": "U+1F43A",
+      "text": "🐺",
+      "name": {
+        "th": "หมาป่า",
+        "en": "Wolf"
+      }
+    },
+    {
+      "api": "U+1F98A",
+      "text": "🦊",
+      "name": {
+        "th": "สุนัขจิ้งจอก",
+        "en": "Fox"
+      }
+    },
+    {
+      "api": "U+1F99D",
+      "text": "🦝",
+      "name": {
+        "th": "แรคคูน",
+        "en": "Raccoon"
+      }
+    },
+    {
+      "api": "U+1F431",
+      "text": "🐱",
+      "name": {
+        "th": "แมวหน้า",
+        "en": "Cat Face"
+      }
+    },
+    {
+      "api": "U+1F408",
+      "text": "🐈",
+      "name": {
+        "th": "แมว",
+        "en": "Cat"
+      }
+    },
+    {
+      "api": "U+1F408-200D-2B1B",
+      "text": "🐈‍⬛",
+      "name": {
+        "th": "แมวดำ",
+        "en": "Black Cat"
+      }
+    },
+    {
+      "api": "U+1F981",
+      "text": "🦁",
+      "name": {
+        "th": "สิงโต",
+        "en": "Lion"
+      }
+    },
+    {
+      "api": "U+1F42F",
+      "text": "🐯",
+      "name": {
+        "th": "หน้าเสือ",
+        "en": "Tiger Face"
+      }
+    },
+    {
+      "api": "U+1F405",
+      "text": "🐅",
+      "name": {
+        "th": "เสือ",
+        "en": "Tiger"
+      }
+    },
+    {
+      "api": "U+1F406",
+      "text": "🐆",
+      "name": {
+        "th": "เสือดาว",
+        "en": "Leopard"
+      }
+    },
+    {
+      "api": "U+1F434",
+      "text": "🐴",
+      "name": {
+        "th": "ม้า",
+        "en": "Horse Face"
+      }
+    },
+    {
+      "api": "U+1FACF",
+      "text": "🫏",
+      "name": {
+        "th": "ลา",
+        "en": "Donkey"
+      }
+    },
+    {
+      "api": "U+1F40E",
+      "text": "🐎",
+      "name": {
+        "th": "ม้า (สัตว์)",
+        "en": "Horse"
+      }
+    },
+    {
+      "api": "U+1F984",
+      "text": "🦄",
+      "name": {
+        "th": "ยูนิคอร์น",
+        "en": "Unicorn"
+      }
+    },
+    {
+      "api": "U+1F993",
+      "text": "🦓",
+      "name": {
+        "th": "ม้าลาย",
+        "en": "Zebra"
+      }
+    },
+    {
+      "api": "U+1F98C",
+      "text": "🦌",
+      "name": {
+        "th": "กวาง",
+        "en": "Deer"
+      }
+    },
+    {
+      "api": "U+1FACE",
+      "text": "🫎",
+      "name": {
+        "th": "กวางเรนเดียร์/มูส",
+        "en": "Moose"
+      }
+    },
+    {
+      "api": "U+1F9AC",
+      "text": "🦬",
+      "name": {
+        "th": "ควาย/บิสัน",
+        "en": "Bison"
+      }
+    },
+    {
+      "api": "U+1F42E",
+      "text": "🐮",
+      "name": {
+        "th": "วัว",
+        "en": "Cow Face"
+      }
+    },
+    {
+      "api": "U+1F402",
+      "text": "🐂",
+      "name": {
+        "th": "วัวตัวผู้",
+        "en": "Ox"
+      }
+    },
+    {
+      "api": "U+1F403",
+      "text": "🐃",
+      "name": {
+        "th": "ควาย",
+        "en": "Water Buffalo"
+      }
+    },
+    {
+      "api": "U+1F404",
+      "text": "🐄",
+      "name": {
+        "th": "วัวทั่วไป",
+        "en": "Cow"
+      }
+    },
+    {
+      "api": "U+1F437",
+      "text": "🐷",
+      "name": {
+        "th": "หมู",
+        "en": "Pig Face"
+      }
+    },
+    {
+      "api": "U+1F416",
+      "text": "🐖",
+      "name": {
+        "th": "หมูตัวผู้/หมูบ้าน",
+        "en": "Pig"
+      }
+    },
+    {
+      "api": "U+1F417",
+      "text": "🐗",
+      "name": {
+        "th": "หมูป่า",
+        "en": "Boar"
+      }
+    },
+    {
+      "api": "U+1F43D",
+      "text": "🐽",
+      "name": {
+        "th": "จมูกหมู",
+        "en": "Pig Nose"
+      }
+    },
+    {
+      "api": "U+1F40F",
+      "text": "🐏",
+      "name": {
+        "th": "แกะตัวผู้",
+        "en": "Ram"
+      }
+    },
+    {
+      "api": "U+1F411",
+      "text": "🐑",
+      "name": {
+        "th": "แกะ",
+        "en": "Sheep"
+      }
+    },
+    {
+      "api": "U+1F410",
+      "text": "🐐",
+      "name": {
+        "th": "แพะ",
+        "en": "Goat"
+      }
+    },
+    {
+      "api": "U+1F42A",
+      "text": "🐪",
+      "name": {
+        "th": "อูฐตัวเดียว",
+        "en": "Dromedary Camel"
+      }
+    },
+    {
+      "api": "U+1F42B",
+      "text": "🐫",
+      "name": {
+        "th": "อูฐสองหนอก",
+        "en": "Bactrian Camel"
+      }
+    },
+    {
+      "api": "U+1F999",
+      "text": "🦙",
+      "name": {
+        "th": "ลามะ/อัลปากา",
+        "en": "Llama"
+      }
+    },
+    {
+      "api": "U+1F992",
+      "text": "🦒",
+      "name": {
+        "th": "ยีราฟ",
+        "en": "Giraffe"
+      }
+    },
+    {
+      "api": "U+1F418",
+      "text": "🐘",
+      "name": {
+        "th": "ช้าง",
+        "en": "Elephant"
+      }
+    },
+    {
+      "api": "U+1F9A3",
+      "text": "🦣",
+      "name": {
+        "th": "แมมมอธ",
+        "en": "Mammoth"
+      }
+    },
+    {
+      "api": "U+1F98F",
+      "text": "🦏",
+      "name": {
+        "th": "แรด",
+        "en": "Rhinoceros"
+      }
+    },
+    {
+      "api": "U+1F99B",
+      "text": "🦛",
+      "name": {
+        "th": "ฮิปโป",
+        "en": "Hippopotamus"
+      }
+    },
+    {
+      "api": "U+1F42D",
+      "text": "🐭",
+      "name": {
+        "th": "หน้าเมาส์",
+        "en": "Mouse Face"
+      }
+    },
+    {
+      "api": "U+1F401",
+      "text": "🐁",
+      "name": {
+        "th": "หนู",
+        "en": "Mouse"
+      }
+    },
+    {
+      "api": "U+1F400",
+      "text": "🐀",
+      "name": {
+        "th": "หนูใหญ่",
+        "en": "Rat"
+      }
+    },
+    {
+      "api": "U+1F439",
+      "text": "🐹",
+      "name": {
+        "th": "หนูแฮมสเตอร์",
+        "en": "Hamster"
+      }
+    },
+    {
+      "api": "U+1F430",
+      "text": "🐰",
+      "name": {
+        "th": "กระต่ายหน้า",
+        "en": "Rabbit Face"
+      }
+    },
+    {
+      "api": "U+1F407",
+      "text": "🐇",
+      "name": {
+        "th": "กระต่าย",
+        "en": "Rabbit"
+      }
+    },
+    {
+      "api": "U+1F43F",
+      "text": "🐿️",
+      "name": {
+        "th": "กระรอก",
+        "en": "Chipmunk"
+      }
+    },
+    {
+      "api": "U+1F9AB",
+      "text": "🦫",
+      "name": {
+        "th": "บีเวอร์",
+        "en": "Beaver"
+      }
+    },
+    {
+      "api": "U+1F994",
+      "text": "🦔",
+      "name": {
+        "th": "เม่น",
+        "en": "Hedgehog"
+      }
+    },
+    {
+      "api": "U+1F987",
+      "text": "🦇",
+      "name": {
+        "th": "ค้างคาว",
+        "en": "Bat"
+      }
+    },
+    {
+      "api": "U+1F43B",
+      "text": "🐻",
+      "name": {
+        "th": "หมี",
+        "en": "Bear"
+      }
+    },
+    {
+      "api": "U+1F43B-200D-2744-FE0F",
+      "text": "🐻‍❄️",
+      "name": {
+        "th": "หมีขาว",
+        "en": "Polar Bear"
+      }
+    },
+    {
+      "api": "U+1F428",
+      "text": "🐨",
+      "name": {
+        "th": "โคอาล่า",
+        "en": "Koala"
+      }
+    },
+    {
+      "api": "U+1F43C",
+      "text": "🐼",
+      "name": {
+        "th": "แพนด้า",
+        "en": "Panda"
+      }
+    },
+    {
+      "api": "U+1F9A5",
+      "text": "🦥",
+      "name": {
+        "th": "สลอธ",
+        "en": "Sloth"
+      }
+    },
+    {
+      "api": "U+1F9A6",
+      "text": "🦦",
+      "name": {
+        "th": "นาก",
+        "en": "Otter"
+      }
+    },
+    {
+      "api": "U+1F9A8",
+      "text": "🦨",
+      "name": {
+        "th": "สกังก์",
+        "en": "Skunk"
+      }
+    },
+    {
+      "api": "U+1F998",
+      "text": "🦘",
+      "name": {
+        "th": "จิงโจ้",
+        "en": "Kangaroo"
+      }
+    },
+    {
+      "api": "U+1F9A1",
+      "text": "🦡",
+      "name": {
+        "th": "อีเทล/แบดเจอร์",
+        "en": "Badger"
+      }
+    },
+    {
+      "api": "U+1F983",
+      "text": "🦃",
+      "name": {
+        "th": "ไก่งวง",
+        "en": "Turkey"
+      }
+    },
+    {
+      "api": "U+1F414",
+      "text": "🐔",
+      "name": {
+        "th": "ไก่",
+        "en": "Chicken"
+      }
+    },
+    {
+      "api": "U+1F413",
+      "text": "🐓",
+      "name": {
+        "th": "ไก่ตัวผู้",
+        "en": "Rooster"
+      }
+    },
+    {
+      "api": "U+1F423",
+      "text": "🐣",
+      "name": {
+        "th": "ลูกไก่",
+        "en": "Hatching Chick"
+      }
+    },
+    {
+      "api": "U+1F424",
+      "text": "🐤",
+      "name": {
+        "th": "ลูกนก",
+        "en": "Baby Chick"
+      }
+    },
+    {
+      "api": "U+1F425",
+      "text": "🐥",
+      "name": {
+        "th": "ลูกนกหน้า",
+        "en": "Front-Facing Baby Chick"
+      }
+    },
+    {
+      "api": "U+1F426",
+      "text": "🐦",
+      "name": {
+        "th": "นก",
+        "en": "Bird"
+      }
+    },
+    {
+      "api": "U+1F427",
+      "text": "🐧",
+      "name": {
+        "th": "เพนกวิน",
+        "en": "Penguin"
+      }
+    },
+    {
+      "api": "U+1F54A",
+      "text": "🕊️",
+      "name": {
+        "th": "นกพิราบ",
+        "en": "Dove"
+      }
+    },
+    {
+      "api": "U+1F985",
+      "text": "🦅",
+      "name": {
+        "th": "นกอินทรี",
+        "en": "Eagle"
+      }
+    },
+    {
+      "api": "U+1F986",
+      "text": "🦆",
+      "name": {
+        "th": "เป็ด",
+        "en": "Duck"
+      }
+    },
+    {
+      "api": "U+1F9A2",
+      "text": "🦢",
+      "name": {
+        "th": "หงส์",
+        "en": "Swan"
+      }
+    },
+    {
+      "api": "U+1FABF",
+      "text": "🪿",
+      "name": {
+        "th": "ห่าน",
+        "en": "Goose"
+      }
+    },
+    {
+      "api": "U+1F989",
+      "text": "🦉",
+      "name": {
+        "th": "นกฮูก",
+        "en": "Owl"
+      }
+    },
+    {
+      "api": "U+1F9A4",
+      "text": "🦤",
+      "name": {
+        "th": "โดโด",
+        "en": "Dodo"
+      }
+    },
+    {
+      "api": "U+1FAB6",
+      "text": "🪶",
+      "name": {
+        "th": "ขน",
+        "en": "Feather"
+      }
+    },
+    {
+      "api": "U+1F9A9",
+      "text": "🦩",
+      "name": {
+        "th": "ฟลามิงโก",
+        "en": "Flamingo"
+      }
+    },
+    {
+      "api": "U+1F99A",
+      "text": "🦚",
+      "name": {
+        "th": "นกยูง",
+        "en": "Peacock"
+      }
+    },
+    {
+      "api": "U+1F99C",
+      "text": "🦜",
+      "name": {
+        "th": "นกแก้ว",
+        "en": "Parrot"
+      }
+    },
+    {
+      "api": "U+1FABD",
+      "text": "🪽",
+      "name": {
+        "th": "ปีก",
+        "en": "Wing"
+      }
+    },
+    {
+      "api": "U+1F426-200D-2B1B",
+      "text": "🐦‍⬛",
+      "name": {
+        "th": "นกสีดำ",
+        "en": "Black Bird"
+      }
+    },
+    {
+      "api": "U+1F426-200D-1F525",
+      "text": "🐦‍🔥",
+      "name": {
+        "th": "นกไฟ/ฟีนิกซ์",
+        "en": "Firebird"
+      }
+    },
+    {
+      "api": "U+1F438",
+      "text": "🐸",
+      "name": {
+        "th": "กบ",
+        "en": "Frog"
+      }
+    },
+    {
+      "api": "U+1F40A",
+      "text": "🐊",
+      "name": {
+        "th": "จระเข้",
+        "en": "Crocodile"
+      }
+    },
+    {
+      "api": "U+1F422",
+      "text": "🐢",
+      "name": {
+        "th": "เต่า",
+        "en": "Turtle"
+      }
+    },
+    {
+      "api": "U+1F98E",
+      "text": "🦎",
+      "name": {
+        "th": "กิ้งก่า",
+        "en": "Lizard"
+      }
+    },
+    {
+      "api": "U+1F40D",
+      "text": "🐍",
+      "name": {
+        "th": "งู",
+        "en": "Snake"
+      }
+    },
+    {
+      "api": "U+1F432",
+      "text": "🐲",
+      "name": {
+        "th": "มังกรหน้า",
+        "en": "Dragon Face"
+      }
+    },
+    {
+      "api": "U+1F409",
+      "text": "🐉",
+      "name": {
+        "th": "มังกร",
+        "en": "Dragon"
+      }
+    },
+    {
+      "api": "U+1F996",
+      "text": "🦖",
+      "name": {
+        "th": "ไดโนเสาร์ (ทีเร็กซ์)",
+        "en": "T-Rex"
+      }
+    },
+    {
+      "api": "U+1F995",
+      "text": "🦕",
+      "name": {
+        "th": "ไดโนเสาร์ (ซอโรพอด)",
+        "en": "Sauropod"
+      }
+    },
+    {
+      "api": "U+1F433",
+      "text": "🐳",
+      "name": {
+        "th": "วาฬพ่นน้ำ",
+        "en": "Spouting Whale"
+      }
+    },
+    {
+      "api": "U+1F40B",
+      "text": "🐋",
+      "name": {
+        "th": "วาฬ",
+        "en": "Whale"
+      }
+    },
+    {
+      "api": "U+1F42C",
+      "text": "🐬",
+      "name": {
+        "th": "ปลาโลมา",
+        "en": "Dolphin"
+      }
+    },
+    {
+      "api": "U+1F9AD",
+      "text": "🦭",
+      "name": {
+        "th": "แมวน้ำ",
+        "en": "Seal"
+      }
+    },
+    {
+      "api": "U+1F41F",
+      "text": "🐟",
+      "name": {
+        "th": "ปลา",
+        "en": "Fish"
+      }
+    },
+    {
+      "api": "U+1F420",
+      "text": "🐠",
+      "name": {
+        "th": "ปลาเขตร้อน",
+        "en": "Tropical Fish"
+      }
+    },
+    {
+      "api": "U+1F421",
+      "text": "🐡",
+      "name": {
+        "th": "ปลาปักเป้า",
+        "en": "Blowfish"
+      }
+    },
+    {
+      "api": "U+1F988",
+      "text": "🦈",
+      "name": {
+        "th": "ฉลาม",
+        "en": "Shark"
+      }
+    },
+    {
+      "api": "U+1F419",
+      "text": "🐙",
+      "name": {
+        "th": "ปลาหมึก",
+        "en": "Octopus"
+      }
+    },
+    {
+      "api": "U+1F41A",
+      "text": "🐚",
+      "name": {
+        "th": "หอย",
+        "en": "Spiral Shell"
+      }
+    },
+    {
+      "api": "U+1FAB8",
+      "text": "🪸",
+      "name": {
+        "th": "ปะการัง",
+        "en": "Coral"
+      }
+    },
+    {
+      "api": "U+1FABC",
+      "text": "🪼",
+      "name": {
+        "th": "แมงกะพรุน",
+        "en": "Jellyfish"
+      }
+    },
+    {
+      "api": "U+1F40C",
+      "text": "🐌",
+      "name": {
+        "th": "หอยทาก",
+        "en": "Snail"
+      }
+    },
+    {
+      "api": "U+1F98B",
+      "text": "🦋",
+      "name": {
+        "th": "ผีเสื้อ",
+        "en": "Butterfly"
+      }
+    },
+    {
+      "api": "U+1F41B",
+      "text": "🐛",
+      "name": {
+        "th": "หนอน",
+        "en": "Bug"
+      }
+    },
+    {
+      "api": "U+1F41C",
+      "text": "🐜",
+      "name": {
+        "th": "มด",
+        "en": "Ant"
+      }
+    },
+    {
+      "api": "U+1F41D",
+      "text": "🐝",
+      "name": {
+        "th": "ผึ้ง",
+        "en": "Honeybee"
+      }
+    },
+    {
+      "api": "U+1FAB2",
+      "text": "🪲",
+      "name": {
+        "th": "ด้วง",
+        "en": "Beetle"
+      }
+    },
+    {
+      "api": "U+1F41E",
+      "text": "🐞",
+      "name": {
+        "th": "เต่าทอง",
+        "en": "Lady Beetle"
+      }
+    },
+    {
+      "api": "U+1F997",
+      "text": "🦗",
+      "name": {
+        "th": "ตั๊กแตน",
+        "en": "Cricket"
+      }
+    },
+    {
+      "api": "U+1FAB3",
+      "text": "🪳",
+      "name": {
+        "th": "แมลงสาบ",
+        "en": "Cockroach"
+      }
+    },
+    {
+      "api": "U+1F577-FE0F",
+      "text": "🕷️",
+      "name": {
+        "th": "แมงมุม",
+        "en": "Spider"
+      }
+    },
+    {
+      "api": "U+1F578-FE0F",
+      "text": "🕸️",
+      "name": {
+        "th": "ใยแมงมุม",
+        "en": "Spider Web"
+      }
+    },
+    {
+      "api": "U+1F982",
+      "text": "🦂",
+      "name": {
+        "th": "แมงป่อง",
+        "en": "Scorpion"
+      }
+    },
+    {
+      "api": "U+1F99F",
+      "text": "🦟",
+      "name": {
+        "th": "ยุง",
+        "en": "Mosquito"
+      }
+    },
+    {
+      "api": "U+1FAB0",
+      "text": "🪰",
+      "name": {
+        "th": "แมลงวัน",
+        "en": "Fly"
+      }
+    },
+    {
+      "api": "U+1FAB1",
+      "text": "🪱",
+      "name": {
+        "th": "หนอน/ไส้เดือน",
+        "en": "Worm"
+      }
+    },
+    {
+      "api": "U+1FAD0",
+      "text": "🫐",
+      "name": {
+        "th": "เบอร์รี่",
+        "en": "Blueberries"
+      }
+    }
   ]
 }

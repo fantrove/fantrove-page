@@ -1,0 +1,59 @@
+{
+  "id": "fancy",
+  "name": {
+    "th": "ข้อความแฟนซี",
+    "en": "Fancy Text"
+  },
+  "categories": [
+    {
+      "id": "math_bold",
+      "name": { "th": "ตัวหนา", "en": "Bold" },
+      "file": "/assets/db/con-data/fancy/math_bold.json"
+    },
+    {
+      "id": "math_italic",
+      "name": { "th": "ตัวเอียง", "en": "Italic" },
+      "file": "/assets/db/con-data/fancy/math_italic.json"
+    },
+    {
+      "id": "math_bold_italic",
+      "name": { "th": "ตัวหนาเอียง", "en": "Bold Italic" },
+      "file": "/assets/db/con-data/fancy/math_bold_italic.json"
+    },
+    {
+      "id": "math_script",
+      "name": { "th": "ลายมือ", "en": "Script" },
+      "file": "/assets/db/con-data/fancy/math_script.json"
+    },
+    {
+      "id": "math_bold_script",
+      "name": { "th": "ลายมือหนา", "en": "Bold Script" },
+      "file": "/assets/db/con-data/fancy/math_bold_script.json"
+    },
+    {
+      "id": "math_fraktur",
+      "name": { "th": "กอทิก", "en": "Fraktur" },
+      "file": "/assets/db/con-data/fancy/math_fraktur.json"
+    },
+    {
+      "id": "math_double_struck",
+      "name": { "th": "ขีดคู่", "en": "Double-Struck" },
+      "file": "/assets/db/con-data/fancy/math_double_struck.json"
+    },
+    {
+      "id": "math_monospace",
+      "name": { "th": "โมโนสเปซ", "en": "Monospace" },
+      "file": "/assets/db/con-data/fancy/math_monospace.json"
+    },
+    {
+      "id": "math_sans",
+      "name": { "th": "แซนเซอริฟ", "en": "Sans-Serif" },
+      "file": "/assets/db/con-data/fancy/math_sans.json"
+    },
+    {
+      "id": "math_sans_bold",
+      "name": { "th": "แซนเซอริฟหนา", "en": "Sans-Serif Bold" },
+      "file": "/assets/db/con-data/fancy/math_sans_bold.json"
+    }
+  ]
+}
