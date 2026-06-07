@@ -44,9 +44,9 @@
  },
  "about": {
   "1title": "About Fantrove",
-  "1content": "FanTrove is a platform designed to meet the needs of text decoration and design in the digital world...",
+  "1content": "FanTrove is a platform designed to meet the needs of text decoration and design in the digital world. It combines special characters, emojis, font transformers, and various text customization tools all in one place, allowing users to express themselves freely and stand out on platforms like Discord, Instagram, and X (formerly Twitter).@br@brWe believe everyone should have the right to access beauty and uniqueness without relying on technical knowledge or paying for premium features. Therefore, FanTrove is free to use with no limitations on core functionalities.@br@brFanTrove is developed and maintained by the parent company, Lédp Aero Wings, which aims to create digital tools that are truly accessible, fair, and user-centered. We are committed to making technology available to everyone, not just a select few.",
   "6title": "Content License",
-  "5content": "All content on this site (including special characters and emojis) is considered public domain..."
+  "5content": "All content on this site (including special characters and emojis) is considered public domain under the @a Creative Commons Zero v1.0 Universal (CC0)@ license. @br@br Users are free to copy, modify, distribute, or use this content commercially or otherwise—no permission or credit required. @br@br We believe creativity should be accessible to everyone—whether you're a creator or an entrepreneur."
  },
  "home-hero-title": "Emoji & Special Characters Hub",
  "home-hero-desc": "Your central place to search, copy, and use @strong emojis@ and @strong special characters@ for all your needs!",
@@ -77,7 +77,7 @@
  "contact-report-text": "Report an Issue",
  "contact-report-method-label": "Choose Report Channel",
  "contact-other-title": "General Contact",
- "contact-other-desc": "You can use this page to contact the FanTrove Hub developer for general inquiries...",
+ "contact-other-desc": "You can use this page to contact the FanTrove Hub developer for general inquiries, suggestions, collaboration, or other topics that are not bug reports or abuse reports. @br@br <span class=\"col\"> Available contact channels: </span> @br • Gmail: \nfantrove.offical@gmail.com\n @br • Form: Submit your message directly from the website.",
  "contact-method-label": "Choose Contact Channel",
  "contact-method-gmail": "Gmail",
  "contact-method-form": "Form",
@@ -85,5 +85,5 @@
  "contact-gmail-text": "Send your message via Gmail:",
  "contact-gmail-btn": "Send via Gmail",
  "contact-report-title": "Report an Issue",
- "contact-report-desc": "You can use this page to report any issues, bugs, or abuse found on FanTrove..."
+ "contact-report-desc": "You can use this page to report any issues, bugs, or abuse found on FanTrove.\n\nCurrently, you can only use the form below to submit your report."
 }
