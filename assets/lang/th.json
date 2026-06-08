@@ -52,6 +52,8 @@
  "home-hero-desc": "ศูนย์กลางสำหรับค้นหา คัดลอก และใช้ @strongอิโมจิ@ และ @strongอักขระพิเศษ@ ในทุกการใช้งานของคุณ!",
  "home-hero-btn-emoji": "@slot:1@ เรียกดูอิโมจิทั้งหมด",
  "home-hero-btn-symbol": "@slot:1@ เรียกดูสัญลักษณ์สุดเจ๋ง",
+ "home-hero-btn-fancy": "@slot:1@ ตัวสร้างข้อความแฟนซี",
+ "home-skip-link": "ข้ามไปยังเนื้อหาหลัก",
  "home-features-title": "ทำไมต้อง FANTROVE?",
  "home-feature1-title": "ค้นหาได้ง่ายดาย",
  "home-feature1-desc": "ค้นหาอิโมจิและสัญลักษณ์พิเศษได้ทันที ผ่านหมวดหมู่และระบบค้นหาอัจฉริยะ",

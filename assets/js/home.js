@@ -1,36 +1,15 @@
 // Path:    assets/js/home.js
 // Purpose: Home page renderer — fast-path + carousel arrows (v4.3)
 // Used by: home/index.html
-//
-// v4.3 copyable-type guard:
-//   renderToApp() now filters assembled.type to only include copyable types
-//   before building the UI. Prevents collection types (cards, packages) from
-//   being accidentally rendered as copy-button carousels if they end up in
-//   the assembled DB.
-//
-//   Two-layer detection in isCopyableType():
-//     1. kind field (explicit) — requires con-data-service.js to pass kind through
-//     2. item structure heuristic (fallback) — checks for image/link fields
-//        that indicate a card item, not a copyable character
-//
-// v4.2 arrow redesign:
-//   Replaced circle button arrows with full-height gradient strip arrows.
 
-// ─────────────────────────────────────────────────────────
-// CONFIG
-// ─────────────────────────────────────────────────────────
 const HOME_CONFIG = {
   MAX_ITEMS_PER_CATEGORY : 20,
   MAX_CATEGORIES_PER_TYPE: 4,
-  // WHY: ใช้ filter isCopyableType() — type ที่ไม่มี kind ถือว่า copyable (backward compat)
   COPYABLE_KIND: 'copyable',
   SERVICE_PATH: '/assets/js/con-data-service/con-data-service.js',
   INDEX_PATH  : '/assets/db/con-data/index.json',
 };
 
-// ─────────────────────────────────────────────────────────
-// VIEW ALL CONFIG
-// ─────────────────────────────────────────────────────────
 const VIEW_ALL_CONFIGS = {
   emoji: {
     url   : '/data/verse/discover/?type=emojis&page=1',
@@ -46,9 +25,6 @@ const VIEW_ALL_CONFIGS = {
   },
 };
 
-// ─────────────────────────────────────────────────────────
-// LANGUAGE
-// ─────────────────────────────────────────────────────────
 const getLang = () =>
   (typeof localStorage !== 'undefined' && localStorage.getItem('selectedLang')) || 'en';
 
@@ -61,19 +37,6 @@ const getViewAllCfg   = id => VIEW_ALL_CONFIGS[id] || VIEW_ALL_CONFIGS._default;
 const getViewAllLabel = id => { const l = getLang(); return getViewAllCfg(id).labels[l] || getViewAllCfg(id).labels.en; };
 const getViewAllUrl   = id => getViewAllCfg(id).url;
 
-// ─────────────────────────────────────────────────────────
-// COPYABLE TYPE GUARD
-//
-// WHY: home.js renders ทุก type เป็น copy-button carousel
-//      ถ้า collection type (cards) เข้ามาใน assembled DB
-//      item.text = "OpenAI" จะถูก render เป็น emoji text — ผิดทั้งหมด
-//
-// Two-layer detection:
-//   Layer 1 (explicit): typeObj.kind — ต้องให้ con-data-service.js pass kind ผ่าน assembly
-//   Layer 2 (heuristic): ตรวจ item แรก — card items มี image หรือ link field
-//
-// Default behaviour (no kind field): ถือว่า copyable เพื่อ backward compat
-// ─────────────────────────────────────────────────────────
 function isCopyableType(typeObj) {
   if (typeObj.kind) return typeObj.kind === HOME_CONFIG.COPYABLE_KIND;
   const firstItem = typeObj.category?.[0]?.data?.[0];
@@ -81,11 +44,8 @@ function isCopyableType(typeObj) {
   return !firstItem.image && !firstItem.link;
 }
 
-// ─────────────────────────────────────────────────────────
-// CLIPBOARD
-// ─────────────────────────────────────────────────────────
 async function copyToClipboard(text) {
-  try { await navigator.clipboard.writeText(text); return true; } catch { /* try legacy fallback */ }
+  try { await navigator.clipboard.writeText(text); return true; } catch {}
   try {
     const ta = document.createElement('textarea');
     ta.value = text;
@@ -98,9 +58,6 @@ async function copyToClipboard(text) {
   } catch { return false; }
 }
 
-// ─────────────────────────────────────────────────────────
-// CSS INJECTION
-// ─────────────────────────────────────────────────────────
 function injectStyles() {
   if (document.getElementById('home-extra-styles')) return;
   const s = document.createElement('style');
@@ -216,9 +173,6 @@ function injectStyles() {
   document.head.appendChild(s);
 }
 
-// ─────────────────────────────────────────────────────────
-// ORDERING FIX
-// ─────────────────────────────────────────────────────────
 async function fetchIdOrder(url) {
   try {
     const r = await fetch(url);
@@ -252,9 +206,6 @@ async function reorderAssembled(assembled) {
   return assembled;
 }
 
-// ─────────────────────────────────────────────────────────
-// CAROUSEL ARROWS — v4.2 full-height gradient strip design
-// ─────────────────────────────────────────────────────────
 function getCardStep(track) {
   const card = track.querySelector('.item-card');
   if (!card) return 200;
@@ -267,7 +218,6 @@ function buildArrowBtn(dir) {
   btn.type      = 'button';
   btn.className = `carousel-arrow carousel-arrow--${dir}`;
   btn.setAttribute('aria-label', dir === 'left' ? 'Scroll left' : 'Scroll right');
-
   const d = dir === 'left' ? 'M11 4L5 9l6 5' : 'M7 4l6 5-6 5';
   const pill = document.createElement('span');
   pill.className = 'ca-icon-wrap';
@@ -286,7 +236,6 @@ function attachCarouselArrows(wrapper, track) {
   const btnRight = buildArrowBtn('right');
   wrapper.appendChild(btnLeft);
   wrapper.appendChild(btnRight);
-
   btnLeft.addEventListener('click', (e) => {
     e.stopPropagation();
     track.scrollBy({ left: -getCardStep(track), behavior: 'smooth' });
@@ -295,26 +244,20 @@ function attachCarouselArrows(wrapper, track) {
     e.stopPropagation();
     track.scrollBy({ left: getCardStep(track), behavior: 'smooth' });
   });
-
   const cards     = track.querySelectorAll('.item-card');
   const firstCard = cards[0];
   const lastCard  = cards[cards.length - 1];
   if (!firstCard || firstCard === lastCard) return;
-
   const io = new IntersectionObserver(entries => {
     for (const { target, isIntersecting } of entries) {
       if (target === firstCard) btnLeft.classList.toggle('visible', !isIntersecting);
       else                      btnRight.classList.toggle('visible', !isIntersecting);
     }
   }, { root: track, threshold: 0.5 });
-
   io.observe(firstCard);
   io.observe(lastCard);
 }
 
-// ─────────────────────────────────────────────────────────
-// DOM BUILDERS
-// ─────────────────────────────────────────────────────────
 function buildItemCard(item, typeId, lang) {
   const itemName = pickLang(item.name, lang);
   const card = document.createElement('div');
@@ -323,12 +266,10 @@ function buildItemCard(item, typeId, lang) {
   card.setAttribute('role', 'button');
   card.setAttribute('tabindex', '0');
   card.setAttribute('aria-label', `คัดลอก ${itemName}`);
-
   const e = document.createElement('div'); e.className = 'emoji'; e.textContent = item.text || '';
   const n = document.createElement('div'); n.className = 'name';  n.textContent = itemName;
   card.appendChild(e);
   card.appendChild(n);
-
   const handleCopy = async () => {
     const ok = await copyToClipboard(item.text || '');
     if (!ok) return;
@@ -359,7 +300,6 @@ function buildViewAllCard(typeId) {
   card.href  = getViewAllUrl(typeId);
   card.title = label;
   card.setAttribute('aria-label', label);
-
   const icon = document.createElement('span');
   icon.className = 'view-all-icon';
   icon.setAttribute('aria-hidden', 'true');
@@ -369,11 +309,9 @@ function buildViewAllCard(typeId) {
             stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
   `;
-
   const lbl = document.createElement('div');
   lbl.className = 'name view-all-label';
   lbl.textContent = label;
-
   card.appendChild(icon);
   card.appendChild(lbl);
   return card;
@@ -382,14 +320,11 @@ function buildViewAllCard(typeId) {
 function buildCategorySection(category, typeId, lang) {
   const section = document.createElement('div');
   section.className = 'category-section';
-
   const heading = document.createElement('h2');
   heading.textContent = pickLang(category.name, lang);
   section.appendChild(heading);
-
   const wrapper = document.createElement('div');
   wrapper.className = 'carousel-wrapper content';
-
   const container = document.createElement('div');
   container.className = 'carousel-container';
   const track = document.createElement('div');
@@ -397,25 +332,23 @@ function buildCategorySection(category, typeId, lang) {
   container.appendChild(track);
   wrapper.appendChild(container);
   section.appendChild(wrapper);
-
   const frag = document.createDocumentFragment();
   (category.data || []).slice(0, HOME_CONFIG.MAX_ITEMS_PER_CATEGORY).forEach(item => {
     frag.appendChild(buildItemCard(item, typeId, lang));
   });
   frag.appendChild(buildViewAllCard(typeId));
   track.appendChild(frag);
-
   requestAnimationFrame(() => attachCarouselArrows(wrapper, track));
   return section;
 }
 
 function buildTypeSection(typeObj, lang) {
   const wrapper = document.createElement('div');
-
   const header = document.createElement('div');
   header.className = 'text-h';
 
-  const title = document.createElement('h1');
+  // SEO FIX: changed from h1 to h2 (page already has one sr-only h1)
+  const title = document.createElement('h2');
   title.textContent = pickLang(typeObj.name, lang);
   header.appendChild(title);
 
@@ -427,13 +360,11 @@ function buildTypeSection(typeObj, lang) {
   viewAllBtn.innerHTML = `<span class="btn-content">${getViewAllLabel(typeObj.id)}</span>`;
   header.appendChild(viewAllBtn);
   wrapper.appendChild(header);
-
   const frag = document.createDocumentFragment();
   (typeObj.category || []).slice(0, HOME_CONFIG.MAX_CATEGORIES_PER_TYPE).forEach(cat => {
     frag.appendChild(buildCategorySection(cat, typeObj.id, lang));
   });
   wrapper.appendChild(frag);
-
   return wrapper;
 }
 
@@ -444,24 +375,11 @@ function buildError(msg, detail = '') {
   return el;
 }
 
-// ─────────────────────────────────────────────────────────
-// RENDER
-//
-// WHY filter isCopyableType():
-//   getAssembled() คืนทุก type ที่อยู่ใน index.json
-//   ถ้า collection type (cards) เข้ามาโดยไม่ตั้งใจ
-//   buildTypeSection จะ render item.text = "OpenAI" เป็น emoji text
-//   filter นี้ป้องกันทั้ง 2 layers:
-//     - kind field (explicit, ต้อง con-data-service.js ส่ง kind มาด้วย)
-//     - item structure heuristic (fallback, image/link = collection item)
-// ─────────────────────────────────────────────────────────
 function renderToApp(assembled, lang) {
   const app = document.getElementById('app');
   if (!app) return;
   injectStyles();
-
   const copyableTypes = assembled.type.filter(isCopyableType);
-
   if (!copyableTypes.length) {
     app.innerHTML = '';
     app.appendChild(buildError(
@@ -469,7 +387,6 @@ function renderToApp(assembled, lang) {
     ));
     return;
   }
-
   const frag = document.createDocumentFragment();
   copyableTypes.forEach(typeObj => frag.appendChild(buildTypeSection(typeObj, lang)));
   app.innerHTML = '';
@@ -484,18 +401,12 @@ function renderErrorToApp(msg, detail) {
   app.appendChild(buildError(msg, detail));
 }
 
-// ─────────────────────────────────────────────────────────
-// FAST DATA FETCH
-// ─────────────────────────────────────────────────────────
 const _dataPromise = (async () => {
   const { default: ConDataService } = await import(HOME_CONFIG.SERVICE_PATH);
   const raw = await ConDataService.getAssembled();
   return reorderAssembled(raw);
 })();
 
-// ─────────────────────────────────────────────────────────
-// BOOT
-// ─────────────────────────────────────────────────────────
 const lang = getLang();
 
 _dataPromise.then(assembled => {

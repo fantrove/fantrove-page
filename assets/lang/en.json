@@ -51,6 +51,8 @@
  "home-hero-title": "Emoji & Special Characters Hub",
  "home-hero-desc": "Your central place to search, copy, and use @strong emojis@ and @strong special characters@ for all your needs!",
  "home-hero-btn-emoji": "@slot:1@ Browse All Emojis",
+ "home-hero-btn-fancy": "@slot:1@ Fancy Text Generator",
+ "home-skip-link": "Skip to main content",
  "home-hero-btn-symbol": "@slot:1@ Browse Cool Symbols",
  "home-features-title": "Why Choose FANTROVE?",
  "home-feature1-title": "Easy Search",

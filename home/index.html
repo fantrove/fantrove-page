@@ -11,17 +11,15 @@
   <!-- Title: ใช้ data-translate เพื่อให้ build/translation engine แทนที่เป็นภาษาที่เหมาะสม -->
   <title data-translate="home-seo-title">Fantrove — Emoji &amp; Symbols Hub | Copy with One Tap</title>
   
-  <!-- Primary meta description:
-       ถ้าต้องการแปล ควรเพิ่ม key "home-seo-description" ในไฟล์แปลแต่ละภาษา
-  -->
+  <!-- Primary meta description -->
   <meta name="description" content="Browse thousands of emojis, special characters and fancy text. Search, copy and use instantly — Fantrove (also Fantrove Verse). Free to use." />
   
   <!-- General SEO -->
   <meta name="robots" content="index, follow" />
   <meta name="author" content="Fantrove (Lédp Aero Wings, Nontakorn Nonsurat)" />
-  <link rel="canonical" href="https://fantrove.pages.dev/home/" />
+  <link rel="canonical" href="https://fantrove.pages.dev/en/home/" />
   
-  <!-- hreflang alternates (explicit): build also injects hreflang; having them here is safe -->
+  <!-- hreflang alternates -->
   <link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/home/" />
   <link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/home/" />
   <link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/home/" />
@@ -32,8 +30,10 @@
   <meta property="og:description" content="Browse thousands of emojis, special characters and fancy text. Search, copy and use instantly — Fantrove (Fantrove Verse)." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://fantrove.pages.dev/home/" />
-  <!-- UPDATED: OG image moved into assets/images/OG/ -->
   <meta property="og:image" content="https://fantrove.pages.dev/assets/images/OG/fantrove-hub-og.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Fantrove — Emoji and Symbol Collection" />
   <meta property="og:locale" content="en_US" />
   <meta property="og:locale:alternate" content="th_TH" />
   
@@ -42,16 +42,16 @@
   <meta name="twitter:site" content="@fantrove" />
   <meta name="twitter:title" content="Fantrove — Emoji & Symbols Hub" />
   <meta name="twitter:description" content="Browse thousands of emojis, special characters and fancy text. Search, copy and use instantly." />
-  <!-- UPDATED: Twitter image path -->
   <meta name="twitter:image" content="https://fantrove.pages.dev/assets/images/OG/fantrove-hub-og.png" />
+  <meta name="twitter:image:alt" content="Fantrove — Emoji and Symbol Collection" />
   
-  <!-- Optional: keywords (minor use nowadays, but included) -->
+  <!-- Optional: keywords -->
   <meta name="keywords" content="emoji, emojis, symbols, special characters, copy, fancy text, unicode, fantrove, fantrove verse" />
   
-  <!-- Sitemap (helpful for some crawlers) -->
+  <!-- Sitemap -->
   <link rel="sitemap" type="application/xml" title="Sitemap" href="https://fantrove.pages.dev/sitemap.xml" />
   
-  <!-- Structured Data (JSON-LD) — includes localized fields for en/th -->
+  <!-- Structured Data (JSON-LD) -->
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -62,12 +62,11 @@
         "name": "Fantrove",
         "alternateName": "Fantrove Verse",
         "url": "https://fantrove.pages.dev/",
-        /* If you prefer organization logo to point to main logo keep original path;
-           if you want JSON-LD to reference OG preview, set same OG path below.
-           UPDATED: point to OG folder preview for social preview usage */
-        "logo": "https://fantrove.pages.dev/assets/images/OG/fantrove-hub-og.png",
+        "logo": "https://fantrove.pages.dev/assets/images/fantrove-logo-1280.png",
         "sameAs": [
-          "https://discord.gg/MMxQSZB3y3"
+          "https://discord.gg/MMxQSZB3y3",
+          "https://twitter.com/fantrove",
+          "https://github.com/fantrove"
         ]
       },
       {
@@ -81,17 +80,27 @@
         },
         "potentialAction": {
           "@type": "SearchAction",
-          "target": "https://fantrove.pages.dev/{lang}/data/verse/discover/?q={search_term_string}",
+          "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": "https://fantrove.pages.dev/search/?q={search_term_string}",
+            "actionPlatform": [
+              "https://schema.org/DesktopWebPlatform",
+              "https://schema.org/MobileWebPlatform"
+            ]
+          },
           "query-input": "required name=search_term_string"
         }
       },
       {
         "@type": "WebPage",
-        "@id": "https://fantrove.pages.dev/home/#webpage",
-        "url": "https://fantrove.pages.dev/home/",
+        "@id": "https://fantrove.pages.dev/en/home/#webpage",
+        "url": "https://fantrove.pages.dev/en/home/",
         "inLanguage": "en",
         "name": "Fantrove — Emoji & Symbols Hub | Copy with One Tap",
-        "description": "Browse thousands of emojis, special characters and fancy text. Search, copy and use instantly — Fantrove."
+        "description": "Browse thousands of emojis, special characters and fancy text. Search, copy and use instantly — Fantrove.",
+        "isPartOf": {
+          "@id": "https://fantrove.pages.dev/#website"
+        }
       },
       {
         "@type": "WebPage",
@@ -99,7 +108,52 @@
         "url": "https://fantrove.pages.dev/th/home/",
         "inLanguage": "th",
         "name": "Fantrove — ศูนย์อิโมจิและอักขระพิเศษ | คัดลอกด้วยแตะเดียว",
-        "description": "เรียกดูอิโมจิ อักขระพิเศษ และตัวอักษรแฟนซีหลายพันรายการ ค้นหาและคัดลอกไปใช้ได้ทันที — Fantrove."
+        "description": "เรียกดูอิโมจิ อักขระพิเศษ และตัวอักษรแฟนซีหลายพันรายการ ค้นหาและคัดลอกไปใช้ได้ทันที — Fantrove.",
+        "isPartOf": {
+          "@id": "https://fantrove.pages.dev/#website"
+        }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": "https://fantrove.pages.dev/en/home/#breadcrumb",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "https://fantrove.pages.dev/en/home/"
+          }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://fantrove.pages.dev/en/home/#faq",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "How do I use FANTROVE?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Choose a category or use the search bar, then click or tap on any emoji or special character to copy it to your clipboard!"
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I use it on mobile?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Absolutely! FANTROVE works on any platform—mobile, tablet, or desktop."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is all content free?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes, 100% free. No sign-up required and no hidden costs."
+            }
+          }
+        ]
       }]
     }
   </script>
@@ -107,7 +161,12 @@
   <meta name="theme-color" content="#13b47f" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <link rel="icon" type="image/x-icon" href="/assets/images/fantrove-verse360.ico" />
-  
+
+  <!-- Preconnect to third-party domains for faster loading -->
+  <link rel="preconnect" href="https://consent.cookiebot.com" />
+  <link rel="preconnect" href="https://pagead2.googlesyndication.com" />
+  <link rel="preconnect" href="https://www.googletagmanager.com" />
+
   <!-- 1. Tokens ก่อนสุดเสมอ -->
   <link rel="preload" href="/assets/css/tokens.css" as="style">
   <link rel="stylesheet" href="/assets/css/tokens.css">
@@ -130,16 +189,15 @@
 </head>
 
 <body style="opacity:0">
-  <!-- ════════════════════════════════════════════════
-       APP ROOT WRAPPER
-       data-page ใช้สำหรับ CSS scoping ในอนาคต
-  ════════════════════════════════════════════════ -->
+  <!-- Skip to content for keyboard accessibility -->
+  <a href="#fv-main" class="fv-sr-only fv-skip-link" data-translate="home-skip-link">Skip to main content</a>
+
   <div id="fv-app" class="fv-app" data-page="home">
 
     <!-- SEO h1 — อ่านได้ทันทีโดย Crawler, ซ่อนจากผู้ใช้ -->
-    <h1 class="fv-sr-only">Fantrove — Emoji and Symbol Collection | Free Copy Tool</h1>
+    <h1 class="fv-sr-only" data-translate="home-seo-title">Fantrove — Emoji &amp; Symbols Hub | Copy with One Tap</h1>
 
-    <!-- Navigation Layer (JS inject bottom nav ที่นี่) -->
+    <!-- Navigation Layer -->
     <div id="fv-nav-layer"></div>
 
     <!-- Page Shell -->
@@ -154,9 +212,8 @@
           </div>
         </div>
 
-        <!-- HERO: visual display (ไม่ใช่ heading — ใช้ div แทน h) -->
+        <!-- HERO -->
         <section class="hero nob">
-          <!-- aria-hidden เพราะ h1 จริงอยู่ด้านบนแล้ว -->
           <div class="fv-hero-display h1"
                data-translate="home-hero-title"
                aria-hidden="true"></div>
@@ -180,19 +237,19 @@
               <span class="btn-icon" data-translate-slot="1">✦</span>
               <span></span>
             </a>
+            <a wave="c=#90969F"
+              href="/data/verse/discover/?type=special-characters__&page=1"
+              class="button button-secondary oc"
+              data-translate="home-hero-btn-fancy">
+              <span class="btn-icon" data-translate-slot="1">Aa</span>
+              <span></span>
+            </a>
           </div>
         </section>
 
-        <!-- ═══════════════════════════════════════════════
-             BANNER MOUNT POINT
-             - แสดงใต้ hero ก่อนเนื้อหาหลัก
-             - เปลี่ยน data-banner="home-banner" ให้ตรงกับ
-               slug ที่สร้างใน dashboard ก่อน publish
-        ════════════════════════════════════════════════ -->
         <div data-banner="welcome-banner"></div>
 
         <div class="container">
-          <!-- DYNAMIC CONTENT (home.js renders here) -->
           <div id="app"></div>
 
           <!-- FEATURES SECTION -->
@@ -244,15 +301,14 @@
               <div data-translate="home-faq-a3"></div>
             </div>
           </section>
-        </div><!-- /.container -->
+        </div>
 
       </main>
 
-      <!-- Footer inject by JS -->
       <div id="fv-footer-mount"></div>
-    </div><!-- /.fv-page-shell -->
+    </div>
 
-  </div><!-- /#fv-app -->
+  </div>
 
   <script src="/assets/js/language.js?v=1.0.0-20250322"></script>
   <script defer src="/assets/js/version-core.js?v=1.0.0-20250322"></script>

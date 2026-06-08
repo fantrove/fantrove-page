@@ -3,10 +3,15 @@
 User-agent: *
 Allow: /
 
-# Block crawling of internal JSON endpoints that shouldn't be indexed (optional)
+# Block crawling of internal JSON endpoints that shouldn't be indexed
 Disallow: /assets/json/whats-new.json
 Disallow: /assets/json/release-history.json
 Disallow: /assets/json/current-stage.json
 
+# Block test/development pages from being indexed
+Disallow: /beta.html
+Disallow: /n.html
+Disallow: /s.css
+Disallow: /data/verse/scope/
+
 Sitemap: https://fantrove.pages.dev/sitemap.xml
-Host: fantrove.pages.dev
