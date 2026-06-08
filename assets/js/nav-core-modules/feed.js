@@ -158,6 +158,20 @@
       }
     },
 
+    /**
+    * Determine if a type is copyable (renders as button) or collection (renders as card).
+    * Data-driven: reads kind from typeObj first, then falls back to knownKinds.
+    * Default is 'copyable' — only explicitly marked 'collection' types are non-copyable.
+    */
+  _isTypeCopyable(typeObj) {
+    // 1. Explicit kind on the type object itself (from data files)
+    if (typeObj.kind) return typeObj.kind === 'copyable';
+    // 2. Check against the resolved knownKinds set
+   if (this._copyableIds.has(typeObj.id)) return true;
+   // 3. Default: treat unknown types as copyable (safe default — only 'collection' is non-copyable)
+    return true;
+    },
+
     _buildPools(db) {
       this._buttonSegs = [];
       this._cardSegs   = [];

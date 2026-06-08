@@ -71,13 +71,13 @@ const ConDataRegistry = {
   // WHY: รายชื่อนี้มีแค่ copyable types เท่านั้น
   //      collection types (cards) ไม่อยู่ที่นี่ เพราะ fetch แบบ direct path เสมอ
   // =========================================================
-  knownTypes: ['emoji', 'symbol', 'unicode'],
+  knownTypes: ['emoji', 'symbol', 'unicode', 'fancy'],
   
-  // WHY: kind map สำหรับ fallback assembly ให้รู้ว่า type ไหน copyable
   knownKinds: Object.freeze({
     emoji: 'copyable',
     symbol: 'copyable',
     unicode: 'copyable',
+    fancy: 'copyable',
   }),
   
   // =========================================================
