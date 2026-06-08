@@ -25,7 +25,7 @@
  *   nav bar hides, innerHeight grows but --placeholder-h stays stale, so
  *   .search-result-here is clipped at the bottom.
  *   FIX: removed _syncPlaceholderHeight() and _ensureResizeListener() entirely.
- *   CSS already handles .search-result-here height correctly on its own.
+ *   CSS already handles .search-result-here height correctly without any JS.
  *   JS does not set --placeholder-h at all.
  *
  * @module search
@@ -260,11 +260,16 @@
      * @private
      */
     _showPlaceholder() {
+      // Properly destroy URE handle BEFORE wiping container innerHTML.
+      // Without this, _searchHandle stays non-null with destroyed DOM,
+      // causing renderResults() to skip fresh URE mount on next search
+      // (it reuses the dangling handle → nothing renders).
+      RenderingService.disconnectRenderObserver();
       const rc = DOMService.get(CONFIG.DOM.searchResultsId);
       if (rc) {
         rc.innerHTML = `<div class="search-result-here">${LanguageService.t('search_result_here')}</div>`;
       }
-      VirtualScrollEngine.destroy();
+      // VirtualScrollEngine.destroy() removed — rendering uses URE, not the old VSE
       FilterService.setupCategoryFilter([], 'all');
       UIService.updateUILanguage();
       if (!window.__renderIsRestore) {
