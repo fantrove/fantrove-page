@@ -114,7 +114,8 @@ const CONFIG = {
     'fantrove-console-bridge.js',
     'google6b646fa60e0f9f2f.html',
     'console.css',
-    'console.js'
+    'console.js',
+    'console.html'
   ],
 
   /**
