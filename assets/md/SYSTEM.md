@@ -34,9 +34,50 @@ assets/json/
   whats-new.json            ← เก่า — fallback เท่านั้น
 
 assets/js/
+  lang-core.js              ← v5.0: Central Language API (FvLang)
   new.js                    ← หน้า What's New — อ่าน MD ตามภาษา + history JSON
   version-core.js           ← Popup แจ้งเตือน — อ่าน MD ตามภาษา
 ```
+
+---
+
+## ระบบภาษา FvLang (v5.0)
+
+ไฟล์ `lang-core.js` โหลดเป็น script แรกสุดใน `<head>` ก่อน `language.js`
+
+### FvLang API
+
+```
+window.FvLang.lang              — ภาษาปัจจุบัน ('en' | 'th')
+window.FvLang.isReady           — true เสมอ (resolve แบบ sync)
+window.FvLang.isStaticMode      — true ถ้าเป็น production built page
+window.FvLang.onChange(fn)      — subscribe ภาษาเปลี่ยน → return unsubscribe fn
+window.FvLang.setLang(lang)     — ตั้งภาษา + dispatch fv:langchange
+window.FvLang.forceRefresh()    — refresh ทั้งหน้าโดยไม่เปลี่ยนภาษา
+```
+
+### Event
+
+```
+window 'fv:langchange'  → CustomEvent, detail: { lang, previousLang }
+```
+
+### ลำดับการทำงาน
+
+1. `lang-core.js` อ่านภาษาทันที: data-fv-built → URL → localStorage → browser
+2. สร้าง `window.FvLang` object + `window.languageReady` Promise (resolved ทันที)
+3. `language.js` โหลด อ่าน FvLang → โหลด modules → setup UI
+4. ทุก script อื่นใช้ `FvLang.lang` และ `FvLang.onChange()`
+
+### ผลกระทบต่อระบบอื่น
+
+| ระบบ | ก่อน v5.0 | v5.0 |
+|------|-----------|------|
+| home.js | `localStorage.getItem('selectedLang')` | `FvLang.lang` + `FvLang.onChange(re-render)` |
+| new.js | `localStorage.getItem('selectedLang')` + `languageChange` event | `FvLang.lang` + `fv:langchange` event |
+| version-core.js | `localStorage.getItem('selectedLang')` | `FvLang.lang` |
+| modern-navigation.js | `_readStoredLang()` + `languageChange` event | `_readStoredLang()` + `fv:langchange` event |
+| language.js | detect เอง + 14 modules (static) | FvLang ให้ภาษา + 6 modules (static) |
 
 ---
 
@@ -68,15 +109,6 @@ notify: true
 - **Bug fixed**
   How it was fixed.
 ```
-
-**เปรียบเทียบกับระบบเก่า:**
-
-| | ระบบเก่า (ไฟล์เดียว) | ระบบใหม่ (แยกภาษา) |
-|--|--|--|
-| ไฟล์ | `current.md` 1 ไฟล์ | `en/current.md` + `th/current.md` |
-| Title | `title:\n  en: ...\n  th: ...` | `title: ...` (string ธรรมดา) |
-| Description | ผสมภาษาใน item เดียว | แยกไฟล์ อ่านง่าย |
-| เพิ่มภาษา | ยาวขึ้นเรื่อยๆ | สร้างไฟล์ใหม่เพิ่ม |
 
 ---
 

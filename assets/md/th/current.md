@@ -1,23 +1,29 @@
 ---
-version: 1.4.1
-date: 2025-06-14T05:00:00Z
-title: ไฟล์ Markdown แยกตามภาษา
-subtitle: ไฟล์ release note แต่ละภาษาถูกแยกออกจากกันแล้ว — เขียน `en/current.md` สำหรับอังกฤษและ `th/current.md` สำหรับไทย แต่ละไฟล์มีเนื้อหาเพียงภาษาเดียว ทำให้อ่าน เขียน และดูแลได้ง่ายขึ้นมาก ไม่ต้องใช้ YAML i18n block หรือผสมหลายภาษาในไฟล์เดียวกันอีกต่อไป
+version: 1.5.0
+date: 2026-06-14T08:30:00Z
+title: Central Language API — FvLang
+subtitle: ระบบภาษากลางใหม่ที่ตั้งค่าทันทีก่อนทุกอย่าง ระบบ JS ทุกระบบใช้ API เดียวกันสำหรับตรวจจับและรับแจ้งเมื่อภาษาเปลี่ยน ไม่ต้องอ่าน localStorage เองอีกต่อไป เมื่อเปลี่ยนภาษา ทั้งหน้าจะอัพเดททันทีโดยไม่ต้องรีโหลด
 notify: true
 ---
 
 ### New
 
-- **โครงสร้างไฟล์ MD แยกตามภาษา**
-  ไฟล์ release note ถูกแยกตามภาษาแล้ว — `en/current.md` สำหรับอังกฤษและ `th/current.md` สำหรับไทย แต่ละไฟล์มีเนื้อหาเพียงภาษาเดียว ทำให้อ่าน เขียน และดูแลรักษาได้ง่ายขึ้นมาก ไม่ต้องใช้ YAML i18n block หรือผสมหลายภาษาในไฟล์เดียวกันอีกต่อไป
+- **FvLang — Central Language API (lang-core.js)**
+  สคริปต์เล็กๆ ใหม่ที่โหลดก่อนทุกอย่างใน `<head>` อ่านภาษาปัจจุบันแบบ sync จาก attribute `data-fv-built` (production), URL prefix, localStorage หรือการตั้งค่า browser — รู้ภาษาทันทีโดยไม่ต้องรอ network request เลย ระบบ JS ทุกระบบใช้ `FvLang.lang` แทนการอ่าน localStorage เอง แก้ปัญหา "ภาษาโหลดไม่ทัน" ได้สำเร็จ
 
-- **Build script รองรับไฟล์ MD แยกภาษา**
-  Build script `update-version.js` อ่านไฟล์ทั้งสองภาษาจาก git history แล้วรวมเป็น `release-history.json` ที่มี i18n object สมบูรณ์สำหรับ runtime อัตโนมัติ
+- **รีเฟรชทั้งหน้าอัตโนมัติเมื่อเปลี่ยนภาษา**
+  เมื่อภาษาเปลี่ยน `FvLang.setLang()` จะ dispatch event `fv:langchange` และเรียก callback ที่ subscribe ไว้ทั้งหมด ทุกระบบที่แสดงข้อความ (หน้า home, navigation, What's New, update popup) subscribe แล้ว re-render อัตโนมัติ ทั้งหน้าอัพเดทเป็นภาษาใหม่ทันทีโดยไม่ต้องรีโหลดหน้า
+
+- **Subscriber API สำหรับระบบ JS ทุกระบบ**
+  สคริปต์ใดๆ สามารถใช้ `FvLang.onChange(function(lang, prevLang) { ... })` เพื่อสมัครรับแจ้งเมื่อภาษาเปลี่ยน ค่าที่ return คือ function ยกเลิกการสมัคร แทนการที่แต่ละระบบต้องอ่าน `localStorage.getItem('selectedLang')` เองและฟัง event `languageChange` แยกกัน
 
 ### Improved
 
-- **รูปแบบ MD ที่เรียบง่ายขึ้นสำหรับไฟล์ภาษาเดียว**
-  เนื่องจากแต่ละไฟล์เป็นภาษาเดียวเท่านั้น front matter ไม่จำเป็นต้องมี i18n block อีกต่อไป title และ subtitle เป็นข้อความธรรมดา และคำอธิบายของแต่ละ item ก็เป็นข้อความธรรมดา ช่วยลด boilerplate และทำให้ไฟล์สั้นลงและโฟกัสกับภาษานั้นมากขึ้น
+- **ตั้งค่าภาษาเร็วขึ้นใน static mode**
+  ใน production (pre-built pages) `lang-core.js` อ่าน attribute `data-fv-built` จาก `<html>` ได้ทันที — ไม่ต้องรอ `language.js` โหลด modules เสร็จ gate resolve ทันที และทุกสคริปต์มีภาษาที่ถูกต้องตั้งแต่บรรทัดแรก
 
-- **เวิร์กโฟลว์การเขียนที่สะอาดขึ้น**
-  ผู้เขียนสามารถโฟกัสกับภาษาเดียวในแต่ละครั้ง โดยไม่ต้องเลื่อนผ่านหรือจัดการเนื้อหาในภาษาอื่นในไฟล์เดียวกัน ซึ่งมีประโยชน์มากโดยเฉพาะเมื่อมีการเพิ่มภาษาใหม่ในอนาคต
+- **Static mode ของ language.js เบาลง**
+  ใน static mode `language.js` โหลดเฉพาะ 3 modules (types, config, state, gate, ui, manager) แทน 14 modules ข้าม translation, worker pool, detector, loader และ markers ทั้งหมดเพราะเนื้อหาถูก bake ลง HTML แล้ว
+
+- **หน้า home re-render เมื่อภาษาเปลี่ยน**
+  หน้า home จะ cache ข้อมูลและ subscribe ไปยัง `FvLang.onChange()` เมื่อภาษาเปลี่ยนจะ re-render หมวดหมู่ ป้ายกำกับ และปุ่ม "ดูทั้งหมด" ด้วยข้อความภาษาที่ถูกต้อง — ทันทีโดยไม่ต้องรีโหลดหน้า
