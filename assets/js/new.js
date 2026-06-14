@@ -1,23 +1,29 @@
-// new.js — v1.0.5.7
-// Change: ลบ injectStyles() ออกทั้งหมด — CSS ย้ายไปอยู่ใน /assets/css/new.css แล้ว
+// new.js — v2.0.0
+// Markdown-based What's New system
+// - อ่าน current.md (ปัจจุบัน) และ release-history.json (ประวัติที่ build script สร้าง)
+// - รองรับอ่าน whats-new.json เก่า (fallback ถ้า current.md ไม่มี)
+// - ไม่ใช้ localStorage — อ่านจากไฟล์จริงทั้งหมด
+// - version.json ยังใช้ poll เช็คเวอร์ชั่นใหม่เหมือนเดิม
 
 (function() {
   'use strict';
 
-  var CURRENT_URL      = '/assets/json/whats-new.json';
-  var HISTORY_URL      = '/assets/json/release-history.json';
+  // ── URLs ────────────────────────────────────────────────────────────────────
+  var CURRENT_MD_URL   = '/assets/md/current.md';
+  var HISTORY_URL      = '/assets/json/release-history.json';  // สร้างโดย update-version.js
+  var LEGACY_CURRENT   = '/assets/json/whats-new.json';        // fallback (เก่า)
   var VERSION_URL      = '/assets/json/version.json';
   var POLL_INTERVAL_MS = 60 * 1000;
-  var REAL_DATE_SEC    = 10 * 86400; // 10 วัน → เปลี่ยนเป็นวันที่จริง
+  var REAL_DATE_SEC    = 10 * 86400;
 
   var _lastVersion = null;
   var _pollTimer   = null;
 
+  // ── i18n ────────────────────────────────────────────────────────────────────
+
   function getLang() {
     try { return localStorage.getItem('selectedLang') || 'en'; } catch(e) { return 'en'; }
   }
-
-  // ── i18n ──────────────────────────────────────────────────────────────────
 
   var L10N = {
     en: {
@@ -27,7 +33,8 @@
       oneHour:   '1 hour ago',
       xHours:    function(n) { return n + ' hours ago'; },
       yesterday: 'Yesterday',
-      xDays:     function(n) { return n + ' days ago'; }
+      xDays:     function(n) { return n + ' days ago'; },
+      prevReleases: 'Previous releases'
     },
     th: {
       justNow:   'เมื่อกี้',
@@ -36,7 +43,8 @@
       oneHour:   '1 ชั่วโมงที่แล้ว',
       xHours:    function(n) { return n + ' ชั่วโมงที่แล้ว'; },
       yesterday: 'เมื่อวาน',
-      xDays:     function(n) { return n + ' วันที่แล้ว'; }
+      xDays:     function(n) { return n + ' วันที่แล้ว'; },
+      prevReleases: 'ประวัติการอัพเดท'
     }
   };
 
@@ -46,7 +54,7 @@
     return obj[lang] || obj['en'] || '';
   }
 
-  // ── Timestamp helpers ─────────────────────────────────────────────────────
+  // ── Timestamp helpers ───────────────────────────────────────────────────────
 
   function pad2(n) { return String(n).padStart(2, '0'); }
 
@@ -76,8 +84,6 @@
     } catch(e) { return ''; }
   }
 
-  // ── Relative time ─────────────────────────────────────────────────────────
-
   function diffToRel(sec, ts, lang) {
     var L = L10N[lang] || L10N.en;
     if (sec >= REAL_DATE_SEC) {
@@ -100,7 +106,7 @@
     return 300000;
   }
 
-  // ── Section config ────────────────────────────────────────────────────────
+  // ── Section config ──────────────────────────────────────────────────────────
 
   var SECTION_CFG = {
     'new':      { color:'#13b47f', bg:'rgba(19,180,127,.09)',  border:'rgba(19,180,127,.2)',  label:{en:'New',      th:'ใหม่'        } },
@@ -108,7 +114,102 @@
     'fixed':    { color:'#f59e0b', bg:'rgba(245,158,11,.09)',  border:'rgba(245,158,11,.2)',  label:{en:'Fixed',    th:'แก้ไขปัญหา' } }
   };
 
-  // ── Fetch ─────────────────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+  //  MARKDOWN PARSER
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  function parseMD(mdText) {
+    var result = { version: '', date: null, title: null, subtitle: null, notify: true, sections: [] };
+    try {
+      var body = mdText;
+      var fmMatch = mdText.match(/^---\s*\n([\s\S]*?)\n---\s*\n/);
+      if (fmMatch) {
+        body = mdText.substring(fmMatch[0].length);
+        var fm = fmMatch[1];
+        var vMatch = fm.match(/^version:\s*(.+)$/m);
+        if (vMatch) result.version = String(vMatch[1]).trim();
+        var dMatch = fm.match(/^date:\s*(.+)$/m);
+        if (dMatch) {
+          var parsed = Date.parse(String(dMatch[1]).trim());
+          if (!isNaN(parsed)) result.date = new Date(parsed).toISOString();
+        }
+        var nMatch = fm.match(/^notify:\s*(false|true)$/m);
+        if (nMatch) result.notify = nMatch[1] !== 'false';
+        var titleBlock = fm.match(/^(title:)\s*\n((?:  \w+:\s*.+\n?)+)/m);
+        if (titleBlock) result.title = parseI18nBlock(titleBlock[2]);
+        else {
+          var titleLine = fm.match(/^title:\s*(.+)$/m);
+          if (titleLine) result.title = { en: String(titleLine[1]).trim() };
+        }
+        var subBlock = fm.match(/^(subtitle:)\s*\n((?:  \w+:\s*.+\n?)+)/m);
+        if (subBlock) result.subtitle = parseI18nBlock(subBlock[2]);
+        else {
+          var subLine = fm.match(/^subtitle:\s*(.+)$/m);
+          if (subLine) result.subtitle = { en: String(subLine[1]).trim() };
+        }
+      }
+
+      var lines = body.split('\n');
+      var currentSection = null;
+      var currentItem = null;
+
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        var headingMatch = line.match(/^###\s+(New|Improved|Fixed)\s*$/i);
+        if (headingMatch) {
+          if (currentSection) result.sections.push(currentSection);
+          currentSection = { type: headingMatch[1].toLowerCase(), items: [] };
+          currentItem = null;
+          continue;
+        }
+        if (line.match(/^\s*-\s+\*\*/)) {
+          if (currentItem && currentSection) currentSection.items.push(currentItem);
+          currentItem = parseItemLine(line);
+          continue;
+        }
+        if (currentItem && line.trim() && !line.match(/^---/) && !line.match(/^###/)) {
+          if (!currentItem.desc) currentItem.desc = { en: '', th: '' };
+          currentItem.desc.en += (currentItem.desc.en ? ' ' : '') + line.trim();
+          currentItem.desc.th += (currentItem.desc.th ? ' ' : '') + line.trim();
+        }
+      }
+      if (currentItem && currentSection) currentSection.items.push(currentItem);
+      if (currentSection) result.sections.push(currentSection);
+    } catch(e) {
+      console.warn('[new.js] MD parse error:', e);
+    }
+    return result;
+  }
+
+  function parseI18nBlock(block) {
+    var obj = {};
+    var re = /^\s+(\w+):\s*(.+)$/gm;
+    var m;
+    while ((m = re.exec(block)) !== null) obj[m[1]] = m[2].trim();
+    return Object.keys(obj).length ? obj : null;
+  }
+
+  function parseItemLine(line) {
+    var item = { title: { en: '', th: '' }, desc: null };
+    var match = line.match(/^\s*-\s+\*\*(.+?)\*\*\s*(.*)?$/);
+    if (match) {
+      var titleText = match[1].trim();
+      var restText  = (match[2] || '').trim();
+      item.title = { en: titleText, th: titleText };
+      if (restText) item.desc = { en: restText, th: restText };
+    }
+    return item;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  //  FETCH HELPERS
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  function fetchText(url) {
+    return fetch(url + '?_=' + Date.now(), { cache: 'no-store' })
+      .then(function(r) { return r.ok ? r.text() : null; })
+      .catch(function() { return null; });
+  }
 
   function fetchJSON(url) {
     return fetch(url + '?_=' + Date.now(), { cache: 'no-store' })
@@ -116,7 +217,127 @@
       .catch(function() { return null; });
   }
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+  //  NORMALIZE — ทำให้ข้อมูลทุก source อยู่ในรูปแบบเดียวกัน
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  function normalizeRelease(r) {
+    if (!r || !r.version) return null;
+    return {
+      version:  String(r.version),
+      date:     r.date || r.timestamp || null,
+      title:    r.title    || null,
+      subtitle: r.subtitle || null,
+      notify:   r.notify !== false,
+      sections: (r.sections || []).map(function(s) {
+        return {
+          type: (SECTION_CFG[s.type] ? s.type : 'improved'),
+          items: (s.items || []).map(function(item) {
+            var clean = { title: item.title || { en: '', th: '' } };
+            if (item.desc) clean.desc = item.desc;
+            else if (item.description) clean.desc = item.description;
+            return clean;
+          })
+        };
+      })
+    };
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  //  MAIN DATA PIPELINE
+  // ══════════════════════════════════════════════════════════════════════════════
+  //  Flow:
+  //  1. fetch current.md → parse → เป็น release ปัจจุบัน
+  //     ถ้าไม่มี current.md → fallback ไป whats-new.json (รองรับ JSON เก่า)
+  //  2. fetch release-history.json → เป็นประวัติ (สร้างโดย update-version.js)
+  //     ถ้าไม่มี → ลอง fetch MD files จาก releases/ directory
+  //  3. render
+
+  function loadContent() {
+    var currentRelease = null;
+    var historyData    = { releases: [] };
+
+    // Step 1: โหลด current release — ลอง MD ก่อน แล้ว fallback JSON
+    fetchText(CURRENT_MD_URL).then(function(mdText) {
+      if (mdText && mdText.trim()) {
+        var parsed = parseMD(mdText);
+        if (parsed.version) {
+          currentRelease = normalizeRelease(parsed);
+        }
+      }
+
+      // Fallback: ถ้า MD ไม่มี/parse ไม่ได้ → ลอง JSON เก่า
+      if (!currentRelease) {
+        return fetchJSON(LEGACY_CURRENT).then(function(json) {
+          if (json && json.version) {
+            currentRelease = normalizeRelease(json);
+          }
+        });
+      }
+    }).then(function() {
+      // Step 2: โหลดประวัติ — release-history.json (สร้างโดย build script)
+      return fetchJSON(HISTORY_URL);
+    }).then(function(history) {
+      if (history && history.releases && history.releases.length) {
+        historyData = history;
+      } else {
+        // Fallback: ถ้าไม่มี release-history.json ลองอ่าน MD files จาก releases/
+        return loadFallbackHistory();
+      }
+    }).then(function(fallbackHistory) {
+      if (fallbackHistory && fallbackHistory.releases && fallbackHistory.releases.length) {
+        historyData = fallbackHistory;
+      }
+
+      // Step 3: Render
+      var pastReleases = historyData.releases.filter(function(r) {
+        return currentRelease ? r.version !== currentRelease.version : true;
+      });
+
+      render(currentRelease, { releases: pastReleases });
+    }).catch(function(err) {
+      console.warn('[new.js] Load error:', err);
+    });
+  }
+
+  // Fallback: โหลด MD files จาก releases/ โดยตรง (ถ้าไม่มี release-history.json)
+  function loadFallbackHistory() {
+    // ลองโหลดจาก versions ที่รู้จัก
+    var candidates = [
+      'v1.3.0', 'v1.2.0', 'v1.1.0', 'v1.0.9', 'v1.0.8',
+      'v1.0.7.1', 'v1.0.7'
+    ];
+    var promises = candidates.map(function(ver) {
+      return fetchText('/assets/md/releases/' + ver + '.md')
+        .then(function(text) {
+          if (!text || !text.trim()) return null;
+          var parsed = parseMD(text);
+          return normalizeRelease(parsed);
+        });
+    });
+
+    return Promise.all(promises).then(function(results) {
+      var releases = results.filter(Boolean);
+      releases.sort(function(a, b) { return compareVersions(b.version, a.version); });
+      return { releases: releases };
+    });
+  }
+
+  function compareVersions(a, b) {
+    var pa = String(a || '0').split('.').map(Number);
+    var pb = String(b || '0').split('.').map(Number);
+    var len = Math.max(pa.length, pb.length);
+    for (var i = 0; i < len; i++) {
+      var na = pa[i] || 0;
+      var nb = pb[i] || 0;
+      if (na !== nb) return na - nb;
+    }
+    return 0;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  //  RENDER
+  // ══════════════════════════════════════════════════════════════════════════════
 
   function render(current, historyData) {
     try {
@@ -136,7 +357,8 @@
       if (releases.length) {
         var div = document.createElement('div');
         div.className = 'wn-history-label';
-        div.textContent = getLang() === 'th' ? 'ประวัติการอัพเดท' : 'Previous releases';
+        var lang = getLang();
+        div.textContent = (L10N[lang] || L10N.en).prevReleases;
         container.appendChild(div);
         releases.forEach(function(r) {
           try { container.appendChild(buildRelease(r, false)); } catch(e) {}
@@ -158,7 +380,7 @@
     badge.textContent = 'v' + (release.version || '');
     header.appendChild(badge);
 
-    var dateSource = release.timestamp || release.date;
+    var dateSource = release.date || release.timestamp;
     if (dateSource) {
       try {
         var ts   = toTimestamp(dateSource);
@@ -209,13 +431,6 @@
       release.sections.forEach(function(s) {
         try { wrap.appendChild(buildSection(s)); } catch(e) {}
       });
-    } else if (release.changelog && release.changelog.length) {
-      try {
-        wrap.appendChild(buildSection({
-          type: 'improved',
-          items: release.changelog.map(function(c) { return { title: { en: c, th: c } }; })
-        }));
-      } catch(e) {}
     }
 
     return wrap;
@@ -269,36 +484,31 @@
     return wrap;
   }
 
-  // ── Live tick ─────────────────────────────────────────────────────────────
+  // ── Live tick ───────────────────────────────────────────────────────────────
 
   function tickRelativeTimes() {
     try {
       var lang  = getLang();
       var chips = document.querySelectorAll('.wn-time-chip[data-ts]');
       var minNext = null;
-
       for (var i = 0; i < chips.length; i++) {
         try {
           var chip = chips[i];
           var tsStr = chip.getAttribute('data-ts');
           var ts = tsStr ? parseInt(tsStr, 10) : NaN;
           if (!ts || isNaN(ts)) continue;
-
           var sec = Math.max(0, Math.floor((Date.now() - ts) / 1000));
           var rel = diffToRel(sec, ts, lang);
           if (chip.textContent !== rel) chip.textContent = rel;
-
           var next = nextTickMs(sec);
-          if (next !== null) {
-            minNext = (minNext === null) ? next : Math.min(minNext, next);
-          }
+          if (next !== null) minNext = (minNext === null) ? next : Math.min(minNext, next);
         } catch(e) {}
       }
       return minNext;
     } catch(e) { return null; }
   }
 
-  // ── Version check ─────────────────────────────────────────────────────────
+  // ── Version check ───────────────────────────────────────────────────────────
 
   function checkForUpdates() {
     fetchJSON(VERSION_URL).then(function(v) {
@@ -308,11 +518,10 @@
     });
   }
 
-  // ── Polling loop ──────────────────────────────────────────────────────────
+  // ── Polling loop ────────────────────────────────────────────────────────────
 
   function startPolling() {
     tickRelativeTimes();
-
     function tick() {
       try {
         var nextMs = tickRelativeTimes();
@@ -323,7 +532,6 @@
         _pollTimer = setTimeout(tick, POLL_INTERVAL_MS);
       }
     }
-
     var firstDelay = tickRelativeTimes();
     _pollTimer = setTimeout(tick, (firstDelay !== null) ? Math.max(firstDelay, 10000) : POLL_INTERVAL_MS);
   }
@@ -331,25 +539,12 @@
   function setupVisibilityRefresh() {
     try {
       document.addEventListener('visibilitychange', function() {
-        try {
-          if (!document.hidden) { tickRelativeTimes(); checkForUpdates(); }
-        } catch(e) {}
+        try { if (!document.hidden) { tickRelativeTimes(); checkForUpdates(); } } catch(e) {}
       });
     } catch(e) {}
   }
 
-  // ── Load ──────────────────────────────────────────────────────────────────
-
-  function loadContent() {
-    Promise.all([fetchJSON(CURRENT_URL), fetchJSON(HISTORY_URL)])
-      .then(function(r) {
-        try { render(r[0], r[1]); } catch(e) {}
-      })
-      .catch(function() {});
-  }
-
-  // ── Boot ──────────────────────────────────────────────────────────────────
-  // หมายเหตุ: ลบ injectStyles() ออกแล้ว — CSS อยู่ใน /assets/css/new.css
+  // ── Boot ────────────────────────────────────────────────────────────────────
 
   function boot() {
     try { loadContent();             } catch(e) {}
