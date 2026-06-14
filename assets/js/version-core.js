@@ -1,5 +1,7 @@
 // version-core.js — Fantrove Verse
-// v2: ใช้ whats-new.json เป็น single source of truth แทน version.json
+// v3: ใช้ PopupSystem.container() เป็น shell แทน inline popup
+//     ระบบ popup ควบคุมขนาด/ตำแหน่ง/animation/theme/a11y
+//     version-core ควบคุมเนื้อหาและ business logic เท่านั้น
 
 (function () {
   'use strict';
@@ -16,12 +18,13 @@
     SS_LAST_ACTIVE: 'fv_last_active',
     IDLE_MS:        90 * 60 * 1000,
 
-    POPUP_ID:   'fv-update-popup',
     TOGGLE_ID:  'auto-update-toggle-btn',
-    SWITCH_ID:  'auto-update-switch'
+    SWITCH_ID:  'auto-update-switch',
+
+    POPUP_GROUP: 'update-notification',
   };
 
-  // ── ตรวจว่าอยู่หน้า What's New หรือไม่ ──────────────────────────────────────
+  // ── ตรวจว่าอยู่หน้า What's New หรือไม่ ──────────────────────────────────
 
   function isOnWhatsNewPage() {
     var meta = document.querySelector('meta[name="fv-page"]');
@@ -65,7 +68,7 @@
       .catch(function() { return null; });
   }
 
-  // ── Popup ────────────────────────────────────────────────────────────────────
+  // ── Helpers ─────────────────────────────────────────────────────────────────
 
   function esc(s) {
     return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -77,16 +80,17 @@
     return esc(obj[lang] || obj['en'] || '');
   }
 
-  function buildPopup(wn) {
+  // ── Build popup content (HTML only — no shell, no overlay, no animation) ──
+
+  function buildContent(wn) {
     var isTh = (ls('selectedLang') || 'en') === 'th';
     var ver  = esc(wn.version || '');
 
-    // ใช้ wn.date ที่ build script เขียนไว้ (มี en/th)
     var dateStr = wn.date ? (isTh ? esc(wn.date.th) : esc(wn.date.en)) : '';
-
     var title = t(wn.title);
     var sub   = t(wn.subtitle) || (isTh ? 'มีการปรับปรุงและอัปเดตระบบ' : 'System improvements and updates.');
 
+    // Collect up to 4 items from all sections
     var items = [];
     (wn.sections || []).forEach(function(s) {
       (s.items || []).slice(0, 4).forEach(function(item) {
@@ -104,59 +108,142 @@
 
     var itemsHTML = '';
     if (items.length) {
-      itemsHTML = '<ul style="list-style:none;margin:0 0 16px;padding:0">';
+      itemsHTML = '<ul class="fv-update-list">';
       items.forEach(function(item) {
-        itemsHTML += '<li style="display:flex;align-items:flex-start;gap:8px;padding:4px 0;font-size:.85em;color:var(--fv-t2,#555);line-height:1.5">'
-          + '<span style="flex-shrink:0;margin-top:5px;width:6px;height:6px;border-radius:50%;background:#13b47f;display:inline-block"></span>'
+        itemsHTML += '<li class="fv-update-item">'
+          + '<span class="fv-update-dot"></span>'
           + item + '</li>';
       });
       itemsHTML += '</ul>';
     }
 
-    return '<div id="fv-bd" style="position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(2px);z-index:99998;animation:fv-fi .18s ease"></div>'
-      + '<div id="fv-card" role="dialog" aria-modal="true" style="position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:99999;background:var(--fv-bg,#fff);border-radius:18px;padding:26px 24px 20px;width:min(360px,calc(100vw - 32px));box-shadow:0 8px 48px rgba(0,0,0,.22);font-family:inherit;animation:fv-si .22s cubic-bezier(.22,1,.36,1)">'
-        + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">'
-          + '<div style="width:40px;height:40px;border-radius:12px;flex-shrink:0;background:linear-gradient(135deg,#13b47f,#0d8f65);display:flex;align-items:center;justify-content:center">'
-            + '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>'
-          + '</div>'
-          + '<div>'
-            + '<div style="font-size:.95em;font-weight:600;color:var(--fv-t1,#111)">' + L.badge + '</div>'
-            + '<div style="font-size:.78em;color:#13b47f;font-weight:500;margin-top:1px">'
-              + L.ver + ver + (title ? ' \u2014 ' + title : '')
-            + '</div>'
-            + (dateStr ? '<div style="font-size:.72em;color:var(--fv-t3,#aaa);margin-top:2px">' + dateStr + '</div>' : '')
-          + '</div>'
-        + '</div>'
-        + (sub ? '<p style="font-size:.85em;color:var(--fv-t2,#666);margin:0 0 14px;line-height:1.55">' + sub + '</p>' : '')
-        + itemsHTML
-        + '<a id="fv-more" href="' + CFG.WHATS_NEW_PAGE + '" style="display:block;width:100%;padding:11px 0;background:linear-gradient(135deg,#13b47f,#0d8f65);color:#fff;border-radius:11px;font-size:.95em;font-weight:600;text-align:center;text-decoration:none;box-sizing:border-box;box-shadow:0 2px 12px rgba(19,180,127,.35);margin-bottom:10px">' + L.more + '</a>'
-        + '<div style="text-align:center"><button id="fv-dismiss" style="border:none;background:none;cursor:pointer;font-size:.78em;color:var(--fv-t3,#aaa);font-family:inherit;padding:4px 8px;border-radius:5px">' + L.dismiss + '</button></div>'
+    var html = '<div class="fv-update-header">'
+      + '<div class="fv-update-icon">'
+        + '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>'
       + '</div>'
-      + '<style>@keyframes fv-fi{from{opacity:0}to{opacity:1}}@keyframes fv-si{from{opacity:0;transform:translate(-50%,-44%)}to{opacity:1;transform:translate(-50%,-50%)}}@media(prefers-color-scheme:dark){#fv-card{--fv-bg:#1c1c1e;--fv-t1:#f5f5f7;--fv-t2:#aeaeb2;--fv-t3:#636366}}</style>';
+      + '<div class="fv-update-info">'
+        + '<div class="fv-update-badge">' + L.badge + '</div>'
+        + '<div class="fv-update-version">'
+          + L.ver + ver + (title ? ' \u2014 ' + title : '')
+        + '</div>'
+        + (dateStr ? '<div class="fv-update-date">' + dateStr + '</div>' : '')
+      + '</div>'
+    + '</div>'
+    + (sub ? '<p class="fv-update-sub">' + sub + '</p>' : '')
+    + itemsHTML
+    + '<a href="' + CFG.WHATS_NEW_PAGE + '" class="fv-update-cta">' + L.more + '</a>'
+    + '<div class="fv-update-dismiss-wrap">'
+      + '<button class="fv-update-dismiss-btn" data-fp-action="dismiss">' + L.dismiss + '</button>'
+    + '</div>';
+
+    return { html: html, version: wn.version, lang: isTh ? 'th' : 'en' };
   }
 
+  // ── Inject content styles (once) ────────────────────────────────────────────
+
+  var _stylesInjected = false;
+  function injectStyles() {
+    if (_stylesInjected) return;
+    _stylesInjected = true;
+
+    var css = ''
+      + '.fv-update-header{display:flex;align-items:center;gap:12px;margin-bottom:14px}'
+      + '.fv-update-icon{width:40px;height:40px;border-radius:12px;flex-shrink:0;background:linear-gradient(135deg,#13b47f,#0d8f65);display:flex;align-items:center;justify-content:center}'
+      + '.fv-update-info{min-width:0}'
+      + '.fv-update-badge{font-size:.95em;font-weight:600;color:var(--fv-text-primary,#111)}'
+      + '.fv-update-version{font-size:.78em;color:#13b47f;font-weight:500;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
+      + '.fv-update-date{font-size:.72em;color:var(--fv-text-tertiary,#aaa);margin-top:2px}'
+      + '.fv-update-sub{font-size:.85em;color:var(--fv-text-secondary,#666);margin:0 0 14px;line-height:1.55}'
+      + '.fv-update-list{list-style:none;margin:0 0 16px;padding:0}'
+      + '.fv-update-item{display:flex;align-items:flex-start;gap:8px;padding:4px 0;font-size:.85em;color:var(--fv-text-secondary,#555);line-height:1.5}'
+      + '.fv-update-dot{flex-shrink:0;margin-top:5px;width:6px;height:6px;border-radius:50%;background:#13b47f;display:inline-block}'
+      + '.fv-update-cta{display:block;width:100%;padding:11px 0;background:linear-gradient(135deg,#13b47f,#0d8f65);color:#fff !important;border-radius:11px;font-size:.95em;font-weight:600;text-align:center;text-decoration:none !important;box-shadow:0 2px 12px rgba(19,180,127,.35);margin-bottom:10px;transition:transform .15s ease,box-shadow .15s ease}'
+      + '.fv-update-cta:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(19,180,127,.45)}'
+      + '.fv-update-dismiss-wrap{text-align:center}'
+      + '.fv-update-dismiss-btn{border:none;background:none;cursor:pointer;font-size:.78em;color:var(--fv-text-tertiary,#aaa);font-family:inherit;padding:4px 8px;border-radius:5px;transition:color .15s}'
+      + '.fv-update-dismiss-btn:hover{color:var(--fv-text-secondary,#666)}';
+
+    // Dark theme overrides
+    css += '.fp-theme-dark .fv-update-badge{color:var(--fv-text-primary,#f5f5f7)}'
+      + '.fp-theme-dark .fv-update-sub{color:var(--fv-text-secondary,#aeaeb2)}'
+      + '.fp-theme-dark .fv-update-item{color:var(--fv-text-secondary,#aeaeb2)}'
+      + '.fp-theme-dark .fv-update-date{color:var(--fv-text-tertiary,#636366)}'
+      + '.fp-theme-dark .fv-update-dismiss-btn{color:var(--fv-text-tertiary,#636366)}'
+      + '.fp-theme-dark .fv-update-dismiss-btn:hover{color:var(--fv-text-secondary,#aeaeb2)}';
+
+    var style = document.createElement('style');
+    style.id = 'fv-update-styles';
+    style.textContent = css;
+    document.head.appendChild(style);
+  }
+
+  // ── Show popup via PopupSystem ─────────────────────────────────────────────
+
   function showPopup(wn, buildId) {
-    var existing = document.getElementById(CFG.POPUP_ID);
-    if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+    // ตรวจสอบว่า PopupSystem พร้อมใช้งาน
+    if (typeof window.PopupSystem === 'undefined' || !window.PopupSystem._initialized) {
+      // Fallback: รอ PopupSystem พร้อม
+      window.addEventListener('fp:ready', function() {
+        _doShow(wn, buildId);
+      }, { once: true });
+      // Timeout fallback — ถ้า popup.js โหลดไม่สำเร็จ ใช้วิธีเดิม
+      setTimeout(function() {
+        if (typeof window.PopupSystem === 'undefined') {
+          console.warn('[version-core] PopupSystem not available, skipping update popup');
+        }
+      }, 5000);
+      return;
+    }
+    _doShow(wn, buildId);
+  }
+
+  function _doShow(wn, buildId) {
+    var version = wn.version;
 
     lsSet(CFG.KEY_SHOWN_BUILD, buildId);
     markSession(buildId);
 
-    var version = wn.version;
-    var wrap    = document.createElement('div');
-    wrap.id     = CFG.POPUP_ID;
-    wrap.innerHTML = buildPopup(wn);
-    document.body.appendChild(wrap);
+    injectStyles();
 
-    function dismiss(permanent) {
-      if (permanent) setDismissed(version);
-      wrap.parentNode && wrap.parentNode.removeChild(wrap);
-    }
+    var content = buildContent(wn);
+    var isTh = (ls('selectedLang') || 'en') === 'th';
 
-    document.getElementById('fv-dismiss').onclick = function() { dismiss(true); };
-    document.getElementById('fv-bd').onclick       = function() { dismiss(false); };
-    document.addEventListener('keydown', function onKey(e) {
-      if (e.key === 'Escape') { dismiss(false); document.removeEventListener('keydown', onKey); }
+    PopupSystem.container({
+      id       : 'fv-update-' + version,
+      title    : null,
+      content  : content.html,
+      size     : 'sm',
+      position : 'center',
+      group    : CFG.POPUP_GROUP,
+      blocking : true,
+      closable : true,
+      theme    : 'light',
+      onMount  : function(bodyEl, handle) {
+        // "See what's new" link — close popup on click
+        var cta = bodyEl.querySelector('.fv-update-cta');
+        if (cta) {
+          cta.addEventListener('click', function(e) {
+            // Let the link navigate naturally — just close the popup
+            handle.close({ action: 'navigate' });
+          });
+        }
+
+        // Dismiss button — permanent dismiss
+        var dismissBtn = bodyEl.querySelector('[data-fp-action="dismiss"]');
+        if (dismissBtn) {
+          dismissBtn.addEventListener('click', function() {
+            setDismissed(version);
+            handle.close({ action: 'dismissed' });
+          });
+        }
+      },
+      onClose : function(id, result) {
+        // Cleanup styles if no more popups
+        var stats = PopupSystem.stats();
+        if (stats.active === 0 && stats.queued === 0) {
+          // Keep styles injected — they're lightweight and may be reused
+        }
+      },
     });
   }
 

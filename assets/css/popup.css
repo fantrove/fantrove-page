@@ -1,0 +1,718 @@
+/* ═══════════════════════════════════════════════════════════════
+   FANTROVE POPUP SYSTEM v1.0
+   assets/css/popup.css
+   Auto-injected by popup.js — do NOT add <link> manually.
+   Uses Fantrove design tokens from tokens.css (loaded first).
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Reset & Base ───────────────────────────────────────────────────────── */
+
+.fp-popup,
+.fp-popup *,
+.fp-popup *::before,
+.fp-popup *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.fp-popup {
+  font-family: var(--fv-font-stack);
+  font-size: var(--fv-text-base);
+  line-height: var(--fv-leading-normal);
+  color: var(--fp-text, var(--fv-text-primary));
+  background: var(--fp-bg, var(--fv-surface-card));
+  border: 1px solid var(--fp-border, var(--fv-border-default));
+  border-radius: var(--fp-radius, var(--fv-radius-md));
+  box-shadow: var(--fp-shadow, var(--fv-shadow-lg));
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.fp-popup:focus-visible {
+  box-shadow: var(--fp-shadow, var(--fv-shadow-lg)),
+    var(--fv-shadow-focus);
+}
+
+/* ── Inner container ────────────────────────────────────────────────────── */
+
+.fp-inner {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-height: 90vh;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+
+.fp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--fv-space-5) var(--fv-space-6);
+  border-bottom: 1px solid var(--fp-divider, rgba(0, 0, 0, 0.06));
+  flex-shrink: 0;
+  min-height: 56px;
+}
+
+.fp-title {
+  font-size: var(--fv-text-lg);
+  font-weight: var(--fv-font-semibold);
+  color: var(--fp-text-heading, var(--fv-text-heading));
+  line-height: var(--fv-leading-tight);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Close button ───────────────────────────────────────────────────────── */
+
+.fp-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: var(--fv-radius-xs, 12px);
+  background: transparent;
+  color: var(--fp-text-muted, var(--fv-text-muted));
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-left: var(--fv-space-2);
+  transition: background-color var(--fv-transition-fast),
+              color var(--fv-transition-fast),
+              transform var(--fv-transition-fast);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.fp-close-btn:hover {
+  background: var(--fp-close-hover-bg, rgba(0, 0, 0, 0.04));
+  color: var(--fp-text, var(--fv-text-primary));
+}
+
+.fp-close-btn:active {
+  transform: scale(0.92);
+}
+
+.fp-close-btn svg {
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+}
+
+/* ── Body ───────────────────────────────────────────────────────────────── */
+
+.fp-body {
+  padding: var(--fv-space-6);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  flex: 1;
+  min-height: 0;
+  color: var(--fp-text, var(--fv-text-primary));
+  line-height: var(--fv-leading-relaxed);
+  font-size: var(--fv-text-base);
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Custom scrollbar for popup body */
+.fp-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.fp-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.fp-body::-webkit-scrollbar-thumb {
+  background: var(--fp-border, var(--fv-border-default));
+  border-radius: 3px;
+}
+
+.fp-body::-webkit-scrollbar-thumb:hover {
+  background: var(--fp-text-muted, var(--fv-text-muted));
+}
+
+/* ── Footer ─────────────────────────────────────────────────────────────── */
+
+.fp-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--fv-space-3);
+  padding: var(--fv-space-4) var(--fv-space-6);
+  border-top: 1px solid var(--fp-divider, rgba(0, 0, 0, 0.06));
+  flex-shrink: 0;
+}
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+
+.fp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--fv-space-2) var(--fv-space-6);
+  border: none;
+  border-radius: var(--fv-radius-xs, 12px);
+  font-family: var(--fv-font-stack);
+  font-size: var(--fv-text-sm);
+  font-weight: var(--fv-font-medium);
+  line-height: 1.4;
+  cursor: pointer;
+  transition: all var(--fv-transition-fast);
+  white-space: nowrap;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-appearance: none;
+  appearance: none;
+  min-height: 40px;
+}
+
+.fp-btn:active {
+  transform: scale(0.97);
+}
+
+.fp-btn-primary {
+  background: var(--fp-accent, var(--fv-brand-teal));
+  color: var(--fp-accent-text, #ffffff);
+}
+
+.fp-btn-primary:hover {
+  background: var(--fp-accent-light, var(--fv-brand-teal-light));
+  box-shadow: 0 4px 12px rgba(19, 180, 127, 0.2);
+}
+
+.fp-btn-secondary {
+  background: transparent;
+  color: var(--fp-text-secondary, var(--fv-text-secondary));
+  border: 1px solid var(--fp-border, var(--fv-border-default));
+}
+
+.fp-btn-secondary:hover {
+  background: var(--fp-close-hover-bg, rgba(0, 0, 0, 0.04));
+  color: var(--fp-text, var(--fv-text-primary));
+}
+
+/* ── Alert & Confirm body styles ────────────────────────────────────────── */
+
+.fp-alert-body,
+.fp-confirm-body {
+  padding: var(--fv-space-4) 0;
+  color: var(--fp-text-body, var(--fv-text-body));
+  line-height: var(--fv-leading-relaxed);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   SIZES
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.fp-size-xs { width: 320px; max-width: calc(100vw - 2rem); }
+.fp-size-sm { width: 400px; max-width: calc(100vw - 2rem); }
+.fp-size-md { width: 540px; max-width: calc(100vw - 2rem); }
+.fp-size-lg { width: 720px; max-width: calc(100vw - 2rem); }
+.fp-size-xl { width: 900px; max-width: calc(100vw - 2rem); }
+
+/* Full-size: covers viewport with padding */
+.fp-size-full {
+  width: 100vw;
+  height: 100vh;
+  max-width: 100vw;
+  border-radius: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   POSITIONS & ENTER/EXIT ANIMATIONS
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Center ────────────────────────────────────────────────────────────── */
+
+.fp-pos-center {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.95);
+  opacity: 0;
+}
+
+.fp-pos-center.fp-is-visible,
+.fp-pos-center.fp-is-entering {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+}
+
+.fp-pos-center.fp-is-closing {
+  transform: translate(-50%, -50%) scale(0.95);
+  opacity: 0;
+}
+
+/* ── Top ───────────────────────────────────────────────────────────────── */
+
+.fp-pos-top {
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -100%);
+  opacity: 0;
+}
+
+.fp-pos-top.fp-is-visible,
+.fp-pos-top.fp-is-entering {
+  transform: translate(-50%, 0);
+  opacity: 1;
+}
+
+.fp-pos-top.fp-is-closing {
+  transform: translate(-50%, -100%);
+  opacity: 0;
+}
+
+/* ── Bottom ────────────────────────────────────────────────────────────── */
+
+.fp-pos-bottom {
+  bottom: 0;
+  left: 50%;
+  transform: translate(-50%, 100%);
+  opacity: 0;
+}
+
+.fp-pos-bottom.fp-is-visible,
+.fp-pos-bottom.fp-is-entering {
+  transform: translate(-50%, 0);
+  opacity: 1;
+}
+
+.fp-pos-bottom.fp-is-closing {
+  transform: translate(-50%, 100%);
+  opacity: 0;
+}
+
+/* ── Left ──────────────────────────────────────────────────────────────── */
+
+.fp-pos-left {
+  top: 0;
+  left: 0;
+  transform: translateX(-100%);
+  opacity: 0;
+  height: 100vh;
+  border-radius: 0 var(--fp-radius, var(--fv-radius-md)) var(--fp-radius, var(--fv-radius-md)) 0;
+}
+
+.fp-pos-left.fp-is-visible,
+.fp-pos-left.fp-is-entering {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.fp-pos-left.fp-is-closing {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+/* ── Right ─────────────────────────────────────────────────────────────── */
+
+.fp-pos-right {
+  top: 0;
+  right: 0;
+  transform: translateX(100%);
+  opacity: 0;
+  height: 100vh;
+  border-radius: var(--fp-radius, var(--fv-radius-md)) 0 0 var(--fp-radius, var(--fv-radius-md));
+}
+
+.fp-pos-right.fp-is-visible,
+.fp-pos-right.fp-is-entering {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.fp-pos-right.fp-is-closing {
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+/* ── Corner positions (for toasts, small popups) ───────────────────────── */
+
+.fp-pos-top-left {
+  top: var(--fv-space-6);
+  left: var(--fv-space-6);
+  transform: translateY(-20px) scale(0.95);
+  opacity: 0;
+}
+
+.fp-pos-top-left.fp-is-visible,
+.fp-pos-top-left.fp-is-entering {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+
+.fp-pos-top-left.fp-is-closing {
+  transform: translateY(-20px) scale(0.95);
+  opacity: 0;
+}
+
+.fp-pos-top-right {
+  top: var(--fv-space-6);
+  right: var(--fv-space-6);
+  transform: translateY(-20px) scale(0.95);
+  opacity: 0;
+}
+
+.fp-pos-top-right.fp-is-visible,
+.fp-pos-top-right.fp-is-entering {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+
+.fp-pos-top-right.fp-is-closing {
+  transform: translateY(-20px) scale(0.95);
+  opacity: 0;
+}
+
+.fp-pos-bottom-left {
+  bottom: var(--fv-space-6);
+  left: var(--fv-space-6);
+  transform: translateY(20px) scale(0.95);
+  opacity: 0;
+}
+
+.fp-pos-bottom-left.fp-is-visible,
+.fp-pos-bottom-left.fp-is-entering {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+
+.fp-pos-bottom-left.fp-is-closing {
+  transform: translateY(20px) scale(0.95);
+  opacity: 0;
+}
+
+.fp-pos-bottom-right {
+  bottom: var(--fv-space-6);
+  right: var(--fv-space-6);
+  transform: translateY(20px) scale(0.95);
+  opacity: 0;
+}
+
+.fp-pos-bottom-right.fp-is-visible,
+.fp-pos-bottom-right.fp-is-entering {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+
+.fp-pos-bottom-right.fp-is-closing {
+  transform: translateY(20px) scale(0.95);
+  opacity: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   TYPE-SPECIFIC OVERRIDES
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Dialog ────────────────────────────────────────────────────────────── */
+
+.fp-dialog .fp-inner {
+  max-height: 85vh;
+}
+
+/* ── Alert ─────────────────────────────────────────────────────────────── */
+
+.fp-alert {
+  text-align: center;
+}
+
+.fp-alert .fp-footer {
+  justify-content: center;
+}
+
+/* ── Confirm ───────────────────────────────────────────────────────────── */
+
+.fp-confirm .fp-alert-body,
+.fp-confirm .fp-confirm-body {
+  text-align: center;
+}
+
+/* ── Sheet (bottom sheet) ──────────────────────────────────────────────── */
+
+.fp-sheet {
+  width: 100% !important;
+  max-width: 100vw !important;
+  border-radius: var(--fp-radius, var(--fv-radius-md)) var(--fp-radius, var(--fv-radius-md)) 0 0;
+  border-bottom: none;
+}
+
+.fp-sheet .fp-inner {
+  max-height: 80vh;
+}
+
+/* Sheet drag handle indicator */
+.fp-sheet .fp-header::before {
+  content: '';
+  display: block;
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--fp-border, var(--fv-border-default));
+  margin: 0 auto var(--fv-space-3);
+  flex-shrink: 0;
+}
+
+/* ── Drawer ────────────────────────────────────────────────────────────── */
+
+.fp-drawer {
+  width: 360px;
+  max-width: 85vw !important;
+}
+
+.fp-drawer .fp-inner {
+  height: 100vh;
+  max-height: 100vh;
+}
+
+/* ── Toast ─────────────────────────────────────────────────────────────── */
+
+.fp-toast {
+  border-radius: var(--fv-radius-lg, 37px);
+  padding: 0;
+  box-shadow: var(--fv-shadow-lg), 0 0 0 1px var(--fv-border-default);
+}
+
+.fp-toast .fp-inner {
+  max-height: none;
+}
+
+.fp-toast .fp-body {
+  padding: var(--fv-space-3) var(--fv-space-6);
+  font-size: var(--fv-text-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--fv-space-3);
+  white-space: nowrap;
+}
+
+/* ── Tooltip ───────────────────────────────────────────────────────────── */
+
+.fp-tooltip {
+  padding: var(--fv-space-2) var(--fv-space-3);
+  border-radius: var(--fv-radius-xs, 12px);
+  font-size: var(--fv-text-xs);
+  box-shadow: var(--fv-shadow-md);
+  pointer-events: none;
+  max-width: 280px;
+  white-space: normal;
+}
+
+.fp-tooltip .fp-inner {
+  max-height: none;
+}
+
+.fp-tooltip .fp-body {
+  padding: 0;
+}
+
+/* ── Popover ───────────────────────────────────────────────────────────── */
+
+.fp-popover {
+  border-radius: var(--fv-radius-sm, 17px);
+  box-shadow: var(--fv-shadow-lg), 0 0 0 1px var(--fv-border-default);
+}
+
+.fp-popover .fp-inner {
+  max-height: 50vh;
+  min-width: 200px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   MODIFIERS
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Glassmorphism ─────────────────────────────────────────────────────── */
+
+.fp-glass {
+  background: var(--fv-surface-card-alpha, rgba(255, 255, 255, 0.94)) !important;
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+}
+
+/* ── Borderless ────────────────────────────────────────────────────────── */
+
+.fp-borderless {
+  border-color: transparent !important;
+}
+
+/* ── Persistent (no close mechanisms) ──────────────────────────────────── */
+
+.fp-persistent .fp-close-btn {
+  display: none;
+}
+
+/* ── Anchored ──────────────────────────────────────────────────────────── */
+
+.fp-anchored {
+  position: fixed;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   OVERLAY
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.fp-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--fv-z-overlay, 17000);
+  opacity: 0;
+  transition: opacity 0ms;
+  will-change: opacity;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 600px) {
+  .fp-size-sm,
+  .fp-size-md,
+  .fp-size-lg,
+  .fp-size-xl {
+    width: calc(100vw - 2rem);
+    max-width: calc(100vw - 2rem);
+  }
+
+  .fp-drawer {
+    width: 100vw;
+    max-width: 100vw !important;
+  }
+
+  .fp-header {
+    padding: var(--fv-space-4) var(--fv-space-4);
+  }
+
+  .fp-body {
+    padding: var(--fv-space-4);
+  }
+
+  .fp-footer {
+    padding: var(--fv-space-3) var(--fv-space-4);
+  }
+
+  .fp-footer .fp-btn {
+    flex: 1;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   REDUCED MOTION
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  .fp-popup,
+  .fp-popup *,
+  .fp-overlay {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   SAFE AREA (iOS notch, etc.)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.fp-pos-bottom {
+  bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.fp-pos-bottom-left {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--fv-space-6));
+}
+
+.fp-pos-bottom-right {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--fv-space-6));
+}
+
+.fp-sheet {
+  bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ── Loading state ─────────────────────────────────────────────────────── */
+
+.fp-body-loading {
+  position: relative;
+  min-height: 80px;
+}
+
+.fp-loading-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  background: var(--fv-bg-primary, #ffffff);
+  border-radius: inherit;
+}
+
+.fp-popup.fp-theme-dark .fp-loading-overlay {
+  background: var(--fv-bg-primary, #1a1a2e);
+}
+
+.fp-popup.fp-theme-brand .fp-loading-overlay {
+  background: var(--fv-bg-primary, #0d1b2a);
+}
+
+.fp-loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--fv-space-3, 12px);
+  padding: var(--fv-space-6, 24px);
+}
+
+.fp-loading-spinner {
+  animation: fp-spin 1s linear infinite;
+  color: var(--fv-text-secondary, #64748b);
+}
+
+.fp-popup.fp-theme-dark .fp-loading-spinner {
+  color: var(--fv-text-secondary, #94a3b8);
+}
+
+.fp-popup.fp-theme-brand .fp-loading-spinner {
+  color: var(--fv-text-secondary, #94a3b8);
+}
+
+.fp-loading-label {
+  font-size: var(--fv-text-sm, 0.875rem);
+  color: var(--fv-text-secondary, #64748b);
+  text-align: center;
+}
+
+.fp-popup.fp-theme-dark .fp-loading-label {
+  color: var(--fv-text-secondary, #94a3b8);
+}
+
+.fp-popup.fp-theme-brand .fp-loading-label {
+  color: var(--fv-text-secondary, #94a3b8);
+}
+
+@keyframes fp-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.fp-error-body {
+  padding: var(--fv-space-4, 16px);
+  text-align: center;
+  color: var(--fv-text-danger, #ef4444);
+  font-size: var(--fv-text-sm, 0.875rem);
+}
+
+/* ── Shadow DOM host ────────────────────────────────────────────────────── */
+
+.fp-shadow-host {
+  /* The shadow host itself is transparent — content lives inside shadow root */
+}
+
+.fp-shadow-host > *:not(style) {
+  /* Hide light-DOM children when shadow root is attached */
+  display: none;
+}
