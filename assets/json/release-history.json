@@ -1,3 +1,287 @@
 {
-  "releases": []
+  "releases": [
+    {
+      "version": "1.2.0",
+      "date": {
+        "en": "June 8, 2026 at 20:15 UTC",
+        "th": "8 มิถุนายน 2569 เวลา 20:15 UTC"
+      },
+      "title": {
+        "en": "Navigation overhaul, content system & branding update",
+        "th": "ปรับโครงสร้างนำทาง, ระบบเนื้อหา และอัพเดทแบรนด์"
+      },
+      "subtitle": {
+        "en": "Major rewrite of navigation core modules, new content service architecture, console bridge system, updated branding assets, and comprehensive SEO improvements across the site.",
+        "th": "เขียนใหม่โมดูลนำทางหลักครั้งใหญ่ สถาปัตยกรรมระบบเนื้อหาใหม่ ระบบ console bridge อัพเดทสินทรัพย์แบรนด์ และปรับปรุง SEO อย่างครอบคลุมทั่วทั้งเว็บไซต์"
+      },
+      "sections": [
+        {
+          "type": "new",
+          "items": [
+            {
+              "title": {
+                "en": "Console bridge system for developer tools",
+                "th": "ระบบ console bridge สำหรับ developer tools"
+              },
+              "description": {
+                "en": "New console.html and console.js with fantrove-console-bridge.js provide an integrated developer experience. The bridge connects the live site to the console for real-time debugging, content management, and system monitoring directly from the browser.",
+                "th": "console.html และ console.js ใหม่พร้อม fantrove-console-bridge.js ให้ประสบการณ์สำหรับนักพัฒนาแบบครบวงจร bridge เชื่อมต่อเว็บไซต์ไปยัง console สำหรับ debugging จัดการเนื้อหา และติดตามระบบแบบ real-time โดยตรงจาก browser"
+              }
+            },
+            {
+              "title": {
+                "en": "Content data service with registry architecture",
+                "th": "บริการข้อมูลเนื้อหาด้วยสถาปัตยกรรม registry"
+              },
+              "description": {
+                "en": "New con-data-service/con-data-registry.js provides a centralized content data registry. It manages content packages, button configurations, and card data with a clean service-oriented architecture that separates data concerns from rendering logic.",
+                "th": "con-data-service/con-data-registry.js ใหม่ให้ registry ข้อมูลเนื้อหาแบบรวมศูนย์ จัดการ content packages การตั้งค่าปุ่ม และข้อมูลการ์ดด้วยสถาปัตยกรรมแบบ service-oriented ที่แยกข้อกังวลด้านข้อมูลออกจาก rendering logic"
+              }
+            }
+          ]
+        },
+        {
+          "type": "improved",
+          "items": [
+            {
+              "title": {
+                "en": "Navigation core modules completely rewritten",
+                "th": "เขียนโมดูลนำทางหลักใหม่ทั้งหมด"
+              },
+              "description": {
+                "en": "The navigation system's core modules (buttons, config, feed, router, content, data, init) have been rewritten with cleaner separation of concerns. The feed module now supports dynamic content loading, the router handles page transitions more efficiently, and the config module centralizes all navigation settings.",
+                "th": "โมดูลหลักของระบบนำทาง (buttons, config, feed, router, content, data, init) ถูกเขียนใหม่ด้วยการแยกหน้าที่ที่ชัดเจนมากขึ้น โมดูล feed รองรับการโหลดเนื้อหาแบบ dynamic ตัว router จัดการ page transition ได้มีประสิทธิภาพมากขึ้น และโมดูล config รวมการตั้งค่านำทางทั้งหมดไว้ที่เดียว"
+              }
+            },
+            {
+              "title": {
+                "en": "Site branding and favicon updated",
+                "th": "อัพเดทแบรนด์และ favicon ของเว็บไซต์"
+              },
+              "description": {
+                "en": "Updated logo images (fantrove-hub.png, fantrove-verse.png), favicon files (.ico for both Fantrove Hub and Fantrove Verse), and Open Graph image across all pages. The About page also received a visual refresh with updated CSS.",
+                "th": "อัพเดทรูปโลโก้ (fantrove-hub.png, fantrove-verse.png) ไฟล์ favicon (.ico สำหรับ Fantrove Hub และ Fantrove Verse) และรูป Open Graph บนทุกหน้า หน้า About ได้รับการปรับปรุง visual ด้วย CSS ที่อัพเดท"
+              }
+            },
+            {
+              "title": {
+                "en": "SEO, robots.txt and sitemap.xml improvements",
+                "th": "ปรับปรุง SEO, robots.txt และ sitemap.xml"
+              },
+              "description": {
+                "en": "Comprehensive SEO improvements including updated robots.txt rules, expanded sitemap.xml with more pages, improved meta descriptions, and better URL redirect rules via _redirects and _headers files. The home page received updated SEO-structured data with new FAQ entries.",
+                "th": "ปรับปรุง SEO อย่างครอบคลุมรวมถึงกฎ robots.txt ที่อัพเดท sitemap.xml ที่ขยายเพิ่มหน้าใหม่ meta description ที่ดีขึ้น และกฎ redirect URL ที่ดีขึ้นผ่านไฟล์ _redirects และ _headers หน้า home ได้รับ structured data สำหรับ SEO ที่อัพเดทพร้อม FAQ entries ใหม่"
+              }
+            },
+            {
+              "title": {
+                "en": "Emoji database updated across all categories",
+                "th": "อัพเดทฐานข้อมูล emoji ทุกหมวดหมู่"
+              },
+              "description": {
+                "en": "Updated emoji data files for all 9 categories including activities, animal_nature, flags, food_drink, objects, people_body, smileys_emotion, symbols, and travel_places. The fancy text database was also updated with new entries.",
+                "th": "อัพเดทไฟล์ข้อมูล emoji ทั้ง 9 หมวดหมู่รวมถึง activities, animal_nature, flags, food_drink, objects, people_body, smileys_emotion, symbols และ travel_places ฐานข้อมูล fancy text ก็ได้รับการอัพเดทด้วย entries ใหม่"
+              }
+            },
+            {
+              "title": {
+                "en": "Build system and sitemap generator enhanced",
+                "th": "ปรับปรุงระบบ build และตัวสร้าง sitemap"
+              },
+              "description": {
+                "en": "The build script (build.js) and sitemap generator (generate-sitemap.js) have been enhanced with better file handling, improved content detection, and more reliable output generation. The build process now handles edge cases more gracefully.",
+                "th": "build script (build.js) และตัวสร้าง sitemap (generate-sitemap.js) ถูกปรับปรุงด้วยการจัดการไฟล์ที่ดีขึ้น การตรวจจับเนื้อหาที่แม่นยำขึ้น และการสร้าง output ที่เชื่อถือได้มากขึ้น กระบวนการ build จัดการ edge cases ได้ดีขึ้น"
+              }
+            }
+          ]
+        },
+        {
+          "type": "fixed",
+          "items": [
+            {
+              "title": {
+                "en": "Cloudflare _headers configuration updated",
+                "th": "อัพเดทการตั้งค่า Cloudflare _headers"
+              },
+              "description": {
+                "en": "Updated the _headers file to ensure correct caching behavior, security headers, and content type settings for the Cloudflare Pages deployment environment.",
+                "th": "อัพเดทไฟล์ _headers เพื่อให้แน่ใจว่าพฤติกรรม caching ส่วนหัวความปลอดภัย และการตั้งค่า content type ถูกต้องสำหรับสภาพแวดล้อม Cloudflare Pages"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.1.0",
+      "date": {
+        "en": "May 31, 2026 at 14:20 UTC",
+        "th": "31 พฤษภาคม 2569 เวลา 14:20 UTC"
+      },
+      "title": {
+        "en": "Symbol database expansion & content system",
+        "th": "ขยายฐานข้อมูลสัญลักษณ์ & ระบบเนื้อหา"
+      },
+      "subtitle": {
+        "en": "Massive expansion of the symbol database with 12+ new categories, content card system introduction, and URE virtual list performance improvements.",
+        "th": "ขยายฐานข้อมูลสัญลักษณ์ขนาดใหญ่เพิ่ม 12+ หมวดหมู่ใหม่ แนะนำระบบการ์ดเนื้อหา และปรับปรุงประสิทธิภาพ virtual list ของ URE"
+      },
+      "sections": [
+        {
+          "type": "new",
+          "items": [
+            {
+              "title": {
+                "en": "12+ new symbol database categories",
+                "th": "เพิ่มหมวดหมู่ฐานข้อมูลสัญลักษณ์ใหม่ 12+ หมวด"
+              },
+              "description": {
+                "en": "Added comprehensive symbol data for: arrows, box drawing, braille, currency, cyrillic, dingbats, geometric shapes, greek, latin extended, alchemical symbols, ancient scripts, chess/games, CJK symbols, combining characters, enclosed alphanumeric, general punctuation extended, mahjong/domino, and miscellaneous symbols. This dramatically expands the searchable symbol collection available to users.",
+                "th": "เพิ่มข้อมูลสัญลักษณ์ครอบคลุม: ลูกศร, การวาดกรอบ, เบรลล์, สกุลเงิน, ซีริลลิก, ดิงแบท, รูปทรงเรขาคณิต, กรีก, ละตินขยาย, สัญลักษณ์แอลเคมี, อักษรโบราณ, หมากรุก/เกม, สัญลักษณ์ CJK, อักขระผสม, ตัวเลข/อักษรในกรอบ, เครื่องหมายวรรคตอนขยาย, หมากรุก/โดมิโน และสัญลักษณ์เบ็ดเตล็ด ขยายข้อมูลสัญลักษณ์ที่ค้นหาได้สำหรับผู้ใช้อย่างมาก"
+              }
+            },
+            {
+              "title": {
+                "en": "Content card system with categorized packages",
+                "th": "ระบบการ์ดเนื้อหาพร้อมแพ็กเกจจัดหมวดหมู่"
+              },
+              "description": {
+                "en": "Introduced a new content card system (cards.json, content/packages.json) that organizes content into browsable categories and packages. The con-data-service registry manages these packages with a clean API for content discovery and navigation.",
+                "th": "แนะนำระบบการ์ดเนื้อหาใหม่ (cards.json, content/packages.json) ที่จัดระเบียบเนื้อหาเป็นหมวดหมู่และแพ็กเกจที่เรียกดูได้ con-data-service registry จัดการแพ็กเกจเหล่านี้ด้วย API ที่สะอาดสำหรับการค้นพบและนำทางเนื้อหา"
+              }
+            }
+          ]
+        },
+        {
+          "type": "improved",
+          "items": [
+            {
+              "title": {
+                "en": "URE virtual list performance and diffing engine",
+                "th": "ประสิทธิภาพ virtual list และเอนจิน diffing ของ URE"
+              },
+              "description": {
+                "en": "Multiple rounds of improvements to the URE (Universal Render Engine) virtual list component. The diffing algorithm was refined for faster DOM updates, memory management was optimized to reduce garbage collection pressure, and the virtual list now handles larger datasets more smoothly with better scroll performance.",
+                "th": "ปรับปรุง URE (Universal Render Engine) virtual list component หลายรอบ อัลกอริทึม diffing ถูกปรับแต่งให้ DOM update เร็วขึ้น การจัดการ memory ถูก optimize เพื่อลดแรงกดดันจาก garbage collection และ virtual list จัดการชุดข้อมูลขนาดใหญ่ได้ลื่นไหลมากขึ้นด้วยประสิทธิภาพการเลื่อนที่ดีขึ้น"
+              }
+            },
+            {
+              "title": {
+                "en": "Footer styling refined",
+                "th": "ปรับแต่งสไตล์ footer"
+              },
+              "description": {
+                "en": "The footer CSS received visual refinements for better consistency across different page layouts and screen sizes. Spacing, typography, and responsive behavior were all improved.",
+                "th": "CSS ของ footer ได้รับการปรับแต่ง visual เพื่อความสม่ำเสมอที่ดีขึ้นบน layout หน้าต่างๆ และขนาดหน้าจอต่างๆ ระยะห่าง การพิมพ์ และพฤติกรรม responsive ถูกปรับปรุงทั้งหมด"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.0.9",
+      "date": {
+        "en": "May 24, 2026 at 18:14 UTC",
+        "th": "24 พฤษภาคม 2569 เวลา 18:14 UTC"
+      },
+      "title": {
+        "en": "Search improvements & UI polish",
+        "th": "ปรับปรุงระบบค้นหา & ตกแต่ง UI"
+      },
+      "subtitle": {
+        "en": "Significant improvements to the search system CSS, back-to-top button functionality, home page styling, and design token refinements for better visual consistency.",
+        "th": "ปรับปรุงระบบค้นหา CSS อย่างมาก ฟังก์ชันปุ่มกลับด้านบน สไตล์หน้า home และปรับแต่ง design token เพื่อความสม่ำเสมอทาง visual ที่ดีขึ้น"
+      },
+      "sections": [
+        {
+          "type": "improved",
+          "items": [
+            {
+              "title": {
+                "en": "Search page CSS completely redesigned",
+                "th": "ออกแบบ CSS หน้าค้นหาใหม่ทั้งหมด"
+              },
+              "description": {
+                "en": "The search page received a comprehensive CSS overhaul including search.css, search-compact-overrides.css, and the search UI module. The new design provides better visual hierarchy, improved result card layouts, and a more polished compact mode for mobile devices.",
+                "th": "หน้าค้นหาได้รับการปรับ CSS ครั้งใหญ่รวมถึง search.css, search-compact-overrides.css และ search UI module การออกแบบใหม่ให้ visual hierarchy ที่ดีขึ้น layout การ์ดผลลัพธ์ที่ปรับปรุง และ compact mode สำหรับมือถือที่สวยงามมากขึ้น"
+              }
+            },
+            {
+              "title": {
+                "en": "Back-to-top button enhanced with smooth behavior",
+                "th": "ปรับปรุงปุ่มกลับด้านบนด้วยพฤติกรรมที่ลื่นไหล"
+              },
+              "description": {
+                "en": "The back-to-top button received both CSS and JavaScript improvements. The button now appears more naturally, has better animation timing, and the scroll detection logic was optimized for smoother show/hide behavior across all page types.",
+                "th": "ปุ่มกลับด้านบนได้รับการปรับปรุงทั้ง CSS และ JavaScript ปุ่มปรากฏตามธรรมชาติมากขึ้น มี timing แอนิเมชันที่ดีขึ้น และ logic การตรวจจับการเลื่อนถูก optimize สำหรับพฤติกรรม show/hide ที่ลื่นไหลบนทุกประเภทหน้า"
+              }
+            },
+            {
+              "title": {
+                "en": "Home page styling and design token updates",
+                "th": "สไตล์หน้า home และอัพเดท design token"
+              },
+              "description": {
+                "en": "Multiple rounds of home.css improvements including better spacing, refined typography, and updated component styles. The tokens.css design token file was also updated to ensure visual consistency across all pages with new color values and spacing scales.",
+                "th": "ปรับปรุง home.css หลายรอบรวมถึงระยะห่างที่ดีขึ้น การพิมพ์ที่ปรับแต่ง และสไตล์ component ที่อัพเดท ไฟล์ design token tokens.css ก็ได้รับการอัพเดทเพื่อให้แน่ใจว่า visual consistency บนทุกหน้าด้วยค่าสีและ spacing scale ใหม่"
+              }
+            },
+            {
+              "title": {
+                "en": "Navigation core CSS refined",
+                "th": "ปรับแต่ง CSS ของ navigation core"
+              },
+              "description": {
+                "en": "Both nav-core.css and nav-core-ext.css received styling refinements for better visual appearance, improved responsive behavior, and more consistent interaction states across navigation components.",
+                "th": "nav-core.css และ nav-core-ext.css ได้รับการปรับแต่งสไตล์สำหรับการแสดงผลที่ดีขึ้น พฤติกรรม responsive ที่ปรับปรุง และสถานะ interaction ที่สม่ำเสมอมากขึ้นบน navigation components"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.0.8",
+      "date": {
+        "en": "May 11, 2026 at 21:43 UTC",
+        "th": "11 พฤษภาคม 2569 เวลา 21:43 UTC"
+      },
+      "title": {
+        "en": "Copy notification refinement",
+        "th": "ปรับแต่งระบบแจ้งเตือนการคัดลอก"
+      },
+      "subtitle": {
+        "en": "Refined the copy-to-clipboard notification behavior with improved animation timing, better positioning logic, and more reliable feedback across different browsers and devices.",
+        "th": "ปรับแต่งพฤติกรรมการแจ้งเตือนการคัดลอกไปยังคลิปบอร์ดด้วย timing แอนิเมชันที่ดีขึ้น ตรรกะการวางตำแหน่งที่ดีขึ้น และ feedback ที่เชื่อถือได้มากขึ้นบน browser และอุปกรณ์ต่างๆ"
+      },
+      "sections": [
+        {
+          "type": "improved",
+          "items": [
+            {
+              "title": {
+                "en": "Copy notification animation and timing refined",
+                "th": "ปรับแต่งแอนิเมชันและ timing ของการแจ้งเตือนการคัดลอก"
+              },
+              "description": {
+                "en": "The copyNotification.js module went through 5 iterations of refinement. Improvements include smoother fade-in/out animations, better auto-dismiss timing, improved positioning to avoid overlapping with page content, and more reliable behavior when copying multiple items in quick succession.",
+                "th": "โมดูล copyNotification.js ผ่านการปรับแต่ง 5 รอบ การปรับปรุงรวมถึงแอนิเมชัน fade-in/out ที่ลื่นไหลมากขึ้น timing auto-dismiss ที่ดีขึ้น การวางตำแหน่งที่ดีขึ้นเพื่อหลีกเลี่ยงการซ้อนทับกับเนื้อหาหน้า และพฤติกรรมที่เชื่อถือได้มากขึ้นเมื่อคัดลอกหลายรายการติดต่อกัน"
+              }
+            },
+            {
+              "title": {
+                "en": "Home page layout adjustments",
+                "th": "ปรับ layout หน้า home"
+              },
+              "description": {
+                "en": "Minor home page layout adjustments to improve the overall page flow and ensure consistent spacing between the hero section, features section, and FAQ area.",
+                "th": "ปรับ layout หน้า home เล็กน้อยเพื่อปรับปรุงการไหลของหน้าโดยรวมและให้แน่ใจว่าระยะห่างระหว่าง hero section, features section และพื้นที่ FAQ สม่ำเสมอกัน"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
 }
