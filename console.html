@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0d1117">
+    <title>Fantrove Console Pro</title>
+    <link rel="stylesheet" href="console.css">
+</head>
+
+<body>
+    <div class="header">
+        <div class="brand">
+            <div class="brand-icon">◉</div>
+            <div class="brand-text">
+                <span class="brand-title">Fantrove Console</span>
+                <span class="brand-subtitle">Global Monitoring</span>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn" onclick="window.consolePro && window.consolePro.toggleCapture()" id="capture-btn">
+                <span class="btn-icon" id="capture-icon">⏸</span>
+                <span>Pause</span>
+            </button>
+            <button class="btn" onclick="window.consolePro && window.consolePro.exportLogs()">
+                <span class="btn-icon">📥</span>
+            </button>
+            <button class="btn" onclick="window.consolePro && window.consolePro.clear()" style="color: var(--accent-red);">
+                <span class="btn-icon">🗑</span>
+            </button>
+        </div>
+    </div>
+    
+    <div class="connection-bar">
+        <div class="status-indicator">
+            <span class="status-dot" id="status-dot"></span>
+            <span id="status-text">Ready</span>
+        </div>
+        <div>
+            <span class="sync-status" id="sync-status">Ready</span>
+        </div>
+    </div>
+    
+    <div class="error-banner" id="error-banner">
+        ⚠️ <span id="error-message">Connection error</span>
+        <button class="retry-btn" onclick="window.consolePro && window.consolePro.retryConnection()">Retry</button>
+    </div>
+    
+    <div class="toolbar">
+        <div class="filter-group">
+            <button class="filter-btn active" data-level="all" onclick="window.consolePro && window.consolePro.setFilter('all')">
+                All <span class="badge" id="count-all">0</span>
+            </button>
+        </div>
+        <div class="filter-group">
+            <button class="filter-btn active" data-level="error" onclick="window.consolePro && window.consolePro.setFilter('error')">
+                Errors <span class="badge" id="count-error">0</span>
+            </button>
+            <button class="filter-btn active" data-level="warn" onclick="window.consolePro && window.consolePro.setFilter('warn')">
+                Warnings <span class="badge" id="count-warn">0</span>
+            </button>
+            <button class="filter-btn active" data-level="info" onclick="window.consolePro && window.consolePro.setFilter('info')">
+                Info <span class="badge" id="count-info">0</span>
+            </button>
+            <button class="filter-btn active" data-level="log" onclick="window.consolePro && window.consolePro.setFilter('log')">
+                Logs <span class="badge" id="count-log">0</span>
+            </button>
+            <button class="filter-btn active" data-level="debug" onclick="window.consolePro && window.consolePro.setFilter('debug')">
+                Debug <span class="badge" id="count-debug">0</span>
+            </button>
+        </div>
+        <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="search-input" placeholder="Search logs..." oninput="window.consolePro && window.consolePro.search(this.value)">
+        </div>
+    </div>
+    
+    <div class="console-container" id="console-output">
+        <div class="empty-state" id="initial-state">
+            <div class="empty-icon">🌐</div>
+            <div class="empty-text">Global Console Ready</div>
+            <div class="empty-hint">Monitoring all users in real-time...</div>
+        </div>
+    </div>
+    
+    <div class="input-section">
+        <div class="input-header">
+            <span>JavaScript Console</span>
+            <span id="client-info-display">Client: initializing...</span>
+        </div>
+        <div class="input-wrapper">
+            <span class="input-prompt">❯</span>
+            <textarea class="console-input" id="js-input" rows="1" placeholder="Enter JavaScript command..." onkeydown="window.consolePro && window.consolePro.handleInput(event)" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,100)+'px'"></textarea>
+            <button class="send-btn" onclick="window.consolePro && window.consolePro.executeFromButton()">▶</button>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <div class="footer-stats">
+            <span class="stat">Total: <span class="stat-value" id="stat-total">0</span></span>
+            <span class="stat">Code: <span class="stat-value error" id="stat-code">0</span></span>
+            <span class="stat">Network: <span class="stat-value warn" id="stat-network">0</span></span>
+            <span class="stat">Active: <span class="stat-value" id="stat-active">0</span></span>
+        </div>
+        <div id="storage-info">☁️ Cloud</div>
+    </div>
+    
+    <script src="console.js"></script>
+    
+    <script>
+        // แสดง Client Fingerprint แทน Session ID
+        function updateClientDisplay() {
+            const display = document.getElementById('client-info-display');
+            if (display && window.consolePro) {
+                const fp = window.consolePro.clientFingerprint || 'unknown';
+                display.textContent = 'Client: ' + fp.substring(0, 16) + '...';
+            }
+        }
+        
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                setTimeout(updateClientDisplay, 100);
+            });
+        } else {
+            setTimeout(updateClientDisplay, 100);
+        }
+    </script>
+</body>
+
+</html>
