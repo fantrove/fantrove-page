@@ -1,6 +1,8 @@
 # 04 — ระบบภาษา (i18n) และ Build System
 
-> เอกสารนี้อธิบายระบบ internationalization (i18n) และระบบ Build ของโปรเจกต์ **Fantrove** (Fantrove Verse) อย่างละเอียดครบถ้วน ครอบคลุมทั้ง Runtime Mode (แปลภาษาด้วย JS บนเบราว์เซอร์) และ Pre-built Static Mode (แปลภาษาด้วย Build Script ก่อน deploy) รวมถึง Build System ที่สร้าง static HTML สำหรับทุกภาษา
+> เอกสารนี้อธิบายระบบ internationalization (i18n) และระบบ Build ของโปรเจกต์ **Fantrove** (Fantrove Verse) อย่างละเอียดครบถ้วน ครอบคลุม FvLang Central API (v5.0), Runtime Mode (แปลภาษาด้วย JS บนเบราว์เซอร์) และ Pre-built Static Mode (แปลภาษาด้วย Build Script ก่อน deploy) รวมถึง Build System ที่สร้าง static HTML สำหรับทุกภาษา
+>
+> **อัพเดทล่าสุด:** v1.5.0 — เพิ่ม `lang-core.js` (FvLang API), เปลี่ยน `language.js` → v5.0, เพิ่ม event `fv:langchange`
 
 ---
 
@@ -10,32 +12,40 @@
 2. [ไฟล์และโมดูลทั้งหมด](#2-ไฟล์และโมดูลทั้งหมด)
 3. [Translation Data — ไฟล์ JSON](#3-translation-data--ไฟล์-json)
 4. [Translation Markers — ระบบมาร์กเกอร์](#4-translation-markers--ระบบมาร์กเกอร์)
-5. [Runtime Mode — ระบบแปลภาษาบนเบราว์เซอร์](#5-runtime-mode--ระบบแปลภาษาบนเบราว์เซอร์)
-   - 5.1 [Entry Point — `language.js`](#51-entry-point--languagejs)
-   - 5.2 [Phase Loading System](#52-phase-loading-system)
-   - 5.3 [LangGate — ระบบ Gate](#53-langgate--ระบบ-gate)
-   - 5.4 [Config (`config.js`)](#54-config-configjs)
-   - 5.5 [State (`state.js`)](#55-state-statejs)
-   - 5.6 [DetectorService — การตรวจจับภาษา](#56-detectorservice--การตรวจจับภาษา)
-   - 5.7 [LoaderService — การโหลดข้อมูล](#57-loaderservice--การโหลดข้อมูล)
-   - 5.8 [TranslatorService — เครื่องมือแปลภาษา](#58-translatorservice--เครื่องมือแปลภาษา)
-   - 5.9 [MarkerRegistry — ระบบ Registry](#59-markerregistry--ระบบ-registry)
-   - 5.10 [URLService — จัดการ URL](#510-urlservice--จัดการ-url)
-   - 5.11 [NavigationService — การนำทางและ Sync](#511-navigationservice--การนำทางและ-sync)
-   - 5.12 [UIService — UI ตัวเลือกภาษา](#512-uiservice--ui-ตัวเลือกภาษา)
-   - 5.13 [LanguageManager — Orchestrator หลัก](#513-languagemanager--orchestrator-หลัก)
-6. [lang-proxy.js — URL Language Proxy](#6-lang-proxyjs--url-language-proxy)
-7. [lang-links.js — Smart Link Prefix Manager](#7-lang-linksjs--smart-link-prefix-manager)
-8. [Pre-built Static Mode](#8-pre-built-static-mode)
-9. [Build System](#9-build-system)
-   - 9.1 [build.js — Production Build Orchestrator](#91-buildjs--production-build-orchestrator)
-   - 9.2 [html-transformer.js — การแปลง HTML](#92-html-transformerjs--การแปลง-html)
-   - 9.3 [marker-parser.js — Node.js Marker Parser](#93-marker-parserjs--nodejs-marker-parser)
-   - 9.4 [file-utils.js — File I/O Helpers](#94-file-utilsjs--file-io-helpers)
-   - 9.5 [generate-sitemap.js — Sitemap Generator](#95-generate-sitemapjs--sitemap-generator)
-   - 9.6 [update-version.js — Release Tool](#96-update-versionjs--release-tool)
-10. [Global Variables และ Events](#10-global-variables-และ-events)
-11. [การทำงานร่วมกันระหว่าง Runtime และ Static Mode](#11-การทำงานร่วมกันระหว่าง-runtime-และ-static-mode)
+5. [FvLang — Central Language API (v5.0)](#5-fvlang--central-language-api-v50)
+   - 5.1 [บทบาทและจุดประสงค์](#51-บทบาทและจุดประสงค์)
+   - 5.2 [Public API — `window.FvLang`](#52-public-api--windowfvlang)
+   - 5.3 [Event — `fv:langchange`](#53-event--fvlangchange)
+   - 5.4 [การ Detect ภาษา (Synchronous)](#54-การ-detect-ภาษา-synchronous)
+   - 5.5 [Subscriber System](#55-subscriber-system)
+   - 5.6 [Backward Compatibility Shims](#56-backward-compatibility-shims)
+   - 5.7 [การ Integrate กับระบบอื่น](#57-การ-integrate-กับระบบอื่น)
+6. [Runtime Mode — ระบบแปลภาษาบนเบราว์เซอร์](#6-runtime-mode--ระบบแปลภาษาบนเบราว์เซอร์)
+   - 6.1 [Entry Point — `language.js` v5.0](#61-entry-point--languagejs-v50)
+   - 6.2 [Phase Loading System (v5.0 — Static Optimization)](#62-phase-loading-system-v50--static-optimization)
+   - 6.3 [LangGate — ระบบ Gate](#63-langgate--ระบบ-gate)
+   - 6.4 [Config (`config.js`)](#64-config-configjs)
+   - 6.5 [State (`state.js`)](#65-state-statejs)
+   - 6.6 [DetectorService — การตรวจจับภาษา](#66-detectorservice--การตรวจจับภาษา)
+   - 6.7 [LoaderService — การโหลดข้อมูล](#67-loaderservice--การโหลดข้อมูล)
+   - 6.8 [TranslatorService — เครื่องมือแปลภาษา](#68-translatorservice--เครื่องมือแปลภาษา)
+   - 6.9 [MarkerRegistry — ระบบ Registry](#69-markerregistry--ระบบ-registry)
+   - 6.10 [URLService — จัดการ URL](#610-urlservice--จัดการ-url)
+   - 6.11 [NavigationService — การนำทางและ Sync](#611-navigationservice--การนำทางและ-sync)
+   - 6.12 [UIService — UI ตัวเลือกภาษา](#612-uiservice--ui-ตัวเลือกภาษา)
+   - 6.13 [LanguageManager — Orchestrator หลัก (v5.0)](#613-languagemanager--orchestrator-หลัก-v50)
+7. [lang-proxy.js — URL Language Proxy](#7-lang-proxyjs--url-language-proxy)
+8. [lang-links.js — Smart Link Prefix Manager](#8-lang-linksjs--smart-link-prefix-manager)
+9. [Pre-built Static Mode (v5.0)](#9-pre-built-static-mode-v50)
+10. [Build System](#10-build-system)
+   - 10.1 [build.js — Production Build Orchestrator](#101-buildjs--production-build-orchestrator)
+   - 10.2 [html-transformer.js — การแปลง HTML](#102-html-transformerjs--การแปลง-html)
+   - 10.3 [marker-parser.js — Node.js Marker Parser](#103-marker-parserjs--nodejs-marker-parser)
+   - 10.4 [file-utils.js — File I/O Helpers](#104-file-utilsjs--file-io-helpers)
+   - 10.5 [generate-sitemap.js — Sitemap Generator](#105-generate-sitemapjs--sitemap-generator)
+   - 10.6 [update-version.js — Release Tool](#106-update-versionjs--release-tool)
+11. [Global Variables และ Events (v5.0)](#11-global-variables-และ-events-v50)
+12. [การทำงานร่วมกันระหว่าง Runtime และ Static Mode (v5.0)](#12-การทำงานร่วมกันระหว่าง-runtime-และ-static-mode-v50)
 
 ---
 
@@ -44,22 +54,28 @@
 ระบบภาษาของ Fantrove รองรับ **2 โหมด** ที่ทำงานแยกกันแต่แชร์ codebase ร่วมกัน:
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Fantrove i18n System                      │
-├────────────────────────┬────────────────────────────────────┤
-│   Runtime Mode (JS)    │   Pre-built Static Mode (Build)    │
-│                        │                                    │
-│  • Fetch db.json       │  • Build script อ่าน db.json       │
-│  • Fetch {lang}.json   │  • Build script อ่าน {lang}.json   │
-│  • Parse markers       │  • marker-parser.js (Node.js)      │
-│  • Web Worker pool     │  • cheerio แปลง HTML              │
-│  • DOM reconciliation  │  • ลบ data-translate attrs         │
-│  • MutationObserver    │  • Inject hreflang/canonical       │
-│  • BroadcastChannel    │  • Inject footer template          │
-│  • language.js ทั้งหมด │  • language.js (static mode)       │
-│  • lang-proxy.js       │  • lang-links.js                   │
-│  • lang-links.js       │  • ไม่ต้อง lang-proxy.js           │
-└────────────────────────┴────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                      Fantrove i18n System (v5.0)                    │
+├─────────────────────────────────────────────────────────────────────┤
+│                    FvLang Layer (lang-core.js)                       │
+│  • Synchronous language detection (data-fv-built → URL → LS → nav)  │
+│  • window.FvLang API (.lang, .onChange, .setLang, .forceRefresh)    │
+│  • Dispatch 'fv:langchange' event — single source of truth          │
+│  • All JS systems subscribe here instead of reading localStorage    │
+├────────────────────────────┬────────────────────────────────────────┤
+│   Runtime Mode (JS)       │   Pre-built Static Mode (Build)        │
+│                            │                                        │
+│  • language.js v5.0       │  • Build script อ่าน db.json          │
+│  • Reads FvLang.lang      │  • marker-parser.js (Node.js)          │
+│  • 14 modules (full)      │  • cheerio แปลง HTML                   │
+│  • 6 modules (static)     │  • ลบ data-translate attrs              │
+│  • Web Worker pool        │  • Inject hreflang/canonical           │
+│  • DOM reconciliation     │  • Inject footer template              │
+│  • FvLang.setLang()       │  • language.js (static mode)           │
+│    → fv:langchange        │  • lang-links.js                       │
+│  • lang-proxy.js          │  • ไม่ต้อง lang-proxy.js               │
+│  • lang-links.js          │                                        │
+└────────────────────────────┴────────────────────────────────────────┘
 ```
 
 ### ข้อแตกต่างหลักระหว่าง 2 โหมด
@@ -72,6 +88,7 @@
 | BroadcastChannel | ใช้ | ไม่ใช้ |
 | `data-translate` ใน HTML | ค้างไว้ | ถูกลบออก (baked แล้ว) |
 | `body opacity:0` | ลบเมื่อพร้อม | ลบออกจาก HTML ตั้งแต่ build |
+| `window.FvLang` | สร้างโดย lang-core.js | ไม่มี (language.js จัดการ) |
 | `data-fv-built` | ไม่มี | มี (signal ให้ language.js เข้า static mode) |
 | `window.__fvStaticConfig` | ไม่มี | มี (inject ใน `<head>`) |
 | เปลี่ยนภาษา | JS translate ทันที | `location.replace()` ไปหน้าภาษาอื่น |
@@ -84,7 +101,8 @@
 
 ```
 assets/js/
-├── language.js              ← Entry point, Phase Loader, Gate Promise
+├── lang-core.js             ← v5.0: FvLang Central API (โหลดก่อน language.js)
+├── language.js              ← v5.0: Entry point, Phase Loader, Gate Promise (FvLang integration)
 ├── lang-proxy.js            ← URL prefix redirect (pre-DOM)
 ├── lang-links.js            ← Smart link prefix manager (DOM ready)
 └── lang-modules/
@@ -257,23 +275,282 @@ const MARKER_RE_SRC =
 
 ---
 
-## 5. Runtime Mode — ระบบแปลภาษาบนเบราว์เซอร์
+## 5. FvLang — Central Language API (v5.0)
 
-### 5.1 Entry Point — `language.js`
+**ไฟล์:** `assets/js/lang-core.js`
+**เวอร์ชัน:** v1.0.0 (ตั้งแต่ v1.5.0 ของโปรเจกต์)
+**โหลด:** script แรกสุดใน `<head>` ก่อน `language.js`
 
-ไฟล์ `assets/js/language.js` เป็น entry point ของระบบภาษาทั้งหมด ทำหน้าที่:
+FvLang เป็น **ชั้น API กลาง** ที่ resolve ภาษาแบบ synchronous ทันทีที่ script โหลด ก่อนที่ JS ระบบอื่นๆ จะทำงาน แก้ปัญหา race condition ที่ระบบต่างๆ อ่านภาษาจาก localStorage ไม่ทัน
 
-1. **สร้าง Gate Promise ทันที** (ก่อน load modules) เพื่อให้ external scripts สามารถ `await window.languageReady` ได้ทันที
-2. **โหลด modules ตาม Phase** แบบ sequential (phase 1 → 2 → 3)
-3. **Boot sequence** — เริ่มต้น services ทั้งหมดหลัง modules โหลดเสร็จ
+### 5.1 บทบาทและจุดประสงค์
+
+**ปัญหาที่แก้:**
+ก่อน v5.0 ระบบ JS แต่ละตัว (home.js, new.js, version-core.js, modern-navigation.js) ต้องอ่าน `localStorage.getItem('selectedLang')` เองและฟัง `languageChange` event เอง ทำให้เกิดปัญหา:
+- **Race condition ตอน first visit**: ภาษายังไม่ถูกตั้งค่า → ทุกระบบใช้ค่า default (en) ผิด
+- **Switch back ไม่ update**: เปลี่ยนภาษาแล้วย้อนกลับ ระบบบางตัวไม่ re-render
+- **แต่ละระบบต้องจัดการเอง**: ทำให้โค้ดซ้ำซ้อน และมีโอกาสผิดพลาด
+
+**โมเดลใหม่ (v5.0):**
+```
+lang-core.js (สร้าง FvLang ทันที, sync)
+  → language.js (อ่าน FvLang.lang, เรียก FvLang.setLang() เมื่อเปลี่ยน)
+    → ทุก script อื่น (subscribe FvLang.onChange() หรือฟัง fv:langchange)
+```
+
+FvLang ทำหน้าที่เป็น **single source of truth** สำหรับภาษา — ทุกระบบอ่านจากที่เดียวกัน
+
+### 5.2 Public API — `window.FvLang`
 
 ```javascript
-// language.js — Gate Promise สร้างทันที (ก่อน loadPhases)
-let _gateResolve, _gateReject;
-window.languageReady = new Promise((res, rej) => {
-  _gateResolve = res;
-  _gateReject  = rej;
+window.FvLang = {
+  _v: '1.0.0',                    // Internal version
+
+  lang: 'th',                     // ภาษาปัจจุบัน ('en' | 'th')
+  supportedLangs: ['en', 'th'],   // ภาษาที่รองรับ
+  isReady: true,                  // เสมอ true (resolve แบบ sync)
+  isStaticMode: false,            // true ถ้าเป็น production built page
+
+  onChange(fn),                   // subscribe เมื่อภาษาเปลี่ยน → return unsubscribe fn
+  setLang(lang, opts),            // ตั้งภาษาใหม่ + dispatch fv:langchange
+  forceRefresh(),                 // dispatch fv:langchange โดยไม่เปลี่ยนภาษา (refresh ทั้งหน้า)
+};
+```
+
+**`.lang`** — อ่านภาษาปัจจุบันได้ทันที ไม่ต้อง await หรือ callback:
+
+```javascript
+const lang = window.FvLang?.lang || 'en';
+```
+
+**`.onChange(fn)`** — subscribe เมื่อภาษาเปลี่ยน คืน unsubscribe function:
+
+```javascript
+const unsub = FvLang.onChange(function(newLang, previousLang) {
+  // Re-render UI ตาม newLang
+  renderMyComponent(newLang);
 });
+
+// ถ้าไม่ต้องการแล้ว
+unsub();
+```
+
+**`.setLang(lang, opts)`** — ตั้งภาษาใหม่ ใช้โดย `language.js` เมื่อ user เลือกภาษา:
+
+```javascript
+// language.js เรียกหลัง JS translation เสร็จ
+FvLang.setLang('th');
+// → อัพเดท FvLang.lang = 'th'
+// → เรียก subscribers ทั้งหมด
+// → dispatch 'fv:langchange' event
+// → sync localStorage
+// → update <html lang="th">
+```
+
+`opts.silent` — ไม่ dispatch event (สำหรับ init sync):
+
+```javascript
+// language.js sync ค่าเริ่มต้นโดยไม่ trigger refresh
+FvLang.setLang(initialLang, { silent: true });
+```
+
+**`.forceRefresh()`** — บังคับให้ทุกระบบ re-render โดยไม่เปลี่ยนภาษา:
+
+```javascript
+// ใช้เมื่อ dynamic content โหลดเสร็จแล้ว ต้องการให้ render ตามภาษาปัจจุบัน
+FvLang.forceRefresh();
+// → subscribers ถูกเรียกด้วย (currentLang, currentLang)
+// → dispatch fv:langchange โดยที่ lang === previousLang (signal: refresh)
+```
+
+### 5.3 Event — `fv:langchange`
+
+Event หลักที่ทุกระบบ JS ควรฟัง:
+
+```javascript
+window.addEventListener('fv:langchange', function(e) {
+  const newLang = e.detail.lang;           // 'en' หรือ 'th'
+  const previousLang = e.detail.previousLang;
+
+  if (newLang === previousLang) {
+    // forceRefresh — re-render เนื้อหาเดิม
+  } else {
+    // ภาษาเปลี่ยน — re-render ด้วยภาษาใหม่
+  }
+});
+```
+
+**ความแตกต่างจาก `languageChange` (เก่า):**
+
+| ลักษณะ | `languageChange` (เก่า) | `fv:langchange` (v5.0) |
+|---------|------------------------|------------------------|
+| Dispatch โดย | `LanguageManager.updatePageLanguage()` | `FvLang.setLang()` |
+| Detail key | `detail.language` | `detail.lang` |
+| Previous lang | `detail.previousLanguage` | `detail.previousLang` |
+| forceRefresh | ไม่รองรับ | `lang === previousLang` = refresh signal |
+| Purpose | Backward compatibility | **Primary event สำหรับทุกระบบใหม่** |
+
+### 5.4 การ Detect ภาษา (Synchronous)
+
+FvLang detect ภาษาแบบ synchronous ทันที (ไม่มี async/await) ตาม priority:
+
+```
+Production Static Mode (data-fv-built มีค่า):
+  └─ ยึด data-fv-built เป็นหลัก (เร็วสุด — ไม่ต้องอ่าน localStorage/URL)
+  └─ เหตุผล: content ถูก bake เป็น builtLang แล้ว
+
+Production (ไม่มี data-fv-built):
+  └─ URL path prefix (/en/..., /th/...) → localStorage → browser detection
+
+Development (localhost):
+  └─ localStorage → browser detection (ไม่ดู URL)
+```
+
+Detect functions ภายใน:
+
+```javascript
+getBuiltLang()     // อ่าน document.documentElement.getAttribute('data-fv-built')
+getUrlLang()       // match /^\/(en|th)(\/|$)/ กับ location.pathname
+getStoredLang()    // localStorage.getItem('selectedLang') + validate
+getBrowserLang()   // navigator.languages → split('-')[0] → match SUPPORTED
+isLocalDev()       // hostname === 'localhost' || '127.0.0.1' || '0.0.0.0' || *.local
+```
+
+### 5.5 Subscriber System
+
+ระบบ subscriber ภายใน FvLang เป็น array ของ functions:
+
+```javascript
+var _subscribers = [];
+
+onChange: function(fn) {
+  if (typeof fn !== 'function') return function() {};
+  _subscribers.push(fn);
+  return function() {              // unsubscribe function
+    var idx = _subscribers.indexOf(fn);
+    if (idx >= 0) _subscribers.splice(idx, 1);
+  };
+}
+```
+
+เมื่อ `setLang()` ถูกเรียก → เรียก subscribers ทั้งหมดก่อน dispatch event:
+```
+1. อัพเดท FvLang.lang
+2. Sync localStorage
+3. Update <html lang>
+4. เรียก _subscribers[i](newLang, previous) ทีละตัว (try/catch แยก)
+5. Dispatch window 'fv:langchange' CustomEvent
+```
+
+### 5.6 Backward Compatibility Shims
+
+เพื่อไม่ให้ scripts เก่าที่ยังใช้ `await window.languageReady` พัง FvLang สร้าง shims:
+
+```javascript
+// สร้างทันทีหลัง FvLang object
+if (!window.languageReady) {
+  window.languageReady = Promise.resolve({ lang: FvLang.lang, translations: null });
+}
+if (!window.onLanguageReady) {
+  window.onLanguageReady = function(fn) {
+    if (typeof fn === 'function') {
+      try { fn({ lang: FvLang.lang, translations: null }); } catch (e) {}
+    }
+  };
+}
+```
+
+**สำคัญ:** `language.js` จะ **overwrite** เหล่านี้เมื่อโหลดเสร็จ:
+- Full mode: `window.languageReady` = new Promise (รอจนกว่า translate เสร็จ)
+- Static mode: `window.languageReady` = Promise.resolve ทันที
+
+ดังนั้น shim มีผลเฉพาะตอนช่วงระหว่าง lang-core.js โหลดแล้ว แต่ language.js ยังไม่โหลด
+
+### 5.7 การ Integrate กับระบบอื่น
+
+ตารางสรุปการเปลี่ยนแปลงในแต่ละระบบ:
+
+| ระบบ | ก่อน v5.0 (อ่านภาษาเอง) | v5.0 (ใช้ FvLang) |
+|------|------------------------|-------------------|
+| **home.js** | `localStorage.getItem('selectedLang')` | `FvLang.lang` + `FvLang.onChange(re-render)` |
+| **new.js** | `localStorage.getItem('selectedLang')` + `languageChange` event | `FvLang.lang` + `fv:langchange` event |
+| **version-core.js** | `localStorage.getItem('selectedLang')` | `FvLang.lang` |
+| **modern-navigation.js** | `_readStoredLang()` + `languageChange` event | `_readStoredLang()` + `fv:langchange` event (backward compat: `languageChange` ยังฟัง) |
+| **language.js** | detect เอง + 14 modules (static) | อ่าน FvLang.lang + 6 modules (static) |
+| **manager.js** | dispatch เฉพาะ `languageChange` | เรียก `FvLang.setLang()` → `fv:langchange` + `languageChange` (backward compat) |
+
+**ตัวอย่างการ integrate ในระบบใหม่:**
+
+```javascript
+// ✅ v5.0 — อ่านภาษา + subscribe
+var lang = (window.FvLang && FvLang.lang) || 'en';
+
+// Re-render เมื่อภาษาเปลี่ยน
+if (window.FvLang) {
+  FvLang.onChange(function(newLang) {
+    renderContent(newLang);
+  });
+} else {
+  // Fallback สำหรับกรณี lang-core.js ไม่โหลด
+  window.addEventListener('fv:langchange', function(e) {
+    if (e.detail && e.detail.lang) renderContent(e.detail.lang);
+  });
+}
+
+// ❌ ก่อน v5.0 — อ่าน localStorage เอง + ฟัง languageChange
+var lang = localStorage.getItem('selectedLang') || 'en';
+window.addEventListener('languageChange', function(e) {
+  renderContent(e.detail.language);
+});
+```
+
+**Script Loading Order ใน HTML (v5.0):**
+
+```html
+<head>
+  <!-- 1. lang-core.js — แรกสุด สร้าง FvLang ทันที -->
+  <script src="/assets/js/lang-core.js?v=1.0.0"></script>
+
+  <!-- 2. language.js — อ่าน FvLang, โหลด modules, setup UI -->
+  <script src="/assets/js/language.js?v=1.0.0-20250322"></script>
+</head>
+<body>
+  <!-- 3. ระบบอื่นๆ — ใช้ FvLang.lang และ FvLang.onChange() -->
+  <script defer src="/assets/js/home.js?v=1.0.0-20250322"></script>
+  <script defer src="/assets/js/new.js?v=1.0.0-20250322"></script>
+</body>
+```
+
+---
+
+## 6. Runtime Mode — ระบบแปลภาษาบนเบราว์เซอร์
+
+### 6.1 Entry Point — `language.js` v5.0
+
+ไฟล์ `assets/js/language.js` เป็น entry point ของระบบภาษาทั้งหมด ทำหน้าที่ (v5.0 — FvLang integration):
+
+1. **อ่าน FvLang.lang** สำหรับภาษาเริ่มต้น (ไม่ detect เอง)
+2. **สร้าง Gate Promise** (ใน static mode: resolve ทันที via FvLang)
+3. **โหลด modules ตาม Phase** — 6 modules (static) หรือ 14 modules (full)
+4. **Boot sequence** — เริ่มต้น services ทั้งหมดหลัง modules โหลดเสร็จ
+
+```javascript
+// language.js v5.0 — ใน static mode: gate resolve ทันที
+// Full mode: gate รอจนกว่า initialize เสร็จ
+var isStatic = !!(window.FvLang && window.FvLang.isStaticMode);
+var initialLang = (window.FvLang && window.FvLang.lang) || 'en';
+
+if (isStatic) {
+  // Static mode: FvLang ให้ภาษามาแล้ว → gate resolve ทันที
+  window.languageReady = Promise.resolve({ lang: initialLang, translations: null });
+} else {
+  // Full mode: gate รอจนกว่า initialize เสร็จ
+  let _gateResolve, _gateReject;
+  window.languageReady = new Promise((res, rej) => {
+    _gateResolve = res;
+    _gateReject  = rej;
+  });
+}
 
 // Helper สำหรับ non-async code
 window.onLanguageReady = function(fn) {
@@ -303,7 +580,7 @@ window.onLanguageReady(function({ lang, translations }) { ... });
 window.addEventListener('languageReady', function(e) { ... });
 ```
 
-### 5.2 Phase Loading System
+### 6.2 Phase Loading System (v5.0 — Static Optimization)
 
 Modules ถูกโหลดแบบ 3 phases โดยแต่ละ phase โหลด parallel แต่รอ phase ก่อนหน้าเสร็จก่อน:
 
@@ -319,11 +596,20 @@ Phase 3 (parallel, need Phase 2):
 ```
 
 ```javascript
-const PHASES = [
+// v5.0: Static mode โหลดเฉพาะ modules ที่จำเป็น (6 ตัว แทน 14)
+const FULL_PHASES = [
   ['types.js', 'config.js', 'state.js', 'worker-pool.js', 'gate.js'],
   ['db.js', 'detector.js', 'loader.js', 'markers.js', 'translator.js', 'ui.js'],
   ['url.js', 'navigation.js', 'manager.js'],
 ];
+
+const STATIC_PHASES = [
+  ['types.js', 'config.js', 'state.js', 'gate.js'],   // ไม่ต้อง worker-pool
+  ['ui.js'],                                           // เฉพาะ UI dropdown
+  ['manager.js'],                                      // orchestrator
+];
+
+const PHASES = isStatic ? STATIC_PHASES : FULL_PHASES;
 ```
 
 **Boot sequence หลังโหลด modules เสร็จ:**
@@ -358,7 +644,7 @@ function _boot() {
 }
 ```
 
-### 5.3 LangGate — ระบบ Gate
+### 6.3 LangGate — ระบบ Gate
 
 **ไฟล์:** `lang-modules/gate.js`
 
@@ -437,7 +723,7 @@ LangGate.guardProperty(window, 'dataLayer');
 // หลัง gate เปิด: property ทำงานปกติ
 ```
 
-### 5.4 Config (`config.js`)
+### 6.4 Config (`config.js`)
 
 **ไฟล์:** `lang-modules/config.js`
 
@@ -472,7 +758,7 @@ const CONFIG = Object.freeze({
 });
 ```
 
-### 5.5 State (`state.js`)
+### 6.5 State (`state.js`)
 
 **ไฟล์:** `lang-modules/state.js`
 
@@ -513,7 +799,7 @@ const State = {
 };
 ```
 
-### 5.6 DetectorService — การตรวจจับภาษา
+### 6.6 DetectorService — การตรวจจับภาษา
 
 **ไฟล์:** `lang-modules/detector.js`
 
@@ -560,7 +846,7 @@ back_forward / reload:
 { lang: 'th', source: 'url' }       // หรือ 'storage' | 'browser'
 ```
 
-### 5.7 LoaderService — การโหลดข้อมูล
+### 6.7 LoaderService — การโหลดข้อมูล
 
 **ไฟล์:** `lang-modules/loader.js`
 
@@ -660,7 +946,7 @@ flattenLanguageJson(json) {
 }
 ```
 
-### 5.8 TranslatorService — เครื่องมือแปลภาษา
+### 6.8 TranslatorService — เครื่องมือแปลภาษา
 
 **ไฟล์:** `lang-modules/translator.js`
 
@@ -807,7 +1093,7 @@ observeMutations() {
 }
 ```
 
-### 5.9 MarkerRegistry — ระบบ Registry
+### 6.9 MarkerRegistry — ระบบ Registry
 
 **ไฟล์:** `lang-modules/markers.js`
 
@@ -883,7 +1169,7 @@ MarkerRegistry.register('icon', {
 });
 ```
 
-### 5.10 URLService — จัดการ URL
+### 6.10 URLService — จัดการ URL
 
 **ไฟล์:** `lang-modules/url.js`
 
@@ -912,7 +1198,7 @@ updateURLForLanguage(lang) {
 }
 ```
 
-### 5.11 NavigationService — การนำทางและ Sync
+### 6.11 NavigationService — การนำทางและ Sync
 
 **ไฟล์:** `lang-modules/navigation.js`
 
@@ -996,7 +1282,7 @@ _setupVisibilityChange() {
 }
 ```
 
-### 5.12 UIService — UI ตัวเลือกภาษา
+### 6.12 UIService — UI ตัวเลือกภาษา
 
 **ไฟล์:** `lang-modules/ui.js`
 
@@ -1024,7 +1310,7 @@ _setupVisibilityChange() {
 - `openLanguageDropdown()` / `closeLanguageDropdown()` — จัดการ scroll lock
 - `showError(message)` — แสดง toast error ชั่วคราว
 
-### 5.13 LanguageManager — Orchestrator หลัก
+### 6.13 LanguageManager — Orchestrator หลัก (v5.0)
 
 **ไฟล์:** `lang-modules/manager.js`
 
@@ -1169,7 +1455,13 @@ async updatePageLanguage(language, shouldUpdateURL = true) {
     // 7. BroadcastChannel → sync กับ tabs อื่น
     State._bc.postMessage({ lang: language, url: location.href, ts: Date.now() });
 
-    // 8. Dispatch event
+    // 8. v5.0: FvLang → ทุกระบบ refresh
+    if (window.FvLang) {
+      FvLang.setLang(language);
+      // FvLang.setLang() dispatch 'fv:langchange' + เรียก subscribers
+    }
+
+    // 9. Dispatch 'languageChange' สำหรับ backward compat
     window.dispatchEvent(new CustomEvent('languageChange', {
       detail: { language, previousLanguage: State.lastSelectedLang }
     }));
@@ -1182,7 +1474,7 @@ async updatePageLanguage(language, shouldUpdateURL = true) {
 
 ---
 
-## 6. `lang-proxy.js` — URL Language Proxy
+## 7. `lang-proxy.js` — URL Language Proxy
 
 **ไฟล์:** `assets/js/lang-proxy.js`
 **Version:** v2.2
@@ -1249,7 +1541,7 @@ function setReloadMarker(source) {
 
 ---
 
-## 7. `lang-links.js` — Smart Link Prefix Manager
+## 8. `lang-links.js` — Smart Link Prefix Manager
 
 **ไฟล์:** `assets/js/lang-links.js`
 **Version:** v2.2
@@ -1321,11 +1613,11 @@ window.addEventListener('languageChange', function(e) {
 
 ---
 
-## 8. Pre-built Static Mode
+## 9. Pre-built Static Mode (v5.0)
 
 เมื่อ build script สร้าง static HTML แล้ว จะ inject 2 สิ่งเข้าไปใน HTML:
 
-### 8.1 `data-fv-built` attribute
+### 9.1 `data-fv-built` attribute
 
 ```html
 <html lang="th" data-fv-built="th">
@@ -1333,7 +1625,7 @@ window.addEventListener('languageChange', function(e) {
 
 Attribute นี้เป็น **signal** ให้ `language.js` เข้า static mode
 
-### 8.2 `window.__fvStaticConfig` Inline Script
+### 9.2 `window.__fvStaticConfig` Inline Script
 
 ```html
 <head>
@@ -1343,39 +1635,29 @@ Attribute นี้เป็น **signal** ให้ `language.js` เข้า 
 </head>
 ```
 
-### 8.3 Static Mode Initialization
+### 9.3 Static Mode Initialization
 
 ```javascript
+// v5.0: language.js จัดการ static boot ใน _bootStatic()
+// manager.js.initialize() จะ return ทันทีถ้า FvLang.isStaticMode
 async _initializeStaticMode(builtLang) {
-  // 1. อ่าน config จาก inline script (ไม่ fetch network)
-  const staticConfig = window.__fvStaticConfig;
-  State.languagesConfig = staticConfig.langs;
-  State.selectedLang = staticConfig.lang || builtLang;
-
-  // 2. บันทึก preference ลง localStorage
-  localStorage.setItem(CONFIG.LS_KEY, State.selectedLang);
-
-  // 3. Setup UI dropdown (ใช้ UIService เดิม)
-  await UIService.prepareAllButtonTexts();
-  UIService.updateLanguageSelectorUI();
-
-  // 4. Fade in
-  document.body.style.opacity = '1';
-
-  // 5. Resolve gate
-  LangGate.resolve({ lang: State.selectedLang, translations: null });
+  // v5.0: FvLang ให้ภาษามาแล้ว → gate resolve ทันที
+  // โหลดเฉพระ ui.js + manager.js (6 modules แทน 14)
+  State.isInitialized = true;
+  return;
 }
 ```
 
-### 8.4 สิ่งที่ Static Mode **ไม่ทำ**
+### 9.4 สิ่งที่ Static Mode **ไม่ทำ**
 
 - ✗ ไม่ fetch `db.json` หรือ `{lang}.json`
 - ✗ ไม่สร้าง WorkerPool
 - ✗ ไม่ setup BroadcastChannel
 - ✗ ไม่รัน `parallelStreamingTranslate()`
 - ✗ ไม่ setup MutationObserver
+- ✗ ไม่โหลด translator.js, detector.js, loader.js, markers.js, db.js, worker-pool.js (v5.0)
 
-### 8.5 เปลี่ยนภาษาใน Static Mode
+### 9.5 เปลี่ยนภาษาใน Static Mode
 
 เมื่อ user เลือกภาษาใหม่ → ใช้ `location.replace()` ไปหน้าภาษาอื่น (ไม่ใช่ JS translate):
 
@@ -1390,9 +1672,9 @@ if (document.documentElement.dataset?.fvBuilt) {
 
 ---
 
-## 9. Build System
+## 10. Build System
 
-### 9.1 `build.js` — Production Build Orchestrator
+### 10.1 `build.js` — Production Build Orchestrator
 
 **ไฟล์:** `scripts/build.js`
 
@@ -1487,7 +1769,7 @@ const isDefaultWithHtmlSource =
 /* /en/home/ 404
 ```
 
-### 9.2 `html-transformer.js` — การแปลง HTML
+### 10.2 `html-transformer.js` — การแปลง HTML
 
 **ไฟล์:** `scripts/lib/html-transformer.js`
 **Version:** v2.1
@@ -1599,7 +1881,7 @@ function _injectFooter($, lang, translations) {
 }
 ```
 
-### 9.3 `marker-parser.js` — Node.js Marker Parser
+### 10.3 `marker-parser.js` — Node.js Marker Parser
 
 **ไฟล์:** `scripts/lib/marker-parser.js`
 
@@ -1677,7 +1959,7 @@ function flattenJson(json) {
 }
 ```
 
-### 9.4 `file-utils.js` — File I/O Helpers
+### 10.4 `file-utils.js` — File I/O Helpers
 
 **ไฟล์:** `scripts/lib/file-utils.js`
 
@@ -1716,7 +1998,7 @@ function findHtmlFiles(dir, exclude = [], files = []) {
 | `loadTranslationFile(filePath, flattenFn)` | โหลด + flatten translation JSON |
 | `loadDbJson(filePath)` | โหลด db.json |
 
-### 9.5 `generate-sitemap.js` — Sitemap Generator
+### 10.5 `generate-sitemap.js` — Sitemap Generator
 
 **ไฟล์:** `scripts/generate-sitemap.js`
 
@@ -1766,7 +2048,7 @@ function buildUrlEntries(htmlFiles, langs) {
 </urlset>
 ```
 
-### 9.6 `update-version.js` — Release Tool
+### 10.6 `update-version.js` — Release Tool
 
 **ไฟล์:** `scripts/update-version.js`
 
@@ -1807,9 +2089,9 @@ APP_VERSION=1.2.3 git fetch --unshallow && node scripts/update-version.js
 
 ---
 
-## 10. Global Variables และ Events
+## 11. Global Variables และ Events (v5.0)
 
-### 10.1 Global Variables
+### 11.1 Global Variables
 
 | Variable | ประเภท | สร้างโดย | คำอธิบาย |
 |----------|--------|---------|----------|
@@ -1819,8 +2101,9 @@ APP_VERSION=1.2.3 git fetch --unshallow && node scripts/update-version.js
 | `window.languageManager` | `LanguageManager` | `language.js` (boot) | Public API ของระบบภาษา |
 | `window.__langUI` | `Object` | `language.js` (boot) | `{ _initialized: true }` — guard flag |
 | `window.__fvStaticConfig` | `Object` | `build.js` (inject) | Static config สำหรับ pre-built pages |
+| `window.FvLang` | `Object` | `lang-core.js` | Central Language API — source of truth สำหรับภาษา |
 
-### 10.2 `window.LangModules` Namespace
+### 11.2 `window.LangModules` Namespace
 
 ```
 window.LangModules = {
@@ -1848,20 +2131,21 @@ window.LangModules = {
 }
 ```
 
-### 10.3 Custom Events
+### 11.3 Custom Events
 
 | Event | Dispatch โดย | Detail | คำอธิบาย |
 |-------|-------------|--------|----------|
+| `fv:langchange` | `FvLang.setLang()` / `FvLang.forceRefresh()` | `{ lang, previousLang }` | v5.0: ภาษาเปลี่ยน (หรือ forceRefresh) — ทุกระบบควรฟัง event นี้ |
 | `languageReady` | `LangGate.resolve()` | `{ lang, translations }` | ระบบภาษาพร้อมใช้งาน |
-| `languageChange` | `LanguageManager.updatePageLanguage()` | `{ language, previousLanguage }` | ภาษาถูกเปลี่ยนแล้ว |
+| `languageChange` | `LanguageManager.updatePageLanguage()` | `{ language, previousLanguage }` | ภาษาถูกเปลี่ยนแล้ว (backward compat) |
 
-### 10.4 BroadcastChannel
+### 11.4 BroadcastChannel
 
 | Channel | Message Format | คำอธิบาย |
 |---------|---------------|----------|
 | `fv-lang-v3` | `{ lang, url, ts }` | Sync ภาษาระหว่าง tabs |
 
-### 10.5 Session Storage Keys
+### 11.5 Session Storage Keys
 
 | Key | เขียนโดย | อ่านโดย | คำอธิบาย |
 |-----|---------|---------|----------|
@@ -1870,14 +2154,14 @@ window.LangModules = {
 | `fv-reload-ack` | `manager.js` | `manager.js` | Redirect acknowledge |
 | `fv-nav-lang-map` | `lang-proxy.js` | — | URL → language mapping |
 
-### 10.6 Local Storage Keys
+### 11.6 Local Storage Keys
 
 | Key | คำอธิบาย |
 |-----|----------|
 | `selectedLang` | ภาษาที่ user เลือก (`'en'` หรือ `'th'`) |
 | `__lang_cfg` | Config cache จาก `db.json` |
 
-### 10.7 IndexedDB
+### 11.7 IndexedDB
 
 | Database | Version | Stores | คำอธิบาย |
 |----------|---------|--------|----------|
@@ -1896,15 +2180,16 @@ window.LangModules = {
 
 ---
 
-## 11. การทำงานร่วมกันระหว่าง Runtime และ Static Mode
+## 12. การทำงานร่วมกันระหว่าง Runtime และ Static Mode (v5.0)
 
-### 11.1 ขั้นตอน Development (localhost)
+### 12.1 ขั้นตอน Development (localhost)
 
 ```
+0. lang-core.js        → detect: localStorage > browser → สร้าง FvLang
 1. lang-proxy.js       → ตรวจ localhost → ปิดตัวเอง
 2. lang-links.js       → ตรวจ localhost → ปิดตัวเอง
-3. language.js         → โหลด modules ทั้งหมด
-4. LanguageManager     → Full mode initialize
+3. language.js         → อ่าน FvLang.lang → โหลด 14 modules (full mode)
+4. LanguageManager     → Full mode initialize → FvLang.setLang(silent) → gate resolve
    ├─ LoaderService.prefetchEnterprise() → fetch db.json
    ├─ DetectorService.resolveCurrentLang() → storage > browser
    ├─ LoaderService.loadLanguageData() → fetch {lang}.json
@@ -1912,28 +2197,27 @@ window.LangModules = {
    └─ UIService / NavigationService → setup
 ```
 
-### 11.2 ขั้นตอน Production (ไม่มี pre-build)
+### 12.2 ขั้นตอน Production (ไม่มี pre-build)
 
 ```
+0. lang-core.js        → detect: URL > localStorage > browser → สร้าง FvLang
 1. lang-proxy.js       → ตรวจ URL → redirect หรือ sync
 2. lang-links.js       → prefix ลิงก์ + intercept clicks
-3. language.js         → โหลด modules ทั้งหมด
+3. language.js         → อ่าน FvLang.lang → โหลด 14 modules (full mode)
 4. LanguageManager     → Full mode initialize (เหมือน dev)
 ```
 
-### 11.3 ขั้นตอน Production (Pre-built Static)
+### 12.3 ขั้นตอน Production (Pre-built Static)
 
 ```
+0. lang-core.js        → detect: data-fv-built → สร้าง FvLang (isStaticMode=true)
 1. (lang-proxy.js ถูกลบออกจาก HTML แล้ว)
 2. lang-links.js       → prefix ลิงก์ + intercept clicks (ทำงานปกติ)
-3. language.js         → โหลด modules ทั้งหมด
-4. LanguageManager     → ตรวจ data-fv-built → Static mode
-   ├─ อ่าน window.__fvStaticConfig (ไม่ fetch)
-   ├─ UIService → setup dropdown
-   └─ LangGate.resolve()
+3. language.js         → อ่าน FvLang → gate resolve ทันที → โหลด 6 modules (static) → _bootStatic()
+4. LanguageManager     → ตรวจ FvLang.isStaticMode → return ทันที
 ```
 
-### 11.2 User เปลี่ยนภาษา — ขั้นตอน
+### 12.4 User เปลี่ยนภาษา — ขั้นตอน
 
 **Runtime Mode:**
 ```
@@ -1942,8 +2226,9 @@ window.LangModules = {
 3. localStorage.setItem('selectedLang', lang)
 4. LoaderService.loadLanguageData() → memory/IDB/network
 5. TranslatorService.parallelStreamingTranslate() → Workers → DOM update
-6. BroadcastChannel.postMessage() → sync tabs อื่น
-7. dispatchEvent('languageChange') → lang-links.js อัพเดทลิงก์
+6. FvLang.setLang(lang) → subscribers refresh + dispatch `fv:langchange`
+7. BroadcastChannel.postMessage() → sync tabs อื่น
+8. dispatchEvent('languageChange') → lang-links.js อัพเดทลิงก์ (backward compat)
 ```
 
 **Static Mode:**
@@ -1951,19 +2236,9 @@ window.LangModules = {
 1. User คลิก dropdown → UIService → LanguageManager.selectLanguage()
 2. localStorage.setItem('selectedLang', lang)
 3. location.replace('/th/path/') → โหลดหน้าใหม่ที่ pre-built แล้ว
-4. หน้าใหม่ → language.js → static mode → แสดง UI
+4. หน้าใหม่ → language.js → FvLang detect → static mode → แสดง UI
 ```
 
 ---
 
-> **สรุป:** ระบบภาษาของ Fantrove ออกแบบมาเป็น modular architecture ที่รองรับทั้ง runtime translation (เหมาะกับ development) และ pre-built static HTML (เหมาะกับ production SEO) โดยแชร์ codebase ร่วมกันผ่าน `data-fv-built` flag ที่สลับ behavior ของ `language.js` ได้อย่างสะอาดallelStreamingTranslate() → Workers → DOM update
-6. BroadcastChannel.postMessage() → sync tabs อื่น
-7. dispatchEvent('languageChange') → lang-links.js อัพเดทลิงก์
-```
-
-**Static Mode:**
-```
-1. User คลิก dropdown → UIService → LanguageManager.selectLanguage()
-2. localStorage.setItem('selectedLang', lang)
-3. location.replace('/th/path/') → โหลดหน้าใหม่ที่ pre-built แล้ว
-4. หน้าใหม่ → language.j
+> **สรุป:** ระบบภาษาของ Fantrove ออกแบบมาเป็น modular architecture ที่รองรับทั้ง runtime translation (เหมาะกับ development) และ pre-built static HTML (เหมาะกับ production SEO) โดยมี **FvLang (lang-core.js)** เป็นชั้น API กลางที่ resolve ภาษาแบบ synchronous และเป็น single source of truth สำหรับทุกระบบ JS ผ่าน `FvLang.lang`, `FvLang.onChange()`, และ event `fv:langchange`
