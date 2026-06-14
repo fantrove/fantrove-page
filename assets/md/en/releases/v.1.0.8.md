@@ -1,12 +1,8 @@
 ---
 version: 1.0.8
 date: 2025-01-28T09:00:00Z
-title:
-  en: Core infrastructure and design tokens
-  th: โครงสร้างพื้นฐานและ design tokens
-subtitle:
-  en: Established the foundational infrastructure for the site including CSS design tokens, theme system, and the base component architecture that all future features build upon.
-  th: สร้างโครงสร้างพื้นฐานของเว็บไซต์ รวมถึง CSS design tokens ระบบธีม และสถาปัตยกรรม component ฐานที่ feature ทั้งหมดในอนาคตจะสร้างบนนี้
+title: Core infrastructure and design tokens
+subtitle: Established the foundational infrastructure for the site including CSS design tokens, theme system, and the base component architecture that all future features build upon.
 ---
 
 ### New

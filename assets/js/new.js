@@ -1,20 +1,21 @@
-// new.js — v2.0.0
-// Markdown-based What's New system
-// - อ่าน current.md (ปัจจุบัน) และ release-history.json (ประวัติที่ build script สร้าง)
-// - รองรับอ่าน whats-new.json เก่า (fallback ถ้า current.md ไม่มี)
-// - ไม่ใช้ localStorage — อ่านจากไฟล์จริงทั้งหมด
-// - version.json ยังใช้ poll เช็คเวอร์ชั่นใหม่เหมือนเดิม
+// new.js — v2.1.0
+// Per-language Markdown What's New system
+// - อ่าน /assets/md/{lang}/current.md (ปัจจุบัน แยกภาษา)
+// - อ่าน /assets/json/release-history.json (ประวัติ — สร้างโดย build script รวม i18n)
+// - รองรับ fallback: current.md เดี่ยว, whats-new.json เก่า
+// - version.json poll เช็คเวอร์ชั่นใหม่เหมือนเดิม
 
 (function() {
   'use strict';
 
-  // ── URLs ────────────────────────────────────────────────────────────────────
-  var CURRENT_MD_URL   = '/assets/md/current.md';
-  var HISTORY_URL      = '/assets/json/release-history.json';  // สร้างโดย update-version.js
-  var LEGACY_CURRENT   = '/assets/json/whats-new.json';        // fallback (เก่า)
-  var VERSION_URL      = '/assets/json/version.json';
-  var POLL_INTERVAL_MS = 60 * 1000;
-  var REAL_DATE_SEC    = 10 * 86400;
+  var CURRENT_MD_BASE  = '/assets/md/{lang}/current.md';   // per-language
+  var CURRENT_MD_LEGACY = '/assets/md/current.md';          // single-file (old v1.4.0 format)
+  var HISTORY_URL       = '/assets/json/release-history.json';
+  var LEGACY_CURRENT    = '/assets/json/whats-new.json';
+  var VERSION_URL       = '/assets/json/version.json';
+  var POLL_INTERVAL_MS  = 60 * 1000;
+  var REAL_DATE_SEC     = 10 * 86400;
+  var SUPPORTED_LANGS   = ['en', 'th'];
 
   var _lastVersion = null;
   var _pollTimer   = null;
@@ -22,34 +23,34 @@
   // ── i18n ────────────────────────────────────────────────────────────────────
 
   function getLang() {
-    try { return localStorage.getItem('selectedLang') || 'en'; } catch(e) { return 'en'; }
+    try { var l = localStorage.getItem('selectedLang') || 'en'; return SUPPORTED_LANGS.indexOf(l) >= 0 ? l : 'en'; } catch(e) { return 'en'; }
   }
 
   var L10N = {
     en: {
-      justNow:   'Just now',
-      oneMin:    '1 minute ago',
-      xMins:     function(n) { return n + ' minutes ago'; },
-      oneHour:   '1 hour ago',
-      xHours:    function(n) { return n + ' hours ago'; },
+      justNow: 'Just now', oneMin: '1 minute ago',
+      xMins: function(n) { return n + ' minutes ago'; },
+      oneHour: '1 hour ago',
+      xHours: function(n) { return n + ' hours ago'; },
       yesterday: 'Yesterday',
-      xDays:     function(n) { return n + ' days ago'; },
+      xDays: function(n) { return n + ' days ago'; },
       prevReleases: 'Previous releases'
     },
     th: {
-      justNow:   'เมื่อกี้',
-      oneMin:    '1 นาทีที่แล้ว',
-      xMins:     function(n) { return n + ' นาทีที่แล้ว'; },
-      oneHour:   '1 ชั่วโมงที่แล้ว',
-      xHours:    function(n) { return n + ' ชั่วโมงที่แล้ว'; },
+      justNow: 'เมื่อกี้', oneMin: '1 นาทีที่แล้ว',
+      xMins: function(n) { return n + ' นาทีที่แล้ว'; },
+      oneHour: '1 ชั่วโมงที่แล้ว',
+      xHours: function(n) { return n + ' ชั่วโมงที่แล้ว'; },
       yesterday: 'เมื่อวาน',
-      xDays:     function(n) { return n + ' วันที่แล้ว'; },
+      xDays: function(n) { return n + ' วันที่แล้ว'; },
       prevReleases: 'ประวัติการอัพเดท'
     }
   };
 
+  // t() รองรับทั้ง object {en:..., th:...} และ string ธรรมดา
   function t(obj) {
     if (!obj) return '';
+    if (typeof obj === 'string') return obj;
     var lang = getLang();
     return obj[lang] || obj['en'] || '';
   }
@@ -70,38 +71,30 @@
 
   function toFullDate(ts, lang) {
     try {
-      var d    = new Date(ts);
-      var h    = pad2(d.getUTCHours());
-      var min  = pad2(d.getUTCMinutes());
+      var d = new Date(ts), h = pad2(d.getUTCHours()), min = pad2(d.getUTCMinutes());
       var EN_M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
       var TH_M = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-      if (lang === 'th') {
-        return d.getUTCDate() + ' ' + TH_M[d.getUTCMonth()] + ' ' + d.getUTCFullYear()
-          + ' ' + h + ':' + min + ' UTC';
-      }
-      return EN_M[d.getUTCMonth()] + ' ' + d.getUTCDate() + ', ' + d.getUTCFullYear()
-        + ' at ' + h + ':' + min + ' UTC';
+      if (lang === 'th') return d.getUTCDate() + ' ' + TH_M[d.getUTCMonth()] + ' ' + d.getUTCFullYear() + ' ' + h + ':' + min + ' UTC';
+      return EN_M[d.getUTCMonth()] + ' ' + d.getUTCDate() + ', ' + d.getUTCFullYear() + ' at ' + h + ':' + min + ' UTC';
     } catch(e) { return ''; }
   }
 
   function diffToRel(sec, ts, lang) {
     var L = L10N[lang] || L10N.en;
-    if (sec >= REAL_DATE_SEC) {
-      return (!isNaN(ts) && ts) ? toFullDate(ts, lang) : L.xDays(Math.round(sec / 86400));
-    }
-    if (sec < 45)     return L.justNow;
-    if (sec < 90)     return L.oneMin;
-    if (sec < 2670)   { var m = Math.round(sec / 60);   return L.xMins(m);   }
-    if (sec < 5400)   return L.oneHour;
-    if (sec < 77400)  { var h = Math.round(sec / 3600); return L.xHours(h);  }
+    if (sec >= REAL_DATE_SEC) return (!isNaN(ts) && ts) ? toFullDate(ts, lang) : L.xDays(Math.round(sec / 86400));
+    if (sec < 45) return L.justNow;
+    if (sec < 90) return L.oneMin;
+    if (sec < 2670) { var m = Math.round(sec / 60); return L.xMins(m); }
+    if (sec < 5400) return L.oneHour;
+    if (sec < 77400) { var h = Math.round(sec / 3600); return L.xHours(h); }
     if (sec < 129600) return L.yesterday;
     return L.xDays(Math.round(sec / 86400));
   }
 
   function nextTickMs(sec) {
     if (sec >= REAL_DATE_SEC) return null;
-    if (sec < 120)   return 10000;
-    if (sec < 3600)  return 30000;
+    if (sec < 120) return 10000;
+    if (sec < 3600) return 30000;
     if (sec < 86400) return 60000;
     return 300000;
   }
@@ -117,8 +110,11 @@
   // ══════════════════════════════════════════════════════════════════════════════
   //  MARKDOWN PARSER
   // ══════════════════════════════════════════════════════════════════════════════
+  // รองรับ 2 โหมด:
+  //  1. Per-language: title/subtitle เป็น string ธรรมดา → wrap เป็น {lang: value}
+  //  2. Legacy i18n: title/subtitle เป็น {en:..., th:...} → ใช้ตรงนั้น
 
-  function parseMD(mdText) {
+  function parseMD(mdText, lang) {
     var result = { version: '', date: null, title: null, subtitle: null, notify: true, sections: [] };
     try {
       var body = mdText;
@@ -129,74 +125,86 @@
         var vMatch = fm.match(/^version:\s*(.+)$/m);
         if (vMatch) result.version = String(vMatch[1]).trim();
         var dMatch = fm.match(/^date:\s*(.+)$/m);
-        if (dMatch) {
-          var parsed = Date.parse(String(dMatch[1]).trim());
-          if (!isNaN(parsed)) result.date = new Date(parsed).toISOString();
-        }
+        if (dMatch) { var parsed = Date.parse(String(dMatch[1]).trim()); if (!isNaN(parsed)) result.date = new Date(parsed).toISOString(); }
         var nMatch = fm.match(/^notify:\s*(false|true)$/m);
         if (nMatch) result.notify = nMatch[1] !== 'false';
+
+        // title — ลอง i18n block ก่อน แล้วค่อยลอง single string
         var titleBlock = fm.match(/^(title:)\s*\n((?:  \w+:\s*.+\n?)+)/m);
-        if (titleBlock) result.title = parseI18nBlock(titleBlock[2]);
-        else {
+        if (titleBlock) {
+          result.title = parseI18nBlock(titleBlock[2]);
+        } else {
           var titleLine = fm.match(/^title:\s*(.+)$/m);
-          if (titleLine) result.title = { en: String(titleLine[1]).trim() };
+          if (titleLine) {
+            var tv = String(titleLine[1]).trim();
+            // Per-language: wrap string → {lang: value}
+            result.title = lang ? _wrapLang(tv, lang) : { en: tv };
+          }
         }
+
+        // subtitle — เหมือนกัน
         var subBlock = fm.match(/^(subtitle:)\s*\n((?:  \w+:\s*.+\n?)+)/m);
-        if (subBlock) result.subtitle = parseI18nBlock(subBlock[2]);
-        else {
+        if (subBlock) {
+          result.subtitle = parseI18nBlock(subBlock[2]);
+        } else {
           var subLine = fm.match(/^subtitle:\s*(.+)$/m);
-          if (subLine) result.subtitle = { en: String(subLine[1]).trim() };
+          if (subLine) {
+            var sv = String(subLine[1]).trim();
+            result.subtitle = lang ? _wrapLang(sv, lang) : { en: sv };
+          }
         }
       }
 
+      // Parse body → sections
       var lines = body.split('\n');
-      var currentSection = null;
-      var currentItem = null;
-
+      var currentSection = null, currentItem = null;
       for (var i = 0; i < lines.length; i++) {
         var line = lines[i];
         var headingMatch = line.match(/^###\s+(New|Improved|Fixed)\s*$/i);
         if (headingMatch) {
           if (currentSection) result.sections.push(currentSection);
           currentSection = { type: headingMatch[1].toLowerCase(), items: [] };
-          currentItem = null;
-          continue;
+          currentItem = null; continue;
         }
         if (line.match(/^\s*-\s+\*\*/)) {
           if (currentItem && currentSection) currentSection.items.push(currentItem);
-          currentItem = parseItemLine(line);
+          currentItem = parseItemLine(line, lang);
           continue;
         }
         if (currentItem && line.trim() && !line.match(/^---/) && !line.match(/^###/)) {
-          if (!currentItem.desc) currentItem.desc = { en: '', th: '' };
-          currentItem.desc.en += (currentItem.desc.en ? ' ' : '') + line.trim();
-          currentItem.desc.th += (currentItem.desc.th ? ' ' : '') + line.trim();
+          if (!currentItem.desc) currentItem.desc = lang ? _wrapLang('', lang) : { en: '' };
+          var descKey = lang || 'en';
+          currentItem.desc[descKey] += (currentItem.desc[descKey] ? ' ' : '') + line.trim();
         }
       }
       if (currentItem && currentSection) currentSection.items.push(currentItem);
       if (currentSection) result.sections.push(currentSection);
-    } catch(e) {
-      console.warn('[new.js] MD parse error:', e);
-    }
+    } catch(e) { console.warn('[new.js] MD parse error:', e); }
     return result;
   }
 
-  function parseI18nBlock(block) {
+  // Wrap string ให้เป็น {lang: value}
+  function _wrapLang(val, lang) {
     var obj = {};
-    var re = /^\s+(\w+):\s*(.+)$/gm;
-    var m;
+    obj[lang] = val;
+    return obj;
+  }
+
+  function parseI18nBlock(block) {
+    var obj = {}; var re = /^\s+(\w+):\s*(.+)$/gm; var m;
     while ((m = re.exec(block)) !== null) obj[m[1]] = m[2].trim();
     return Object.keys(obj).length ? obj : null;
   }
 
-  function parseItemLine(line) {
-    var item = { title: { en: '', th: '' }, desc: null };
+  function parseItemLine(line, lang) {
+    var item = { title: {}, desc: null };
     var match = line.match(/^\s*-\s+\*\*(.+?)\*\*\s*(.*)?$/);
     if (match) {
       var titleText = match[1].trim();
       var restText  = (match[2] || '').trim();
-      item.title = { en: titleText, th: titleText };
-      if (restText) item.desc = { en: restText, th: restText };
+      // Per-language: title เป็น string ในภาษานั้น
+      item.title = lang ? _wrapLang(titleText, lang) : { en: titleText, th: titleText };
+      if (restText) item.desc = lang ? _wrapLang(restText, lang) : { en: restText, th: restText };
     }
     return item;
   }
@@ -218,102 +226,81 @@
   }
 
   // ══════════════════════════════════════════════════════════════════════════════
-  //  NORMALIZE — ทำให้ข้อมูลทุก source อยู่ในรูปแบบเดียวกัน
-  // ══════════════════════════════════════════════════════════════════════════════
-
-  function normalizeRelease(r) {
-    if (!r || !r.version) return null;
-    return {
-      version:  String(r.version),
-      date:     r.date || r.timestamp || null,
-      title:    r.title    || null,
-      subtitle: r.subtitle || null,
-      notify:   r.notify !== false,
-      sections: (r.sections || []).map(function(s) {
-        return {
-          type: (SECTION_CFG[s.type] ? s.type : 'improved'),
-          items: (s.items || []).map(function(item) {
-            var clean = { title: item.title || { en: '', th: '' } };
-            if (item.desc) clean.desc = item.desc;
-            else if (item.description) clean.desc = item.description;
-            return clean;
-          })
-        };
-      })
-    };
-  }
-
-  // ══════════════════════════════════════════════════════════════════════════════
   //  MAIN DATA PIPELINE
   // ══════════════════════════════════════════════════════════════════════════════
-  //  Flow:
-  //  1. fetch current.md → parse → เป็น release ปัจจุบัน
-  //     ถ้าไม่มี current.md → fallback ไป whats-new.json (รองรับ JSON เก่า)
-  //  2. fetch release-history.json → เป็นประวัติ (สร้างโดย update-version.js)
-  //     ถ้าไม่มี → ลอง fetch MD files จาก releases/ directory
+  //  1. fetch /assets/md/{lang}/current.md → parse (per-language)
+  //     fallback: /assets/md/current.md → parse (legacy single-file with i18n)
+  //     fallback: /assets/json/whats-new.json (old JSON)
+  //  2. fetch release-history.json (build script สร้าง — combined i18n)
+  //     fallback: fetch MD files จาก releases/ directory
   //  3. render
 
   function loadContent() {
+    var lang = getLang();
     var currentRelease = null;
     var historyData    = { releases: [] };
 
-    // Step 1: โหลด current release — ลอง MD ก่อน แล้ว fallback JSON
-    fetchText(CURRENT_MD_URL).then(function(mdText) {
+    // Step 1: โหลด current release — ลอง per-language MD → legacy MD → JSON
+    var perLangUrl = CURRENT_MD_BASE.replace('{lang}', lang);
+
+    fetchText(perLangUrl).then(function(mdText) {
       if (mdText && mdText.trim()) {
-        var parsed = parseMD(mdText);
+        var parsed = parseMD(mdText, lang);
         if (parsed.version) {
-          currentRelease = normalizeRelease(parsed);
+          currentRelease = parsed;
+          return null; // ไม่ต้อง fallback
         }
       }
-
-      // Fallback: ถ้า MD ไม่มี/parse ไม่ได้ → ลอง JSON เก่า
-      if (!currentRelease) {
-        return fetchJSON(LEGACY_CURRENT).then(function(json) {
-          if (json && json.version) {
-            currentRelease = normalizeRelease(json);
-          }
-        });
+      // Fallback 2: legacy single-file MD (มี i18n blocks)
+      return fetchText(CURRENT_MD_LEGACY);
+    }).then(function(mdText) {
+      if (mdText && !currentRelease) {
+        var parsed = parseMD(mdText, null); // null = legacy i18n mode
+        if (parsed.version) currentRelease = parsed;
+        return null;
       }
-    }).then(function() {
-      // Step 2: โหลดประวัติ — release-history.json (สร้างโดย build script)
+      // Fallback 3: JSON เก่า
+      if (!currentRelease) return fetchJSON(LEGACY_CURRENT);
+    }).then(function(json) {
+      if (json && !currentRelease && json.version) currentRelease = json;
+
+      // Step 2: โหลดประวัติ
       return fetchJSON(HISTORY_URL);
     }).then(function(history) {
       if (history && history.releases && history.releases.length) {
         historyData = history;
       } else {
-        // Fallback: ถ้าไม่มี release-history.json ลองอ่าน MD files จาก releases/
-        return loadFallbackHistory();
+        return loadFallbackHistory(lang);
       }
-    }).then(function(fallbackHistory) {
-      if (fallbackHistory && fallbackHistory.releases && fallbackHistory.releases.length) {
-        historyData = fallbackHistory;
-      }
+    }).then(function(fallback) {
+      if (fallback && fallback.releases && fallback.releases.length) historyData = fallback;
 
       // Step 3: Render
       var pastReleases = historyData.releases.filter(function(r) {
         return currentRelease ? r.version !== currentRelease.version : true;
       });
-
       render(currentRelease, { releases: pastReleases });
     }).catch(function(err) {
       console.warn('[new.js] Load error:', err);
     });
   }
 
-  // Fallback: โหลด MD files จาก releases/ โดยตรง (ถ้าไม่มี release-history.json)
-  function loadFallbackHistory() {
-    // ลองโหลดจาก versions ที่รู้จัก
-    var candidates = [
-      'v1.3.0', 'v1.2.0', 'v1.1.0', 'v1.0.9', 'v1.0.8',
-      'v1.0.7.1', 'v1.0.7'
-    ];
+  // Fallback: โหลดจาก per-language releases/ หรือ legacy releases/
+  function loadFallbackHistory(lang) {
+    var candidates = ['v1.3.0', 'v1.2.0', 'v1.1.0', 'v1.0.9', 'v1.0.8', 'v1.0.7.1', 'v1.0.7'];
     var promises = candidates.map(function(ver) {
-      return fetchText('/assets/md/releases/' + ver + '.md')
-        .then(function(text) {
-          if (!text || !text.trim()) return null;
-          var parsed = parseMD(text);
-          return normalizeRelease(parsed);
+      // ลอง per-language ก่อน
+      var perLangUrl = '/assets/md/' + lang + '/releases/' + ver + '.md';
+      return fetchText(perLangUrl).then(function(text) {
+        if (text && text.trim()) {
+          return parseMD(text, lang);
+        }
+        // ลอง legacy path
+        return fetchText('/assets/md/releases/' + ver + '.md').then(function(legacyText) {
+          if (legacyText && legacyText.trim()) return parseMD(legacyText, null);
+          return null;
         });
+      });
     });
 
     return Promise.all(promises).then(function(results) {
@@ -327,42 +314,29 @@
     var pa = String(a || '0').split('.').map(Number);
     var pb = String(b || '0').split('.').map(Number);
     var len = Math.max(pa.length, pb.length);
-    for (var i = 0; i < len; i++) {
-      var na = pa[i] || 0;
-      var nb = pb[i] || 0;
-      if (na !== nb) return na - nb;
-    }
+    for (var i = 0; i < len; i++) { var na = pa[i] || 0, nb = pb[i] || 0; if (na !== nb) return na - nb; }
     return 0;
   }
 
   // ══════════════════════════════════════════════════════════════════════════════
-  //  RENDER
+  //  RENDER (เหมือนเดิม)
   // ══════════════════════════════════════════════════════════════════════════════
 
   function render(current, historyData) {
     try {
       var titleEl = document.getElementById('title');
       if (titleEl && current) titleEl.textContent = current.version || '';
-
       var container = document.getElementById('whats-new-container');
       if (!container) return;
       container.innerHTML = '';
-
-      if (current) {
-        _lastVersion = current.version;
-        container.appendChild(buildRelease(current, true));
-      }
-
+      if (current) { _lastVersion = current.version; container.appendChild(buildRelease(current, true)); }
       var releases = (historyData && historyData.releases) || [];
       if (releases.length) {
         var div = document.createElement('div');
         div.className = 'wn-history-label';
-        var lang = getLang();
-        div.textContent = (L10N[lang] || L10N.en).prevReleases;
+        div.textContent = (L10N[getLang()] || L10N.en).prevReleases;
         container.appendChild(div);
-        releases.forEach(function(r) {
-          try { container.appendChild(buildRelease(r, false)); } catch(e) {}
-        });
+        releases.forEach(function(r) { try { container.appendChild(buildRelease(r, false)); } catch(e) {} });
       }
     } catch(e) {}
   }
@@ -371,199 +345,89 @@
     var lang = getLang();
     var wrap = document.createElement('article');
     wrap.className = 'wn-release' + (isCurrent ? ' wn-release--current' : ' wn-release--past');
-
-    var header = document.createElement('div');
-    header.className = 'wn-header';
-
+    var header = document.createElement('div'); header.className = 'wn-header';
     var badge = document.createElement('span');
     badge.className = 'wn-version-badge' + (isCurrent ? '' : ' wn-version-badge--past');
     badge.textContent = 'v' + (release.version || '');
     header.appendChild(badge);
-
     var dateSource = release.date || release.timestamp;
     if (dateSource) {
       try {
-        var ts   = toTimestamp(dateSource);
-        var sec  = isNaN(ts) ? NaN : Math.max(0, Math.floor((Date.now() - ts) / 1000));
-        var rel  = isNaN(sec) ? '' : diffToRel(sec, ts, lang);
-
+        var ts = toTimestamp(dateSource);
+        var sec = isNaN(ts) ? NaN : Math.max(0, Math.floor((Date.now() - ts) / 1000));
+        var rel = isNaN(sec) ? '' : diffToRel(sec, ts, lang);
         if (rel) {
-          var chip = document.createElement('span');
-          chip.className = 'wn-time-chip';
-          chip.textContent = rel;
-          if (!isNaN(ts) && ts) {
-            try { chip.setAttribute('data-ts', String(ts)); } catch(e) {}
-          }
+          var chip = document.createElement('span'); chip.className = 'wn-time-chip'; chip.textContent = rel;
+          if (!isNaN(ts) && ts) try { chip.setAttribute('data-ts', String(ts)); } catch(e) {}
           header.appendChild(chip);
         }
-
         if (!isNaN(sec) && sec < REAL_DATE_SEC) {
-          var fullDateStr = typeof release.date === 'object'
-            ? (t(release.date))
-            : (typeof release.date === 'string' ? release.date : '');
-          if (fullDateStr) {
-            var ds = document.createElement('span');
-            ds.className = 'wn-date-full';
-            ds.textContent = fullDateStr;
-            header.appendChild(ds);
-          }
+          var fullDateStr = typeof release.date === 'object' ? t(release.date) : (typeof release.date === 'string' ? release.date : '');
+          if (fullDateStr) { var ds = document.createElement('span'); ds.className = 'wn-date-full'; ds.textContent = fullDateStr; header.appendChild(ds); }
         }
       } catch(e) {}
     }
-
     wrap.appendChild(header);
-
-    if (release.title) {
-      var h = document.createElement(isCurrent ? 'h2' : 'h3');
-      h.className = 'wn-title';
-      h.textContent = t(release.title);
-      wrap.appendChild(h);
-    }
-
-    if (release.subtitle) {
-      var sub = document.createElement('p');
-      sub.className = 'wn-subtitle';
-      sub.textContent = t(release.subtitle);
-      wrap.appendChild(sub);
-    }
-
-    if (release.sections && release.sections.length) {
-      release.sections.forEach(function(s) {
-        try { wrap.appendChild(buildSection(s)); } catch(e) {}
-      });
-    }
-
+    if (release.title) { var h = document.createElement(isCurrent ? 'h2' : 'h3'); h.className = 'wn-title'; h.textContent = t(release.title); wrap.appendChild(h); }
+    if (release.subtitle) { var sub = document.createElement('p'); sub.className = 'wn-subtitle'; sub.textContent = t(release.subtitle); wrap.appendChild(sub); }
+    if (release.sections && release.sections.length) { release.sections.forEach(function(s) { try { wrap.appendChild(buildSection(s)); } catch(e) {} }); }
     return wrap;
   }
 
   function buildSection(section) {
-    var cfg  = SECTION_CFG[section.type] || SECTION_CFG['improved'];
-    var wrap = document.createElement('div');
-    wrap.className = 'wn-section';
-
-    var head = document.createElement('div');
-    head.className = 'wn-section-head';
-    var pill = document.createElement('span');
-    pill.className = 'wn-section-pill';
+    var cfg = SECTION_CFG[section.type] || SECTION_CFG['improved'];
+    var wrap = document.createElement('div'); wrap.className = 'wn-section';
+    var head = document.createElement('div'); head.className = 'wn-section-head';
+    var pill = document.createElement('span'); pill.className = 'wn-section-pill';
     pill.style.cssText = 'color:' + cfg.color + ';background:' + cfg.bg + ';border-color:' + cfg.border;
-    pill.textContent = t(cfg.label);
-    head.appendChild(pill);
-    wrap.appendChild(head);
-
-    var list = document.createElement('ul');
-    list.className = 'wn-items';
+    pill.textContent = t(cfg.label); head.appendChild(pill); wrap.appendChild(head);
+    var list = document.createElement('ul'); list.className = 'wn-items';
     (section.items || []).forEach(function(item) {
       try {
-        var li   = document.createElement('li');
-        li.className = 'wn-item';
-
-        var bar  = document.createElement('span');
-        bar.className = 'wn-item-bar';
-        bar.style.background = cfg.color;
-        li.appendChild(bar);
-
-        var body = document.createElement('div');
-        body.className = 'wn-item-body';
-
-        var tt = document.createElement('div');
-        tt.className = 'wn-item-title';
-        tt.textContent = t(item.title);
-        body.appendChild(tt);
-
-        if (item.desc) {
-          var dd = document.createElement('div');
-          dd.className = 'wn-item-desc';
-          dd.textContent = t(item.desc);
-          body.appendChild(dd);
-        }
-        li.appendChild(body);
-        list.appendChild(li);
+        var li = document.createElement('li'); li.className = 'wn-item';
+        var bar = document.createElement('span'); bar.className = 'wn-item-bar'; bar.style.background = cfg.color; li.appendChild(bar);
+        var body = document.createElement('div'); body.className = 'wn-item-body';
+        var tt = document.createElement('div'); tt.className = 'wn-item-title'; tt.textContent = t(item.title); body.appendChild(tt);
+        if (item.desc) { var dd = document.createElement('div'); dd.className = 'wn-item-desc'; dd.textContent = t(item.desc); body.appendChild(dd); }
+        li.appendChild(body); list.appendChild(li);
       } catch(e) {}
     });
-    wrap.appendChild(list);
-    return wrap;
+    wrap.appendChild(list); return wrap;
   }
 
-  // ── Live tick ───────────────────────────────────────────────────────────────
+  // ── Live tick, polling, boot (เหมือนเดิม) ─────────────────────────────────
 
   function tickRelativeTimes() {
     try {
-      var lang  = getLang();
-      var chips = document.querySelectorAll('.wn-time-chip[data-ts]');
-      var minNext = null;
+      var lang = getLang(); var chips = document.querySelectorAll('.wn-time-chip[data-ts]'); var minNext = null;
       for (var i = 0; i < chips.length; i++) {
         try {
-          var chip = chips[i];
-          var tsStr = chip.getAttribute('data-ts');
-          var ts = tsStr ? parseInt(tsStr, 10) : NaN;
-          if (!ts || isNaN(ts)) continue;
-          var sec = Math.max(0, Math.floor((Date.now() - ts) / 1000));
-          var rel = diffToRel(sec, ts, lang);
+          var chip = chips[i]; var ts = parseInt(chip.getAttribute('data-ts'), 10); if (!ts || isNaN(ts)) continue;
+          var sec = Math.max(0, Math.floor((Date.now() - ts) / 1000)); var rel = diffToRel(sec, ts, lang);
           if (chip.textContent !== rel) chip.textContent = rel;
-          var next = nextTickMs(sec);
-          if (next !== null) minNext = (minNext === null) ? next : Math.min(minNext, next);
+          var next = nextTickMs(sec); if (next !== null) minNext = (minNext === null) ? next : Math.min(minNext, next);
         } catch(e) {}
       }
       return minNext;
     } catch(e) { return null; }
   }
 
-  // ── Version check ───────────────────────────────────────────────────────────
-
-  function checkForUpdates() {
-    fetchJSON(VERSION_URL).then(function(v) {
-      try {
-        if (v && _lastVersion && v.version !== _lastVersion) loadContent();
-      } catch(e) {}
-    });
-  }
-
-  // ── Polling loop ────────────────────────────────────────────────────────────
+  function checkForUpdates() { fetchJSON(VERSION_URL).then(function(v) { try { if (v && _lastVersion && v.version !== _lastVersion) loadContent(); } catch(e) {} }); }
 
   function startPolling() {
     tickRelativeTimes();
     function tick() {
-      try {
-        var nextMs = tickRelativeTimes();
-        checkForUpdates();
-        var delay = (nextMs !== null) ? Math.max(nextMs, 10000) : POLL_INTERVAL_MS;
-        _pollTimer = setTimeout(tick, delay);
-      } catch(e) {
-        _pollTimer = setTimeout(tick, POLL_INTERVAL_MS);
-      }
+      try { var nextMs = tickRelativeTimes(); checkForUpdates(); var delay = (nextMs !== null) ? Math.max(nextMs, 10000) : POLL_INTERVAL_MS; _pollTimer = setTimeout(tick, delay); }
+      catch(e) { _pollTimer = setTimeout(tick, POLL_INTERVAL_MS); }
     }
-    var firstDelay = tickRelativeTimes();
-    _pollTimer = setTimeout(tick, (firstDelay !== null) ? Math.max(firstDelay, 10000) : POLL_INTERVAL_MS);
+    var firstDelay = tickRelativeTimes(); _pollTimer = setTimeout(tick, (firstDelay !== null) ? Math.max(firstDelay, 10000) : POLL_INTERVAL_MS);
   }
 
-  function setupVisibilityRefresh() {
-    try {
-      document.addEventListener('visibilitychange', function() {
-        try { if (!document.hidden) { tickRelativeTimes(); checkForUpdates(); } } catch(e) {}
-      });
-    } catch(e) {}
-  }
+  function setupVisibilityRefresh() { try { document.addEventListener('visibilitychange', function() { try { if (!document.hidden) { tickRelativeTimes(); checkForUpdates(); } } catch(e) {} }); } catch(e) {} }
 
-  // ── Boot ────────────────────────────────────────────────────────────────────
+  function boot() { try { loadContent(); } catch(e) {} try { setupVisibilityRefresh(); } catch(e) {} try { startPolling(); } catch(e) {} }
 
-  function boot() {
-    try { loadContent();             } catch(e) {}
-    try { setupVisibilityRefresh();  } catch(e) {}
-    try { startPolling();            } catch(e) {}
-  }
+  try { window.addEventListener('languageChange', function() { try { loadContent(); } catch(e) {} }); } catch(e) {}
 
-  try {
-    window.addEventListener('languageChange', function() {
-      try { loadContent(); } catch(e) {}
-    });
-  } catch(e) {}
-
-  try {
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', boot);
-    } else {
-      boot();
-    }
-  } catch(e) {}
-
+  try { if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot(); } catch(e) {}
 })();
