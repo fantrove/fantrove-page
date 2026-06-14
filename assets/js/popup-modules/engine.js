@@ -10,20 +10,19 @@
 //   3. Options merged with preset via Utils.mergeOptions()
 //   4. PopupInstance created, added to State
 //   5. Renderer.build() creates DOM
-//   6. ThemeService.apply() sets theme tokens
-//   7. OverlayService attaches listeners
-//   8. A11yService installs focus trap + manages inert siblings
-//   9. Scroll lock applied (if needed)
-//  10. Animator.enter() plays animation
-//  11. onMount callback fires → PopupHandle returned
-//  12. If async body: resolves → content injected → onContentReady fires
-//  13. User interacts...
-//  14. close() called (or auto-close, or overlay click, or escape)
-//  15. onBeforeClose guard checked
-//  16. Animator.exit() plays exit animation
-//  17. Cleanup: DOM removed, listeners detached, scroll unlocked
-//  18. onClose callback fires
-//  19. QueueManager.processNext() opens next queued popup
+ *   6. ThemeService.apply() sets theme tokens
+ *   7. OverlayService attaches listeners
+ *   8. A11yService installs focus trap + manages inert siblings
+ *   9. Scroll lock applied (if needed)
+ *  10. Animator.enter() plays animation
+ *  11. onOpen callback fires → PopupHandle returned
+ *  12. User interacts...
+ *  13. close() called (or auto-close, or overlay click, or escape)
+ *  14. onBeforeClose guard checked
+ *  15. Animator.exit() plays exit animation
+ *  16. Cleanup: DOM removed, listeners detached, scroll unlocked
+ *  17. onClose callback fires
+ *  18. QueueManager.processNext() opens next queued popup
 //
 // Used by: popup.js (entry point) → reads M.Engine to build window.PopupSystem
 
@@ -54,34 +53,11 @@
     _cleanups.delete(id);
   }
 
-  // ── Inject content into body (shared by open and async resolve) ───────────
-
-  function _injectContent(bodyEl, content, useShadowDom) {
-    if (!useShadowDom) {
-      if (typeof content === 'string') {
-        bodyEl.innerHTML = content;
-      } else if (content instanceof HTMLElement) {
-        bodyEl.innerHTML = '';
-        bodyEl.appendChild(content);
-      }
-      return;
-    }
-    // Shadow DOM mode
-    var shadowRoot = bodyEl.attachShadow({ mode: 'open' });
-    if (typeof content === 'string') {
-      shadowRoot.innerHTML = content;
-    } else if (content instanceof HTMLElement) {
-      shadowRoot.appendChild(content);
-    }
-    // Store reference for later access
-    bodyEl._fpShadowRoot = shadowRoot;
-  }
-
   // ── Open ───────────────────────────────────────────────────────────────────
 
   /**
    * Open a new popup. Returns a Promise that resolves with a PopupHandle
-   * after the enter animation completes (and async body resolves, if any).
+   * after the enter animation completes.
    *
    * @param {PopupOptions} userOpts
    * @returns {Promise<PopupHandle>}
@@ -115,8 +91,6 @@
       zIndex    : zIndex,
       autoCloseTimer: null,
       listeners : new Set(),
-      _asyncBody: null,
-      _shadowDom: false,
     };
 
     // 5. Save trigger element reference
@@ -144,31 +118,7 @@
     // 10. Attach interaction listeners
     _attachInteractions(instance, dom);
 
-    // 11. Event bridge — forward CustomEvents from body content
-    if (typeof opts.onBodyEvent === 'function') {
-      var bodyEventHandler = function(e) {
-        if (e.type && e.type.indexOf('fp:') === 0) {
-          var eventName = e.type.replace('fp:', '');
-          opts.onBodyEvent(eventName, e.detail, _createHandle(instance));
-        }
-      };
-      dom.bodyEl.addEventListener('fp:*', bodyEventHandler);
-      // Also listen for any custom event with fp: prefix via delegation
-      var delegatingHandler = function(e) {
-        if (e.type && e.type.indexOf('fp:') === 0 && e.target !== dom.bodyEl) {
-          var eventName = e.type.replace('fp:', '');
-          opts.onBodyEvent(eventName, e.detail, _createHandle(instance));
-        }
-      };
-      // Use capture to catch events from shadow DOM too
-      dom.rootEl.addEventListener('fp:*', delegatingHandler, true);
-      _addCleanup(id, function() {
-        dom.bodyEl.removeEventListener('fp:*', bodyEventHandler);
-        dom.rootEl.removeEventListener('fp:*', delegatingHandler, true);
-      });
-    }
-
-    // 12. Accessibility
+    // 11. Accessibility
     if (opts.focusTrap !== false) {
       const cleanupTrap = A11yService.installFocusTrap(id, dom.rootEl);
       _addCleanup(id, cleanupTrap);
@@ -178,75 +128,51 @@
       _addCleanup(id, function() { A11yService.manageInertSiblings(false); });
     }
 
-    // 13. Scroll lock
+    // 12. Scroll lock
     if (opts.lockScroll !== false) {
       State.lockScroll();
       _addCleanup(id, function() { State.unlockScroll(); });
     }
 
-    // 14. Stagger delay for stacked popups
+    // 13. Stagger delay for stacked popups
     if (stackPos > 0) {
       await Animator.staggerDelay(stackPos);
     }
 
-    // 15. Play enter animation
+    // 14. Play enter animation
     instance.state = 'opening';
     await Animator.enter(dom.rootEl, dom.overlayEl, opts);
     instance.state = 'open';
     dom.rootEl.classList.add(CONFIG.DOM.OPEN_CLASS);
 
-    // 16. Auto-focus
+    // 15. Auto-focus
     if (opts.focusTrap !== false) {
       A11yService.autoFocus(dom.rootEl, dom.bodyEl);
     }
 
-    // 17. Auto-close timer
+    // 16. Auto-close timer
     if (opts.timeout && opts.timeout > 0) {
       instance.autoCloseTimer = setTimeout(function() {
         close(id, { action: 'timeout' });
       }, opts.timeout + CONFIG.TIMING.AUTO_CLOSE_GRACE);
     }
 
-    // 18. Fire onMount callback (DOM ready, before onOpen)
+    // 17. Fire onMount callback (DOM ready, before onOpen)
     if (typeof opts.onMount === 'function') {
       try { opts.onMount(dom.bodyEl, _createHandle(instance)); } catch (e) {
         console.error('[PopupSystem] onMount error:', e);
       }
     }
 
-    // 19. Fire onOpen callback
+    // 18. Fire onOpen callback
     if (typeof opts.onOpen === 'function') {
       try { opts.onOpen(id, _createHandle(instance)); } catch (e) {
         console.error('[PopupSystem] onOpen error:', e);
       }
     }
 
-    // 20. Emit system event
+    // 19. Emit system event
     State._emit('opened', { id, type: opts.type, stackHeight: State.getStackHeight() });
-
-    // 21. Handle async body (Promise)
-    if (instance._asyncBody) {
-      try {
-        var content = await instance._asyncBody;
-        // Remove loading state
-        Renderer.setLoadingState(dom.bodyEl, false);
-        dom.bodyEl.classList.remove(CONFIG.DOM.CLASS_LOADING_BODY);
-        // Inject resolved content
-        _injectContent(dom.bodyEl, content, instance._shadowDom);
-        instance._asyncBody = null;
-        // Fire onContentReady
-        if (typeof opts.onContentReady === 'function') {
-          try { opts.onContentReady(dom.bodyEl, _createHandle(instance)); } catch (e) {
-            console.error('[PopupSystem] onContentReady error:', e);
-          }
-        }
-      } catch (err) {
-        console.error('[PopupSystem] async body error:', err);
-        Renderer.setLoadingState(dom.bodyEl, false);
-        dom.bodyEl.classList.remove(CONFIG.DOM.CLASS_LOADING_BODY);
-        dom.bodyEl.innerHTML = '<div class="fp-error-body">Failed to load content</div>';
-      }
-    }
 
     return _createHandle(instance);
   }
@@ -390,7 +316,12 @@
 
     // Re-render body
     if (newOpts.body !== undefined) {
-      _injectContent(instance.bodyEl, newOpts.body, instance._shadowDom);
+      if (typeof newOpts.body === 'string') {
+        instance.bodyEl.innerHTML = newOpts.body;
+      } else if (newOpts.body instanceof HTMLElement) {
+        instance.bodyEl.innerHTML = '';
+        instance.bodyEl.appendChild(newOpts.body);
+      }
     }
 
     // Re-render footer
@@ -401,20 +332,6 @@
     State._emit('updated', { id, options: newOpts });
   }
 
-  // ── Set loading state ──────────────────────────────────────────────────────
-
-  /**
-   * Show or hide a loading overlay on a popup's body.
-   * @param {string} id
-   * @param {boolean} isLoading
-   * @param {string} [label]
-   */
-  function setLoading(id, isLoading, label) {
-    const instance = State.getInstance(id);
-    if (!instance || instance.state !== 'open') return;
-    Renderer.setLoadingState(instance.bodyEl, isLoading, label);
-  }
-
   // ── Instance event subscription ────────────────────────────────────────────
 
   function onInstance(id, fn) {
@@ -422,101 +339,6 @@
     if (!instance) return function() {};
     instance.listeners.add(fn);
     return function() { instance.listeners.delete(fn); };
-  }
-
-  function onceInstance(id, fn) {
-    const instance = State.getInstance(id);
-    if (!instance) return function() {};
-    var wrapper = function(data) {
-      instance.listeners.delete(wrapper);
-      fn(data);
-    };
-    instance.listeners.add(wrapper);
-    return function() { instance.listeners.delete(wrapper); };
-  }
-
-  // ── Register preset ────────────────────────────────────────────────────────
-
-  /**
-   * Register a custom preset that any system can use via PopupSystem.open({ type: 'myPreset' }).
-   * @param {string} name - Unique preset name (e.g. 'language-selector', 'update-dialog')
-   * @param {PresetConfig} config - Full preset configuration (same shape as built-in presets)
-   * @returns {boolean} true if registered successfully
-   */
-  function registerPreset(name, config) {
-    return State.registerCustomPreset(name, config);
-  }
-
-  // ── Container (universal shell API) ────────────────────────────────────────
-
-  /**
-   * Open a popup as a pure container — the system controls size, position,
-   * animation, theme, and accessibility. The calling system controls ALL content.
-   *
-   * This is the recommended API for other systems (language, update, etc.)
-   * to show popups without worrying about popup mechanics.
-   *
-   * @param {ContainerOptions} opts
-   * @returns {Promise<PopupHandle>}
-   *
-   * @example
-   * // Language system opens a selector popup:
-   * const handle = await PopupSystem.container({
-   *   title: 'Select Language',
-   *   content: buildLanguageSelectorHTML(),
-   *   size: 'sm',
-   *   group: 'lang-selector',
-   *   onBodyEvent: (name, detail, handle) => {
-   *     if (name === 'lang:selected') handle.close({ data: detail.lang });
-   *   },
-   * });
-   *
-   * @example
-   * // Update system shows a loading then content:
-   * const handle = await PopupSystem.container({
-   *   title: 'Checking for updates...',
-   *   content: fetchUpdateInfo().then(data => buildUpdateHTML(data)),
-   *   size: 'md',
-   *   blocking: true,
-   *   onContentReady: (bodyEl, handle) => {
-   *     // Attach event listeners after content loads
-   *     bodyEl.querySelector('.install-btn').addEventListener('click', () => {
-   *       handle.setLoading(true, 'Installing...');
-   *     });
-   *   },
-   * });
-   */
-  function container(opts = {}) {
-    // Map container options to full PopupOptions
-    var openOpts = {
-      type    : 'dialog',
-      title   : opts.title !== undefined ? opts.title : null,
-      body    : opts.content !== undefined ? opts.content : '',
-      footer  : opts.footer,
-      size    : opts.size || 'md',
-      position: opts.position || 'center',
-      theme   : opts.theme || 'light',
-      blocking: opts.blocking !== undefined ? opts.blocking : true,
-      closable: opts.closable !== undefined ? opts.closable : true,
-      lockScroll: opts.lockScroll !== undefined ? opts.lockScroll : true,
-      group   : opts.group,
-      zIndex  : opts.zIndex,
-      variant : opts.variant,
-      glassmorphism: opts.glassmorphism,
-      borderless: opts.borderless,
-      anchor  : opts.anchor,
-      placement: opts.placement,
-      onMount : opts.onMount,
-      onContentReady: opts.onContentReady,
-      onBodyEvent: opts.onBodyEvent,
-      onClose : opts.onClose,
-      onBeforeClose: opts.onBeforeClose,
-      triggerEl: opts.triggerEl,
-      shadowDom: opts.shadowDom,
-      loadingLabel: opts.loadingLabel,
-      id      : opts.id,
-    };
-    return open(openOpts);
   }
 
   // ── Attach interactions ────────────────────────────────────────────────────
@@ -624,58 +446,13 @@
         update(id, { title: title });
       },
 
-      /**
-       * Show or hide loading overlay on this popup.
-       * @param {boolean} isLoading
-       * @param {string} [label] - Optional text below spinner
-       */
-      setLoading: function(isLoading, label) {
-        setLoading(id, isLoading, label);
-      },
-
-      /**
-       * Emit an event from this popup instance.
-       * Listeners via handle.on() and system events will receive it.
-       * @param {string} eventName
-       * @param {*} [detail]
-       */
-      emit: function(eventName, detail) {
-        var inst = State.getInstance(id);
-        if (!inst) return;
-        var payload = { type: eventName, detail: detail, id: id };
-        for (const fn of inst.listeners) {
-          try { fn(payload); } catch (_) {}
-        }
-        State._emit('instance:' + eventName, payload);
-      },
-
       getState: function() {
         var inst = State.getInstance(id);
         return inst ? inst.state : 'closed';
       },
 
-      /**
-       * Subscribe to instance events.
-       * @param {string} event
-       * @param {Function} fn
-       * @returns {Function} Unsubscribe
-       */
       on: function(event, fn) {
-        return onInstance(id, function(payload) {
-          if (!event || payload.type === event) fn(payload);
-        });
-      },
-
-      /**
-       * Subscribe to an instance event once, then auto-unsubscribe.
-       * @param {string} event
-       * @param {Function} fn
-       * @returns {Function} Unsubscribe
-       */
-      once: function(event, fn) {
-        return onceInstance(id, function(payload) {
-          if (!event || payload.type === event) fn(payload);
-        });
+        return onInstance(id, fn);
       },
 
       destroy: function() {
@@ -781,7 +558,6 @@
       queued  : QueueManager.status().queued,
       stack   : State.getStackHeight(),
       scrollLock: State.getScrollLockCount() > 0,
-      customPresets: State.getAllCustomPresetNames(),
       instances: State.getAllInstances().map(function(inst) {
         return {
           id    : inst.id,
@@ -797,8 +573,7 @@
   function debug() {
     var s = stats();
     console.table(s.instances);
-    console.log('[PopupSystem] active:', s.active, 'queued:', s.queued, 'scrollLock:', s.scrollLock,
-      'customPresets:', s.customPresets.join(', ') || '(none)');
+    console.log('[PopupSystem] active:', s.active, 'queued:', s.queued, 'scrollLock:', s.scrollLock);
     return s;
   }
 
@@ -813,7 +588,6 @@
   M.Engine = Object.freeze({
     open, close, destroy, closeAll, closeByGroup, update, onInstance,
     alert, confirm, toast,
-    registerPreset, container, setLoading,
     stats, debug, onSystem,
   });
 

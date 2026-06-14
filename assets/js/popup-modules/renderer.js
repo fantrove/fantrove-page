@@ -1,8 +1,8 @@
 // Path:    assets/js/popup-modules/renderer.js
 // Purpose: DOM structure builder — creates the popup element tree
-//          (overlay, root, header, body, footer) from resolved options.
-//          Does NOT handle animation or lifecycle — only DOM construction.
-// Used by: engine.js
+ *          (overlay, root, header, body, footer) from resolved options.
+ *          Does NOT handle animation or lifecycle — only DOM construction.
+ * Used by: engine.js
 
 (function(M) {
   'use strict';
@@ -134,27 +134,6 @@
       bodyEl.innerHTML = opts.body;
     } else if (opts.body instanceof HTMLElement) {
       bodyEl.appendChild(opts.body);
-    } else if (opts.body && typeof opts.body.then === 'function') {
-      // Async body (Promise) — show loading state, return a resolver
-      bodyEl.classList.add(CONFIG.DOM.CLASS_LOADING_BODY);
-      bodyEl.innerHTML = _buildLoadingHtml(opts.loadingLabel);
-      instance._asyncBody = opts.body; // store promise for engine to resolve
-    }
-
-    // Shadow DOM mode
-    if (opts.shadowDom && typeof bodyEl.attachShadow === 'function') {
-      bodyEl.classList.add(CONFIG.DOM.CLASS_SHADOW_HOST);
-      // Content will be moved into shadow root by engine after async resolve
-      instance._shadowDom = true;
-    }
-
-    // Slots support — named content regions
-    if (opts.slots) {
-      if (opts.slots.body !== undefined) {
-        bodyEl.innerHTML = '';
-        if (typeof opts.slots.body === 'string') bodyEl.innerHTML = opts.slots.body;
-        else if (opts.slots.body instanceof HTMLElement) bodyEl.appendChild(opts.slots.body);
-      }
     }
 
     inner.appendChild(bodyEl);
@@ -181,37 +160,6 @@
     }
 
     return { rootEl: rootEl, overlayEl: overlayEl, headerEl: headerEl, bodyEl: bodyEl, footerEl: footerEl, closeBtn: closeBtn };
-  }
-
-  /**
-   * Build the loading indicator HTML.
-   * @param {string} [label]
-   * @returns {string}
-   */
-  function _buildLoadingHtml(label) {
-    var text = label !== undefined ? label : CONFIG.LOADING.DEFAULT_LABEL;
-    var labelHtml = text ? '<div class="fp-loading-label">' + text + '</div>' : '';
-    return '<div class="fp-loading-overlay"><div class="fp-loading-content">' +
-      CONFIG.LOADING.SPINNER_HTML + labelHtml + '</div></div>';
-  }
-
-  /**
-   * Show or hide the loading overlay inside a popup body.
-   * @param {HTMLElement} bodyEl
-   * @param {boolean} isLoading
-   * @param {string} [label]
-   */
-  function setLoadingState(bodyEl, isLoading, label) {
-    var existing = bodyEl.querySelector('.fp-loading-overlay');
-    if (isLoading && !existing) {
-      var overlay = document.createElement('div');
-      overlay.innerHTML = _buildLoadingHtml(label);
-      bodyEl.appendChild(overlay.firstElementChild);
-      bodyEl.classList.add(CONFIG.DOM.CLASS_LOADING_BODY);
-    } else if (!isLoading && existing) {
-      existing.parentNode.removeChild(existing);
-      bodyEl.classList.remove(CONFIG.DOM.CLASS_LOADING_BODY);
-    }
   }
 
   /**
@@ -258,6 +206,6 @@
     popupEl.style.left = left + 'px';
   }
 
-  M.Renderer = Object.freeze({ build, setLoadingState, _buildLoadingHtml });
+  M.Renderer = Object.freeze({ build });
 
 })(window.PopupModules = window.PopupModules || {});

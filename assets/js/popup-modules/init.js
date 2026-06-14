@@ -13,40 +13,14 @@
  
  window.PopupSystem = Object.freeze({
   _initialized: true,
-  version: '2.0.0',
+  version: '1.0.0',
   
   /**
-   * Open a new popup with full control.
+   * Open a new popup.
    * @param {PopupOptions} opts
    * @returns {Promise<PopupHandle>}
    */
   open: function(opts) { return Engine.open(opts); },
-  
-  /**
-   * Open a popup as a universal container.
-   * The popup system controls size, position, animation, theme, accessibility.
-   * The calling system controls ALL content.
-   *
-   * @param {ContainerOptions} opts
-   * @returns {Promise<PopupHandle>}
-   *
-   * @example
-   * // Any system can open a container:
-   * const h = await PopupSystem.container({
-   *   title: 'My Feature',
-   *   content: myHTML,  // or Promise<string>
-   *   size: 'sm',
-   *   group: 'my-feature',
-   *   onBodyEvent: (name, detail, handle) => { ... },
-   *   onContentReady: (bodyEl, handle) => { ... },
-   * });
-   * // Later:
-   * h.setLoading(true, 'Saving...');
-   * h.setLoading(false);
-   * h.emit('saved', { id: 123 });
-   * h.close();
-   */
-  container: function(opts) { return Engine.container(opts); },
   
   /**
    * Close a popup by ID.
@@ -75,40 +49,6 @@
   closeByGroup: function(group) { Engine.closeByGroup(group); },
   
   /**
-   * Register a custom preset for use by any system.
-   * Custom presets work exactly like built-in presets.
-   *
-   * @param {string} name - e.g. 'language-selector', 'update-dialog'
-   * @param {PresetConfig} config - Same shape as built-in presets
-   * @returns {boolean} true on success
-   *
-   * @example
-   * PopupSystem.registerPreset('update-dialog', {
-   *   type: 'update-dialog',
-   *   defaultSize: 'md',
-   *   defaultPosition: 'center',
-   *   hasOverlay: true,
-   *   hasHeader: true,
-   *   hasFooter: true,
-   *   hasCloseButton: true,
-   *   defaultClosable: true,
-   *   defaultBlocking: true,
-   *   defaultLockScroll: true,
-   *   defaultFocusTrap: true,
-   *   defaultStackable: false,
-   *   defaultDismissOnOverlay: true,
-   *   defaultDismissOnEscape: true,
-   *   enterAnimation: 'fp-enter-center',
-   *   exitAnimation: 'fp-exit-center',
-   *   defaultRole: 'dialog',
-   *   zIndexLayer: 25000,
-   * });
-   * // Then use it:
-   * PopupSystem.open({ type: 'update-dialog', body: '...' });
-   */
-  registerPreset: function(name, config) { return Engine.registerPreset(name, config); },
-  
-  /**
    * Show an alert dialog.
    * @param {string} message
    * @param {Object} [opts]
@@ -134,7 +74,7 @@
   
   /**
    * Subscribe to system events: 'opening', 'opened', 'closing', 'closed',
-   * 'destroyed', 'queued', 'updated', 'preset:registered', 'preset:removed'.
+   * 'destroyed', 'queued', 'updated'.
    * @param {string} event
    * @param {Function} fn
    * @returns {Function} Unsubscribe
@@ -169,7 +109,7 @@
  // ── Dispatch ready event ──────────────────────────────────────────────────
  
  try {
-  window.dispatchEvent(new CustomEvent('fp:ready', { detail: { version: '2.0.0' } }));
+  window.dispatchEvent(new CustomEvent('fp:ready', { detail: { version: '1.0.0' } }));
  } catch (_) {}
  
 })(window.PopupModules = window.PopupModules || {});

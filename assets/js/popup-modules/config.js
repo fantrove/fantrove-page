@@ -104,11 +104,6 @@
     // Position classes
     POS_PREFIX       : 'fp-pos-',
     ANCHOR_CLASS     : 'fp-anchored',
-
-    // State classes (v2.0)
-    CLASS_LOADING    : 'fp-loading',
-    CLASS_LOADING_BODY: 'fp-body-loading',
-    CLASS_SHADOW_HOST: 'fp-shadow-host',
   });
 
   // ── Preset configurations ──────────────────────────────────────────────────
@@ -295,13 +290,6 @@
     xl   : '0 30px 60px -12px rgba(6, 20, 24, 0.12), 0 18px 36px -18px rgba(6, 20, 24, 0.08)',
   });
 
-  // ── Loading spinner ──────────────────────────────────────────────────────
-
-  const LOADING = Object.freeze({
-    SPINNER_HTML: '<div class="fp-loading-spinner"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></div>',
-    DEFAULT_LABEL: '',
-  });
-
   // ── Queue ──────────────────────────────────────────────────────────────────
 
   const QUEUE = Object.freeze({
@@ -318,7 +306,7 @@
   });
 
   M.CONFIG = Object.freeze({
-    Z_INDEX, TIMING, EASING, SIZES, DOM, PRESETS, SHADOWS, QUEUE, A11Y, LOADING,
+    Z_INDEX, TIMING, EASING, SIZES, DOM, PRESETS, SHADOWS, QUEUE, A11Y,
   });
 
 })(window.PopupModules = window.PopupModules || {});

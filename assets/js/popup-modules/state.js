@@ -63,15 +63,6 @@
    */
   const _systemListeners = new Map();
 
-  // ── Custom preset registry ─────────────────────────────────────────────────
-  // Other systems (language, update, etc.) can register their own presets.
-  // Custom presets have the same shape as built-in PRESETS.
-
-  /**
-   * @type {Map<string, PresetConfig>}
-   */
-  const _customPresets = new Map();
-
   // ── ID generator ────────────────────────────────────────────────────────────
 
   let _idCounter = 0;
@@ -244,46 +235,6 @@
     } catch (_) {}
   }
 
-  // ── Custom preset management ────────────────────────────────────────────
-
-  function registerCustomPreset(name, config) {
-    if (typeof name !== 'string' || !name) {
-      console.error('[PopupSystem] registerPreset: name must be a non-empty string');
-      return false;
-    }
-    // Validate required fields
-    var required = ['type', 'defaultSize', 'defaultPosition', 'hasOverlay',
-      'hasHeader', 'hasFooter', 'hasCloseButton', 'defaultClosable',
-      'defaultBlocking', 'defaultLockScroll', 'defaultFocusTrap',
-      'defaultStackable', 'defaultDismissOnOverlay', 'defaultDismissOnEscape',
-      'enterAnimation', 'exitAnimation', 'defaultRole', 'zIndexLayer'];
-    for (var i = 0; i < required.length; i++) {
-      if (config[required[i]] === undefined) {
-        console.error('[PopupSystem] registerPreset: missing required field "' + required[i] + '"');
-        return false;
-      }
-    }
-    // Ensure type matches the registered name
-    var preset = Object.assign({}, config, { type: name });
-    _customPresets.set(name, Object.freeze(preset));
-    _emit('preset:registered', { name: name });
-    return true;
-  }
-
-  function getCustomPreset(name) {
-    return _customPresets.get(name) || null;
-  }
-
-  function removeCustomPreset(name) {
-    var removed = _customPresets.delete(name);
-    if (removed) _emit('preset:removed', { name: name });
-    return removed;
-  }
-
-  function getAllCustomPresetNames() {
-    return Array.from(_customPresets.keys());
-  }
-
   // ── Destroy ─────────────────────────────────────────────────────────────────
 
   function destroyAll() {
@@ -296,7 +247,6 @@
     _stack.length = 0;
     _groups.clear();
     _systemListeners.clear();
-    _customPresets.clear();
     // Force unlock scroll
     if (_scrollLockCount > 0) {
       _scrollLockCount = 1;
@@ -317,7 +267,6 @@
     lockScroll, unlockScroll, getScrollLockCount,
     enqueue, dequeue, peekQueue, getQueueLength, clearQueue,
     on, off, _emit,
-    registerCustomPreset, getCustomPreset, removeCustomPreset, getAllCustomPresetNames,
     destroyAll, isDestroyed,
   });
 

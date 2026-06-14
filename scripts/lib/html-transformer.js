@@ -9,15 +9,17 @@
  *  v1: ลบ language.js ออก แล้ว inject lang-switch-minimal.js แทน
  *      → ปัญหา: ต้องดูแล 2 codebase แยกกัน
  *
- *  v2: เก็บ language.js ไว้ทั้งหมด แต่เพิ่ม 2 สิ่ง:
+ *  v2.1 (FvLang integration):
+ *    - Keep lang-core.js as first script (central language API)
+ *    - language.js uses FvLang for faster static mode
+ *    - In static mode, language.js loads fewer modules
  *
  *   1. `data-fv-built="[lang]"` ใน <html>
- *      → language.js ตรวจจับ flag นี้ → เข้า "static mode"
- *        (skip translation + network fetch, คงแค่ UI dropdown ที่ redirect)
+ *      → lang-core.js reads this instantly → FvLang.lang = lang
+ *      → language.js detects FvLang.isStaticMode → skips heavy modules
  *
  *   2. <script>window.__fvStaticConfig={...}</script> ใน <head>
- *      → ส่ง language config ที่ language.js ต้องการ
- *        โดยไม่ต้อง fetch db.json จาก network
+ *      → language.js reads this for UI dropdown config
  *
  *  Scripts ที่ถูกลบออก (ไม่จำเป็นบน pre-built pages):
  *   - lang-proxy.js      URL มี prefix แล้ว ไม่ต้อง redirect อีก
@@ -25,6 +27,7 @@
  *   - lang-coordinator.js setting page เท่านั้น, ไม่จำเป็น
  *
  *  Scripts ที่ยังคงอยู่ (ทำงานใน static mode):
+ *   - lang-core.js       → central language API (ใหม่ v5.0)
  *   - language.js        → static mode: UI dropdown + redirect
  *   - lang-links.js      → prefix links ตามภาษาปัจจุบัน
  *   - ทุก script อื่น    → ไม่แตะ

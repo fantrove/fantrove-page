@@ -24,10 +24,9 @@
  *
  * ── Identity ──
  * @property {string}            [id]                  - Unique ID. Auto-generated if omitted.
- * @property {PopupPreset}       [type='dialog']      - Preset to base configuration on (built-in or custom registered).
+ * @property {PopupPreset}       [type='dialog']      - Preset to base configuration on.
  * @property {string}            [title]               - Header text (null hides header entirely).
- * @property {string|HTMLElement|Promise<string|HTMLElement>} [body] - Content: HTML string, DOM element,
- *                                                       or Promise that resolves to either (shows loading automatically).
+ * @property {string|HTMLElement} [body]               - Content — HTML string or DOM element.
  * @property {string}            [footer]              - Footer HTML string (null hides footer).
  *
  * ── Size & position ──
@@ -80,18 +79,6 @@
  * @property {Function}         [onMount]             - (containerEl, instance) => void — fires when DOM is ready
  *                                                       but before animation starts. Useful for attaching
  *                                                       event listeners inside the popup.
- * @property {Function}         [onContentReady]      - (containerEl, instance) => void — fires after async body
- *                                                       Promise resolves and content is injected.
- * @property {Function}         [onBodyEvent]         - (eventName, detail, instance) => void — event bridge:
- *                                                       any CustomEvent dispatched inside the popup body
- *                                                       with prefix 'fp:' bubbles up to this handler.
- * @property {string}            [loadingLabel]        - Custom text shown in loading spinner (default: '').
- *
- * ── Advanced ──
- * @property {boolean}           [shadowDom=false]     - Wrap body content in Shadow DOM for complete
- *                                                       style isolation. Content must bring its own styles.
- * @property {Object}            [slots]               - Named content slots: { headerActions, body, footer }.
- *                                                       'body' slot overrides the body option.
  *
  * ── Accessibility ──
  * @property {string}            [role]                - ARIA role override.
@@ -117,9 +104,6 @@
  * @property {Function} setTitle        - (string) => void — replace title.
  * @property {Function} getState        - () => 'opening'|'open'|'closing'|'closed'.
  * @property {Function} on              - (event, fn) => unsub — subscribe to instance events.
- * @property {Function} once            - (event, fn) => unsub — subscribe once, auto-unsubscribe.
- * @property {Function} emit            - (eventName, detail?) => void — dispatch event from this popup.
- * @property {Function} setLoading      - (isLoading, label?) => void — show/hide loading overlay.
  * @property {Function} destroy         - () => void — immediate DOM removal (no animation).
  */
 
@@ -172,39 +156,6 @@
  * @property {string}      exitAnimation
  * @property {string}      defaultRole
  * @property {string}      zIndexLayer  - Which z-index layer this preset uses
- */
-
-/**
- * @typedef {Object} ContainerOptions
- * Simplified options for PopupSystem.container() — the universal shell API.
- * The popup system controls size, position, animation, theme, and accessibility.
- * The calling system controls ALL content.
- *
- * @property {string}            [id]              - Unique ID.
- * @property {string|HTMLElement|Promise<string|HTMLElement>} [content] - Body content (same as body).
- * @property {string}            [title]           - Optional title (null = no header).
- * @property {string}            [footer]          - Optional footer HTML.
- * @property {string}            [size='md']       - 'xs'|'sm'|'md'|'lg'|'xl'|'full'.
- * @property {string}            [position='center']- Popup position.
- * @property {string}            [theme='light']    - 'light'|'dark'|'brand'.
- * @property {boolean}           [blocking=true]   - Block page interaction.
- * @property {boolean}           [closable=true]   - Show close button.
- * @property {boolean}           [lockScroll=true]  - Lock page scroll.
- * @property {string}            [group]           - Group name for singleton behavior.
- * @property {number}            [zIndex]          - Override z-index.
- * @property {string}            [variant]         - Extra CSS class.
- * @property {boolean}           [glassmorphism]   - Frosted glass effect.
- * @property {boolean}           [borderless]      - Remove border.
- * @property {string}            [anchor]          - Anchor element selector.
- * @property {string}            [placement]       - Anchor placement.
- * @property {Function}         [onMount]         - (bodyEl, handle) => void.
- * @property {Function}         [onContentReady]  - (bodyEl, handle) => void (after async content resolves).
- * @property {Function}         [onBodyEvent]     - (eventName, detail, handle) => void.
- * @property {Function}         [onClose]         - (id, result) => void.
- * @property {Function}         [onBeforeClose]   - (id) => boolean|Promise<boolean>.
- * @property {Element}           [triggerEl]       - Trigger element for return focus.
- * @property {boolean}           [shadowDom=false] - Isolate content in Shadow DOM.
- * @property {string}            [loadingLabel]    - Loading spinner text.
  */
 
 window.PopupModules = window.PopupModules || {};

@@ -6,7 +6,7 @@
 (function(M) {
   'use strict';
 
-  const { CONFIG, State } = M;
+  const { CONFIG } = M;
 
   // ── DOM helpers ─────────────────────────────────────────────────────────────
 
@@ -131,7 +131,7 @@
    * @returns {PresetConfig}
    */
   function getPreset(type) {
-    return State.getCustomPreset(type) || CONFIG.PRESETS[type] || CONFIG.PRESETS.dialog;
+    return CONFIG.PRESETS[type] || CONFIG.PRESETS.dialog;
   }
 
   /**

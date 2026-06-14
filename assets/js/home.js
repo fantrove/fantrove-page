@@ -25,8 +25,9 @@ const VIEW_ALL_CONFIGS = {
   },
 };
 
+// v5.0: ใช้ FvLang.lang แทน localStorage โดยตรง
 const getLang = () =>
-  (typeof localStorage !== 'undefined' && localStorage.getItem('selectedLang')) || 'en';
+  (window.FvLang && FvLang.lang) || (typeof localStorage !== 'undefined' && localStorage.getItem('selectedLang')) || 'en';
 
 function pickLang(obj, lang) {
   if (!obj || typeof obj !== 'object') return String(obj || '');
@@ -409,8 +410,12 @@ const _dataPromise = (async () => {
 
 const lang = getLang();
 
+// v5.0: Cache assembled data สำหรับ re-render เมื่อภาษาเปลี่ยน
+var _cachedAssembled = null;
+
 _dataPromise.then(assembled => {
   if (!assembled?.type?.length) throw new Error('No data');
+  _cachedAssembled = assembled;
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => renderToApp(assembled, lang), { once: true });
   } else {
@@ -425,3 +430,21 @@ _dataPromise.then(assembled => {
     renderErrorToApp(msg, err.message);
   }
 });
+
+// v5.0: เมื่อภาษาเปลี่ยน → re-render ทั้งหน้า home ทันที
+try {
+  if (window.FvLang) {
+    FvLang.onChange(function(newLang) {
+      if (_cachedAssembled) {
+        renderToApp(_cachedAssembled, newLang);
+      }
+    });
+  } else {
+    // Fallback: ฟัง fv:langchange event
+    window.addEventListener('fv:langchange', function(e) {
+      if (_cachedAssembled && e.detail && e.detail.lang) {
+        renderToApp(_cachedAssembled, e.detail.lang);
+      }
+    });
+  }
+} catch(e) {}

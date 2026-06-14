@@ -397,7 +397,9 @@
         window.addEventListener('scroll', this._onScrollBound, { passive: true });
         window.addEventListener('storage', this._onStorageBound);
         window.addEventListener('popstate', this._onPopStateBound);
+        // v5.0: ฟังทั้ง languageChange (backward compat) และ fv:langchange (FvLang central)
         window.addEventListener('languageChange', (e) => { try { if (e?.detail?.language) this._onLangChanged(e.detail.language); } catch (e) {} });
+        window.addEventListener('fv:langchange', (e) => { try { if (e?.detail?.lang) this._onLangChanged(e.detail.lang); } catch (e) {} });
         try {
           this._mo = new MutationObserver(muts => {
             try {

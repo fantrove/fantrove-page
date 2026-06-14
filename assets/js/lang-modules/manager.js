@@ -3,29 +3,17 @@
  * @file manager.js
  * LanguageManager — orchestrator หลักของระบบภาษา
  *
- * เปลี่ยนแปลงใน v4.2 (Static Mode):
- *  - ตรวจจับ `document.documentElement.dataset.fvBuilt`
- *    → flag นี้ถูก inject โดย build script เมื่อ page ถูก pre-build
- *
- *  เมื่ออยู่ใน static mode:
- *   ✓ อ่าน config จาก window.__fvStaticConfig แทน fetch db.json
- *   ✓ ตั้งค่า selectedLang จาก flag (ไม่ต้อง detect จาก URL/storage)
- *   ✓ Setup UI (language button + dropdown) ตามปกติ
- *   ✓ Fade in body
- *   ✗ ไม่ fetch translation JSON (ไม่จำเป็น เนื้อหาถูก bake ลง HTML แล้ว)
- *   ✗ ไม่รัน parallelStreamingTranslate (ไม่มี [data-translate] elements เหลือ)
- *   ✗ ไม่สร้าง WorkerPool
- *   ✗ ไม่ setup BroadcastChannel
- *
- *  การเลือกภาษาใน static mode:
- *   → redirect ไปยัง /{lang}/{current-path} แทนการแปลด้วย JS
- *   → ใช้ location.replace() เพื่อไม่เพิ่ม history entry
- *     (กด Back จะออกจากหน้าปัจจุบันจริงๆ ไม่วนกลับมาภาษาเดิม)
- *   → บันทึกใน localStorage เหมือนเดิม
+ * v5.0: FvLang integration
+ *  - ใช้ FvLang.lang เป็น source of truth
+ *  - เรียก FvLang.setLang() เมื่อภาษาเปลี่ยน
+ *    → ทุกระบบ JS ที่ subscribe จะถูก refresh อัตโนมัติ
+ *  - ใน static mode → redirect (เหมือนเดิม) แต่เรียก FvLang.setLang() ก่อน
+ *  - ใน full mode → JS translation + FvLang.setLang() + fv:langchange
  *
  * @module manager
- * @depends {config.js, state.js, detector.js, loader.js, url.js,
- *           translator.js, ui.js, navigation.js, gate.js}
+ * @depends {config.js, state.js, ui.js, gate.js}
+ *   full mode ยังต้อง: detector.js, loader.js, url.js,
+ *                     translator.js, navigation.js
  */
 (function(M) {
   'use strict';
@@ -35,11 +23,8 @@
     // ── Initialization ────────────────────────────────────────────────────────
     
     /**
-     * เริ่มต้นระบบภาษา — เรียกเมื่อ DOM ready
-     *
-     * v4.2: ตรวจสอบ static mode ก่อน
-     * ถ้าเป็น static mode → initialize แบบเบา (UI only)
-     * ถ้าไม่ใช่ → initialize แบบเต็ม (เหมือนเดิมทุกอย่าง)
+     * เริ่มต้นระบบภาษา
+     * v5.0: language.js แยก static/full boot แล้ว → ที่นี้รับแต่ full mode
      */
     async initialize() {
       const { State, UIService, LangGate } = M;
@@ -53,85 +38,19 @@
         return;
       }
       
-      // ── v4.2: Static mode detection ────────────────────────────────────
-      const builtLang = document.documentElement.dataset?.fvBuilt;
-      if (builtLang) {
-        await this._initializeStaticMode(builtLang);
+      // ── v5.0: ถ้า FvLang บอกว่าเป็น static mode → ไม่ต้องทำอะไร
+      // language.js จัดการ static boot ไปแล้ว
+      if (window.FvLang && window.FvLang.isStaticMode) {
+        State.isInitialized = true;
         return;
       }
       
-      // ── Normal mode (dev + production without pre-build) ───────────────
+      // ── Full mode (dev + production without pre-build) ───────────────
       await this._initializeFullMode();
     },
     
     /**
-     * Static mode initialization
-     * เรียกเมื่อ data-fv-built ถูกตั้งค่าบน <html>
-     *
-     * เป้าหมาย:
-     *  1. Load config จาก window.__fvStaticConfig (ไม่ fetch network)
-     *  2. Setup UI dropdown
-     *  3. Fade in body
-     *  4. Resolve LangGate
-     *
-     * @param {string} builtLang — ภาษาที่ build script ตั้งไว้
-     * @private
-     */
-    async _initializeStaticMode(builtLang) {
-      const { CONFIG, State, UIService, LangGate } = M;
-      
-      try {
-        // อ่าน config ที่ build script inject ไว้ใน <head>
-        const staticConfig = window.__fvStaticConfig;
-        
-        if (staticConfig && staticConfig.langs) {
-          // ใช้ config จาก inline script — ไม่ fetch db.json เลย
-          State.languagesConfig = staticConfig.langs;
-          State.selectedLang    = staticConfig.lang || builtLang;
-        } else {
-          // Fallback: ถ้า config ไม่มีด้วยเหตุผลใดก็ตาม
-          // สร้าง minimal config จาก supported langs ใน CONFIG
-          State.languagesConfig = {};
-          for (const l of CONFIG.SUPPORTED_LANGS) {
-            State.languagesConfig[l] = {
-              buttonText: l === 'th' ? 'ภาษาไทย' : 'English',
-              label:      l === 'th' ? 'ภาษาไทย' : 'English',
-            };
-          }
-          State.selectedLang = builtLang || CONFIG.DEFAULT_LANG;
-        }
-        
-        // บันทึก preference ลง localStorage (สำหรับ cross-page consistency)
-        try { localStorage.setItem(CONFIG.LS_KEY, State.selectedLang); } catch (e) {}
-        
-        // Setup UI (ใช้ UIService เดิมทุกอย่าง — ไม่ต้องเขียนใหม่)
-        await UIService.prepareAllButtonTexts();
-        UIService.showButtonTextForLang(State.selectedLang);
-        UIService.updateLanguageSelectorUI();
-        
-        State.isInitialized = true;
-        
-        // Fade in — หน้า built ไม่มี opacity:0 แล้ว แต่ใส่ไว้ safe
-        if (document.body && document.body.style.opacity === '0') {
-          document.body.style.opacity = '1';
-        }
-        
-        LangGate?.resolve({
-          lang: State.selectedLang,
-          translations: null, // static mode: ไม่มี in-memory translations
-        });
-        
-      } catch (error) {
-        console.error('[LanguageManager] Static mode init error:', error);
-        // Fail gracefully — แสดงหน้าได้ แม้ UI ภาษาจะไม่ทำงาน
-        if (document.body && document.body.style.opacity === '0')
-          document.body.style.opacity = '1';
-        LangGate?.reject(error);
-      }
-    },
-    
-    /**
-     * Full mode initialization (เหมือนเดิมทุกอย่างจาก v4.1)
+     * Full mode initialization
      * @private
      */
     async _initializeFullMode() {
@@ -175,6 +94,11 @@
           }
         }, 0);
         
+        // ── v5.0: FvLang sync + gate resolve ─────────────────────────────
+        if (window.FvLang) {
+          FvLang.setLang(State.selectedLang, { silent: true });
+        }
+        
         if (LangGate) {
           LangGate.resolve({
             lang: State.selectedLang,
@@ -204,6 +128,10 @@
       
       TranslatorService.storeOriginalContent();
       
+      // v5.0: ใช้ FvLang.lang แทน detect เอง (FvLang อ่านแล้ว)
+      var initialLang = (window.FvLang && FvLang.lang) || 'en';
+      
+      // แต่ full mode ยังต้อง resolve แบบเดิมเพื่อได้ source info
       const decision = DetectorService.resolveCurrentLang();
       State.selectedLang = decision.lang;
       
@@ -229,13 +157,10 @@
     /**
      * User กดเลือกภาษา — entry point จาก UIService
      *
-     * v4.2: ถ้าอยู่ใน static mode → redirect ไปยัง /{lang}/path
-     *       ถ้าอยู่ใน full mode  → JS translation เหมือนเดิม
-     *
-     * [FIX] Static mode ใช้ location.replace() แทน location.href
-     *       เพื่อไม่เพิ่ม history entry ใหม่
-     *       → กด Back จะออกจากหน้าปัจจุบันจริงๆ
-     *         ไม่วนกลับมาภาษาเดิม (สำคัญมากสำหรับ app-style navigation)
+     * v5.0:
+     *   static mode → FvLang.setLang() → redirect
+     *   full mode   → JS translation + FvLang.setLang()
+     *                  → fv:langchange ให้ทุกระบบ refresh
      *
      * @param {string} language
      */
@@ -252,20 +177,19 @@
         return;
       }
       
-      // ── v4.2: Static mode → redirect ──────────────────────────────────
-      if (document.documentElement.dataset?.fvBuilt) {
+      // ── Static mode → redirect ────────────────────────────────────────
+      if (window.FvLang && window.FvLang.isStaticMode) {
         await UIService.closeLanguageDropdown();
         
-        // บันทึก preference ก่อน navigate
+        // v5.0: แจ้ง FvLang ก่อน redirect
+        // (เผื่อบางระบบต้องการทำอะไรก่อน page unload)
+        if (window.FvLang) {
+          FvLang.setLang(language);
+        }
+        
         try { localStorage.setItem(CONFIG.LS_KEY, language); } catch (e) {}
         
-        // สร้าง URL ใหม่ด้วย language prefix ที่ต้องการ
         const newUrl = _buildStaticLangUrl(language);
-        
-        // ใช้ replace() แทน href เพื่อไม่เพิ่ม history entry
-        // เหตุผล: การเปลี่ยนภาษาไม่ใช่ "navigation ใหม่" แต่เป็น
-        //         "การ replace หน้าปัจจุบันด้วยภาษาอื่น"
-        //         กด Back ควรออกไปหน้าก่อนหน้า ไม่ใช่วนกลับมาภาษาเดิม
         window.location.replace(newUrl);
         return;
       }
@@ -283,7 +207,7 @@
     
     /**
      * อัพเดทภาษาของทั้งหน้าด้วย JS translation
-     * (ไม่ถูกเรียกใน static mode)
+     * v5.0: เพิ่ม FvLang.setLang() → dispatch fv:langchange
      */
     async updatePageLanguage(language, shouldUpdateURL = true) {
       const { State, DetectorService, URLService, LoaderService, TranslatorService, UIService } = M;
@@ -340,6 +264,16 @@
           } catch (e) {}
         }
         
+        // ── v5.0: FvLang → ทุกระบบ refresh ─────────────────────────────
+        // FvLang.setLang() จะ:
+        //   1. อัพเดท FvLang.lang
+        //   2. เรียก subscribers ทั้งหมด
+        //   3. dispatch 'fv:langchange' event
+        if (window.FvLang) {
+          FvLang.setLang(language);
+        }
+        
+        // ยังคง dispatch 'languageChange' สำหรับ backward compat
         try {
           window.dispatchEvent(new CustomEvent('languageChange', {
             detail: { language, previousLanguage: State.lastSelectedLang }
@@ -385,16 +319,6 @@
   
   // ── Static mode helpers ────────────────────────────────────────────────────
   
-  /**
-   * สร้าง URL ใหม่โดยเปลี่ยน language prefix
-   * ใช้สำหรับ redirect ใน static mode
-   *
-   * /en/setting/ → /th/setting/
-   * /en/home/    → /th/home/
-   *
-   * @param {string} targetLang
-   * @returns {string}
-   */
   function _buildStaticLangUrl(targetLang) {
     const path    = location.pathname;
     const current = path.match(/^\/(en|th)(\/|$)/)?.[1];
@@ -403,7 +327,6 @@
     if (current) {
       newPath = path.replace(/^\/(en|th)(\/|$)/, `/${targetLang}$2`);
     } else {
-      // ไม่มี prefix (ไม่ควรเกิด บน built pages) → เพิ่ม prefix
       newPath = `/${targetLang}${path === '/' ? '' : path}`;
     }
     
