@@ -1,29 +1,34 @@
 ---
-version: 1.5.0
-date: 2026-06-14T08:30:00Z
-title: Central Language API — FvLang
-subtitle: A new central language system that sets up instantly before everything else. Every JS system now uses a single API for language detection and change notifications — no more reading localStorage independently. When the language changes, the entire page refreshes seamlessly without reloading.
+version: 1.6.0
+date: 2026-06-16T00:00:00Z
+title: Fullscreen Popup & Error Notification Overhaul
+subtitle: A major upgrade to the popup system introducing fullscreen popups, and a complete overhaul of how errors are displayed across the entire application. All error notifications now use a fullscreen popup with detailed error information and a one-click copy button, replacing the old toast-based approach. Also fixes the version update notification popup that was broken due to an API mismatch.
 notify: true
 ---
 
 ### New
 
-- **FvLang — Central Language API (lang-core.js)**
-  A new lightweight script that loads before everything else in the `<head>`. It reads the current language synchronously from the `data-fv-built` attribute (production), URL prefix, localStorage, or browser settings — resolving the language instantly with zero network requests. All other JS systems now use `FvLang.lang` instead of reading localStorage independently, eliminating the "language not loaded in time" issue.
+- **Fullscreen Popup Type (PopupSystem.fullscreen)**
+  A brand new popup type that covers the entire viewport (100vw x 100vh) with a clean, immersive layout. Ideal for rich content panels, error details, search interfaces, or any content that needs the full screen. Supports header toggle (showHeader), two content layout modes ('fit' for internal scrolling, 'stretch' for full-height fill), and browser back button support via the History API (hideOnBack). Uses opacity-only animation for a smooth, app-like transition experience. Operates at z-index 28000, the highest layer in the popup system.
 
-- **Automatic full-page language refresh**
-  When the language changes, `FvLang.setLang()` dispatches a `fv:langchange` event and calls all subscribed callbacks. Every system that renders text (home page, navigation, What's New, update popup) subscribes to this and re-renders automatically. The entire page updates to the new language without a page reload.
-
-- **Subscriber API for any JS system**
-  Any script can now use `FvLang.onChange(function(lang, prevLang) { ... })` to register for language change notifications. The return value is an unsubscribe function. This replaces the old pattern where each system independently read `localStorage.getItem('selectedLang')` and listened for `languageChange` events.
+- **showErrorFullscreen() — Centralized Error Display**
+  A new utility function in the nav-core system that replaces all scattered error notifications with a single, consistent fullscreen error popup. Every error is now displayed in a structured layout showing the error message, error type classification, timestamp (in both Thai and English), the full error object details, and a prominent "Copy error details" button. The function supports Thai and English labels automatically based on the current language, includes inline CSS injection for self-contained styling, and falls back to a toast notification if the PopupSystem is not yet initialized.
 
 ### Improved
 
-- **Faster language initialization in static mode**
-  In production (pre-built pages), `lang-core.js` reads `data-fv-built` attribute from `<html>` instantly — no need to wait for `language.js` to load its modules. The gate resolves immediately, and all scripts have access to the correct language from their first line of code.
+- **Error Boundary Now Uses Fullscreen Popups (performance.js)**
+  The global error boundary that catches unhandled JavaScript errors has been upgraded to use `showErrorFullscreen()` instead of the old `showNotification()` toast. Errors are now presented with full detail and context, making debugging significantly easier. A 2-second throttle has been added to prevent error popup spam when multiple errors occur in rapid succession.
 
-- **Lighter static mode for language.js**
-  In static mode, `language.js` now loads only 3 modules (types, config, state, gate, ui, manager) instead of 14 modules. Translation, worker pool, detector, loader, and marker modules are completely skipped since the content is pre-baked into the HTML.
+- **Navigation Error Display (router.js)**
+  Navigation failures and routing errors that previously showed as small, easily-missed toasts are now displayed as fullscreen error popups. Users get a clear view of what went wrong during page navigation, with the ability to copy the full error details for reporting.
 
-- **Home page re-renders on language change**
-  The home page now caches its data and subscribes to `FvLang.onChange()`. When the language changes, it re-renders all categories, labels, and "View All" buttons with the correct language text — instantly and without a page reload.
+- **Data Fetching Error Display (data.js)**
+  When content fetching fails after all retry attempts are exhausted, the error is now presented as a fullscreen popup instead of a dismissible toast. This ensures users are properly informed about data loading failures and can take action (such as copying the error for support).
+
+- **Initialization Error Handling (init.js)**
+  Three error catch blocks in the nav-core initialization module have been updated to use `showErrorFullscreen()`. This means that any errors during the bootstrap phase of the navigation system are now surfaced prominently rather than being silently shown as fleeting toasts.
+
+### Fixed
+
+- **Version Update Notification Popup Not Showing**
+  The update notification popup (shown when a new version is deployed) has been broken for an extended period. The root cause was that `version-core.js` was calling `PopupSystem.container()`, a method that does not exist in the PopupSystem API. The correct method `PopupSystem.open()` was always available but was never wired up. This has been fixed, and the update notification popup now correctly displays when a new version is detected, using the standard dialog popup type with the custom update notification content and styling.

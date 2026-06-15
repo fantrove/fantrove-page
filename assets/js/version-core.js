@@ -1,7 +1,7 @@
 // version-core.js — Fantrove Verse
 // v5: อ่าน /assets/md/{lang}/current.md โดยตรง (per-language)
 //     fallback: /assets/md/current.md (legacy) → whats-new.json (old)
-//     ใช้ PopupSystem.container() เป็น shell
+//     ใช้ PopupSystem.open() เป็น shell (v5.1: แก้ไขจาก container() ที่ไม่มีใน API)
 
 (function () {
   'use strict';
@@ -133,7 +133,7 @@
   function _doShow(wn,buildId) {
     lsSet(CFG.KEY_SHOWN_BUILD,buildId); markSession(buildId); injectStyles();
     var c=buildContent(wn);
-    PopupSystem.container({id:'fv-update-'+wn.version,title:null,content:c.html,size:'sm',position:'center',group:CFG.POPUP_GROUP,blocking:true,closable:true,theme:'light',
+    PopupSystem.open({id:'fv-update-'+wn.version,type:'dialog',title:null,body:c.html,size:'sm',position:'center',group:CFG.POPUP_GROUP,blocking:true,closable:true,theme:'light',
       onMount:function(el,h){var a=el.querySelector('.fv-update-cta');if(a)a.addEventListener('click',function(){h.close({action:'navigate'});});var d=el.querySelector('[data-fp-action="dismiss"]');if(d)d.addEventListener('click',function(){setDismissed(wn.version);h.close({action:'dismissed'});});},
       onClose:function(){}
     });
