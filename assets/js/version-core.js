@@ -37,12 +37,8 @@
   function markSession(b)    { ssSet(CFG.SS_SHOWN+b, '1'); ssSet(CFG.SS_LAST_ACTIVE, String(Date.now())); }
   function updateLastActive(){ ssSet(CFG.SS_LAST_ACTIVE, String(Date.now())); }
 
-  // v5.0: ใช้ FvLang.lang เป็น primary, fallback to localStorage
   function getLang() {
-    try { 
-      if (window.FvLang && FvLang.lang) return FvLang.lang;
-      var l = ls('selectedLang') || 'en'; return SUPPORTED_LANGS.indexOf(l) >= 0 ? l : 'en'; 
-    } catch(e) { return 'en'; }
+    try { var l = ls('selectedLang') || 'en'; return SUPPORTED_LANGS.indexOf(l) >= 0 ? l : 'en'; } catch(e) { return 'en'; }
   }
 
   function fetchText(url) { return fetch(url + '?_=' + Date.now(), { cache: 'no-store' }).then(function(r) { return r.ok ? r.text() : null; }).catch(function() { return null; }); }

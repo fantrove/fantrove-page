@@ -22,13 +22,8 @@
 
   // ── i18n ────────────────────────────────────────────────────────────────────
 
-  // v5.0: ใช้ FvLang.lang เป็น primary, fallback to localStorage
   function getLang() {
-    try {
-      if (window.FvLang && FvLang.lang) return FvLang.lang;
-      var l = localStorage.getItem('selectedLang') || 'en'; 
-      return SUPPORTED_LANGS.indexOf(l) >= 0 ? l : 'en'; 
-    } catch(e) { return 'en'; }
+    try { var l = localStorage.getItem('selectedLang') || 'en'; return SUPPORTED_LANGS.indexOf(l) >= 0 ? l : 'en'; } catch(e) { return 'en'; }
   }
 
   var L10N = {
@@ -432,9 +427,7 @@
 
   function boot() { try { loadContent(); } catch(e) {} try { setupVisibilityRefresh(); } catch(e) {} try { startPolling(); } catch(e) {} }
 
-  // v5.0: ฟังทั้ง languageChange (backward compat) และ fv:langchange (FvLang)
   try { window.addEventListener('languageChange', function() { try { loadContent(); } catch(e) {} }); } catch(e) {}
-  try { window.addEventListener('fv:langchange', function() { try { loadContent(); } catch(e) {} }); } catch(e) {}
 
   try { if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot(); } catch(e) {}
 })();
