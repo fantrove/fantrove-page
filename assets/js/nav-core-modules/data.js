@@ -70,7 +70,6 @@
           priority: typeof priority === 'number' ? priority : 5,
           resolve, reject,
           timestamp: Date.now(),
-          silent: !!(options && options._silent),
         });
         this._queueDirty = true;
         this._processFetchQueue();
@@ -93,8 +92,7 @@
         const task   = this._fetchQueue.shift();
         const taskId = `${task.url}-${task.priority}`;
         this._fetchInProgress.set(taskId, true);
-        const fetchOpts = task.silent ? { ...task.options, _silent: true } : task.options;
-        this._performFetch(task.url, fetchOpts)
+        this._performFetch(task.url, task.options)
           .then(result => { task.resolve(result); this._fetchInProgress.delete(taskId); })
           .catch(err   => { task.reject(err);     this._fetchInProgress.delete(taskId); });
       }
@@ -172,14 +170,12 @@
         }
       }
 
-      // ทุก retry ล้มเหลว — แสดง error (ยกเว้น silent mode เช่น warmup) แล้ว throw
-      if (!options._silent) {
-        try {
-          Utils.errorManager.showError(url, lastErr, {
-            duration: 1200, type: 'error', dismissible: true, position: 'top-right',
-          });
-        } catch (_) {}
-      }
+      // ทุก retry ล้มเหลว — แสดง error แล้ว throw
+      try {
+        Utils.errorManager.showError(url, lastErr, {
+          duration: 1200, type: 'error', dismissible: true, position: 'top-right',
+        });
+      } catch (_) {}
       throw lastErr;
     },
 
@@ -223,7 +219,7 @@
         const doWarmup = async () => {
           try {
             if (!Utils.isOnline()) return resolve();
-            await this._enqueueFetch(CONFIG.PATHS.BUTTONS_CONFIG, { cache: 'force-cache', _silent: true }, 9).catch(() => {});
+            await this._enqueueFetch(CONFIG.PATHS.BUTTONS_CONFIG, { cache: 'force-cache' }, 9).catch(() => {});
             _getConDataService()?.preload?.().catch(() => {});
           } finally { resolve(); }
         };
