@@ -285,7 +285,7 @@
 
       } catch (err) {
         console.error('[NavCore/Router] navigateTo error:', err);
-        try { Utils.showNotification('เกิดข้อผิดพลาดในการนำทาง', 'error'); } catch (_) {}
+        try { Utils.showErrorFullscreen(err, { label: 'Navigation' }); } catch (_) {}
         try { M.LoadingService?.hide(); } catch (_) {}
       } finally {
         this.state.isNavigating = false;

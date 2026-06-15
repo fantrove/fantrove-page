@@ -13,7 +13,7 @@
  
  window.PopupSystem = Object.freeze({
   _initialized: true,
-  version: '1.0.0',
+  version: '1.1.0',
   
   /**
    * Open a new popup.
@@ -73,6 +73,14 @@
   toast: function(content, opts) { return Engine.toast(content, opts); },
   
   /**
+   * Open a fullscreen popup — covers the entire viewport like a page.
+   * Ideal for search suggestions, media viewers, rich content panels.
+   * @param {Object} [opts]
+   * @returns {Promise<PopupHandle>}
+   */
+  fullscreen: function(opts) { return Engine.fullscreen(opts); },
+  
+  /**
    * Subscribe to system events: 'opening', 'opened', 'closing', 'closed',
    * 'destroyed', 'queued', 'updated'.
    * @param {string} event
@@ -109,7 +117,7 @@
  // ── Dispatch ready event ──────────────────────────────────────────────────
  
  try {
-  window.dispatchEvent(new CustomEvent('fp:ready', { detail: { version: '1.0.0' } }));
+  window.dispatchEvent(new CustomEvent('fp:ready', { detail: { version: '1.1.0' } }));
  } catch (_) {}
  
 })(window.PopupModules = window.PopupModules || {});

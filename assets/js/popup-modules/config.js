@@ -19,6 +19,7 @@
     DIALOG        : 25000,
     ALERT_CONFIRM : 26000,
     BLOCKING      : 27000,
+    FULLSCREEN    : 28000,
     BASE_OFFSET   : 20000,  // starting point for auto-stacking
     STACK_STEP    : 100,    // each stacked popup increments by this
   });
@@ -37,6 +38,8 @@
     DRAWER_EXIT       : 250,
     SHEET_ENTER       : 340,
     SHEET_EXIT        : 260,
+    FULLSCREEN_ENTER  : 300,
+    FULLSCREEN_EXIT   : 240,
     RAF_DOUBLE_BUFFER : 16,   // 2 frames before starting animation
     DESTROY_CLEANUP   : 50,   // ms after animation to remove DOM
     AUTO_CLOSE_GRACE  : 200,  // prevent accidental auto-close on open
@@ -91,6 +94,11 @@
     CLASS_DRAWER     : 'fp-drawer',
     CLASS_TOOLTIP    : 'fp-tooltip',
     CLASS_POPOVER    : 'fp-popover',
+    CLASS_FULLSCREEN : 'fp-fullscreen',
+
+    // Fullscreen sub-classes
+    FS_NO_HEADER       : 'fp-fs-no-header',
+    FS_LAYOUT_STRETCH  : 'fp-fs-stretch',
 
     // State classes
     CLASS_BLOCKING   : 'fp-blocking',
@@ -277,6 +285,27 @@
       exitAnimation           : 'fp-exit-bottom',
       defaultRole             : 'dialog',
       zIndexLayer             : Z_INDEX.POPOVER,
+    }),
+
+    fullscreen: Object.freeze({
+      type                    : 'fullscreen',
+      defaultSize             : 'full',
+      defaultPosition         : 'center',
+      hasOverlay              : true,
+      hasHeader               : true,
+      hasFooter               : false,
+      hasCloseButton          : true,
+      defaultClosable         : true,
+      defaultBlocking         : true,
+      defaultLockScroll       : true,
+      defaultFocusTrap        : true,
+      defaultStackable        : false,
+      defaultDismissOnOverlay : false,
+      defaultDismissOnEscape  : true,
+      enterAnimation          : 'fp-enter-fullscreen',
+      exitAnimation           : 'fp-exit-fullscreen',
+      defaultRole             : 'dialog',
+      zIndexLayer             : Z_INDEX.FULLSCREEN,
     }),
   });
 

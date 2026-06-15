@@ -1,8 +1,8 @@
 // Path:    assets/js/popup-modules/renderer.js
 // Purpose: DOM structure builder — creates the popup element tree
- *          (overlay, root, header, body, footer) from resolved options.
- *          Does NOT handle animation or lifecycle — only DOM construction.
- * Used by: engine.js
+//          (overlay, root, header, body, footer) from resolved options.
+//          Does NOT handle animation or lifecycle — only DOM construction.
+// Used by: engine.js
 
 (function(M) {
   'use strict';
@@ -50,11 +50,25 @@
     }
 
     // ── Root element ────────────────────────────────────────────────────────
+    var isFullscreen = opts.type === 'fullscreen';
+
     const rootEl = Utils.DOM.create('div', null, '', {
       position : 'fixed',
       zIndex   : String(instance.zIndex),
       willChange: 'transform, opacity',
     });
+
+    // Fullscreen popups fill the entire viewport
+    if (isFullscreen) {
+      rootEl.style.inset = '0';
+      rootEl.style.width = '100vw';
+      rootEl.style.height = '100vh';
+      rootEl.style.maxWidth = '100vw';
+      rootEl.style.maxHeight = '100vh';
+      rootEl.style.borderRadius = '0';
+      rootEl.style.border = 'none';
+      rootEl.style.overflow = 'hidden';
+    }
     rootEl.setAttribute(D.ROOT_ATTR, '');
     rootEl.setAttribute(D.INSTANCE_ID_ATTR, instance.id);
 
@@ -66,6 +80,7 @@
       dialog: D.CLASS_DIALOG, alert: D.CLASS_ALERT, confirm: D.CLASS_CONFIRM,
       sheet: D.CLASS_SHEET, toast: D.CLASS_TOAST, drawer: D.CLASS_DRAWER,
       tooltip: D.CLASS_TOOLTIP, popover: D.CLASS_POPOVER,
+      fullscreen: D.CLASS_FULLSCREEN,
     };
     if (typeClassMap[opts.type]) classes.push(typeClassMap[opts.type]);
 
@@ -83,6 +98,12 @@
     if (opts.variant) classes.push(opts.variant);
     if (opts.anchor) classes.push(D.ANCHOR_CLASS);
 
+    // Fullscreen-specific sub-classes
+    if (isFullscreen) {
+      if (opts.showHeader === false) classes.push(D.FS_NO_HEADER);
+      if (opts.contentLayout === 'stretch') classes.push(D.FS_LAYOUT_STRETCH);
+    }
+
     // Theme class
     if (opts.theme && opts.theme !== 'light') classes.push('fp-theme-' + opts.theme);
 
@@ -96,11 +117,23 @@
     // ── Inner container ────────────────────────────────────────────────────
     var inner = Utils.DOM.create('div', null, 'fp-inner');
 
+    // Fullscreen inner fills the entire popup
+    if (isFullscreen) {
+      inner.style.height = '100%';
+      inner.style.maxHeight = '100%';
+    }
+
     // ── Header ──────────────────────────────────────────────────────────────
     var headerEl = null;
     var closeBtn = null;
 
-    if (preset.hasHeader && opts.title !== null) {
+    var shouldShowHeader = preset.hasHeader && opts.title !== null;
+    // Fullscreen with showHeader=false skips header entirely
+    if (isFullscreen && opts.showHeader === false) {
+      shouldShowHeader = false;
+    }
+
+    if (shouldShowHeader) {
       headerEl = Utils.DOM.create('div', null, 'fp-header');
       headerEl.setAttribute(D.HEADER_ATTR, '');
 

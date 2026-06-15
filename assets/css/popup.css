@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   FANTROVE POPUP SYSTEM v1.0
+   FANTROVE POPUP SYSTEM v1.1
    assets/css/popup.css
    Auto-injected by popup.js — do NOT add <link> manually.
    Uses Fantrove design tokens from tokens.css (loaded first).
@@ -520,6 +520,68 @@
 .fp-popover .fp-inner {
   max-height: 50vh;
   min-width: 200px;
+}
+
+/* ── Fullscreen ────────────────────────────────────────────────────────── */
+
+.fp-fullscreen {
+  border-radius: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: var(--fp-bg, var(--fv-surface-card));
+}
+
+.fp-fullscreen .fp-inner {
+  max-height: 100vh !important;
+  height: 100%;
+}
+
+.fp-fullscreen .fp-body {
+  flex: 1;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Fullscreen no-header variant: body takes full height, no header space */
+.fp-fullscreen.fp-fs-no-header .fp-body {
+  height: 100%;
+}
+
+/* Fullscreen stretch layout: body fills all remaining space */
+.fp-fullscreen.fp-fs-stretch .fp-body {
+  flex: 1 1 0%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Fullscreen enter/exit: opacity-only (no transform needed) */
+.fp-fullscreen.fp-pos-center {
+  top: 0;
+  left: 0;
+  transform: none;
+  opacity: 0;
+}
+
+.fp-fullscreen.fp-pos-center.fp-is-visible,
+.fp-fullscreen.fp-pos-center.fp-is-entering {
+  transform: none;
+  opacity: 1;
+}
+
+.fp-fullscreen.fp-pos-center.fp-is-closing {
+  transform: none;
+  opacity: 0;
+}
+
+/* Fullscreen header — slightly different style for full-width bar */
+.fp-fullscreen .fp-header {
+  border-radius: 0;
+  padding: var(--fv-space-4) var(--fv-space-6);
+  min-height: 52px;
+}
+
+.fp-fullscreen .fp-title {
+  font-size: var(--fv-text-base);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════

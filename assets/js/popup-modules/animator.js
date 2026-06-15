@@ -3,6 +3,7 @@
 //          Handles enter/exit transitions, respects prefers-reduced-motion.
 //          Uses double-rAF technique (same as copyNotification.js) to
 //          ensure initial state is painted before starting transitions.
+//          v1.1 — fullscreen popups use opacity-only animation (no transform).
 // Used by: engine.js
 
 (function(M) {
@@ -10,6 +11,17 @@
   
   const { CONFIG } = M;
   const { Utils } = M;
+  
+  // ── Helpers ──────────────────────────────────────────────────────────────
+  
+  /**
+   * Check if the popup is a fullscreen type (by class).
+   * @param {HTMLElement} el
+   * @returns {boolean}
+   */
+  function _isFullscreen(el) {
+    return el.classList.contains(CONFIG.DOM.CLASS_FULLSCREEN);
+  }
   
   // ── Enter animation ────────────────────────────────────────────────────────
   
@@ -25,6 +37,7 @@
     const duration = options._enterDuration;
     const easing = options._easing;
     const reducedMotion = Utils.prefersReducedMotion();
+    const isFS = _isFullscreen(popupEl);
     
     return new Promise(function(resolve) {
       // Add entering class immediately
@@ -48,8 +61,13 @@
       // painted by the browser before we add the transition class.
       requestAnimationFrame(function() {
         requestAnimationFrame(function() {
-          popupEl.style.transition = 'transform ' + duration + 'ms ' + easing +
-            ', opacity ' + duration + 'ms ' + easing;
+          if (isFS) {
+            // Fullscreen: opacity-only fade (no transform since it fills viewport)
+            popupEl.style.transition = 'opacity ' + duration + 'ms ' + easing;
+          } else {
+            popupEl.style.transition = 'transform ' + duration + 'ms ' + easing +
+              ', opacity ' + duration + 'ms ' + easing;
+          }
           popupEl.classList.remove(CONFIG.DOM.ENTERING_CLASS);
           popupEl.classList.add(CONFIG.DOM.VISIBLE_CLASS);
         });
@@ -77,6 +95,7 @@
     const duration = options._exitDuration;
     const easing = CONFIG.EASING.EXIT; // Always use ease-in for exit
     const reducedMotion = Utils.prefersReducedMotion();
+    const isFS = _isFullscreen(popupEl);
     
     return new Promise(function(resolve) {
       popupEl.classList.add(CONFIG.DOM.CLOSING_CLASS);
@@ -94,8 +113,13 @@
       }
       
       // Apply exit transition
-      popupEl.style.transition = 'transform ' + duration + 'ms ' + easing +
-        ', opacity ' + duration + 'ms ' + easing;
+      if (isFS) {
+        // Fullscreen: opacity-only fade out
+        popupEl.style.transition = 'opacity ' + duration + 'ms ' + easing;
+      } else {
+        popupEl.style.transition = 'transform ' + duration + 'ms ' + easing +
+          ', opacity ' + duration + 'ms ' + easing;
+      }
       popupEl.classList.remove(CONFIG.DOM.VISIBLE_CLASS);
       
       setTimeout(function() {

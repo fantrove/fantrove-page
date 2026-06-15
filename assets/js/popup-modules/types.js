@@ -9,7 +9,7 @@
  * Built-in popup type presets. Each defines a starting configuration
  * that can be overridden per-popup via PopupSystem.open().
  *
- * @typedef {'dialog'|'alert'|'confirm'|'sheet'|'toast'|'drawer'|'tooltip'|'popover'}
+ * @typedef {'dialog'|'alert'|'confirm'|'sheet'|'toast'|'drawer'|'tooltip'|'popover'|'fullscreen'}
  *   PopupPreset
  */
 
@@ -63,6 +63,14 @@
  * @property {string}            [exitAnimation]       - Override exit animation name.
  * @property {number}            [animationDuration]   - Override animation duration (ms).
  * @property {'ease'|'spring'|'bounce'|'linear'} [easing='ease'] - Animation easing curve.
+ *
+ * ── Fullscreen-specific ──
+ * @property {boolean}           [showHeader=true]     - [fullscreen] Show the header bar with title & close btn.
+ *                                                       false = fully custom layout (like search suggestions).
+ * @property {string}            [contentLayout='fit'] - [fullscreen] 'fit' = body fills remaining space
+ *                                                       with internal scroll; 'stretch' = body uses 100% height
+ *                                                       (for grid/list layouts).
+ * @property {boolean}           [hideOnBack=true]     - [fullscreen] Close on browser back button (history API).
  *
  * ── Scroll behavior ──
  * @property {boolean}           [lockScroll=true]     - Lock page scroll while open.

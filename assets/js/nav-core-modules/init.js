@@ -96,7 +96,7 @@
         try {
           await ButtonService.loadConfig();
         } catch (e) {
-          Utils.showNotification('โหลดข้อมูลปุ่มไม่สำเร็จ', 'error');
+          Utils.showErrorFullscreen(e, { label: 'Button Config Load' });
           console.error('[NavCore/Init] loadConfig error:', e);
         }
 
@@ -126,7 +126,7 @@
 
           RouterService.markInitialNavigationHandled?.();
         } catch (e) {
-          Utils.showNotification('เกิดข้อผิดพลาดในการนำทางเริ่มต้น', 'error');
+          Utils.showErrorFullscreen(e, { label: 'Initial Navigation' });
           console.error('[NavCore/Init] initial navigation error:', e);
           State.isBootstrapping         = false;
           window._navCore_bootstrapping = false;
@@ -135,7 +135,7 @@
 
       } catch (error) {
         console.error('[NavCore/Init] bootstrap error:', error);
-        try { Utils.showNotification('เกิดข้อผิดพลาดในการโหลดแอพพลิเคชัน กรุณารีเฟรชหน้า', 'error'); } catch (_) {}
+        try { Utils.showErrorFullscreen(error, { label: 'App Bootstrap', title: 'เกิดข้อผิดพลาดในการโหลดแอพพลิเคชัน กรุณารีเฟรชหน้า' }); } catch (_) {}
       } finally {
         try {
           if (typeof window.__removeInstantLoadingOverlay === 'function'

@@ -109,8 +109,10 @@
     o._shadow = CONFIG.SHADOWS[o.shadow] || CONFIG.SHADOWS.md;
 
     // Animation duration
-    o._enterDuration = o.animationDuration || CONFIG.TIMING.ENTER_DURATION;
-    o._exitDuration = o.animationDuration || CONFIG.TIMING.EXIT_DURATION;
+    o._enterDuration = o.animationDuration ||
+      (o.type === 'fullscreen' ? CONFIG.TIMING.FULLSCREEN_ENTER : CONFIG.TIMING.ENTER_DURATION);
+    o._exitDuration = o.animationDuration ||
+      (o.type === 'fullscreen' ? CONFIG.TIMING.FULLSCREEN_EXIT : CONFIG.TIMING.EXIT_DURATION);
 
     return o;
   }

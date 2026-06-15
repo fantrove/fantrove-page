@@ -170,11 +170,9 @@
         }
       }
 
-      // ทุก retry ล้มเหลว — แสดง error แล้ว throw
+      // ทุก retry ล้มเหลว — แสดง fullscreen error detail แล้ว throw
       try {
-        Utils.errorManager.showError(url, lastErr, {
-          duration: 1200, type: 'error', dismissible: true, position: 'top-right',
-        });
+        Utils.showErrorFullscreen(lastErr, { label: 'Data Fetch: ' + url });
       } catch (_) {}
       throw lastErr;
     },

@@ -87,20 +87,20 @@ header{position:relative;z-index:${hz};contain:layout style;}
         if (!img.hasAttribute('fetchpriority')) img.setAttribute('fetchpriority', 'low');
       });
 
-      // Error boundary — throttle notifications to max 1 per second
+      // Error boundary — fullscreen error detail (throttled to max 1 per 2 seconds)
       let _errT;
-      const _notify = msg => {
+      const _notifyError = (error, label) => {
         clearTimeout(_errT);
         _errT = setTimeout(() => {
-          try { Utils.showNotification(msg, 'error'); } catch (_) {}
-        }, 1000);
+          try { Utils.showErrorFullscreen(error, { label: label }); } catch (_) {}
+        }, 2000);
       };
       window.addEventListener('error', e => {
-        _notify('เกิดข้อผิดพลาดที่ไม่คาดคิด');
+        _notifyError(e, 'Global Error Boundary');
         console.error(e.error || e);
       }, { passive: true });
       window.addEventListener('unhandledrejection', e => {
-        _notify('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+        _notifyError(e, 'Unhandled Promise Rejection');
         console.error(e.reason);
       }, { passive: true });
 

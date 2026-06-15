@@ -10,19 +10,19 @@
 //   3. Options merged with preset via Utils.mergeOptions()
 //   4. PopupInstance created, added to State
 //   5. Renderer.build() creates DOM
- *   6. ThemeService.apply() sets theme tokens
- *   7. OverlayService attaches listeners
- *   8. A11yService installs focus trap + manages inert siblings
- *   9. Scroll lock applied (if needed)
- *  10. Animator.enter() plays animation
- *  11. onOpen callback fires → PopupHandle returned
- *  12. User interacts...
- *  13. close() called (or auto-close, or overlay click, or escape)
- *  14. onBeforeClose guard checked
- *  15. Animator.exit() plays exit animation
- *  16. Cleanup: DOM removed, listeners detached, scroll unlocked
- *  17. onClose callback fires
- *  18. QueueManager.processNext() opens next queued popup
+//   6. ThemeService.apply() sets theme tokens
+//   7. OverlayService attaches listeners
+//   8. A11yService installs focus trap + manages inert siblings
+//   9. Scroll lock applied (if needed)
+//  10. Animator.enter() plays animation
+//  11. onOpen callback fires → PopupHandle returned
+//  12. User interacts...
+//  13. close() called (or auto-close, or overlay click, or escape)
+//  14. onBeforeClose guard checked
+//  15. Animator.exit() plays exit animation
+//  16. Cleanup: DOM removed, listeners detached, scroll unlocked
+//  17. onClose callback fires
+//  18. QueueManager.processNext() opens next queued popup
 //
 // Used by: popup.js (entry point) → reads M.Engine to build window.PopupSystem
 
@@ -126,6 +126,19 @@
     if (opts.blocking) {
       A11yService.manageInertSiblings(true, dom.rootEl);
       _addCleanup(id, function() { A11yService.manageInertSiblings(false); });
+    }
+
+    // 11b. Fullscreen: browser back button (history API)
+    if (opts.type === 'fullscreen' && opts.hideOnBack !== false) {
+      history.pushState({ fpFullscreenId: id }, '');
+      var onPopState = function(e) {
+        var inst = State.getInstance(id);
+        if (inst && (inst.state === 'open' || inst.state === 'opening')) {
+          close(id, { action: 'browser-back' });
+        }
+      };
+      onPopState._instanceId = id;
+      OverlayService.on(window, 'popstate', onPopState);
     }
 
     // 12. Scroll lock
@@ -550,6 +563,43 @@
     }, opts));
   }
 
+  /**
+   * Open a fullscreen popup — covers the entire viewport like a page.
+   * Similar to the search suggestions overlay. Ideal for rich content
+   * panels, search interfaces, media viewers, or any content that needs
+   * the full screen.
+   *
+   * @param {Object} [opts]
+   * @param {string|HTMLElement} [opts.body]         - Content HTML or element.
+   * @param {string}            [opts.title]         - Header title (null to hide header entirely).
+   * @param {boolean}           [opts.showHeader=true] - Show the header bar.
+   *                                                     Set false for fully custom layouts.
+   * @param {string}            [opts.contentLayout='fit'] - 'fit' = body scrolls internally;
+   *                                                     'stretch' = body fills 100% height.
+   * @param {string}            [opts.theme='light'] - 'light'|'dark'|'brand'.
+   * @param {boolean}           [opts.hideOnBack=true] - Close on browser back button.
+   * @param {Function}          [opts.onOpen]        - (popupId, handle) => void
+   * @param {Function}          [opts.onClose]       - (popupId, result) => void
+   * @param {Function}          [opts.onMount]       - (bodyEl, handle) => void
+   * @returns {Promise<PopupHandle>}
+   */
+  function fullscreen(opts = {}) {
+    return open(Object.assign({
+      type          : 'fullscreen',
+      size          : 'full',
+      position      : 'center',
+      blocking      : true,
+      lockScroll    : true,
+      stackable     : false,
+      dismissOnOverlay : false,
+      dismissOnEscape  : true,
+      focusTrap     : true,
+      showHeader    : opts.showHeader !== undefined ? opts.showHeader : true,
+      contentLayout : opts.contentLayout || 'fit',
+      hideOnBack    : opts.hideOnBack !== undefined ? opts.hideOnBack : true,
+    }, opts));
+  }
+
   // ── Stats / Debug ──────────────────────────────────────────────────────────
 
   function stats() {
@@ -587,7 +637,7 @@
 
   M.Engine = Object.freeze({
     open, close, destroy, closeAll, closeByGroup, update, onInstance,
-    alert, confirm, toast,
+    alert, confirm, toast, fullscreen,
     stats, debug, onSystem,
   });
 
