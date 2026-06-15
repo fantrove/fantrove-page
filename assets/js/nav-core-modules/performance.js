@@ -96,8 +96,9 @@ header{position:relative;z-index:${hz};contain:layout style;}
         }, 1000);
       };
       window.addEventListener('error', e => {
+        if (!e.error) return; // ข้าม resource 404 (script/img/link ที่หาย)
         _notify('เกิดข้อผิดพลาดที่ไม่คาดคิด');
-        console.error(e.error || e);
+        console.error(e.error);
       }, { passive: true });
       window.addEventListener('unhandledrejection', e => {
         _notify('เกิดข้อผิดพลาดในการเชื่อมต่อ');
@@ -130,4 +131,26 @@ header{position:relative;z-index:${hz};contain:layout style;}
   M.ScrollService      = ScrollService;
   M.PerformanceService = PerformanceService;
 
-})(window.NavCoreModules = window.NavCoreModules || {});
+})(window.NavCoreModules = window.NavCoreModules || {});ry {
+        const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        if (conn) {
+          const _check = () => {
+            window._navCore_slowConnection =
+              conn.saveData
+              || conn.effectiveType === '2g'
+              || conn.effectiveType === 'slow-2g';
+          };
+          _check();
+          conn.addEventListener('change', _check, { passive: true });
+        }
+      } catch (_) {}
+    },
+
+    // Called during init — setupErrorBoundary is handled inside init()
+    setupErrorBoundary() { /* handled in init() */ },
+    setupLazyLoading()   { /* handled in init() */ },
+  };
+
+  // ── Export ────────────────────────────────────────────────────────────────────
+
+  M.ScrollService  
