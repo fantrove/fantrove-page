@@ -91,7 +91,7 @@
  "contact-report-title": "Report an Issue",
  "contact-report-desc": "You can use this page to report any issues, bugs, or abuse found on FanTrove.\n\nCurrently, you can only use the form below to submit your report.",
  "report-new-title": "Report an Issue",
- "report-new-desc": "Found a bug or something not working correctly?@br@Help us improve Fantrove by sending a report.",
+ "report-new-desc": "Found a bug or something not working correctly?\nHelp us improve Fantrove by sending a report.",
  "report-select-placeholder": "— Select —",
  "report-category-label": "Issue Type",
  "report-details-label": "Problem Details",

@@ -1,528 +1,510 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <script src="assets/js/lang-proxy.js?v=1.0.0-20250322"></script>
-  <script src="assets/js/lang-sync.js?v=1.0.0-20250322"></script>
-  <script src="assets/js/lang-coordinator.js?v=1.0.0-20250322"></script>
+    <script src="assets/js/lang-proxy.js?v=1.0.0-20250322"></script>
+    <script src="assets/js/lang-sync.js?v=1.0.0-20250322"></script>
 
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title data-translate="page-report"></title>
-  <meta name="description" content="Report a bug, issue, or suggestion to help improve Fantrove.">
-  <meta name="theme-color" content="#13b47f" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <link rel="icon" type="image/x-icon" href="/assets/images/fantrove-verse360.ico" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title data-translate="page-report"></title>
 
-  <!-- 1. Tokens -->
-  <link rel="preload" href="/assets/css/tokens.css" as="style">
-  <link rel="stylesheet" href="/assets/css/tokens.css">
+    <!-- Critical CSS -->
+    <link rel="preload" href="/assets/css/tokens.css" as="style">
+    <link rel="stylesheet" href="/assets/css/tokens.css">
+    <link rel="preload" href="/assets/css/setting.css?v=1.0.0-20250322" as="style" onload="this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="/assets/css/setting.css?v=1.0.0-20250322"></noscript>
+    <link rel="preload" href="/assets/css/bg.css?v=1.0.0-20250322" as="style" onload="this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="/assets/css/bg.css?v=1.0.0-20250322"></noscript>
 
-  <!-- 2. CSS -->
-  <link rel="preload" href="/assets/css/setting.css?v=1.0.0-20250322" as="style" onload="this.rel='stylesheet'" />
-  <noscript><link rel="stylesheet" href="/assets/css/setting.css?v=1.0.0-20250322" /></noscript>
-  <link rel="preload" href="/assets/css/bg.css?v=1.0.0-20250322" as="style" onload="this.rel='stylesheet'" />
-  <noscript><link rel="stylesheet" href="/assets/css/bg.css?v=1.0.0-20250322" /></noscript>
-  <link rel="stylesheet" href="/assets/css/top-navigation-bar.css?v=1.0.0-20250322" media="all" />
-  <link rel="stylesheet" href="/assets/css/report.css?v=1.6.2_2" media="all" />
+    <!-- Other CSS -->
+    <link rel="stylesheet" href="/assets/css/top-navigation-bar.css?v=1.0.0-20250322" media="all" />
+    <link rel="stylesheet" href="/assets/css/report.css?v=1.6.2_1" media="all" />
+
+    <link rel="icon" type="image/x-icon" href="/assets/images/fantrove-verse360.ico" />
 </head>
-
 <body style="opacity:0">
 
-  <div id="fv-app" class="fv-app" data-page="report">
-
-    <!-- Top Navigation with Back Button -->
-    <nav aria-label="Page navigation">
-      <button class="back-button" id="back-button" aria-label="Go back">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="m15 19-7-7 7-7" />
-        </svg>
-      </button>
-      <span class="page-title" data-translate="page-report"></span>
+    <!-- Navigation Bar -->
+    <nav>
+        <button class="back-button" id="back-button" aria-label="Go back">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m15 19-7-7 7-7" />
+            </svg>
+        </button>
+        <span class="page-title" data-translate="page-report"></span>
     </nav>
 
-    <h1 class="fv-sr-only" data-translate="page-report"></h1>
-
-    <div class="fv-page-shell">
-      <main id="fv-main">
-
-      <section>
-            <div class="m5"><div class="w">
-                <p class="fv-section-label" data-translate="report-new-title"></p>
-                <p class="report-desc" data-translate="report-new-desc"></p>
-            </div></div>
-
-        <section>
-          <form id="report-form" novalidate>
-
-            <!-- Issue Type -->
-            <div class="m5"><div class="w">
-              <div class="setting-item">
-                <label for="report-category" data-translate="report-category-label"></label>
-                <select id="report-category" class="setting-item select" required>
-                  <option value="" disabled selected data-translate="report-select-placeholder"></option>
-                </select>
-                <p class="report-error-text" id="error-category"></p>
-              </div>
-            </div></div>
-
-            <!-- Problem Details -->
-            <div class="m5"><div class="w">
-              <div class="setting-item">
-                <label for="report-details" data-translate="report-details-label"></label>
-                <textarea id="report-details" class="report-textarea" rows="4" required></textarea>
-                <p class="report-error-text" id="error-details"></p>
-              </div>
-            </div></div>
-
-            <!-- Expected Behavior (optional) -->
-            <div class="m5"><div class="w">
-              <div class="setting-item">
-                <label for="report-expected">
-                  <span data-translate="report-expected-label"></span>
-                  <span class="report-optional" data-translate="report-optional"></span>
-                </label>
-                <textarea id="report-expected" class="report-textarea" rows="3"></textarea>
-              </div>
-            </div></div>
-
-            <!-- Page where issue occurred -->
-            <div class="m5"><div class="w">
-              <div class="setting-item">
-                <label for="report-page" data-translate="report-page-label"></label>
-                <select id="report-page" class="setting-item select" required>
-                  <option value="" disabled selected data-translate="report-select-placeholder"></option>
-                </select>
-                <input type="text" id="report-page-custom" class="report-textinput report-page-custom" autocomplete="off" />
-                <p class="report-error-text" id="error-page"></p>
-              </div>
-            </div></div>
-
-            <!-- Browser -->
-            <div class="m5"><div class="w">
-              <div class="setting-item">
-                <label for="report-browser" data-translate="report-browser-label"></label>
-                <select id="report-browser" class="setting-item select">
-                  <option value="" disabled selected data-translate="report-select-placeholder"></option>
-                </select>
-              </div>
-            </div></div>
-
-            <!-- Contact Email (optional) -->
-            <div class="m5"><div class="w">
-              <div class="setting-item">
-                <label for="report-email">
-                  <span data-translate="report-email-label"></span>
-                  <span class="report-optional" data-translate="report-optional"></span>
-                </label>
-                <input type="email" id="report-email" class="report-textinput" autocomplete="email" />
-              </div>
-            </div></div>
-
-            <!-- Submit -->
-            <div class="m5"><div class="w">
-              <button type="submit" class="report-submit" id="report-submit" data-translate="report-submit-btn"></button>
-            </div></div>
-
-          </form>
+    <main>
+        <section class="con">
+            <h1 data-translate="report-new-title" style="margin-bottom:1.5rem;"></h1>
+            <p class="text-content" data-translate="report-new-desc" style="margin-bottom:1.5rem;"></p>
         </section>
 
-      </main>
-      <div id="fv-footer-mount"></div>
-    </div>
+        <div class="pad">
+            <form id="report-form" novalidate>
+                <!-- Issue Type -->
+                <div class="setting-item">
+                    <label for="report-category" data-translate="report-category-label"></label>
+                    <select id="report-category" class="setting-item select m5" required>
+                        <option value="" disabled selected data-translate="report-select-placeholder"></option>
+                    </select>
+                    <p class="report-error-text" id="error-category"></p>
+                </div>
 
-  </div><!-- /#fv-app -->
+                <!-- Problem Details -->
+                <div class="setting-item">
+                    <label for="report-details" data-translate="report-details-label"></label>
+                    <textarea id="report-details" class="report-textarea m5" rows="4" required></textarea>
+                    <p class="report-error-text" id="error-details"></p>
+                </div>
 
-  <script src="/assets/js/back-button.js?v=1.0.0-20250322"></script>
-  <script src="/assets/js/lang-core.js?v=1.0.0"></script>
-  <script src="/assets/js/language.js?v=1.0.0-20250322"></script>
-  <script defer src="/assets/js/footer-template.js?v=1.0.0-20250322"></script>
-  <script defer src="/assets/js/Intelligent-system.js?v=1.0.0-20250322"></script>
-  <script defer src="/assets/js/popup.js?v=1.0.0-20250322"></script>
-  <script defer src="/assets/js/version-core.js?v=1.0.0-20250322"></script>
-  <script defer src="/assets/js/lang-links.js?v=1.0.0-20250322"></script>
+                <!-- Expected Behavior (optional) -->
+                <div class="setting-item">
+                    <label for="report-expected">
+                        <span data-translate="report-expected-label"></span>
+                        <span class="report-optional" data-translate="report-optional"></span>
+                    </label>
+                    <textarea id="report-expected" class="report-textarea m5" rows="3"></textarea>
+                </div>
 
-  <script>
-  (function() {
-    'use strict';
+                <!-- Page where issue occurred -->
+                <div class="setting-item">
+                    <label for="report-page" data-translate="report-page-label"></label>
+                    <select id="report-page" class="setting-item select m5" required>
+                        <option value="" disabled selected data-translate="report-select-placeholder"></option>
+                    </select>
+                    <input type="text" id="report-page-custom" class="report-textinput report-page-custom" autocomplete="off" />
+                    <p class="report-error-text" id="error-page"></p>
+                </div>
 
-    /* ══════════════════════════════════════════════
-       CONFIG
-       ══════════════════════════════════════════════ */
-    var API_ENDPOINT = 'https://community.nontakorn2600.workers.dev/';
-    var VERSION_FALLBACK = '1.6.2_2';
+                <!-- Browser -->
+                <div class="setting-item">
+                    <label for="report-browser" data-translate="report-browser-label"></label>
+                    <select id="report-browser" class="setting-item select m5"></select>
+                </div>
 
-    /* ── Issue categories ── */
-    var CATEGORIES = [
-      { value: 'bug',            label: { en: '\u{1F41B} Bug',                   th: '\u{1F41B} \u0E1A\u0E31\u0E4A\u0E01' } },
-      { value: 'translation',    label: { en: '\u{1F310} Translation Issue',      th: '\u{1F310} \u0E1B\u0E31\u0E0D\u0E2B\u0E32\u0E01\u0E32\u0E23\u0E41\u0E1B\u0E25' } },
-      { value: 'broken-link',    label: { en: '\u{1F517} Broken Link',            th: '\u{1F517} \u0E25\u0E34\u0E07\u0E01\u0E4C\u0E40\u0E2A\u0E35\u0E22' } },
-      { value: 'mobile-ui',      label: { en: '\u{1F4F1} Mobile UI Issue',        th: '\u{1F4F1} \u0E1B\u0E31\u0E0D\u0E2B\u0E32 UI \u0E1A\u0E19\u0E21\u0E37\u0E2D\u0E16\u0E37\u0E2D' } },
-      { value: 'performance',    label: { en: '\u{26A1} Performance Issue',       th: '\u{26A1} \u0E1B\u0E31\u0E0D\u0E2B\u0E32\u0E1B\u0E23\u0E30\u0E2A\u0E34\u0E17\u0E18\u0E34\u0E20\u0E32\u0E1E' } },
-      { value: 'incorrect-info', label: { en: '\u{1F4C4} Incorrect Information',  th: '\u{1F4C4} \u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07' } },
-      { value: 'suggestion',     label: { en: '\u{1F4A1} Suggestion',             th: '\u{1F4A1} \u0E02\u0E49\u0E2D\u0E40\u0E2A\u0E19\u0E2D\u0E41\u0E19\u0E30' } },
-      { value: 'other',          label: { en: '\u{2753} Other',                   th: '\u{2753} \u0E2D\u0E37\u0E48\u0E19\u0E46' } }
-    ];
+                <!-- Contact Email (optional) -->
+                <div class="setting-item">
+                    <label for="report-email">
+                        <span data-translate="report-email-label"></span>
+                        <span class="report-optional" data-translate="report-optional"></span>
+                    </label>
+                    <input type="email" id="report-email" class="report-textinput m5" autocomplete="email" />
+                </div>
 
-    /* ── Site pages ── */
-    var PAGES = [
-      { value: '/home/',                label: { en: 'Home',            th: '\u0E2B\u0E19\u0E49\u0E32\u0E2B\u0E25\u0E31\u0E01' } },
-      { value: '/platform/about/',      label: { en: 'About',           th: '\u0E40\u0E01\u0E35\u0E48\u0E22\u0E27\u0E01\u0E31\u0E1A' } },
-      { value: '/platform/whats_new/',  label: { en: "What's New",      th: '\u0E2D\u0E30\u0E44\u0E23\u0E43\u0E2B\u0E21\u0E48' } },
-      { value: '/platform/roadmap/',    label: { en: 'Roadmap',         th: '\u0E41\u0E1C\u0E19\u0E07\u0E32\u0E19' } },
-      { value: '/platform/privacy/',    label: { en: 'Privacy Policy',  th: '\u0E19\u0E42\u0E22\u0E1A\u0E32\u0E22\u0E04\u0E27\u0E32\u0E21\u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E48\u0E27\u0E19\u0E15\u0E31\u0E27' } },
-      { value: '/platform/license/',    label: { en: 'Content License', th: '\u0E2A\u0E31\u0E0D\u0E0D\u0E32\u0E2D\u0E19\u0E38\u0E0D\u0E32\u0E15\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32' } },
-      { value: '/community/contact/',   label: { en: 'Contact',         th: '\u0E15\u0E34\u0E14\u0E15\u0E48\u0E2D' } },
-      { value: '/data/verse/discover/', label: { en: 'Verse Discover',  th: 'Verse \u0E04\u0E49\u0E19\u0E1E\u0E1A' } },
-      { value: '/data/verse/scope/',    label: { en: 'Verse Scope',     th: 'Verse \u0E02\u0E2D\u0E1A\u0E40\u0E02\u0E15' } },
-      { value: '/setting/',             label: { en: 'Settings',        th: '\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32' } },
-      { value: '/search/',              label: { en: 'Search',          th: '\u0E04\u0E49\u0E19\u0E2B\u0E32' } },
-      { value: '__other__',             label: { en: 'Other (specify)', th: '\u0E2D\u0E37\u0E48\u0E19\u0E46 (\u0E23\u0E30\u0E1A\u0E38)' } }
-    ];
+                <!-- Submit -->
+                <button type="submit" class="report-submit" id="report-submit" data-translate="report-submit-btn"></button>
+            </form>
+        </div>
+    </main>
 
-    /* ── Browsers ── */
-    var BROWSERS = [
-      { value: 'Chrome',           label: { en: 'Chrome',           th: 'Chrome' } },
-      { value: 'Firefox',          label: { en: 'Firefox',          th: 'Firefox' } },
-      { value: 'Safari',           label: { en: 'Safari',           th: 'Safari' } },
-      { value: 'Edge',             label: { en: 'Edge',             th: 'Edge' } },
-      { value: 'Opera',            label: { en: 'Opera',            th: 'Opera' } },
-      { value: 'Samsung Internet', label: { en: 'Samsung Internet', th: 'Samsung Internet' } },
-      { value: 'Other',            label: { en: 'Other',            th: '\u0E2D\u0E37\u0E48\u0E19\u0E46' } }
-    ];
+    <script src="/assets/js/lang-core.js?v=1.0.0"></script>
+    <script src="/assets/js/language.js?v=1.0.0-20250322"></script>
+    <script defer src="/assets/js/popup.js?v=1.0.0-20250322"></script>
+    <script defer src="/assets/js/version-core.js?v=1.0.0-20250322"></script>
+    <script defer src="/assets/js/footer-template.js?v=1.0.0-20250322"></script>
+    <script defer src="/assets/js/back-button.js?v=1.0.0-20250322"></script>
 
-    /* ── Placeholders ── */
-    var PLACEHOLDERS = {
-      en: {
-        details: 'Describe the issue you encountered...',
-        expected: 'What did you expect to happen?',
-        email: 'your@email.com',
-        pageCustom: '/path/to/page'
-      },
-      th: {
-        details: '\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22\u0E1B\u0E31\u0E0D\u0E2B\u0E32\u0E17\u0E35\u0E48\u0E1E\u0E1A...',
-        expected: '\u0E04\u0E38\u0E13\u0E04\u0E32\u0E14\u0E2B\u0E27\u0E31\u0E07\u0E43\u0E2B\u0E49\u0E40\u0E01\u0E34\u0E14\u0E2D\u0E30\u0E44\u0E23\u0E02\u0E36\u0E49\u0E19?',
-        email: 'your@email.com',
-        pageCustom: '/path/to/page'
-      }
-    };
+    <script>
+    (function() {
+        'use strict';
 
-    /* ══════════════════════════════════════════════
-       STATE
-       ══════════════════════════════════════════════ */
-    var currentLang = 'en';
-    var currentVersion = VERSION_FALLBACK;
+        /* ══════════════════════════════════════════════
+           CONFIG
+           ══════════════════════════════════════════════ */
+        var API_ENDPOINT = 'https://community.nontakorn2600.workers.dev/';
+        var VERSION_FALLBACK = '1.6.2_1';
 
-    /* ══════════════════════════════════════════════
-       DETECTION
-       ══════════════════════════════════════════════ */
+        /* ── Issue categories ── */
+        var CATEGORIES = [
+            { value: 'bug',               label: { en: '\u{1F41B} Bug',                  th: '\u{1F41B} \u0E1A\u0E31\u0E4A\u0E01' } },
+            { value: 'translation',       label: { en: '\u{1F310} Translation Issue',   th: '\u{1F310} \u0E1B\u0E31\u0E0D\u0E2B\u0E32\u0E01\u0E32\u0E23\u0E41\u0E1B\u0E25' } },
+            { value: 'broken-link',       label: { en: '\u{1F517} Broken Link',          th: '\u{1F517} \u0E25\u0E34\u0E07\u0E01\u0E4C\u0E40\u0E2A\u0E35\u0E22' } },
+            { value: 'mobile-ui',         label: { en: '\u{1F4F1} Mobile UI Issue',      th: '\u{1F4F1} \u0E1B\u0E31\u0E0D\u0E2B\u0E32 UI \u0E1A\u0E19\u0E21\u0E37\u0E2D\u0E16\u0E37\u0E2D' } },
+            { value: 'performance',       label: { en: '\u{26A1} Performance Issue',     th: '\u{26A1} \u0E1B\u0E31\u0E0D\u0E2B\u0E32\u0E1B\u0E23\u0E30\u0E2A\u0E34\u0E17\u0E18\u0E34\u0E20\u0E32\u0E1E' } },
+            { value: 'incorrect-info',    label: { en: '\u{1F4C4} Incorrect Information', th: '\u{1F4C4} \u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07' } },
+            { value: 'suggestion',        label: { en: '\u{1F4A1} Suggestion',            th: '\u{1F4A1} \u0E02\u0E49\u0E2D\u0E40\u0E2A\u0E19\u0E2D\u0E41\u0E19\u0E30' } },
+            { value: 'other',             label: { en: '\u{2753} Other',                 th: '\u{2753} \u0E2D\u0E37\u0E48\u0E19\u0E46' } }
+        ];
 
-    function detectBrowser() {
-      var ua = navigator.userAgent;
-      if (/Edg\//i.test(ua)) return 'Edge';
-      if (/OPR\/|Opera/i.test(ua)) return 'Opera';
-      if (/SamsungBrowser/i.test(ua)) return 'Samsung Internet';
-      if (/Chrome/i.test(ua) && !/Edg/i.test(ua)) return 'Chrome';
-      if (/Safari/i.test(ua) && !/Chrome/i.test(ua)) return 'Safari';
-      if (/Firefox/i.test(ua)) return 'Firefox';
-      return 'Other';
-    }
+        /* ── Discord category emoji map ── */
+        var CATEGORY_EMOJI = {
+            bug: '\u{1F41B}', translation: '\u{1F310}', 'broken-link': '\u{1F517}',
+            'mobile-ui': '\u{1F4F1}', performance: '\u{26A1}', 'incorrect-info': '\u{1F4C4}',
+            suggestion: '\u{1F4A1}', other: '\u{2753}'
+        };
 
-    function detectDevice() {
-      var ua = navigator.userAgent;
-      if (/Android/i.test(ua) && /Mobile/i.test(ua)) return 'Android';
-      if (/iPhone/i.test(ua)) return 'iPhone';
-      if (/iPad/i.test(ua) || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1)) return 'iPad';
-      if (/Android/i.test(ua)) return 'Android';
-      if (/Windows/i.test(ua)) return 'Windows';
-      if (/Macintosh/i.test(ua)) return 'macOS';
-      if (/Linux/i.test(ua)) return 'Linux';
-      return 'Other';
-    }
+        /* ── Site pages ── */
+        var PAGES = [
+            { value: '/home/',                    label: { en: 'Home',            th: '\u0E2B\u0E19\u0E49\u0E32\u0E2B\u0E25\u0E31\u0E01' } },
+            { value: '/platform/about/',          label: { en: 'About',           th: '\u0E40\u0E01\u0E35\u0E48\u0E22\u0E27\u0E01\u0E31\u0E1A' } },
+            { value: '/platform/whats_new/',      label: { en: "What's New",      th: '\u0E2D\u0E30\u0E44\u0E23\u0E43\u0E2B\u0E21\u0E48' } },
+            { value: '/platform/roadmap/',        label: { en: 'Roadmap',         th: '\u0E41\u0E1C\u0E19\u0E07\u0E32\u0E19' } },
+            { value: '/platform/privacy/',        label: { en: 'Privacy Policy',  th: '\u0E19\u0E42\u0E22\u0E1A\u0E32\u0E22\u0E04\u0E27\u0E32\u0E21\u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E48\u0E27\u0E19\u0E15\u0E31\u0E27' } },
+            { value: '/platform/license/',        label: { en: 'Content License', th: '\u0E2A\u0E31\u0E0D\u0E0D\u0E32\u0E2D\u0E19\u0E38\u0E0D\u0E32\u0E15\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32' } },
+            { value: '/community/contact/',       label: { en: 'Contact',         th: '\u0E15\u0E34\u0E14\u0E15\u0E48\u0E2D' } },
+            { value: '/data/verse/discover/',     label: { en: 'Verse Discover',  th: 'Verse \u0E04\u0E49\u0E19\u0E1E\u0E1A' } },
+            { value: '/data/verse/scope/',        label: { en: 'Verse Scope',     th: 'Verse \u0E02\u0E2D\u0E1A\u0E40\u0E02\u0E15' } },
+            { value: '/setting/',                 label: { en: 'Settings',        th: '\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32' } },
+            { value: '/search/',                  label: { en: 'Search',          th: '\u0E04\u0E49\u0E19\u0E2B\u0E32' } },
+            { value: '__other__',                 label: { en: 'Other (specify)', th: '\u0E2D\u0E37\u0E48\u0E19\u0E46 (\u0E23\u0E30\u0E1A\u0E38)' } }
+        ];
 
-    function getLangLabel() {
-      return (currentLang === 'th') ? '\u0E44\u0E17\u0E22' : 'English';
-    }
+        /* ── Browsers ── */
+        var BROWSERS = [
+            { value: 'Chrome',           label: { en: 'Chrome',           th: 'Chrome' } },
+            { value: 'Firefox',          label: { en: 'Firefox',          th: 'Firefox' } },
+            { value: 'Safari',           label: { en: 'Safari',           th: 'Safari' } },
+            { value: 'Edge',             label: { en: 'Edge',             th: 'Edge' } },
+            { value: 'Opera',            label: { en: 'Opera',            th: 'Opera' } },
+            { value: 'Samsung Internet', label: { en: 'Samsung Internet', th: 'Samsung Internet' } },
+            { value: 'Other',            label: { en: 'Other',            th: '\u0E2D\u0E37\u0E48\u0E19\u0E46' } }
+        ];
 
-    /* ══════════════════════════════════════════════
-       VERSION FETCH
-       ══════════════════════════════════════════════ */
+        /* ── Placeholders ── */
+        var PLACEHOLDERS = {
+            en: {
+                details: 'Describe the issue you encountered...',
+                expected: 'What did you expect to happen?',
+                email: 'your@email.com',
+                pageCustom: '/path/to/page'
+            },
+            th: {
+                details: '\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22\u0E1B\u0E31\u0E0D\u0E2B\u0E32\u0E17\u0E35\u0E48\u0E1E\u0E1A...',
+                expected: '\u0E04\u0E38\u0E13\u0E04\u0E32\u0E14\u0E2B\u0E27\u0E31\u0E07\u0E43\u0E2B\u0E49\u0E40\u0E01\u0E34\u0E14\u0E2D\u0E30\u0E44\u0E23\u0E02\u0E36\u0E49\u0E19?',
+                email: 'your@email.com',
+                pageCustom: '/path/to/page'
+            }
+        };
 
-    function fetchVersion() {
-      var lang = window.FvLang ? window.FvLang.lang : 'en';
-      return fetch('/assets/md/' + lang + '/current.md')
-        .then(function(r) { return r.ok ? r.text() : ''; })
-        .then(function(text) {
-          var m = text.match(/version:\s*(.+)/);
-          if (m) currentVersion = m[1].trim();
-        })
-        .catch(function() {});
-    }
+        /* ── Device labels ── */
+        var DEVICE_LABELS = {
+            Android:  { en: 'Android',  th: 'Android' },
+            iPhone:   { en: 'iPhone',   th: 'iPhone' },
+            iPad:     { en: 'iPad',     th: 'iPad' },
+            Windows:  { en: 'Windows',  th: 'Windows' },
+            macOS:    { en: 'macOS',    th: 'macOS' },
+            Linux:    { en: 'Linux',    th: 'Linux' }
+        };
 
-    /* ══════════════════════════════════════════════
-       DROPDOWN POPULATION
-       ══════════════════════════════════════════════ */
+        /* ══════════════════════════════════════════════
+           STATE
+           ══════════════════════════════════════════════ */
+        var currentLang = 'en';
+        var currentVersion = VERSION_FALLBACK;
 
-    function populateSelect(selectEl, items, selectedValue) {
-      // Remove all options except the first (placeholder)
-      while (selectEl.options.length > 1) {
-        selectEl.remove(1);
-      }
-      items.forEach(function(item) {
-        var opt = document.createElement('option');
-        opt.value = item.value;
-        opt.textContent = item.label[currentLang] || item.label.en || item.value;
-        selectEl.appendChild(opt);
-      });
-      if (selectedValue && selectEl.querySelector('option[value="' + selectedValue + '"]')) {
-        selectEl.value = selectedValue;
-      } else {
-        selectEl.selectedIndex = 0;
-      }
-    }
+        /* ══════════════════════════════════════════════
+           DETECTION
+           ══════════════════════════════════════════════ */
 
-    function updateDropdowns() {
-      var detectedBrowser = detectBrowser();
-      populateSelect(document.getElementById('report-category'), CATEGORIES);
-      populateSelect(document.getElementById('report-page'), PAGES);
-      populateSelect(document.getElementById('report-browser'), BROWSERS, detectedBrowser);
-      updatePlaceholders();
-      handlePageSelect();
-    }
-
-    function updatePlaceholders() {
-      var ph = PLACEHOLDERS[currentLang] || PLACEHOLDERS.en;
-      document.getElementById('report-details').placeholder = ph.details;
-      document.getElementById('report-expected').placeholder = ph.expected;
-      document.getElementById('report-email').placeholder = ph.email;
-      document.getElementById('report-page-custom').placeholder = ph.pageCustom;
-    }
-
-    /* ══════════════════════════════════════════════
-       PAGE SELECT (Other -> show text input)
-       ══════════════════════════════════════════════ */
-
-    function handlePageSelect() {
-      var sel = document.getElementById('report-page');
-      var custom = document.getElementById('report-page-custom');
-      if (sel.value === '__other__') {
-        custom.classList.add('visible');
-        custom.required = true;
-        custom.focus();
-      } else {
-        custom.classList.remove('visible');
-        custom.required = false;
-        custom.value = '';
-      }
-    }
-
-    /* ══════════════════════════════════════════════
-       VALIDATION
-       ══════════════════════════════════════════════ */
-
-    function clearErrors() {
-      document.querySelectorAll('.report-field-error').forEach(function(el) {
-        el.classList.remove('report-field-error');
-      });
-      document.querySelectorAll('.report-error-text').forEach(function(el) {
-        el.classList.remove('visible');
-        el.textContent = '';
-      });
-    }
-
-    function showFieldError(fieldId, errorId, msg) {
-      var field = document.getElementById(fieldId);
-      var error = document.getElementById(errorId);
-      if (field) field.classList.add('report-field-error');
-      if (error) {
-        error.textContent = msg;
-        error.classList.add('visible');
-      }
-    }
-
-    function validateForm() {
-      clearErrors();
-      var valid = true;
-      var t = getTranslations();
-
-      if (!document.getElementById('report-category').value) {
-        showFieldError('report-category', 'error-category', t.errorCategory);
-        valid = false;
-      }
-
-      if (!document.getElementById('report-details').value.trim()) {
-        showFieldError('report-details', 'error-details', t.errorDetails);
-        valid = false;
-      }
-
-      var page = document.getElementById('report-page').value;
-      var pageCustom = document.getElementById('report-page-custom').value.trim();
-      if (!page) {
-        showFieldError('report-page', 'error-page', t.errorPage);
-        valid = false;
-      } else if (page === '__other__' && !pageCustom) {
-        document.getElementById('report-page-custom').classList.add('report-field-error');
-        showFieldError('report-page-custom', 'error-page', t.errorPage);
-        valid = false;
-      }
-
-      return valid;
-    }
-
-    /* ══════════════════════════════════════════════
-       TRANSLATIONS (inline for popup messages)
-       ══════════════════════════════════════════════ */
-
-    function getTranslations() {
-      var map = {
-        en: {
-          errorCategory: 'Please select an issue type.',
-          errorDetails: 'Please describe the problem.',
-          errorPage: 'Please select or specify the page.',
-          submitBtn: 'Submit Report',
-          submitting: 'Submitting...',
-          successTitle: '\u2705 Report Submitted',
-          successBody: 'Thank you for helping improve Fantrove.',
-          errorTitle: '\u26A0\uFE0F Submission Failed',
-          errorBody: 'Please try again later.'
-        },
-        th: {
-          errorCategory: '\u0E01\u0E23\u0E38\u0E13\u0E32\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E1B\u0E31\u0E0D\u0E2B\u0E32',
-          errorDetails: '\u0E01\u0E23\u0E38\u0E13\u0E32\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22\u0E1B\u0E31\u0E0D\u0E2B\u0E32',
-          errorPage: '\u0E01\u0E23\u0E38\u0E13\u0E32\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E2B\u0E23\u0E37\u0E2D\u0E23\u0E30\u0E1A\u0E38\u0E2B\u0E19\u0E49\u0E32',
-          submitBtn: '\u0E2A\u0E48\u0E07\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19',
-          submitting: '\u0E01\u0E33\u0E25\u0E31\u0E07\u0E2A\u0E48\u0E07...',
-          successTitle: '\u2705 \u0E2A\u0E48\u0E07\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E41\u0E25\u0E49\u0E27',
-          successBody: '\u0E02\u0E2D\u0E1A\u0E04\u0E38\u0E13\u0E17\u0E35\u0E48\u0E0A\u0E48\u0E27\u0E22\u0E1E\u0E31\u0E12\u0E19\u0E32 Fantrove \u0E43\u0E2B\u0E49\u0E14\u0E35\u0E02\u0E36\u0E49\u0E19',
-          errorTitle: '\u26A0\uFE0F \u0E2A\u0E48\u0E07\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08',
-          errorBody: '\u0E01\u0E23\u0E38\u0E13\u0E32\u0E25\u0E2D\u0E07\u0E2D\u0E35\u0E01\u0E04\u0E23\u0E31\u0E49\u0E07\u0E20\u0E32\u0E22\u0E2B\u0E25\u0E31\u0E07'
-        }
-      };
-      return map[currentLang] || map.en;
-    }
-
-    /* ══════════════════════════════════════════════
-       FORM SUBMISSION
-       ══════════════════════════════════════════════ */
-
-    function getFormData() {
-      var pageSelect = document.getElementById('report-page').value;
-      var pageCustom = document.getElementById('report-page-custom').value.trim();
-      var page = (pageSelect === '__other__') ? pageCustom : pageSelect;
-
-      var categoryVal = document.getElementById('report-category').value;
-      var categoryOption = CATEGORIES.find(function(c) { return c.value === categoryVal; });
-      var categoryLabel = categoryOption ? (categoryOption.label[currentLang] || categoryOption.label.en) : categoryVal;
-
-      return {
-        category: categoryLabel,
-        categoryKey: categoryVal,
-        page: page,
-        language: getLangLabel(),
-        version: currentVersion,
-        device: detectDevice(),
-        browser: document.getElementById('report-browser').value,
-        message: document.getElementById('report-details').value.trim(),
-        expected: document.getElementById('report-expected').value.trim(),
-        email: document.getElementById('report-email').value.trim()
-      };
-    }
-
-    function setSubmitLoading(loading) {
-      var btn = document.getElementById('report-submit');
-      var t = getTranslations();
-      btn.disabled = loading;
-      btn.textContent = loading ? t.submitting : t.submitBtn;
-    }
-
-    function showPopup(title, body) {
-      if (window.PopupSystem && window.PopupSystem.open) {
-        PopupSystem.open({
-          title: title,
-          body: '<p style="text-align:center;margin:0;">' + body + '</p>',
-          size: 'sm',
-          showHeader: true,
-          hideOnBack: true
-        });
-      } else {
-        alert(title + '\n' + body);
-      }
-    }
-
-    async function handleSubmit(e) {
-      e.preventDefault();
-      if (!validateForm()) return;
-
-      var t = getTranslations();
-      setSubmitLoading(true);
-
-      var data = getFormData();
-
-      try {
-        var resp = await fetch(API_ENDPOINT, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-
-        if (!resp.ok) {
-          var errData = {};
-          try { errData = await resp.json(); } catch (_) {}
-          throw new Error(errData.error || 'HTTP ' + resp.status);
+        function detectBrowser() {
+            var ua = navigator.userAgent;
+            if (/Edg\//i.test(ua)) return 'Edge';
+            if (/OPR\/|Opera/i.test(ua)) return 'Opera';
+            if (/SamsungBrowser/i.test(ua)) return 'Samsung Internet';
+            if (/Chrome/i.test(ua) && !/Edg/i.test(ua)) return 'Chrome';
+            if (/Safari/i.test(ua) && !/Chrome/i.test(ua)) return 'Safari';
+            if (/Firefox/i.test(ua)) return 'Firefox';
+            return 'Other';
         }
 
-        document.getElementById('report-form').reset();
-        updateDropdowns();
-        showPopup(t.successTitle, t.successBody);
-      } catch (err) {
-        console.error('[report] Submit failed:', err);
-        showPopup(t.errorTitle, t.errorBody);
-      } finally {
-        setSubmitLoading(false);
-      }
-    }
+        function detectDevice() {
+            var ua = navigator.userAgent;
+            if (/Android/i.test(ua) && /Mobile/i.test(ua)) return 'Android';
+            if (/iPhone/i.test(ua)) return 'iPhone';
+            if (/iPad/i.test(ua) || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1)) return 'iPad';
+            if (/Android/i.test(ua)) return 'Android';
+            if (/Windows/i.test(ua)) return 'Windows';
+            if (/Macintosh/i.test(ua)) return 'macOS';
+            if (/Linux/i.test(ua)) return 'Linux';
+            return 'Other';
+        }
 
-    /* ══════════════════════════════════════════════
-       LANGUAGE CHANGE HANDLER
-       ══════════════════════════════════════════════ */
+        function getLangLabel() {
+            return (currentLang === 'th') ? '\u0E44\u0E17\u0E22' : 'English';
+        }
 
-    function onLangChange() {
-      if (window.FvLang) {
-        currentLang = window.FvLang.lang || 'en';
-      }
-      updateDropdowns();
-    }
+        /* ══════════════════════════════════════════════
+           VERSION FETCH
+           ══════════════════════════════════════════════ */
 
-    /* ══════════════════════════════════════════════
-       INIT
-       ══════════════════════════════════════════════ */
+        function fetchVersion() {
+            var lang = window.FvLang ? window.FvLang.lang : 'en';
+            return fetch('/assets/md/' + lang + '/current.md')
+                .then(function(r) { return r.ok ? r.text() : ''; })
+                .then(function(text) {
+                    var m = text.match(/version:\s*(.+)/);
+                    if (m) currentVersion = m[1].trim();
+                })
+                .catch(function() {});
+        }
 
-    function init() {
-      if (window.FvLang) {
-        currentLang = window.FvLang.lang || 'en';
-      }
+        /* ══════════════════════════════════════════════
+           DROPDOWN POPULATION
+           ══════════════════════════════════════════════ */
 
-      updateDropdowns();
+        function populateSelect(selectEl, items, selectedValue) {
+            var current = selectEl.value;
+            selectEl.innerHTML = '<option value="" disabled selected></option>';
+            items.forEach(function(item) {
+                var opt = document.createElement('option');
+                opt.value = item.value;
+                opt.textContent = item.label[currentLang] || item.label.en || item.value;
+                selectEl.appendChild(opt);
+            });
+            if (selectedValue) selectEl.value = selectedValue;
+            else if (current) selectEl.value = current;
+        }
 
-      document.getElementById('report-page').addEventListener('change', handlePageSelect);
-      document.getElementById('report-form').addEventListener('submit', handleSubmit);
+        function updateDropdowns() {
+            var detectedBrowser = detectBrowser();
+            populateSelect(document.getElementById('report-category'), CATEGORIES);
+            populateSelect(document.getElementById('report-page'), PAGES);
+            populateSelect(document.getElementById('report-browser'), BROWSERS, detectedBrowser);
+            updatePlaceholders();
+            handlePageSelect(); // show/hide custom input
+        }
 
-      document.addEventListener('fv:langchange', onLangChange);
-      if (window.FvLang && window.FvLang.onChange) {
-        window.FvLang.onChange(onLangChange);
-      }
+        function updatePlaceholders() {
+            var ph = PLACEHOLDERS[currentLang] || PLACEHOLDERS.en;
+            document.getElementById('report-details').placeholder = ph.details;
+            document.getElementById('report-expected').placeholder = ph.expected;
+            document.getElementById('report-email').placeholder = ph.email;
+            document.getElementById('report-page-custom').placeholder = ph.pageCustom;
+        }
 
-      fetchVersion();
+        /* ══════════════════════════════════════════════
+           PAGE SELECT (Other → show text input)
+           ══════════════════════════════════════════════ */
 
-      document.body.style.opacity = '1';
-    }
+        function handlePageSelect() {
+            var sel = document.getElementById('report-page');
+            var custom = document.getElementById('report-page-custom');
+            if (sel.value === '__other__') {
+                custom.classList.add('visible');
+                custom.required = true;
+                custom.focus();
+            } else {
+                custom.classList.remove('visible');
+                custom.required = false;
+                custom.value = '';
+            }
+        }
 
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', init);
-    } else {
-      init();
-    }
-  })();
-  </script>
+        /* ══════════════════════════════════════════════
+           VALIDATION
+           ══════════════════════════════════════════════ */
 
+        function clearErrors() {
+            document.querySelectorAll('.report-field-error').forEach(function(el) {
+                el.classList.remove('report-field-error');
+            });
+            document.querySelectorAll('.report-error-text').forEach(function(el) {
+                el.classList.remove('visible');
+                el.textContent = '';
+            });
+        }
+
+        function showFieldError(fieldId, errorId, msg) {
+            var field = document.getElementById(fieldId);
+            var error = document.getElementById(errorId);
+            if (field) field.classList.add('report-field-error');
+            if (error) {
+                error.textContent = msg;
+                error.classList.add('visible');
+            }
+        }
+
+        function validateForm() {
+            clearErrors();
+            var valid = true;
+            var t = getTranslations();
+
+            var category = document.getElementById('report-category').value;
+            if (!category) {
+                showFieldError('report-category', 'error-category', t.errorCategory);
+                valid = false;
+            }
+
+            var details = document.getElementById('report-details').value.trim();
+            if (!details) {
+                showFieldError('report-details', 'error-details', t.errorDetails);
+                valid = false;
+            }
+
+            var page = document.getElementById('report-page').value;
+            var pageCustom = document.getElementById('report-page-custom').value.trim();
+            if (!page) {
+                showFieldError('report-page', 'error-page', t.errorPage);
+                valid = false;
+            } else if (page === '__other__' && !pageCustom) {
+                document.getElementById('report-page-custom').classList.add('report-field-error');
+                showFieldError('report-page-custom', 'error-page', t.errorPage);
+                valid = false;
+            }
+
+            return valid;
+        }
+
+        /* ══════════════════════════════════════════════
+           TRANSLATIONS (inline for popup messages)
+           ══════════════════════════════════════════════ */
+
+        function getTranslations() {
+            var map = {
+                en: {
+                    errorCategory: 'Please select an issue type.',
+                    errorDetails: 'Please describe the problem.',
+                    errorPage: 'Please select or specify the page.',
+                    submitBtn: 'Submit Report',
+                    submitting: 'Submitting...',
+                    successTitle: '\u2705 Report Submitted',
+                    successBody: 'Thank you for helping improve Fantrove.',
+                    errorTitle: '\u26A0\uFE0F Submission Failed',
+                    errorBody: 'Please try again later.'
+                },
+                th: {
+                    errorCategory: '\u0E01\u0E23\u0E38\u0E13\u0E32\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E1B\u0E31\u0E0D\u0E2B\u0E32',
+                    errorDetails: '\u0E01\u0E23\u0E38\u0E13\u0E32\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22\u0E1B\u0E31\u0E0D\u0E2B\u0E32',
+                    errorPage: '\u0E01\u0E23\u0E38\u0E13\u0E32\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E2B\u0E23\u0E37\u0E2D\u0E23\u0E30\u0E1A\u0E38\u0E2B\u0E19\u0E49\u0E32',
+                    submitBtn: '\u0E2A\u0E48\u0E07\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19',
+                    submitting: '\u0E01\u0E33\u0E25\u0E31\u0E07\u0E2A\u0E48\u0E07...',
+                    successTitle: '\u2705 \u0E2A\u0E48\u0E07\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E41\u0E25\u0E49\u0E27',
+                    successBody: '\u0E02\u0E2D\u0E1A\u0E04\u0E38\u0E13\u0E17\u0E35\u0E48\u0E0A\u0E48\u0E27\u0E22\u0E1E\u0E31\u0E12\u0E19\u0E32 Fantrove \u0E43\u0E2B\u0E49\u0E14\u0E35\u0E02\u0E36\u0E49\u0E19',
+                    errorTitle: '\u26A0\uFE0F \u0E2A\u0E48\u0E07\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08',
+                    errorBody: '\u0E01\u0E23\u0E38\u0E13\u0E32\u0E25\u0E2D\u0E07\u0E2D\u0E35\u0E01\u0E04\u0E23\u0E31\u0E49\u0E07\u0E20\u0E32\u0E22\u0E2B\u0E25\u0E31\u0E07'
+                }
+            };
+            return map[currentLang] || map.en;
+        }
+
+        /* ══════════════════════════════════════════════
+           FORM SUBMISSION
+           ══════════════════════════════════════════════ */
+
+        function getFormData() {
+            var pageSelect = document.getElementById('report-page').value;
+            var pageCustom = document.getElementById('report-page-custom').value.trim();
+            var page = (pageSelect === '__other__') ? pageCustom : pageSelect;
+
+            var categoryVal = document.getElementById('report-category').value;
+            var categoryOption = CATEGORIES.find(function(c) { return c.value === categoryVal; });
+            var categoryLabel = categoryOption ? (categoryOption.label[currentLang] || categoryOption.label.en) : categoryVal;
+
+            return {
+                category: categoryLabel,
+                categoryKey: categoryVal,
+                page: page,
+                language: getLangLabel(),
+                version: currentVersion,
+                device: detectDevice(),
+                browser: document.getElementById('report-browser').value,
+                message: document.getElementById('report-details').value.trim(),
+                expected: document.getElementById('report-expected').value.trim(),
+                email: document.getElementById('report-email').value.trim()
+            };
+        }
+
+        function setSubmitLoading(loading) {
+            var btn = document.getElementById('report-submit');
+            var t = getTranslations();
+            btn.disabled = loading;
+            btn.textContent = loading ? t.submitting : t.submitBtn;
+        }
+
+        function showPopup(title, body) {
+            if (window.PopupSystem && window.PopupSystem.open) {
+                PopupSystem.open({
+                    title: title,
+                    body: '<p style="text-align:center;margin:0;">' + body + '</p>',
+                    size: 'sm',
+                    showHeader: true,
+                    hideOnBack: true
+                });
+            } else {
+                alert(title + '\n' + body);
+            }
+        }
+
+        async function handleSubmit(e) {
+            e.preventDefault();
+            if (!validateForm()) return;
+
+            var t = getTranslations();
+            setSubmitLoading(true);
+
+            var data = getFormData();
+
+            try {
+                var resp = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (!resp.ok) {
+                    var errData = {};
+                    try { errData = await resp.json(); } catch (_) {}
+                    throw new Error(errData.error || 'HTTP ' + resp.status);
+                }
+
+                document.getElementById('report-form').reset();
+                updateDropdowns();
+                showPopup(t.successTitle, t.successBody);
+            } catch (err) {
+                console.error('[report] Submit failed:', err);
+                showPopup(t.errorTitle, t.errorBody);
+            } finally {
+                setSubmitLoading(false);
+            }
+        }
+
+        /* ══════════════════════════════════════════════
+           LANGUAGE CHANGE HANDLER
+           ══════════════════════════════════════════════ */
+
+        function onLangChange() {
+            if (window.FvLang) {
+                currentLang = window.FvLang.lang || 'en';
+            }
+            updateDropdowns();
+        }
+
+        /* ══════════════════════════════════════════════
+           INIT
+           ══════════════════════════════════════════════ */
+
+        function init() {
+            if (window.FvLang) {
+                currentLang = window.FvLang.lang || 'en';
+            }
+
+            updateDropdowns();
+
+            document.getElementById('report-page').addEventListener('change', handlePageSelect);
+            document.getElementById('report-form').addEventListener('submit', handleSubmit);
+
+            // Listen for language changes
+            document.addEventListener('fv:langchange', onLangChange);
+            if (window.FvLang && window.FvLang.onChange) {
+                window.FvLang.onChange(onLangChange);
+            }
+
+            // Fetch version in background
+            fetchVersion();
+
+            document.body.style.opacity = '1';
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    })();
+    </script>
+
+    <script defer src="/assets/js/lang-links.js?v=1.0.0-20250322"></script>
+    <script src="/fantrove-console-bridge.js?v=1.0.0-20250322"></script>
 </body>
 </html>
