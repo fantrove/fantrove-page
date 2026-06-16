@@ -14,7 +14,8 @@
   "support-button": "Support on Ko-fi",
   "support-button-patreon": "Support on Patreon",
   "about-button": "Fantrove Overview",
-  "contact-button": "Talk to the Creator"
+  "contact-button": "Talk to the Creator",
+  "report-button": "Report an Issue"
  },
  "pages": {
   "page-What's-New": "What's New",
@@ -38,6 +39,7 @@
  },
  "others": {
   "about-text": "Platform",
+  "community-text": "community",
   "support-text": "Fuel Fantrove",
   "footer": "© 2025 Fantrove (Beta) All rights reserved",
   "logo-header": "Fantrove Verse"

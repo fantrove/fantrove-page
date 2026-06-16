@@ -28,7 +28,7 @@
     CURRENT_MD_PERLANG: '/assets/md/{lang}/current.md',
     CURRENT_MD_LEGACY:  '/assets/md/current.md',
     LEGACY_JSON_URL:    '/assets/json/whats-new.json',
-    WHATS_NEW_PAGE:     '/info/whats_new/',
+    WHATS_NEW_PAGE:     '/platform/whats_new/',
     KEY_SHOWN_BUILD:    'fv_shown_build',
     KEY_DISMISSED:      'fv_dismissed_v',
     KEY_DISABLE:        'fv_noupdate',

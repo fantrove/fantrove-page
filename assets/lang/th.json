@@ -14,7 +14,8 @@
   "support-button": "สนับสนุนผ่าน Ko-fi",
   "support-button-patreon": "สนับสนุนผ่าน Patreon",
   "about-button": "เกี่ยวกับ Fantrove",
-  "contact-button": "ติดต่อผู้พัฒนา"
+  "contact-button": "ติดต่อผู้พัฒนา",
+  "report-button": "รายงานปัญหา"
  },
  "pages": {
   "page-What's-New": "มีอะไรใหม่",
@@ -38,6 +39,7 @@
  },
  "others": {
   "about-text": "แพลตฟอร์ม",
+  "community-text": "ชุมชน",
   "support-text": "สนับสนุน Fantrove",
   "footer": "© 2025 Fantrove (เบต้า) สงวนลิขสิทธิ์",
   "logo-header": "Fantrove Verse"
