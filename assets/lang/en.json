@@ -89,5 +89,16 @@
  "contact-gmail-text": "Send your message via Gmail:",
  "contact-gmail-btn": "Send via Gmail",
  "contact-report-title": "Report an Issue",
- "contact-report-desc": "You can use this page to report any issues, bugs, or abuse found on FanTrove.\n\nCurrently, you can only use the form below to submit your report."
+ "contact-report-desc": "You can use this page to report any issues, bugs, or abuse found on FanTrove.\n\nCurrently, you can only use the form below to submit your report.",
+ "report-new-title": "Report an Issue",
+ "report-new-desc": "Found a bug or something not working correctly?\nHelp us improve Fantrove by sending a report.",
+ "report-select-placeholder": "— Select —",
+ "report-category-label": "Issue Type",
+ "report-details-label": "Problem Details",
+ "report-expected-label": "Expected Behavior",
+ "report-optional": "(optional)",
+ "report-page-label": "Page where issue occurred",
+ "report-browser-label": "Browser",
+ "report-email-label": "Contact Email",
+ "report-submit-btn": "Submit Report"
 }

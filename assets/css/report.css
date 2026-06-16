@@ -1,0 +1,129 @@
+/* ═══════════════════════════════════════════════════
+   Report Form Styles
+   assets/css/report.css
+   ═══════════════════════════════════════════════════ */
+
+/* ── Textarea ── */
+.report-textarea {
+  width: 100%;
+  padding: calc(var(--fv-space-2) + 8px) var(--fv-space-4);
+  font-size: 0.9em;
+  font-family: var(--fv-font-stack);
+  border: 1px solid var(--fv-border-subtle);
+  border-radius: var(--fv-radius-xl);
+  background-color: var(--fv-surface-page);
+  color: var(--fv-text-primary);
+  transition: border-color var(--fv-transition-fast),
+    box-shadow var(--fv-transition-fast);
+  outline: none;
+  resize: vertical;
+  min-height: 80px;
+  line-height: var(--fv-leading-normal);
+  -webkit-appearance: none;
+}
+
+.report-textarea:focus {
+  border-color: var(--fv-brand-teal);
+  box-shadow: var(--fv-shadow-focus);
+}
+
+.report-textarea::placeholder {
+  color: var(--fv-text-faint);
+}
+
+/* ── Text Input ── */
+.report-textinput {
+  width: 100%;
+  padding: calc(var(--fv-space-2) + 8px) var(--fv-space-4);
+  font-size: 0.9em;
+  font-family: var(--fv-font-stack);
+  border: 1px solid var(--fv-border-subtle);
+  border-radius: var(--fv-radius-xl);
+  background-color: var(--fv-surface-page);
+  color: var(--fv-text-primary);
+  transition: border-color var(--fv-transition-fast),
+    box-shadow var(--fv-transition-fast);
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.report-textinput:focus {
+  border-color: var(--fv-brand-teal);
+  box-shadow: var(--fv-shadow-focus);
+}
+
+.report-textinput::placeholder {
+  color: var(--fv-text-faint);
+}
+
+/* ── Optional label badge ── */
+.report-optional {
+  font-weight: var(--fv-font-normal);
+  color: var(--fv-text-faint);
+  font-size: 0.85em;
+  margin-left: var(--fv-space-1);
+}
+
+/* ── Submit Button ── */
+.report-submit {
+  width: 100%;
+  padding: calc(var(--fv-space-3) + 4px) var(--fv-space-6);
+  font-size: 1em;
+  font-family: var(--fv-font-stack);
+  font-weight: var(--fv-font-bold);
+  color: var(--fv-text-inverse);
+  background: var(--fv-gradient-btn);
+  border: none;
+  border-radius: var(--fv-radius-xl);
+  cursor: pointer;
+  transition: opacity var(--fv-transition-fast),
+    transform var(--fv-transition-fast),
+    box-shadow var(--fv-transition-normal);
+  margin-top: var(--fv-space-6);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.report-submit:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+  box-shadow: var(--fv-shadow-teal);
+}
+
+.report-submit:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.report-submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* ── Field validation error ── */
+.report-field-error {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12) !important;
+}
+
+.report-error-text {
+  color: #ef4444;
+  font-size: 0.8em;
+  margin-top: var(--fv-space-1);
+  padding-left: var(--fv-space-4);
+  display: none;
+}
+
+.report-error-text.visible {
+  display: block;
+}
+
+/* ── Custom page input (shown when "Other" selected) ── */
+.report-page-custom {
+  margin-top: var(--fv-space-2);
+  display: none;
+}
+
+.report-page-custom.visible {
+  display: block;
+}
