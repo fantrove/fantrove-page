@@ -586,51 +586,7 @@ const handle = URE.mount({
   diffing: true,                  // เปิด data diffing (default: true)
   keyField: 'id',                 // field สำหรับ identity (default: 'id')
   lang: 'th',                     // ภาษา (default: 'en' หรือ localStorage)
-  poolCap: 60,                    // จำนวน node ใน pool (default: 60)
-  cacheKey: 'mylist',             // key สำหรับ height/scroll cache
-  onVisible: (item, el) => {},    // callback เมื่อ item เข้า viewport
-  onHidden: (item) => {},         // callback เมื่อ item ออกจาก viewport
-  onItemClick: (e, item) => {},   // delegated click handler
-});
-```
 
-### 6.2 การอัปเดตข้อมูล
+---
 
-```javascript
-handle.setData(newItems);          // แทนที่ทั้งหมด (พร้อม diff)
-handle.append(moreItems);          // เพิ่มท้าย
-handle.prepend(firstItems);        // เพิ่มหัว
-handle.filter([{ field: 'name', op: 'includes', value: 'heart' }]);
-handle.sort('name', 'asc');
-handle.resetFilter();
-```
-
-### 6.3 การ Destroy
-
-```javascript
-handle.destroy();    // ทำลาย instance เดียว
-URE.destroyAll();    // ทำลายทุก instance (ใช้ใน SPA route change)
-```                // จำนวน node ใน pool (default: 60)
-  cacheKey: 'mylist',             // key สำหรับ height/scroll cache
-  onVisible: (item, el) => {},    // callback เมื่อ item เข้า viewport
-  onHidden: (item) => {},         // callback เมื่อ item ออกจาก viewport
-  onItemClick: (e, item) => {},   // delegated click handler
-});
-```
-
-### 6.2 การอัปเดตข้อมูล
-
-```javascript
-handle.setData(newItems);          // แทนที่ทั้งหมด (พร้อม diff)
-handle.append(moreItems);          // เพิ่มท้าย
-handle.prepend(firstItems);        // เพิ่มหัว
-handle.filter([{ field: 'name', op: 'includes', value: 'heart' }]);
-handle.sort('name', 'asc');
-handle.resetFilter();
-```
-
-### 6.3 การ Destroy
-
-```javascript
-handle.destroy();    // ทำลาย instance เดียว
-URE.destroyAll();    // ทำล�
+> **เอกสารฉบับนี้สร้างขึ้นเพื่อให้ AI หรือนักพัฒนาสามารถเข้าใจระบบ URE ทั้งหมดได้จากเอกสารฉบับเดียว — โดยไม่ต้องอ่าน source code โดยตรง**

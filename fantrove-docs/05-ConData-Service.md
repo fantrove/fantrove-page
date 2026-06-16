@@ -1419,14 +1419,3 @@ export { ConDataRegistry };
 ---
 
 > **เอกสารฉบับนี้สร้างขึ้นเพื่อให้ AI หรือนักพัฒนาสามารถเข้าใจระบบ ConData Service ทั้งหมดได้จากเอกสารฉบับเดียว — โดยไม่ต้องอ่าน source code โดยตรง**�ั้นนำของโลก", "en": "Creator of ChatGPT and GPT-4, a leading AI research company." },
-  "image":       "/assets/images/cards/openai.png",
-  "link":        "https://openai.com"
-}
-```
-
----
-
-## ภาคผนวก: Version History
-
-| เวอร์ชัน | การเปลี่ยนแปลง |
-|-----------|---------------|

@@ -38,24 +38,22 @@ Every bit of support helps keep this project running and growing! 🚀
 
 
 ## 🔧 **Current Website Status**  
-⚠️ **The website is still under development and is not yet available for actual use.**  
-⚠️ **No testing phase has been launched** – Please wait for further updates when it becomes accessible.  
+🌐 **The website is live at [fantrove.pages.dev](https://fantrove.pages.dev)** — Version 1.6.1  
 
 
 
 
 ## 🔮 What’s Coming Next?  
-FanTrove is still evolving, and in the future, we plan to add exciting features such as:  
-🎨 **Font Generator** – Type text and instantly transform it into stylish fonts.  
-🔍 **Character & Symbol Search** – Easily find the special characters and symbols you need.  
-📌 **Personal Collection Feature** – Save your favorite symbols for quick access later.  
-
+FanTrove is still evolving! Here are some features we're working on:
+- **Personal Collection Feature** — Save your favorite symbols for quick access later.
+- **UI/UX Improvements** — Continuous refinement of navigation, popup system, and responsive design.
+- **Performance Optimizations** — Further improvements to virtual scrolling, memory management, and load times.
 
 
 
 ## 📬 Stay Connected  
 Follow us for updates and join the community:  
-🌍 **Facebook Page:** [Ledp Aero Wings on Facebook](https://www.facebook.com/share/1HJRyK9kYr/)  
+🌍 **Website:** [rowingsco-official.vercel.app](https://rowingsco-official.vercel.app/)  
 💬 **Discord Server:** [Join FanTrove](https://discord.gg/MMxQSZB3y3)  
 
 
@@ -85,4 +83,4 @@ while still protecting the rights of the original creators 🙌
 ### 🙏 Attribution Reminder
 
 If you modify, distribute, or build upon this software, please give proper credit to  
-**Lédp Aero Wings and Nontakorn Nonsurat** — it means a lot! 💖
+**Rowingsco** — it means a lot! 💖

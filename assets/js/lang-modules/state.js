@@ -45,12 +45,8 @@
     mutationThrottleTimeout: null,
     
     // ── UI ────────────────────────────────────────────────────────────────────
-    isLanguageDropdownOpen: false,
-    scrollPosition: 0,
+    // v6.0: popup ภาษาใช้ PopupSystem แล้ว — เก็บเฉพาะ button ref
     languageButton: null, // cached #language-button ref
-    languageOverlay: null, // overlay div ref
-    languageDropdown: null, // dropdown div ref
-    _dropdownWheelListener: null, // wheel handler ref สำหรับ removeEventListener
   };
   
   M.State = State;

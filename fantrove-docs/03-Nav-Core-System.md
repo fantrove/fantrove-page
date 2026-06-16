@@ -402,6 +402,25 @@ M.ErrorManager.clearErrors()
 M.ErrorManager.isDuplicateError(key, message)
 ```
 
+### showErrorFullscreen() — v1.6.0
+
+ฟังก์ชันใหม่ใน `nav-core-modules/utils.js` สำหรับแสดงข้อผิดพลาดแบบ fullscreen popup:
+
+```javascript
+showErrorFullscreen(error, opts)
+// แสดง error ผ่าน PopupSystem.fullscreen() พร้อม:
+// - ข้อความ error, ประเภท, timestamp (TH/EN)
+// - รายละเอียด error object แบบเต็ม
+// - ปุ่ม "คัดลอกรายละเอียด" (copy to clipboard)
+// - Fallback เป็น toast ถ้า PopupSystem ยังไม่พร้อม
+```
+
+ระบบ error ทั้งหมดใน Nav-Core ใช้ `showErrorFullscreen()` แล้ว:
+- `performance.js` — Error boundary (global unhandled error)
+- `router.js` — Navigation error
+- `data.js` — Data fetch failure
+- `init.js` — Initialization error
+
 ### Function Utilities
 
 ```javascript
@@ -1227,14 +1246,15 @@ else                                    → 'not-feature'
 
 ### 20.8 `version-core.js`
 
-**บทบาท**: ระบบ popup update notification แสดงเมื่อมี version ใหม่
+**บทบาท**: ระบบ popup update notification แสดงเมื่อมี version ใหม่ (ใช้ PopupSystem.open())
 
 **Logic**:
-1. Fetch `whats-new.json` (single source of truth)
+1. Fetch `/assets/md/{lang}/current.md` ตามภาษาปัจจุบัน (v5: per-language MD)
 2. ตรวจ `wn.notify === false` → ไม่แสดง popup
 3. ตรวจ dismissed state ใน localStorage
 4. Session fresh check — แสดงอีกครั้งถ้า idle ≥ 90 นาที
-5. แสดง popup modal พร้อม:
+5. รอ PopupSystem พร้อม (fp:ready event)
+6. แสดง popup ผ่าน `PopupSystem.open()` (type: dialog) พร้อม:
    - Version badge
    - Title + subtitle
    - รายการ changes (สูงสุด 4 items)

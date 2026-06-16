@@ -1,3 +1,19 @@
+/**
+ * @file home.js — Fantrove Verse Home Page
+ * @version 4.3
+ * @description Home page renderer สำหรับ Fantrove — โหลดข้อมูลจาก ConDataService,
+ * สร้าง carousel แสดง emoji/symbol/fancy พร้อมปุ่ม copy, View All, และ carousel arrows
+ *
+ * @requires ConDataService (dynamic import) — สำหรับโหลดข้อมูล content
+ * @requires FvLang (window.FvLang) — สำหรับ re-render เมื่อภาษาเปลี่ยน (optional, fallback to fv:langchange event)
+ * @requires showCopyNotification (window.showCopyNotification) — สำหรับแจ้งเตือนเมื่อคัดลอก
+ *
+ * @constant {Object} HOME_CONFIG — ค่าคงที่สำหรับ home page (max items, paths)
+ * @constant {Object} VIEW_ALL_CONFIGS — URL และ labels สำหรับปุ่ม "View All" แต่ละ type
+ *
+ * @used-by home/index.html
+ */
+
 // Path:    assets/js/home.js
 // Purpose: Home page renderer — fast-path + carousel arrows (v4.3)
 // Used by: home/index.html
@@ -16,8 +32,12 @@ const VIEW_ALL_CONFIGS = {
     labels: { th: 'ดูอีโมจิทั้งหมด', en: 'View All Emojis' },
   },
   symbol: {
-    url   : '/data/verse/discover/?type=special-characters__&page=1',
+    url   : '/data/verse/discover/?type=symbols',
     labels: { th: 'ดูสัญลักษณ์ทั้งหมด', en: 'View All Symbols' },
+  },
+  fancy: {
+    url   : '/data/verse/discover/?type=fancy',
+    labels: { th: 'ดูข้อความแฟนซีทั้งหมด', en: 'View All Fancy Text' },
   },
   _default: {
     url   : '/data/verse/discover/',

@@ -1,7 +1,25 @@
-// version-core.js — Fantrove Verse
-// v5: อ่าน /assets/md/{lang}/current.md โดยตรง (per-language)
-//     fallback: /assets/md/current.md (legacy) → whats-new.json (old)
-//     ใช้ PopupSystem.open() เป็น shell (v5.1: แก้ไขจาก container() ที่ไม่มีใน API)
+/**
+ * @file version-core.js — Fantrove Verse
+ * @version 5.1
+ * @description ระบบแจ้งเตือนอัพเดทเวอร์ชันใหม่
+ *
+ * อ่าน `/assets/md/{lang}/current.md` เพื่อตรวจสอบเวอร์ชันล่าสุด,
+ * เปรียบเทียบกับเวอร์ชันที่ผู้ใช้ dismiss แล้ว,
+ * และแสดง popup แจ้งอัพเดทผ่าน `PopupSystem.open()` หากมีเวอร์ชันใหม่
+ *
+ * **Fallback chain:** per-language MD → legacy MD → whats-new.json
+ *
+ * @requires PopupSystem (window.PopupSystem) — สำหรับแสดง popup
+ * @requires FvLang (window.FvLang) — สำหรับตรวจภาษาปัจจุบัน (optional, fallback to localStorage)
+ *
+ * @example
+ * // ระบบทำงานอัตโนมัติเมื่อโหลด — ไม่ต้องเรียก manual
+ * // แต่สามารถตรวจสอบสถานะได้:
+ * localStorage.getItem('fv_dismissed_v1.6.1') // '1' = ผู้ใช้ dismiss แล้ว
+ * localStorage.getItem('fv_noupdate')          // '1' = ปิดการแจ้งเตือน
+ *
+ * @used-by home/index.html, setting/index.html และหน้าอื่นๆ ที่มี `<script>` tag
+ */
 
 (function () {
   'use strict';

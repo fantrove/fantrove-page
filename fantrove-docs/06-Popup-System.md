@@ -1,4 +1,4 @@
-# 06 — Popup System (Fantrove Popup System v1.0)
+# 06 — Popup System (Fantrove Popup System v1.1.0)
 
 > **Placement**: `assets/js/popup.js` (entry point), `assets/js/popup-modules/` (sub-modules), `assets/css/popup.css`
 > **Namespace**: `window.PopupSystem` (public API), `window.PopupModules` (internal)
@@ -11,7 +11,7 @@ Popup System คือระบบ popup ส่วนกลางของ Fantr
 
 ### หลักการออกแบบ
 
-- **Unified API**: ทุก popup ทั้ง dialog, alert, confirm, sheet, toast, drawer, tooltip, popover ใช้ API เดียวกัน (`PopupSystem.open()`)
+- **Unified API**: ทุก popup ทั้ง dialog, alert, confirm, sheet, toast, drawer, tooltip, popover, fullscreen ใช้ API เดียวกัน (`PopupSystem.open()`)
 - **Preset System**: แต่ละประเภทมี preset ค่า default ที่ต่างกัน แต่ทุกอย่าง override ได้ per-instance
 - **Zero coupling กับระบบอื่น**: ทำงานได้เลยโดยไม่ต้องมี URE, NavCore, Search หรือ Language System
 - **ใช้ Fantrove Design Tokens**: สี เงา ขอบ รัศมี ฟอนต์ ทั้งหมดดึงจาก `tokens.css`
@@ -28,7 +28,7 @@ assets/
 │   ├── popup.js                          ← Entry point (IIFE self-loader)
 │   └── popup-modules/                    ← 12 sub-modules (load sequentially)
 │       ├── types.js                      ← JSDoc typedefs (no runtime code)
-│       ├── config.js                     ← Constants, 8 presets, z-index, timing
+│       ├── config.js                     ← Constants, 9 presets, z-index, timing
 │       ├── state.js                      ← Instance registry, stack, groups, scroll lock
 │       ├── utils.js                      ← DOM helpers, option merging
 │       ├── animator.js                   ← Enter/exit animations (double-rAF)
@@ -56,7 +56,7 @@ renderer.js → overlay.js → theme.js → a11y.js → engine.js → init.js
 | # | Module | Depends On | Responsibility |
 |---|--------|-----------|----------------|
 | 1 | `types.js` | — | JSDoc typedefs, namespace init |
-| 2 | `config.js` | — | PRESETS (8 types), Z_INDEX, TIMING, EASING, SIZES, DOM tokens |
+| 2 | `config.js` | — | PRESETS (9 types), Z_INDEX, TIMING, EASING, SIZES, DOM tokens |
 | 3 | `state.js` | CONFIG | Instance Map, stack array, group registry, scroll lock counter, queue storage, system events |
 | 4 | `utils.js` | CONFIG | `mergeOptions()`, `getPreset()`, `DOM.create/query/remove`, `prefersReducedMotion()` |
 | 5 | `animator.js` | CONFIG, Utils | `enter()` / `exit()` — double-rAF animation, respects reduced-motion |
@@ -65,7 +65,7 @@ renderer.js → overlay.js → theme.js → a11y.js → engine.js → init.js
 | 8 | `overlay.js` | CONFIG, State, Utils | `attachOverlayClick()`, `attachEscapeKey()`, `attachClickOutside()`, `detachAll()` |
 | 9 | `theme.js` | — | `apply()` — sets CSS custom properties for light/dark/brand themes |
 | 10 | `a11y.js` | CONFIG, Utils | `installFocusTrap()`, `autoFocus()`, `returnFocus()`, `manageInertSiblings()` |
-| 11 | `engine.js` | ALL above | `open()`, `close()`, `destroy()`, `alert()`, `confirm()`, `toast()`, `stats()` |
+| 11 | `engine.js` | ALL above | `open()`, `close()`, `destroy()`, `alert()`, `confirm()`, `toast()`, `fullscreen()`, `stats()` |
 | 12 | `init.js` | Engine, CONFIG | Creates frozen `window.PopupSystem` global, dispatches `fp:ready` event |
 
 ---
@@ -117,7 +117,7 @@ requestAnimationFrame(() => {
 
 ---
 
-## 5. 8 Popup Presets
+## 5. 9 Popup Presets
 
 | Preset | Size | Position | Overlay | Blocking | Focus Trap | Escape Dismiss |
 |--------|------|----------|---------|----------|------------|----------------|
@@ -129,6 +129,7 @@ requestAnimationFrame(() => {
 | `drawer` | sm | right | ✅ | ❌ | ✅ | ✅ |
 | `tooltip` | xs | top | ❌ | ❌ | ❌ | ❌ |
 | `popover` | sm | bottom | ❌ | ❌ | ❌ | ✅ |
+| `fullscreen` | full | center | ✅ | ✅ | ✅ | ✅ |
 
 ---
 
@@ -183,7 +184,33 @@ await PopupSystem.toast('คัดลอกแล้ว', { position: 'bottom', 
 await PopupSystem.toast(someHTMLElement, { theme: 'brand' });
 ```
 
-### 6.5 อื่นๆ
+### 6.5 `PopupSystem.fullscreen(opts?)` → `Promise<PopupHandle>`
+
+เปิด popup เต็มหน้าจอ — ครอบคลุมทั้ง viewport เหมือนหน้าเพจ:
+
+```javascript
+const handle = await PopupSystem.fullscreen({
+  body: '<p>Full page content here</p>',
+  title: 'Search Results',        // null = ซ่อน header
+  showHeader: true,                // แสดง/ซ่อน header bar (default: true)
+  contentLayout: 'fit',            // 'fit' = body scroll ภายใน, 'stretch' = เต็มความสูง
+  hideOnBack: true,                // ปิดเมื่อกดปุ่ม Back ของ browser (default: true)
+  theme: 'light',
+});
+
+// ปิดด้วย handle
+handle.close();
+```
+
+**คุณสมบัติเฉพาะ:**
+- ขนาด `100vw x 100vh`, position `inset: 0`
+- ไม่มี border-radius, shadow, หรือ max-width
+- ใช้แอนิเมชัน opacity เท่านั้น (เรียบ ไม่มี scale/translate)
+- รองรับ History API — กดปุ่ม Back ของ browser จะปิด popup อัตโนมัติ
+- z-index 28000 (สูงสุดในระบบ)
+- ไม่สามารถ stack ซ้อนกันได้ (`stackable: false`)
+
+### 6.6 อื่นๆ
 
 ```javascript
 PopupSystem.close(id, { action: 'manual' });   // ปิด popup ตาม ID
@@ -330,6 +357,7 @@ await PopupSystem.open({
 | Dialog | 25000 | dialog |
 | Alert/Confirm | 26000 | alert, confirm |
 | Blocking | 27000 | persistent blocking |
+| Fullscreen | 28000 | fullscreen |
 
 Stacked popups (เปิดซ้อนกัน): แต่ละตัวเพิ่ม +100 ตามตำแหน่งใน stack
 
@@ -360,6 +388,16 @@ PopupSystem.on('updated', (d) => {});   // ถูกอัปเดต
 
 Native DOM events ก็มี: `window.addEventListener('fp:opened', ...)`
 
+**Integration patterns:**
+```javascript
+// ตรวจสอบว่า PopupSystem พร้อมใช้งาน
+if (window.PopupSystem?._initialized) { ... }
+
+// รอ PopupSystem พร้อม
+window.addEventListener('fp:ready', () => { ... }, { once: true });
+```
+
+
 ---
 
 ## 12. วิธีเพิ่มในหน้าเว็บ
@@ -367,7 +405,7 @@ Native DOM events ก็มี: `window.addEventListener('fp:opened', ...)`
 เพิ่ม `<script defer>` ใน `<body>` ของทุกหน้าที่ต้องการใช้ popup:
 
 ```html
-<script defer src="/assets/js/popup.js?v=1.0.0"></script>
+<script defer src="/assets/js/popup.js?v=1.1.0"></script>
 ```
 
 ระบบจะ auto-inject `popup.css` และโหลด sub-modules ทั้ง 12 ไฟล์เอง — ไม่ต้องเพิ่ม `<link>` หรือ `<script>` อื่น
@@ -455,12 +493,69 @@ PopupSystem.toast('<strong>Item copied!</strong> 🎉', {
   theme: 'brand',
   timeout: 4000,
 });
-```y: `
-    <div style="display:flex;flex-direction:column;gap:8px;">
-      <button class="fp-btn fp-btn-secondary" style="justify-content:flex-start;">😀 Emojis</button>
-      <button class="fp-btn fp-btn-secondary" style="justify-content:flex-start;">✦ Symbols</button>
-      <button class="fp-btn fp-btn-secondary" style="justify-content:flex-start;">Aa Fancy Text</button>
-    </div>
-  `,
-  onMount: (bodyEl, handle) => {
-    bodyEl.querySelectorAll('button').forEach
+```javascript
+PopupSystem.toast('Simple toast');
+```
+
+### 13.5 Fullscreen popup
+
+```javascript
+// เปิด fullscreen popup แสดงผลลัพธ์การค้นหา
+const handle = await PopupSystem.fullscreen({
+  body: '<div id="search-results"><!-- dynamic content --></div>',
+  title: 'Search Results',
+  showHeader: true,
+  contentLayout: 'fit',
+  theme: 'light',
+});
+
+// ปิดเมื่อกด Back บน browser อัตโนมัติ (History API)
+handle.close();
+```
+
+### 13.6 ใช้ในระบบอื่นของ Fantrove
+
+PopupSystem ถูกใช้งานในหลายส่วนของระบบ:
+
+| ระบบ | วิธีใช้ | รายละเอียด |
+|------|----------|------------|
+| **version-core.js** | `PopupSystem.open({ type:'dialog', body, group:'update-notification' })` | แสดง popup แจ้งอัพเดทเวอร์ชันใหม่ |
+| **lang-modules/ui.js** | `PopupSystem.open({ type:'dialog', body, group:'language-picker' })` | หน้าต่างเลือกภาษา (แทน custom overlay เดิม) |
+| **nav-core/utils.js** | `PopupSystem.fullscreen({ body, showHeader:true })` | แสดงข้อผิดพลาดแบบเต็มหน้าจอผ่าน `showErrorFullscreen()` |
+| **copyNotification.js** | `PopupSystem.toast(content)` | แจ้งเตือนเมื่อคัดลอกสำเร็จ |
+
+---
+
+## 14. showErrorFullscreen() — Error Display Utility
+
+ฟังก์ชัน `showErrorFullscreen(error, opts)` ถูกกำหนดไว้ใน `nav-core-modules/utils.js` เป็น utility สำหรับแสดงข้อผิดพลาดแบบเต็มหน้าจอผ่าน PopupSystem ใช้โดย Nav-Core system:
+
+```javascript
+/**
+ * แสดงข้อผิดพลาดแบบ fullscreen popup
+ * @param {Error|string} error — ข้อผิดพลาดที่ต้องการแสดง
+ * @param {Object} opts — options เพิ่มเติม
+ * @param {string} opts.lang — ภาษา ('th'|'en'), default: auto-detect
+ */
+showErrorFullscreen(error, { lang: 'th' });
+```
+
+**คุณสมบัติ:**
+- แสดงเป็น fullscreen popup ผ่าน `PopupSystem.fullscreen()`
+- รองรับ TH/EN labels อัตโนมัติ
+- มีปุ่มคัดลอก error message
+- ใช้ inline CSS injection (ไม่ต้องเพิ่ม CSS file)
+- ซ่อน header ของ popup (showHeader: false)
+
+---
+
+## 15. Version History
+
+| เวอร์ชัน | การเปลี่ยนแปลง |
+|-----------|---------------|
+| **v1.0.0** | ระบบฐาน — 8 presets (dialog, alert, confirm, sheet, toast, drawer, tooltip, popover) |
+| **v1.1.0** | เพิ่ม **fullscreen** preset, เพิ่ม `PopupSystem.fullscreen()` API, History API back button support, z-index 28000 |
+
+---
+
+> **เอกสารฉบับนี้สร้างขึ้นเพื่อให้ AI หรือนักพัฒนาสามารถเข้าใจระบบ Popup System ทั้งหมดได้จากเอกสารฉบับเดียว — โดยไม่ต้องอ่าน source code โดยตรง**

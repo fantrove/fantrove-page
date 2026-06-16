@@ -12,22 +12,23 @@
 - i18n รองรับ 2 โหมด (runtime translation และ pre-built static pages)
 - Deploy บน Cloudflare Pages ด้วย custom redirects และ headers
 
-**เวอร์ชันปัจจุบัน**: 1.0.7.1, Stage 1 (Website Launch)
+**เวอร์ชันปัจจุบัน**: 1.6.1
 
 ---
 
 ## 2. สถาปัตยกรรมรวม
 
-### 2.1 ระบบหลัก 6 ระบบ
+### 2.1 ระบบหลัก 7 ระบบ
 
 | # | ระบบ | บทบาท | ไฟล์หลัก |
 |---|------|-------|-----------|
 | 1 | **URE (Universal Render Engine)** v1.7.0 | Virtual scroll rendering engine สำหรับแสดงข้อมูลจำนวนมาก | `assets/js/ure/ure.js` + 12 modules |
 | 2 | **Search System** | ระบบค้นหา client-side แบบ two-tier (substring + Fuse.js fuzzy) | `search-engine.js` + `search-ui.js` + 13 modules |
 | 3 | **Nav-Core** | Navigation & Content Management สำหรับหน้า Discover | `nav-core.js` + `nav-core-early.js` + 14 modules |
-| 4 | **Language/i18n System** v4.2 | ระบบแปลภาษา client-side พร้อม build-time static generation | `language.js` + 14 lang-modules |
+| 4 | **Language/i18n System** v5.0 | ระบบแปลภาษา client-side พร้อม build-time static generation | `lang-core.js` + `language.js` + lang-modules |
 | 5 | **Con-Data Service** v2.2.0 | Data access layer สำหรับ content (emoji, symbol, fancy, cards) | `con-data-service.js` + `con-data-registry.js` |
-| 6 | **Build System** | สร้าง static HTML แยกภาษา, sitemap, redirects | `scripts/build.js` + 4 lib files |
+| 6 | **Popup System** v1.1.0 | ระบบ popup ส่วนกลาง — 9 presets, fullscreen, zero coupling | `assets/js/popup.js` + popup-modules (12 modules) |
+| 7 | **Build System** | สร้าง static HTML แยกภาษา, sitemap, redirects | `scripts/build.js` + 4 lib files |
 
 ### 2.2 แผนภาพการเชื่อมต่อระบบ
 
@@ -152,7 +153,7 @@ fantrove-page/
 │   │   ├── back-to-top.js              # Scroll-to-top button
 │   │   ├── back-button.js              # Back navigation
 │   │   ├── lang-proxy.js               # Language URL proxy
-│   │   └── popup.js                    # Empty file
+│   │   └── popup.js                    # PopupSystem v1.1.0 entry point
 │   │
 │   ├── css/                            # 17 CSS files
 │   │   ├── tokens.css                  # Design tokens (load first!)
@@ -345,6 +346,9 @@ https://fantrove.pages.dev/{lang}/{page-path}
 | `urlChanged` | RouterService | `{ url, mainRoute, subRoute }` | ภายนอก |
 | `ure:ready` | ure.js | `{ version: '1.7.0' }` | Nav-Core, Search |
 | `languageReady` | Language Manager | `{ lang, translations }` | ทุกระบบ |
+| `fp:ready` | popup/init.js | — | version-core, lang-ui |
+| `fp:opened` | popup/engine.js | `{ id, options }` | ภายนอก |
+| `fp:closed` | popup/engine.js | `{ id, result }` | ภายนอก |
 
 ### 6.2 Global Variables สำคัญ
 
@@ -366,6 +370,8 @@ https://fantrove.pages.dev/{lang}/{page-path}
 | `window.unifiedCopyToClipboard` | nav-core/init.js | ContentService |
 | `window.showCopyNotification` | copyNotification.js | Search, Nav-Core |
 | `window.showInstantLoadingOverlay` | loading.js | ภายนอก |
+| `window.PopupSystem` | popup.js (init.js) | version-core, lang-ui, nav-core |
+| `window.PopupModules` | ทุก popup module | Popup internal |
 
 ### 6.3 BroadcastChannel
 
@@ -421,6 +427,76 @@ https://fantrove.pages.dev/{lang}/{page-path}
 | `02-ระบบ-Search.md` | ระบบค้นหาทั้ง 14 module อย่างละเอียด |
 | `03-ระบบ-Nav-Core.md` | ระบบ Nav-Core + JS ไฟล์อิสระทั้งหมด |
 | `04-ระบบภาษา-i18n.md` | ระบบภาษา + Build System |
-| `05-ระบบ-ConData-Service.md` | Content Data Service v2.2.0 | only |
-| Ko-fi | nontakorn_nonsurat | Settings page |
-| Patreon | rowings_official | Se
+| `05-ConData-Service.md` | Content Data Service v2.2.0 |
+| `06-Popup-System.md` | Fantrove Popup System v1.1.0 |
+
+---
+
+## 10. Popup System — ระบบ Popup ส่วนกลาง
+
+> **เวอร์ชัน:** v1.1.0 | **Namespace:** `window.PopupSystem` | **ไฟล์:** `assets/js/popup.js` + `popup-modules/` (12 modules)
+
+Popup System เป็นระบบ popup ส่วนกลางของ Fantrove ที่ทุก popup ทั่วทั้งเว็บใช้ร่วมกัน ออกแบบมาเหมือน URE — ใช้ IIFE module pattern, zero coupling กับระบบอื่น, และ auto-inject CSS
+
+### 10.1 Public API
+
+```javascript
+// เปิด popup (API หลัก)
+const handle = await PopupSystem.open({
+  type: 'dialog',          // preset type
+  title: 'Title',
+  body: '<p>Content</p>', // ใช้ body ไม่ใช้ content
+  size: 'md',
+  theme: 'light',
+  group: 'my-group',
+  onMount: (bodyEl, handle) => { /* bind events */ },
+  onClose: (id, result) => { /* handle result */ },
+});
+
+// Shortcut methods
+await PopupSystem.alert('Message');
+const ok = await PopupSystem.confirm('Are you sure?');
+await PopupSystem.toast('Saved!');
+const handle = await PopupSystem.fullscreen({ body: '...' });
+
+// Management
+PopupSystem.close(id);
+PopupSystem.closeAll();
+PopupSystem.closeByGroup('my-group');
+PopupSystem.destroy(id);
+PopupSystem.stats();
+PopupSystem.on('opened', (detail) => {});
+```
+
+### 10.2 Presets (9 ประเภท)
+
+dialog, alert, confirm, sheet, toast, drawer, tooltip, popover, **fullscreen**
+
+### 10.3 ระบบที่ใช้ PopupSystem
+
+| ระบบ | วิธีใช้ |
+|------|----------|
+| version-core.js | `PopupSystem.open()` แสดง popup แจ้งอัพเดทเวอร์ชัน |
+| lang-modules/ui.js | `PopupSystem.open()` หน้าต่างเลือกภาษา |
+| nav-core/utils.js | `PopupSystem.fullscreen()` แสดงข้อผิดพลาดผ่าน `showErrorFullscreen()` |
+
+### 10.4 Global Variables
+
+| Variable | ตั้งโดย | ใช้โดย |
+|----------|---------|--------|
+| `window.PopupSystem` | init.js | version-core, lang-ui, nav-core |
+| `window.PopupModules` | ทุก popup module | Popup internal |
+
+### 10.5 Custom Events
+
+| Event | ผู้ส่ง | Detail |
+|-------|-------|--------|
+| `fp:ready` | init.js | — |
+| `fp:opened` | engine.js | `{ id, options }` |
+| `fp:closed` | engine.js | `{ id, result }` |
+
+ดูรายละเอียดเต็มใน [`06-Popup-System.md`](06-Popup-System.md)
+
+---
+
+> **เอกสารฉบับนี้สร้างขึ้นเพื่อให้ AI หรือนักพัฒนาสามารถเข้าใจสถาปัตยกรรมระบบ Fantrove ทั้งหมดได้จากเอกสารฉบับเดียว — โดยไม่ต้องอ่าน source code โดยตรง**

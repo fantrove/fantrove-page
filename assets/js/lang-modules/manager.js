@@ -173,13 +173,13 @@
       }
       
       if (State.selectedLang === language) {
-        await UIService.closeLanguageDropdown();
+        await UIService.closeLanguagePopup();
         return;
       }
       
       // ── Static mode → redirect ────────────────────────────────────────
       if (window.FvLang && window.FvLang.isStaticMode) {
-        await UIService.closeLanguageDropdown();
+        await UIService.closeLanguagePopup();
         
         // v5.0: แจ้ง FvLang ก่อน redirect
         // (เผื่อบางระบบต้องการทำอะไรก่อน page unload)
@@ -200,7 +200,7 @@
       
       URLService.updateURLForLanguage(language);
       await this.updatePageLanguage(language, false);
-      await UIService.closeLanguageDropdown();
+      await UIService.closeLanguagePopup();
     },
     
     // ── Page language update (full mode only) ─────────────────────────────────
@@ -294,8 +294,7 @@
     destroy() {
       const { State } = M;
       
-      if (State.languageOverlay?.parentElement) State.languageOverlay.remove();
-      if (State.languageDropdown?.parentElement) State.languageDropdown.remove();
+      // PopupSystem จัดการ cleanup DOM เอง — ไม่ต้องลบ overlay/dropdown แล้ว
       
       if (State.mutationObserver) {
         State.mutationObserver.disconnect();

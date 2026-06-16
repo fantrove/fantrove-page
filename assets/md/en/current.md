@@ -1,34 +1,23 @@
 ---
-version: 1.6.0
+version: 1.6.1
 date: 2026-06-16T00:00:00Z
-title: Fullscreen Popup & Error Notification Overhaul
-subtitle: A major upgrade to the popup system introducing fullscreen popups, and a complete overhaul of how errors are displayed across the entire application. All error notifications now use a fullscreen popup with detailed error information and a one-click copy button, replacing the old toast-based approach. Also fixes the version update notification popup that was broken due to an API mismatch.
+title: Home Navigation Fixes & Language Popup Migration
+subtitle: Fixes broken navigation links on the home page where the Fancy Text and Symbols buttons were pointing to a non-existent legacy identifier, causing users to land on the wrong page. Migrates the language selection popup to use the PopupSystem, bringing proper accessibility, keyboard navigation, dark mode support, and consistent behavior with the rest of the application.
 notify: true
 ---
 
-### New
-
-- **Fullscreen Popup Type (PopupSystem.fullscreen)**
-  A brand new popup type that covers the entire viewport (100vw x 100vh) with a clean, immersive layout. Ideal for rich content panels, error details, search interfaces, or any content that needs the full screen. Supports header toggle (showHeader), two content layout modes ('fit' for internal scrolling, 'stretch' for full-height fill), and browser back button support via the History API (hideOnBack). Uses opacity-only animation for a smooth, app-like transition experience. Operates at z-index 28000, the highest layer in the popup system.
-
-- **showErrorFullscreen() — Centralized Error Display**
-  A new utility function in the nav-core system that replaces all scattered error notifications with a single, consistent fullscreen error popup. Every error is now displayed in a structured layout showing the error message, error type classification, timestamp (in both Thai and English), the full error object details, and a prominent "Copy error details" button. The function supports Thai and English labels automatically based on the current language, includes inline CSS injection for self-contained styling, and falls back to a toast notification if the PopupSystem is not yet initialized.
-
 ### Improved
 
-- **Error Boundary Now Uses Fullscreen Popups (performance.js)**
-  The global error boundary that catches unhandled JavaScript errors has been upgraded to use `showErrorFullscreen()` instead of the old `showNotification()` toast. Errors are now presented with full detail and context, making debugging significantly easier. A 2-second throttle has been added to prevent error popup spam when multiple errors occur in rapid succession.
-
-- **Navigation Error Display (router.js)**
-  Navigation failures and routing errors that previously showed as small, easily-missed toasts are now displayed as fullscreen error popups. Users get a clear view of what went wrong during page navigation, with the ability to copy the full error details for reporting.
-
-- **Data Fetching Error Display (data.js)**
-  When content fetching fails after all retry attempts are exhausted, the error is now presented as a fullscreen popup instead of a dismissible toast. This ensures users are properly informed about data loading failures and can take action (such as copying the error for support).
-
-- **Initialization Error Handling (init.js)**
-  Three error catch blocks in the nav-core initialization module have been updated to use `showErrorFullscreen()`. This means that any errors during the bootstrap phase of the navigation system are now surfaced prominently rather than being silently shown as fleeting toasts.
+- **Language Selection Popup Now Uses PopupSystem (ui.js)**
+  The language picker on the Settings page has been completely rewritten to use `PopupSystem.open()` instead of a hand-rolled modal. The old implementation created its own overlay, scroll lock, and DOM elements imperatively with inline styles that ignored dark mode and had no keyboard support. The new implementation leverages PopupSystem's built-in features: proper z-index layering (25000+), focus trap, escape key dismissal, overlay click-to-close, return-focus to the trigger button, scroll lock management, enter/exit animations, ARIA roles, dark mode theme support, and automatic DOM cleanup on close. The `showError()` method also now uses `PopupSystem.toast()` as its primary display, with a lightweight inline fallback if PopupSystem is not yet initialized. The state module has been cleaned up to remove legacy overlay/dropdown references.
 
 ### Fixed
 
-- **Version Update Notification Popup Not Showing**
-  The update notification popup (shown when a new version is deployed) has been broken for an extended period. The root cause was that `version-core.js` was calling `PopupSystem.container()`, a method that does not exist in the PopupSystem API. The correct method `PopupSystem.open()` was always available but was never wired up. This has been fixed, and the update notification popup now correctly displays when a new version is detected, using the standard dialog popup type with the custom update notification content and styling.
+- **Fancy Text Button on Home Page Navigates to Wrong Page**
+  The hero "Fancy Text" button on the home page was using `type=special-characters__` as its URL parameter, which is a legacy identifier that no longer exists in the routing system. When clicked, the router could not find a matching button entry and silently fell back to showing the "All" feed instead of Fancy Text content. The URL has been corrected to `type=fancy`, which properly resolves to the Fancy Text content with all 10 Unicode style categories.
+
+- **Symbols "View All" Link on Home Page Points to Wrong URL**
+  The "View All Symbols" carousel card generated by JavaScript was also using the legacy `type=special-characters__` URL, causing the same fallback-to-all-feed behavior. This has been corrected to `type=symbols`, which now properly navigates to the Symbols content page.
+
+- **Missing Fancy Text "View All" Configuration**
+  The `VIEW_ALL_CONFIGS` object in `home.js` had no entry for the `fancy` type ID. When the home page rendered the Fancy Text section's "View All" card, it fell through to the default configuration which pointed to `/data/verse/discover/` with no query parameters, resulting in the "All" feed being shown. A new `fancy` entry has been added with the correct URL `?type=fancy` and proper Thai/English labels.

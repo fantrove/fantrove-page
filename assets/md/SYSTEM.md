@@ -36,7 +36,7 @@ assets/json/
 assets/js/
   lang-core.js              ← v5.0: Central Language API (FvLang)
   new.js                    ← หน้า What's New — อ่าน MD ตามภาษา + history JSON
-  version-core.js           ← Popup แจ้งเตือน — อ่าน MD ตามภาษา
+  version-core.js           ← Popup แจ้งเตือน — อ่าน MD ตามภาษา, ใช้ PopupSystem.open()
 ```
 
 ---

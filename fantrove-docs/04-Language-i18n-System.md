@@ -2,7 +2,7 @@
 
 > เอกสารนี้อธิบายระบบ internationalization (i18n) และระบบ Build ของโปรเจกต์ **Fantrove** (Fantrove Verse) อย่างละเอียดครบถ้วน ครอบคลุม FvLang Central API (v5.0), Runtime Mode (แปลภาษาด้วย JS บนเบราว์เซอร์) และ Pre-built Static Mode (แปลภาษาด้วย Build Script ก่อน deploy) รวมถึง Build System ที่สร้าง static HTML สำหรับทุกภาษา
 >
-> **อัพเดทล่าสุด:** v1.5.0 — เพิ่ม `lang-core.js` (FvLang API), เปลี่ยน `language.js` → v5.0, เพิ่ม event `fv:langchange`
+> **อัพเดทล่าสุด:** v1.6.1 — ย้าย popup เลือกภาษามาใช้ PopupSystem (ui.js v6.0), ลบ hand-rolled dropdown
 
 ---
 
@@ -790,12 +790,8 @@ const State = {
   mutationThrottleTimeout: null,
 
   // UI state — [UIService]
-  isLanguageDropdownOpen: false,
-  scrollPosition: 0,
+  // v6.0: popup ภาษาใช้ PopupSystem แล้ว — เก็บเฉพาะ button ref
   languageButton: null,
-  languageOverlay: null,
-  languageDropdown: null,
-  _dropdownWheelListener: null,
 };
 ```
 
@@ -1295,20 +1291,19 @@ _setupVisibilityChange() {
 │   └── .lang-btn-txt[data-lang="en"] (hidden/shown)
 │   └── .lang-btn-txt[data-lang="th"] (hidden/shown)
 │
-#language-overlay (backdrop, z-index:9998)
-#language-dropdown (modal center, z-index:9999)
-├── .language-option[data-language="en"] "🇬🇧 English"
-└── .language-option[data-language="th"] "🇹🇭 ไทย"
+v6.0: popup ภาษาใช้ PopupSystem.open() แล้ว — ไม่สร้าง DOM เอง
+Popup ถูกสร้างแบบ dynamic เมื่อเปิด ผ่าน PopupSystem dialog:
+  - .fv-lang-option[data-language="en|th"] — option items ภายใน popup body
 ```
 
 #### วิธีทำงาน
 
-- `prepareAllButtonTexts()` — สร้าง text spans สำหรับแต่ละภาษา (ซ่อนทั้งหมด แสดงเฉพาะ active)
-- `showButtonTextForLang(lang)` — แสดง text ของภาษาที่ active ซ่อนอันอื่น
-- `initializeCustomLanguageSelector()` — สร้าง overlay + dropdown (idempotent)
-- `populateLanguageDropdown()` — สร้าง option items จาก `languagesConfig`
-- `openLanguageDropdown()` / `closeLanguageDropdown()` — จัดการ scroll lock
-- `showError(message)` — แสดง toast error ชั่วคราว
+- `prepareAllButtonTexts()` — สร้าง text spans สำหรับแต่ละภาษา
+- `showButtonTextForLang(lang)` — แสดง text ของภาษาที่ active
+- `openLanguagePopup()` — เปิด popup เลือกภาษา via PopupSystem.open()
+- `closeLanguagePopup()` — ปิด popup ภาษา (PopupSystem จัดการ cleanup)
+- `_attachButtonHandler()` — ผูก click handler ให้ #language-button
+- `showError(message)` — แสดง toast ผ่าน PopupSystem.toast() (fallback: inline div)
 
 ### 6.13 LanguageManager — Orchestrator หลัก (v5.0)
 
@@ -1352,7 +1347,7 @@ async _initializeFullMode() {
   // 4. Handle initial language detection
   await this._handleInitialLanguage();
 
-  // 5. Setup UI dropdown
+  // 5. Setup language popup trigger
   UIService.updateLanguageSelectorUI();
 
   // 6. Observe DOM mutations
@@ -1411,7 +1406,7 @@ async selectLanguage(language) {
   State._userExplicitLang = language;
   URLService.updateURLForLanguage(language);
   await this.updatePageLanguage(language, false);
-  UIService.closeLanguageDropdown();
+  UIService.closeLanguagePopup();
 }
 ```
 
