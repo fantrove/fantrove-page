@@ -1,29 +1,17 @@
 ---
-version: 1.6.2
+version: 1.6.2_1
 date: 2026-06-16T00:00:00Z
-title: Navigation & Settings Page Improvements
-subtitle: Improved internal URL structure across the platform, reorganized the Settings page layout, and fixed various navigation details for a more consistent experience throughout Fantrove.
+title: Bluesky Icon Fix & Build System Improvement
+subtitle: Fixed the Bluesky icon in the footer which was using the wrong SVG, and improved the build system to skip hidden directories.
 notify: true
 ---
 
-### Improved
-
-- **Settings Page Layout Improvements**
-  Reorganized and repositioned items within the Settings page to better align with the platform's navigation patterns and improve usability.
-
-- **Platform & Community Page Structure**
-  Updated page grouping and internal navigation paths to more clearly reflect Fantrove's structure and support future system expansion.
-
-- **URL Consistency Improvements**
-  Updated links and navigation paths across multiple sections to use a single standardized URL format throughout the platform.
-
 ### Fixed
 
-- **Incorrect Internal Navigation Links**
-  Fixed links and paths in several areas that still referenced old URLs or were inconsistent with the current structure.
+- **Bluesky Icon in Footer Used Wrong SVG**
+  The Bluesky icon in the footer was using Facebook's SVG path, and the aria-label was also set to "Facebook" despite the link pointing to bsky.app. Fixed by replacing it with the correct Bluesky SVG (Simple Icons v2.45) and correcting the aria-label to "Bluesky".
 
-- **Navigation Inconsistencies in Settings Page**
-  Improved navigation behavior within the Settings page for smoother transitions between sections.
+### Improved
 
-- **Internal Routing System Cleanup**
-  Cleaned up and improved internal navigation paths at multiple points to increase overall system stability and correctness.
+- **Build System Skips Hidden Directories**
+  The `copyDir()` function in `scripts/lib/file-utils.js` now skips all directories starting with `.` (e.g. `.well-known`, `.github`) to prevent the build process from touching these configuration files.

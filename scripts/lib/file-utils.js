@@ -48,6 +48,9 @@ function findHtmlFiles(dir, exclude = [], files = []) {
 
 /**
  * Recursively copy a directory tree.
+ * Skips hidden directories that start with '.' (e.g. .well-known, .github)
+ * so the build system never touches them.
+ *
  * @param {string} src
  * @param {string} dest
  */
@@ -56,6 +59,9 @@ function copyDir(src, dest) {
   fs.mkdirSync(dest, { recursive: true });
   
   for (const entry of fs.readdirSync(src)) {
+    // Skip hidden directories (e.g. .well-known, .github)
+    if (entry.startsWith('.')) continue;
+    
     const srcPath = path.join(src, entry);
     const destPath = path.join(dest, entry);
     const stat = fs.statSync(srcPath);
