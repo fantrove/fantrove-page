@@ -1,55 +1,78 @@
 /* ═══════════════════════════════════════════════════
-   Report Form Styles
+   Report Form Styles (overrides on top of setting.css)
    assets/css/report.css
    ═══════════════════════════════════════════════════ */
 
-/* ── Textarea ── */
+/* ── Description below section label ── */
+.report-desc {
+  font-size: 0.88em;
+  color: var(--fv-text-muted);
+  margin: -6px 0 0 10px;
+  padding: 0 var(--fv-space-4);
+  line-height: var(--fv-leading-normal);
+}
+
+/* ── Textarea — match setting-item select styling ── */
 .report-textarea {
   width: 100%;
   padding: calc(var(--fv-space-2) + 8px) var(--fv-space-4);
   font-size: 0.9em;
   font-family: var(--fv-font-stack);
-  border: 1px solid var(--fv-border-subtle);
+  border: 1px solid rgba(255,255,255,0);
   border-radius: var(--fv-radius-xl);
   background-color: var(--fv-surface-page);
   color: var(--fv-text-primary);
-  transition: border-color var(--fv-transition-fast),
-    box-shadow var(--fv-transition-fast);
+  transition: all var(--fv-transition-fast);
   outline: none;
   resize: vertical;
   min-height: 80px;
   line-height: var(--fv-leading-normal);
   -webkit-appearance: none;
+  box-sizing: border-box;
+  display: block;
+}
+
+.report-textarea:hover {
+  background-color: #FBFBFB;
+  box-shadow: 0 0 0 0.5px #D8DBE2;
 }
 
 .report-textarea:focus {
   border-color: var(--fv-brand-teal);
   box-shadow: var(--fv-shadow-focus);
+  background-color: var(--fv-surface-page);
 }
 
 .report-textarea::placeholder {
   color: var(--fv-text-faint);
 }
 
-/* ── Text Input ── */
+/* ── Text Input — match setting-item select styling ── */
 .report-textinput {
   width: 100%;
   padding: calc(var(--fv-space-2) + 8px) var(--fv-space-4);
   font-size: 0.9em;
   font-family: var(--fv-font-stack);
-  border: 1px solid var(--fv-border-subtle);
+  border: 1px solid rgba(255,255,255,0);
   border-radius: var(--fv-radius-xl);
   background-color: var(--fv-surface-page);
   color: var(--fv-text-primary);
-  transition: border-color var(--fv-transition-fast),
-    box-shadow var(--fv-transition-fast);
+  transition: all var(--fv-transition-fast);
   outline: none;
   -webkit-appearance: none;
+  box-sizing: border-box;
+  display: block;
+}
+
+.report-textinput:hover {
+  background-color: #FBFBFB;
+  box-shadow: 0 0 0 0.5px #D8DBE2;
 }
 
 .report-textinput:focus {
   border-color: var(--fv-brand-teal);
   box-shadow: var(--fv-shadow-focus);
+  background-color: var(--fv-surface-page);
 }
 
 .report-textinput::placeholder {
@@ -64,33 +87,32 @@
   margin-left: var(--fv-space-1);
 }
 
-/* ── Submit Button ── */
+/* ── Submit Button — match buttons style from setting.css ── */
 .report-submit {
   width: 100%;
-  padding: calc(var(--fv-space-3) + 4px) var(--fv-space-6);
-  font-size: 1em;
+  padding: calc(var(--fv-space-2) + 8px) var(--fv-space-4);
+  font-size: 0.9em;
   font-family: var(--fv-font-stack);
-  font-weight: var(--fv-font-bold);
-  color: var(--fv-text-inverse);
-  background: var(--fv-gradient-btn);
-  border: none;
+  font-weight: var(--fv-font-semibold);
+  color: var(--fv-text-primary);
+  background-color: var(--fv-surface-page);
+  border: 1px solid rgba(255,255,255,0);
   border-radius: var(--fv-radius-xl);
   cursor: pointer;
-  transition: opacity var(--fv-transition-fast),
-    transform var(--fv-transition-fast),
-    box-shadow var(--fv-transition-normal);
-  margin-top: var(--fv-space-6);
+  transition: all var(--fv-transition-fast);
   -webkit-tap-highlight-color: transparent;
+  text-align: center;
+  user-select: none;
+  min-width: 0;
 }
 
 .report-submit:hover {
-  opacity: 0.92;
-  transform: translateY(-1px);
-  box-shadow: var(--fv-shadow-teal);
+  background-color: #FBFBFB;
+  box-shadow: 0 0 0 0.5px #D8DBE2;
 }
 
 .report-submit:active {
-  transform: translateY(0) scale(0.98);
+  transform: scale(0.98);
 }
 
 .report-submit:disabled {
@@ -126,4 +148,12 @@
 
 .report-page-custom.visible {
   display: block;
+}
+
+/* ── Responsive ── */
+@media (max-width:420px) {
+  .report-textarea, .report-textinput, .report-submit {
+    padding-right: 1.25rem;
+    font-size: 0.91em;
+  }
 }
