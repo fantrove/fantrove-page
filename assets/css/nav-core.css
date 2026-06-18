@@ -44,18 +44,41 @@ nav ul li button {
   color:var(--fv-text-secondary); cursor:pointer; white-space:nowrap;
   user-select:none; -webkit-tap-highlight-color:transparent; 
   touch-action: manipulation; 
+  transition: background 200ms ease-in-out, border-color 200ms ease-in-out, color 200ms ease-in-out;
 }
 nav ul li button:active { background: #f0f0f0; }
+
 nav ul li button.active {
   color:var(--fv-brand-teal-light);
   background:var(--fv-surface-teal-hover);
   border-color:rgba(0,206,176,0.51);
+  
+  /* ขาเข้าปุ่ม: ย่อขนาดลงจังหวะกดนิดนึงให้ดูมีน้ำหนัก (เพิ่มมิติ) */
+  transform: scale(0.98);
+  transition: transform 150ms ease-out, background 150ms ease-out, border-color 150ms ease-out;
 }
-nav ul li button.active::after {
+
+/* --- ส่วนของเส้นใต้ (Indicator) --- */
+nav ul li button::after {
   content:''; position:absolute; left:50%; bottom:0;
   width:40%; height:3px; background:currentColor;
-  border-radius:10px 10px 0 0; transform:translateX(-50%);
+  border-radius:10px 10px 0 0; 
+  
+  /* เริ่มต้นให้หดเหลือ 0 จากตรงกลาง */
+  transform: translateX(-50%) scaleX(0);
+  will-change: transform;
+  
+  transition: transform 200ms ease-in;
 }
+
+nav ul li button.active::after {
+  /* ขยายขนาดกลับมาปกติ */
+  transform: translateX(-50%) scaleX(1);
+  
+  /* ขาเข้า: ใส่ลูกเล่นเด้งดึ๋งด้วย cubic-bezier (Back Out) */
+  transition: transform 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
 
 .navbar-toggle {
   display:flex; flex-direction:column; gap:4px; cursor:pointer;

@@ -7,6 +7,7 @@ main { margin-top:30px; margin-bottom:80px; contain: layout style; }
   font-size:0.9em; cursor:pointer;
   -webkit-tap-highlight-color:transparent; user-select:none;
   touch-action:manipulation;
+  transition: background 200ms ease, border-color 200ms ease, color 200ms ease;
 }
 .button-sub:active, .button-sub.active { color:var(--fv-brand-teal-light); }
 .button-sub.active {
@@ -33,8 +34,9 @@ main { margin-top:30px; margin-bottom:80px; contain: layout style; }
   border:1px solid var(--c-teal-border);
   cursor:pointer; text-align:center;
   -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+  transition: opacity 200ms ease;
 }
-:where(.button-content:active) { opacity:0.85; }
+:where(.button-content:active) { opacity:0.55; }
 
 :where(.card) {
   display:flex; flex-direction:column; align-items:stretch;
@@ -47,8 +49,9 @@ main { margin-top:30px; margin-bottom:80px; contain: layout style; }
   /* [แก้ไขจุดนี้] คลายล็อกชิ้นส่วนการ์ดเล็กน้อย เปลี่ยนจาก strict เป็น layout style */
   /* ช่วยให้ JavaScript สามารถอ่านพิกเซล ข้อมูลความสูง และสั่งงานการคลิก/ซ่อนการ์ดได้ตามปกติ */
   contain: layout style; 
+  transition: opacity 200ms ease;
 }
-:where(.card:active) { opacity:0.85; }
+:where(.card:active) { opacity:0.55; }
 
 .card-image  { 
   width:100%; height:110px; 
@@ -131,5 +134,5 @@ main { margin-top:30px; margin-bottom:80px; contain: layout style; }
 
 @media (prefers-reduced-motion:reduce) {
   .cm-in, .cm-in.cm-done { animation:none; }
-  :where(.button-content), :where(.card), .button-sub { transition:none; }
+  :where(.button-content), :where(.card)
 }
