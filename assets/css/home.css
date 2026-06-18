@@ -367,7 +367,7 @@ section.o:has(.faq-toggle:checked) { padding-bottom:2.1rem!important; }
   padding: 0.6em 1.15em; border-radius: var(--fv-radius-pill);
   background: var(--fv-surface-page); color:#4C4C4C; border:0 solid transparent;
   cursor:pointer; position:relative; overflow:hidden; user-select:none;
-  -webkit-tap-highlight-color:transparent; transition:none;
+  -webkit-tap-highlight-color:transparent; transition: transform 200ms ease;
 }
 .text-h .button-h:active { transform:scale(0.97); }
 .text-h .button-h .btn-content { position:relative; z-index:2; display:inline-flex; align-items:center; justify-content:center; pointer-events:none; letter-spacing:0.05em; }
