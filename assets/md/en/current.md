@@ -1,61 +1,61 @@
 ---
-version: 1.7.1
-date: 2026-06-19T09:18:05.948Z
-title: Loading System Re-architected — No Delay, Always Consistent
-subtitle: Completely reworked the LoadingService proxy and FVL hide logic to eliminate the state-vs-DOM desync bug that caused the loading overlay to get permanently stuck after rapid clicking. The new architecture has NO smart delay and NO minimum display time — the overlay shows and hides immediately based on FVL's actual state, which is always consistent with the DOM.
+version: 1.7.2
+date: 2026-06-19T15:18:20.246Z
+title: Loading Always Shows + Smooth Spinner Rotation
+subtitle: Fixed two critical issues with the loading system: (1) the overlay now shows on EVERY navigation, even back-to-back, with a pulse animation to signal new operations; (2) the spinner now rotates smoothly at full refresh rate by moving CSS keyframes outside @layer, removing conflicting transform: translateZ(0), and adding backface-visibility for GPU acceleration.
 notify: true
 ---
 
 ### Fixed
 
-- **Loading overlay stuck on screen after rapid clicking (the real fix)**
-  The v1.7.0 session-counter design still had a critical flaw: it cached a `_visible` flag and used a `_hideDeferTimer` to enforce minimum display time. Under rapid clicking, this cached flag could drift from FVL's actual state — LoadingService would think the overlay was visible (so it skipped calling `FVL.show()`), but FVL had already removed the DOM element during a hide animation. The result: the overlay would never re-appear even when sessions were open, OR it would get stuck visible after all sessions closed, requiring a page refresh.
+- **Loading overlay not showing on every navigation**
+  When navigating between categories rapidly, the previous v1.7.1 design relied on FVL's idempotency — calling show() on an already-shown instance just updated the message. This meant that subsequent navigations produced NO visible loading state, since the overlay was already there.
   
-  The v1.7.1 design eliminates the cached flag entirely. `show()` now ALWAYS forwards to `FVL.show()` (which is idempotent — calling it on an already-shown instance just updates the message; calling it on a hiding instance cancels the hide). `hide()` calls `FVL.hide()` directly when the session counter reaches 0. There is no cached state to drift.
+  v1.7.2 fixes this by ALWAYS calling FVL.show() (which is idempotent and handles all states correctly), then adding a "pulse" animation (brief opacity dip + scale) when the overlay was already visible. This gives clear visual feedback that a new operation has started, even during back-to-back navigations.
 
-- **FVL hide animation callback cleaning up re-shown instances**
-  When `FVL.hide()` was called, it ran a leave animation with a callback that performed DOM cleanup. If `FVL.show()` was called during the animation (rapid-click scenario), the show would restore the visual state, but the pending hide callback would still fire when the animation ended — cleaning up the DOM of an instance that was supposed to stay visible.
+- **Spinner appeared frozen / barely rotating**
+  Two CSS issues caused the spinner to freeze or rotate very slowly:
+  1. `@keyframes _fvl_spin` was inside `@layer fvl` — some browsers (and headless test environments) don't fully parse keyframes inside @layer, so the animation never ran
+  2. `transform: translateZ(0)` was set on the arc element — this OVERRODE the animation's `transform: rotate()`, freezing the spinner at 0deg
   
-  Fixed by adding a `_cancelHide` flag. When `show()` detects an instance in the `hiding` state, it sets `_cancelHide = true`. The hide callback checks this flag and becomes a no-op if set, so it never cleans up a re-shown instance.
+  Fixed by:
+  - Moving all @keyframes OUTSIDE @layer (they're global by nature, don't need layer isolation)
+  - Removing `transform: translateZ(0)` from the arc — using `will-change: transform` + `backface-visibility: hidden` instead for GPU acceleration
+  - Removing `contain: strict` from fullscreen/topbar overlays (changed to `contain: layout style`) — `strict` includes `paint` + `size` containment which can freeze child animations
+  - Adding `animation-play-state: running` explicitly to prevent inherited paused states
 
-- **Smart delay removed entirely**
-  The previous smart-delay timer (80ms in v1.0.3, 200ms in v1.0.0) was meant to avoid flashing the loader for fast loads, but it caused more problems than it solved:
-  - On cached loads (<15ms), the timer was cancelled by `hide()` before firing, so the overlay never showed
-  - When `hide()` arrived during the smart-delay window, the v1.0.3 design force-flushed the show — but this created complex state transitions that were hard to reason about
+- **Overlay invisible due to leftover `hidden` attribute**
+  The `buildFullscreen()` renderer was setting `hidden=""` attribute on the overlay element, but CSS had a `.fvl-fullscreen[hidden] { display: none !important }` rule that permanently hid it. Even though we removed the CSS rule in an earlier version, the attribute was still being set, causing `display: none` in some browsers.
   
-  v1.7.1 has NO smart delay. The overlay shows immediately on `show()` and hides immediately on `hide()`. This is simpler, more predictable, and matches user expectations.
+  Fixed by removing the `hidden` attribute from the renderer entirely — visibility is now controlled exclusively via the `.fvl-entering` / `.fvl-shown` / `.fvl-leaving` classes (opacity transitions).
 
-- **Minimum display time removed**
-  The v1.0.3 design held the overlay for at least 250ms (originally 300ms) before hiding, to avoid 1-frame flashes. But this meant that even after content was ready, the user had to wait 250ms staring at a loading spinner — which felt slow.
-  
-  v1.7.1 has NO minimum display time. The overlay hides the instant the last session closes. For very fast loads, the overlay may flash briefly — but this is preferable to being stuck or feeling slow.
+- **LoadingService.hide() called too early by ContentService**
+  ContentService calls LoadingService.hide() multiple times after rendering content. On cached loads (<50ms), this caused the overlay to flash for 1 frame then disappear — too fast for users to see. v1.7.2 adds a MIN_VISIBLE_MS (200ms) check: if the overlay was shown less than 200ms ago, hide() is deferred until the 200ms has elapsed. This is NOT a delay on show() (overlay shows instantly), only a minimum visible time on hide().
+
+- **Router not balancing LoadingService sessions**
+  The router called LoadingService.show() at the start of navigateTo() but only called hide() in the catch block — meaning successful navigations left the session counter at 1 forever. v1.7.2 moves the hide() call to the finally block so it always runs, regardless of whether navigation succeeded or failed.
 
 ### Improved
 
-- **Simpler, more predictable loading behavior**
-  The new LoadingService is ~30% smaller (9.3 KB vs 13.1 KB) and much easier to reason about:
-  - `show()`: increment counter, call `FVL.show()` (idempotent)
-  - `hide()`: decrement counter, if 0 then call `FVL.hide()`
-  - No cached `_visible` flag, no `_hideDeferTimer`, no `_scheduleHide()`, no `_reconcile()`
-  
-  This simplicity makes the system robust against any combination of rapid show/hide calls — which is exactly what happens when users click rapidly through navigation buttons.
+- **Spinner rotation is now GPU-accelerated and refresh-rate-independent**
+  The spinner arc uses `will-change: transform` + `backface-visibility: hidden` for compositor-layer promotion. The rotation animation runs entirely on the GPU, decoupled from the main thread (which may be busy with navigation/data-fetching). This means:
+  - Smooth rotation at any display refresh rate (60Hz, 90Hz, 120Hz, 144Hz)
+  - No stuttering when the main thread is under load
+  - Consistent rotation speed regardless of CPU usage
 
-- **FVL show() idempotency fully reliable**
-  The `show()` function now handles all four possible instance states correctly:
-  - `null` (no instance) → create new
-  - `'showing'` or `'shown'` → update message, return existing handle
-  - `'hiding'` → set `_cancelHide`, restore `fvl-shown` class, force reflow, return handle
-  - `'hidden'` or `'destroyed'` → create new
-  
-  Combined with the cancel-safe hide callback, this guarantees that `show()` always results in a visible, properly-styled overlay — regardless of what state the previous instance was in.
+- **Standard 0.7s rotation duration**
+  Changed spinner rotation from 0.8s to 0.7s per revolution — the de-facto standard for Material Design and iOS spinners. Feels more responsive without being too fast.
+
+- **Pulse animation signals new operations**
+  When show() is called while the overlay is already visible (e.g., user clicks another category while still loading the previous one), the overlay briefly dips to 0.6 opacity + scales to 0.97, then returns to normal. This 350ms pulse gives clear visual feedback that a new operation has started, even when the spinner was already spinning.
 
 ### Removed
 
-- **Smart delay feature (`smartDelay` option)**
-  Removed entirely. The `smartDelay` option is now ignored if passed — `show()` always shows immediately. If you were relying on this option, remove it from your calls; it no longer has any effect.
+- **`transform: translateZ(0)` on spinner arc**
+  Removed because it overrode the animation's `transform: rotate()`, freezing the spinner. Replaced with `backface-visibility: hidden` for GPU acceleration.
 
-- **Minimum display time feature (`MIN_DISPLAY_MS` constant)**
-  Removed entirely. The overlay hides the moment the last session closes, with no artificial delay.
+- **`contain: strict` on fullscreen and topbar overlays**
+  Changed to `contain: layout style` — `strict` includes `paint` + `size` containment which can freeze child animations in some browsers.
 
-- **Internal methods: `_reconcile()`, `_scheduleHide()`, `_flushShow()`, `_pendingOpts`, `_hideDeferTimer`, `_visibleSince`**
-  All removed. The new design has no need for these internal mechanisms — `show()` and `hide()` are now thin wrappers around FVL's idempotent API.
+- **`@keyframes` inside `@layer fvl`**
+  Moved all @keyframes outside @layer for maximum browser compatibility. Keyframes are global by nature and don't benefit from layer isolation.

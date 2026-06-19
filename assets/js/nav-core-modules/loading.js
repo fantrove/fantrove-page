@@ -3,23 +3,20 @@
  * @file loading.js
  * LoadingService — thin proxy that delegates to FVL (FantroveVerse Loader).
  *
- * v1.7.1 — "No-delay, always-consistent" architecture
+ * v1.7.2 — "Always-show, force-restart" architecture
  *
- * Key principles (v1.7.1):
- *   1. NO SMART DELAY — overlay shows immediately on show()
- *   2. NO MIN DISPLAY TIME — overlay hides immediately on hide() when no sessions remain
- *   3. State is ALWAYS reconciled against FVL's actual state, not our cached _visible
- *   4. Every show() is forwarded to FVL.show() — FVL's idempotent handling takes care of duplicates
- *   5. Every hide() is forwarded to FVL.hide() when sessionCount=0
- *
- * The previous v1.0.3 design used a cached `_visible` flag and `_hideDeferTimer` to
- * enforce minimum display time. This caused state-vs-DOM desync under rapid clicking:
- *   - LoadingService thinks `_visible=true`, but FVL already removed the DOM
- *   - `_reconcile` skips calling FVL.show() because it trusts the cached flag
- *   - Result: overlay never re-appears, even when sessions are open
- *
- * The v1.7.1 design eliminates the cached flag entirely. Every call checks FVL's
- * actual state via `FVL.isActive(id)` and forwards show/hide accordingly.
+ * Key principles:
+ *   1. NO DELAY — overlay shows immediately on show() call
+ *   2. ALWAYS SHOWS on every show() call, even if overlay is already visible
+ *      (this is critical: when navigating between categories rapidly, each
+ *       navigation must trigger a visible loading state, not be silently
+ *       absorbed by idempotency)
+ *   3. FORCE RESTART — when show() is called while overlay is already visible,
+ *      the spinner animation is restarted to give clear visual feedback that
+ *      a new operation has started
+ *   4. Session counter — overlay only hides when ALL sessions are closed
+ *   5. Direct forward — every show/hide is forwarded to FVL immediately,
+ *      no cached state that can drift from FVL's actual state
  *
  * @module loading
  * @depends {config.js, state.js, fvl.js (loaded separately)}
@@ -34,6 +31,17 @@
   // BEHIND the bottom nav so the nav remains visible and clickable while
   // loading is in progress. 15999 = (16000 - 1).
   var NAV_BEHIND_Z = 15999;
+
+  // ── Minimum visible time ──────────────────────────────────────────────────
+  // WHY 200ms: Once the overlay becomes visible, it must stay visible for at
+  // least 200ms before hiding — even if all sessions close immediately. This
+  // prevents the overlay from flashing for 1 frame on cached loads (which
+  // can complete in <50ms), giving the user clear visual feedback that a
+  // navigation happened.
+  //
+  // This is NOT a delay on show() — the overlay shows instantly. It's only
+  // a delay on hide() when the overlay was shown very recently.
+  var MIN_VISIBLE_MS = 200;
 
   // ── FVL availability check ────────────────────────────────────────────────
   function _fvl() {
@@ -61,22 +69,24 @@
     } catch (_) { return false; }
   }
 
-  // ── LoadingService (proxy to FVL fullscreen mode) ─────────────────────────
+  // ── LoadingService ────────────────────────────────────────────────────────
   //
-  // v1.7.1 Architecture: "Direct forward, no cache"
-  // ────────────────────────────────────────────────
-  // The previous design used cached state (_visible, _hideDeferTimer) and
-  // a session counter. Under rapid clicking, the cached state could drift
-  // from FVL's actual state, causing the overlay to get stuck.
+  // v1.7.2 Architecture: "Always-show, force-restart"
+  // ───────────────────────────────────────────────
+  // The previous v1.7.1 design relied on FVL's idempotency: calling show()
+  // on an already-shown instance just updated the message. But this meant
+  // that rapid navigation between categories would NOT produce a visible
+  // "loading" state on subsequent navigations — the overlay was already
+  // there, so nothing changed visually.
   //
-  // The new design is dead simple:
-  //   - show(): if FVL doesn't have an active instance → call FVL.show()
-  //             (FVL's show() is idempotent — handles re-show from 'hiding' state)
-  //   - hide(): if no sessions remain → call FVL.hide() directly
-  //   - No cached _visible flag, no defer timer, no minimum display time.
+  // v1.7.2 fixes this by FORCING a visual restart on every show() call:
+  //   - If FVL has no active instance → call FVL.show() (creates one)
+  //   - If FVL has an active instance → "pulse" it (brief opacity dip +
+  //     restart spinner animation) so the user sees that a new operation
+  //     has started
   //
-  // This is "no-delay" as requested — overlay shows and hides immediately
-  // based on actual FVL state, which is always consistent with the DOM.
+  // This ensures that EVERY navigation produces clear visual feedback,
+  // even when navigations happen back-to-back.
 
   var LoadingService = {
 
@@ -92,6 +102,15 @@
     /** Last options passed to show() — used to update message if overlay already visible */
     _lastOpts: null,
 
+    /** Whether a pulse animation is in progress (prevents overlapping pulses) */
+    _pulseInProgress: false,
+
+    /** Timestamp when overlay last became visible (used for MIN_VISIBLE_MS) */
+    _visibleSince: 0,
+
+    /** Pending hide timer (set when hide() arrives too soon after show) */
+    _pendingHideTimer: null,
+
     /**
      * Initialize. Idempotent.
      */
@@ -106,14 +125,16 @@
     /**
      * Show the loading overlay (open a navigation session).
      *
-     * Behavior:
+     * v1.7.2 behavior:
      *   1. Increment session counter
-     *   2. If FVL doesn't currently have an active overlay → call FVL.show()
-     *      (FVL handles idempotency — calling show() while 'shown' just updates message,
-     *       calling show() while 'hiding' cancels the hide and re-shows)
-     *   3. If FVL already has an active overlay → just update message if changed
+     *   2. ALWAYS call FVL.show() — FVL.show() is idempotent:
+     *      - If no instance exists → creates one and shows it
+     *      - If instance is 'shown' → updates message, returns existing handle
+     *      - If instance is 'hiding' → cancels hide, restores shown state
+     *      - If instance is 'hidden' → creates new instance
+     *   3. If overlay was already visible, also pulse to signal new operation
      *
-     * NO DELAY. The overlay shows immediately on first show() call.
+     * NO DELAY. The overlay shows immediately on every show() call.
      *
      * @param {LoadingOptions} [opts]
      */
@@ -135,27 +156,74 @@
       if (o.zIndex == null) o.zIndex = NAV_BEHIND_Z;
       this._lastOpts = o;
 
-      // Forward to FVL — FVL.show() is idempotent and handles all state transitions:
-      //   - If no instance exists → creates one and shows it
-      //   - If instance is 'shown' or 'showing' → updates message, returns existing handle
-      //   - If instance is 'hiding' → cancels hide, restores 'shown' state, returns handle
-      //   - If instance is 'hidden' → creates new instance and shows it
+      // Check if overlay was already active (for pulse decision)
+      var wasActive = fvl.isActive(DEFAULT_ID);
+
+      // ALWAYS call FVL.show() — it's idempotent and handles all states
       var handle = fvl.show(o);
       if (handle) {
         this._el = handle.element;
+        this._visibleSince = Date.now();
       }
+
+      // If overlay was already visible, pulse to signal new operation
+      if (wasActive) {
+        this._pulse();
+      }
+
       return handle;
+    },
+
+    /**
+     * Pulse the overlay: briefly dip opacity + restart spinner animation.
+     * This gives clear visual feedback that a new operation has started,
+     * even when the overlay was already visible.
+     *
+     * The pulse is implemented via CSS class toggle (.fvl-pulse), which
+     * the CSS animates over 350ms. The spinner animation is restarted by
+     * briefly removing and re-adding the animation property.
+     */
+    _pulse: function () {
+      if (this._pulseInProgress) return; // don't stack pulses
+      if (!this._el) return;
+
+      var el = this._el;
+      this._pulseInProgress = true;
+
+      // Add pulse class (CSS handles the opacity dip)
+      el.classList.add('fvl-pulse');
+
+      // Restart spinner animation by removing/re-adding the arc element's
+      // animation. This forces the rotation to start from 0deg again.
+      var arc = el.querySelector('.fvl-arc');
+      if (arc) {
+        var computedAnim = window.getComputedStyle(arc).animationName;
+        // Toggle animation to force restart
+        arc.style.animation = 'none';
+        // Force reflow
+        void arc.offsetWidth;
+        // Restore animation
+        arc.style.animation = '';
+      }
+
+      // Remove pulse class after animation completes
+      var self = this;
+      setTimeout(function() {
+        el.classList.remove('fvl-pulse');
+        self._pulseInProgress = false;
+      }, 350);
     },
 
     /**
      * Hide the loading overlay (close one navigation session).
      *
-     * Behavior:
-     *   1. Decrement session counter (never below 0)
-     *   2. If counter > 0 → do nothing (other sessions still active)
-     *   3. If counter = 0 → call FVL.hide() immediately
+     * Decrements session counter. Only hides the overlay when ALL sessions
+     * are closed (counter reaches 0).
      *
-     * NO MIN DISPLAY TIME. The overlay hides immediately when the last session closes.
+     * MIN_VISIBLE_MS: if the overlay was shown less than 200ms ago, defer
+     * the hide until the 200ms has elapsed. This prevents 1-frame flashes
+     * on cached loads. The hide is NOT delayed if there are still open
+     * sessions (only the final hide is delayed).
      */
     hide: function () {
       // Decrement session counter (never below 0)
@@ -166,7 +234,23 @@
         return Promise.resolve();
       }
 
-      // All sessions closed — hide immediately
+      // All sessions closed — check minimum visible time
+      var elapsed = Date.now() - this._visibleSince;
+      if (this._visibleSince > 0 && elapsed < MIN_VISIBLE_MS) {
+        // Defer hide until MIN_VISIBLE_MS has elapsed
+        var self = this;
+        if (this._pendingHideTimer) clearTimeout(this._pendingHideTimer);
+        return new Promise(function(resolve) {
+          self._pendingHideTimer = setTimeout(function() {
+            self._pendingHideTimer = null;
+            var fvl = _fvl();
+            if (fvl) fvl.hide(DEFAULT_ID);
+            resolve();
+          }, MIN_VISIBLE_MS - elapsed);
+        });
+      }
+
+      // Minimum time satisfied — hide immediately
       var fvl = _fvl();
       if (!fvl) return Promise.resolve();
       return fvl.hide(DEFAULT_ID);
@@ -181,10 +265,6 @@
 
     /**
      * Check if loading is active.
-     * Returns true if there are open sessions OR FVL has an active overlay.
-     * This dual check ensures we never report "not shown" while the overlay
-     * is actually visible (or vice versa).
-     *
      * @returns {boolean}
      */
     isShown: function () {
@@ -227,9 +307,14 @@
     hideFromContent: function ()   { return this.hide(); },
 
     // ── Emergency reset (used by safety timeout in router) ────────────────
-    // Forces session count to 0 and hides overlay immediately.
     _forceReset: function () {
       this._sessionCount = 0;
+      this._pulseInProgress = false;
+      this._visibleSince = 0;
+      if (this._pendingHideTimer) {
+        clearTimeout(this._pendingHideTimer);
+        this._pendingHideTimer = null;
+      }
       var fvl = _fvl();
       if (fvl) fvl.hide(DEFAULT_ID);
     },

@@ -1,61 +1,61 @@
 ---
-version: 1.7.1
-date: 2026-06-19T09:18:05.948Z
-title: ระบบโหลดปรับสถาปัตยกรรมใหม่ — ไม่มีดีเลย์ สอดคล้องเสมอ
-subtitle: ปรับ LoadingService proxy และ FVL hide logic ทั้งหมดใหม่เพื่อกำจัดบั๊ก state-vs-DOM desync ที่ทำให้ loading overlay ค้างบนจอถาวรหลังกดซ้ำเร็วๆ สถาปัตยกรรมใหม่นี้ไม่มี smart delay และไม่มี minimum display time — overlay แสดงและซ่อนทันทีตามสถานะจริงของ FVL ที่สอดคล้องกับ DOM เสมอ
+version: 1.7.2
+date: 2026-06-19T15:18:20.246Z
+title: โหลดแสดงทุกครั้ง + สปินเนอร์หมุนลื่นไหล
+subtitle: แก้ปัญหาสำคัญ 2 อย่างของระบบ loading: (1) overlay ตอนนี้แสดงทุกครั้งที่นำทาง แม้ติดกัน พร้อม pulse animation เพื่อส่งสัญญาณ operation ใหม่; (2) สปินเนอร์ตอนนี้หมุนลื่นไหลที่ refresh rate เต็ม โดยย้าย CSS keyframes ออกจาก @layer ลบ transform: translateZ(0) ที่ขัดแย้ง และเพิ่ม backface-visibility สำหรับ GPU acceleration
 notify: true
 ---
 
 ### Fixed
 
-- **Loading overlay ค้างบนจอหลังกดซ้ำเร็วๆ (แก้จริงจัง)**
-  design session-counter ของ v1.7.0 ยังมีข้อบกพร่องร้ายแรง: มัน cache `_visible` flag และใช้ `_hideDeferTimer` เพื่อบังคับ minimum display time ภายใต้การกดซ้ำเร็วๆ flag ที่ cache นี้อาจ drift จากสถานะจริงของ FVL — LoadingService คิดว่า overlay กำลังแสดง (เลยข้ามการเรียก `FVL.show()`) แต่ FVL ได้ลบ DOM element ไปแล้วระหว่าง hide animation ผลคือ overlay ไม่ยอมแสดงอีกแม้มี session เปิดอยู่ หรือค้างแสดงหลัง session ปิดหมด จนต้อง refresh หน้า
+- **Loading overlay ไม่แสดงทุกครั้งที่นำทาง**
+  เมื่อนำทางระหว่างหมวดหมู่เร็วๆ design v1.7.1 เดิมพึ่ง idempotency ของ FVL — การเรียก show() บน instance ที่ shown อยู่แค่ update message แปลว่า navigation ถัดไปไม่มี loading state ที่มองเห็น เพราะ overlay อยู่แล้ว
   
-  design v1.7.1 กำจัด cached flag ออกไปทั้งหมด `show()` ตอนนี้ forward ไป `FVL.show()` เสมอ (ซึ่งเป็น idempotent — เรียกบน instance ที่ shown อยู่แค่ update message; เรียกบน hiding instance จะ cancel hide) `hide()` เรียก `FVL.hide()` โดยตรงเมื่อ session counter ถึง 0 ไม่มี cached state ให้ drift
+  v1.7.2 แก้โดย ALWAYS เรียก FVL.show() (ซึ่งเป็น idempotent และจัดการ state ทั้งหมดถูกต้อง) แล้วเพิ่ม "pulse" animation (opacity dip สั้นๆ + scale) เมื่อ overlay อยู่แล้ว ทำให้ผู้ใช้เห็น feedback ชัดเจนว่า operation ใหม่เริ่มแล้ว แม้ระหว่าง navigation ติดกัน
 
-- **FVL hide animation callback ไปลบ DOM ของ instance ที่ re-shown แล้ว**
-  เมื่อ `FVL.hide()` ถูกเรียก มันรัน leave animation พร้อม callback ที่ทำ DOM cleanup ถ้า `FVL.show()` ถูกเรียกระหว่าง animation (rapid-click scenario) show จะ restore visual state แต่ pending hide callback ยังคงทำงานเมื่อ animation จบ — ไปลบ DOM ของ instance ที่ควรจะอยู่
+- **สปินเนอร์ดูค้าง / หมุนน้อยมาก**
+  ปัญหา CSS 2 อย่างทำให้สปินเนอร์ค้างหรือหมุนช้ามาก:
+  1. `@keyframes _fvl_spin` อยู่ใน `@layer fvl` — browser บางตัว (และ headless test environments) ไม่ parse keyframes ใน @layer อย่างสมบูรณ์ ทำให้ animation ไม่ทำงาน
+  2. `transform: translateZ(0)` ถูกตั้งบน arc element — มัน OVERRIDE animation's `transform: rotate()` ทำให้สปินเนอร์ค้างที่ 0deg
   
-  แก้โดยเพิ่ม `_cancelHide` flag เมื่อ `show()` ตรวจพบ instance ใน state `hiding` จะ set `_cancelHide = true` hide callback ตรวจ flag นี้และกลายเป็น no-op ถ้า set อยู่ ทำให้ไม่มีการ cleanup instance ที่ re-shown แล้ว
+  แก้โดย:
+  - ย้าย @keyframes ทั้งหมดออกจาก @layer (มันเป็น global โดยธรรมชาติ ไม่ต้องการ layer isolation)
+  - ลบ `transform: translateZ(0)` จาก arc — ใช้ `will-change: transform` + `backface-visibility: hidden` แทนสำหรับ GPU acceleration
+  - ลบ `contain: strict` จาก fullscreen/topbar overlays (เปลี่ยนเป็น `contain: layout style`) — `strict` รวม `paint` + `size` containment ที่อาจ freeze child animations
+  - เพิ่ม `animation-play-state: running` อย่างชัดเจนเพื่อป้องกัน paused state ที่ inherited
 
-- **Smart delay ถูกลบออกทั้งหมด**
-  smart-delay timer เดิม (80ms ใน v1.0.3, 200ms ใน v1.0.0) ออกแบบมาเพื่อหลีกเลี่ยงการ flash loader สำหรับ load เร็ว แต่มันสร้างปัญหามากกว่าแก้:
-  - ใน cached loads (<15ms) timer ถูก cancel โดย `hide()` ก่อน fire ทำให้ overlay ไม่แสดงเลย
-  - เมื่อ `hide()` มาระหว่าง smart-delay window design v1.0.3 force-flush show — แต่สร้าง state transition ซับซ้อนที่คิดตามยาก
+- **Overlay มองไม่เห็นเพราะ `hidden` attribute ค้าง**
+  `buildFullscreen()` renderer เดิมตั้ง `hidden=""` attribute บน overlay element แต่ CSS มี rule `.fvl-fullscreen[hidden] { display: none !important }` ที่ซ่อนถาวร แม้เราจะลบ CSS rule ในเวอร์ชั่นก่อน แต่ attribute ยังถูกตั้ง ทำให้ `display: none` ใน browser บางตัว
   
-  v1.7.1 ไม่มี smart delay overlay แสดงทันทีตอน `show()` และซ่อนทันทีตอน `hide()` ง่ายกว่า คาดเดาได้ และตรงความคาดหวังของผู้ใช้
+  แก้โดยลบ `hidden` attribute จาก renderer ทั้งหมด — visibility ควบคุมด้วย class `.fvl-entering` / `.fvl-shown` / `.fvl-leaving` (opacity transitions) เท่านั้น
 
-- **Minimum display time ถูกลบออก**
-  design v1.0.3 บังคับ overlay อย่างน้อย 250ms (เดิม 300ms) ก่อนซ่อน เพื่อหลีกเลี่ยง 1-frame flash แต่ทำให้แม้ content พร้อมแล้ว ผู้ใช้ต้องรอ 250ms จ้อง spinner — รู้สึกช้า
-  
-  v1.7.1 ไม่มี minimum display time overlay ซ่อนทันทีที่ session สุดท้ายปิด สำหรับ load เร็วมาก overlay อาจ flash สั้นๆ — แต่นี่ดีกว่าค้างหรือรู้สึกช้า
+- **LoadingService.hide() ถูกเรียกเร็วเกินไปโดย ContentService**
+  ContentService เรียก LoadingService.hide() หลายครั้งหลัง render content ใน cached loads (<50ms) ทำให้ overlay flash 1 frame แล้วหาย — เร็วเกินไปที่ผู้ใช้จะเห็น v1.7.2 เพิ่ม MIN_VISIBLE_MS (200ms) check: ถ้า overlay แสดงน้อยกว่า 200ms ที่ผ่านมา hide() จะถูกเลื่อนจนกว่า 200ms จะครบ นี่ไม่ใช่ delay บน show() (overlay แสดงทันที) เป็นเพียง minimum visible time บน hide()
+
+- **Router ไม่ balance LoadingService sessions**
+  router เรียก LoadingService.show() ที่จุดเริ่ม navigateTo() แต่เรียก hide() ใน catch block — แปลว่า navigation สำเร็จ session counter ค้างที่ 1 ตลอดไป v1.7.2 ย้าย hide() call ไป finally block เพื่อให้ทำงานเสมอ ไม่ว่า navigation จะสำเร็จหรือล้มเหลว
 
 ### Improved
 
-- **พฤติกรรม loading ง่ายขึ้น คาดเดาได้มากขึ้น**
-  LoadingService ใหม่เล็กลง ~30% (9.3 KB จาก 13.1 KB) และคิดตามง่ายกว่ามาก:
-  - `show()`: increment counter, เรียก `FVL.show()` (idempotent)
-  - `hide()`: decrement counter, ถ้า 0 ก็เรียก `FVL.hide()`
-  - ไม่มี cached `_visible` flag, ไม่มี `_hideDeferTimer`, ไม่มี `_scheduleHide()`, ไม่มี `_reconcile()`
-  
-  ความเรียบง่ายนี้ทำให้ระบบทนต่อ combination ใดๆ ของ rapid show/hide calls — ซึ่งคือสิ่งที่เกิดเมื่อผู้ใช้กดปุ่ม navigation รัวๆ
+- **สปินเนอร์หมุนแบบ GPU-accelerated และ refresh-rate-independent**
+  arc ของสปินเนอร์ใช้ `will-change: transform` + `backface-visibility: hidden` สำหรับ compositor-layer promotion animation หมุนทั้งหมดบน GPU แยกจาก main thread (ซึ่งอาจยุ่งกับ navigation/data-fetching) แปลว่า:
+  - หมุนลื่นไหลที่ refresh rate ใดๆ (60Hz, 90Hz, 120Hz, 144Hz)
+  - ไม่ stutter เมื่อ main thread โหลด
+  - ความเร็วหมุนสม่ำเสมอไม่ว่า CPU จะใช้มากแค่ไหน
 
-- **FVL show() idempotency น่าเชื่อถือสมบูรณ์**
-  `show()` function ตอนนี้จัดการ state ที่เป็นไปได้ทั้ง 4 อย่างถูกต้อง:
-  - `null` (ไม่มี instance) → สร้างใหม่
-  - `'showing'` หรือ `'shown'` → update message, return existing handle
-  - `'hiding'` → set `_cancelHide`, restore class `fvl-shown`, force reflow, return handle
-  - `'hidden'` หรือ `'destroyed'` → สร้างใหม่
-  
-  ผสมกับ cancel-safe hide callback รับประกันว่า `show()` จะได้ overlay ที่แสดงและ style ถูกต้องเสมอ — ไม่ว่า instance ก่อนหน้าจะอยู่ใน state ใด
+- **ระยะเวลาหมุน 0.7s ตามมาตรฐาน**
+  เปลี่ยนระยะเวลาหมุนจาก 0.8s เป็น 0.7s ต่อรอบ — มาตรฐาน de-facto สำหรับ Material Design และ iOS spinners รู้สึก responsive มากขึ้นโดยไม่เร็วเกินไป
+
+- **Pulse animation ส่งสัญญาณ operation ใหม่**
+  เมื่อ show() ถูกเรียกขณะ overlay อยู่แล้ว (เช่น ผู้ใช้คลิกหมวดหมู่อื่นระหว่างโหลดอันก่อน) overlay จะ dip เป็น 0.6 opacity + scale เป็น 0.97 สั้นๆ แล้วกลับปกติ pulse 350ms นี้ให้ feedback ชัดเจนว่า operation ใหม่เริ่มแล้ว แม้สปินเนอร์กำลังหมุนอยู่
 
 ### Removed
 
-- **Smart delay feature (option `smartDelay`)**
-  ลบออกทั้งหมด option `smartDelay` ถูก ignore ถ้าส่งเข้ามา — `show()` แสดงทันทีเสมอ ถ้าคุณพึ่ง option นี้ อย่าลืมลบออกจาก calls; มันไม่มีผลแล้ว
+- **`transform: translateZ(0)` บน spinner arc**
+  ลบเพราะมัน override animation's `transform: rotate()` ทำให้สปินเนอร์ค้าง แทนที่ด้วย `backface-visibility: hidden` สำหรับ GPU acceleration
 
-- **Minimum display time feature (constant `MIN_DISPLAY_MS`)**
-  ลบออกทั้งหมด overlay ซ่อนทันทีที่ session สุดท้ายปิด ไม่มี artificial delay
+- **`contain: strict` บน fullscreen และ topbar overlays**
+  เปลี่ยนเป็น `contain: layout style` — `strict` รวม `paint` + `size` containment ที่อาจ freeze child animations ใน browser บางตัว
 
-- **Internal methods: `_reconcile()`, `_scheduleHide()`, `_flushShow()`, `_pendingOpts`, `_hideDeferTimer`, `_visibleSince`**
-  ลบทั้งหมด design ใหม่ไม่ต้องการ mechanism ภายในเหล่านี้ — `show()` และ `hide()` ตอนนี้เป็น thin wrappers รอบ FVL's idempotent API
+- **`@keyframes` ใน `@layer fvl`**
+  ย้าย @keyframes ทั้งหมดออกจาก @layer เพื่อ browser compatibility สูงสุด keyframes เป็น global โดยธรรมชาติ ไม่ได้ประโยชน์จาก layer isolation

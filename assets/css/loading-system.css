@@ -1,15 +1,42 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   FVL (FantroveVerse Loader) v1.0.0 — loading-system.css
+   FVL (FantroveVerse Loader) v1.0.7 — loading-system.css
    assets/css/loading-system.css
 
    Designed for maximum lightweight:
    • CSS animations only (no JS-driven animation)
-   • `contain: strict` on overlay layers (isolation = better perf)
-   • `will-change` only applied during active transitions
-   • Composite-only properties (transform/opacity) — no layout thrash
+   • `contain: layout style` on overlay layers (isolation = better perf,
+     but NOT `strict` which can freeze child animations)
+   • `will-change` + `backface-visibility` for GPU-accelerated rotation
+     (we avoid `transform: translateZ(0)` on the arc because it would
+     override the animation's `transform: rotate()`)
    • prefers-reduced-motion: reduce → animations disabled
    • All colors via Fantrove design tokens (--fv-*)
    ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Keyframes (OUTSIDE @layer for maximum browser compatibility) ────────
+   WHY outside @layer: Some older browsers (and headless test environments)
+   don't fully support CSS `@layer`. Putting keyframes inside @layer caused
+   them to be ignored in those environments, freezing the spinner.
+   Keyframes are global by nature — they don't need layer isolation. */
+
+/* WHY 0.7s (was 0.8s): slightly snappier, feels more responsive without
+   being too fast. 0.7s is the de-facto standard for Material/iOS spinners. */
+@keyframes _fvl_spin       { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes _fvl_in         { from { opacity: 0; } to { opacity: 1; } }
+@keyframes _fvl_out        { from { opacity: 1; } to { opacity: 0; } }
+@keyframes _fvl_topbar_indeterminate {
+  0%   { transform: translateX(-100%) scaleX(0.4); }
+  50%  { transform: translateX(0%)     scaleX(0.7); }
+  100% { transform: translateX(250%)   scaleX(0.4); }
+}
+/* Pulse animation: brief opacity dip + scale to signal that a new
+   operation has started (used when show() is called while overlay
+   is already visible from a previous navigation). */
+@keyframes _fvl_pulse {
+  0%   { opacity: 1; transform: scale(1); }
+  30%  { opacity: 0.6; transform: scale(0.97); }
+  100% { opacity: 1; transform: scale(1); }
+}
 
 @layer fvl {
 
@@ -27,16 +54,6 @@
     --fvl-spinner-arc: var(--fv-brand-teal-light);
     --fvl-overlay-bg:  rgba(255, 255, 255, 0.96);
     --fvl-topbar-bg:   var(--fv-brand-teal-light);
-  }
-
-  /* ── Keyframes ──────────────────────────────────────────────────────────── */
-  @keyframes _fvl_spin       { to { transform: rotate(360deg); } }
-  @keyframes _fvl_in         { from { opacity: 0; } to { opacity: 1; } }
-  @keyframes _fvl_out        { from { opacity: 1; } to { opacity: 0; } }
-  @keyframes _fvl_topbar_indeterminate {
-    0%   { transform: translateX(-100%) scaleX(0.4); }
-    50%  { transform: translateX(0%)     scaleX(0.7); }
-    100% { transform: translateX(250%)   scaleX(0.4); }
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════
@@ -86,15 +103,31 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    /* WHY no `contain: size style` (was here before):
+       `contain: size` tells the browser the element's size is fixed and
+       independent of its contents. Combined with `contain: style`, this
+       caused some browsers to skip repainting the spinning arc — the
+       spinner would appear "frozen" because the browser thought nothing
+       inside the container could affect the rest of the page.
+       
+       Removing `contain` here lets the browser repaint the arc on every
+       animation frame, which is what we want for a smooth spinner. */
+    /* Promote to compositor layer for GPU-accelerated animation.
+       We use `backface-visibility: hidden` instead of `transform: translateZ(0)`
+       because the arc itself uses `transform: rotate()` for the spin animation —
+       setting `transform: translateZ(0)` on the parent would NOT conflict, but
+       setting it on the arc WOULD override the animation's transform. */
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
     will-change: transform;
-    isolation: isolate;
-    contain: size style;
   }
   .fvl-spinner svg {
     width: 100%;
     height: 100%;
     overflow: visible;
     display: block;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
   }
   .fvl-spinner .fvl-track {
     stroke: var(--fvl-spinner-track);
@@ -109,8 +142,19 @@
     fill: none;
     transform-box: fill-box;
     transform-origin: center;
+    /* WHY will-change but NOT transform: translateZ(0):
+       The arc uses `transform: rotate()` via the _fvl_spin animation.
+       If we set `transform: translateZ(0)` here, it would OVERRIDE the
+       animation's transform (CSS specificity: inline/declared transform
+       beats animation transform in some browsers), freezing the spinner.
+       
+       `will-change: transform` is enough to promote the arc to its own
+       compositor layer for GPU-accelerated rotation, without conflicting
+       with the animation. */
     will-change: transform;
-    animation: _fvl_spin 0.8s linear infinite;
+    /* 0.7s linear infinite — standard spinner duration, smooth rotation */
+    animation: _fvl_spin 0.7s linear infinite;
+    animation-play-state: running;
   }
 
   /* Inline variant — slightly thicker stroke for visibility at small sizes */
@@ -136,9 +180,23 @@
     gap: 22px;
     background: var(--fvl-bg);
     box-sizing: border-box;
-    contain: strict;
+    /* WHY `contain: layout style` instead of `contain: strict`:
+       `contain: strict` = `size + layout + style + paint`. The `paint`
+       and `size` containment caused the spinner animation to freeze in
+       some browsers because they thought nothing inside the overlay
+       needed repainting. `layout style` is enough to isolate the overlay
+       from the rest of the page without freezing child animations. */
+    contain: layout style;
+    /* Force overlay onto its own compositor layer so the enter/leave
+       opacity transitions don't interfere with the spinner's rotation. */
+    transform: translateZ(0);
   }
-  .fvl-fullscreen[hidden] { display: none !important; }
+  /* WHY no `.fvl-fullscreen[hidden] { display: none }` rule:
+     We deliberately do NOT set the `hidden` attribute on the fullscreen
+     overlay (see buildFullscreen() in fvl.js). Visibility is controlled
+     via the .fvl-entering / .fvl-shown / .fvl-leaving classes.
+     If we had a `[hidden]` rule here AND the attribute was set, the
+     overlay would be permanently invisible. */
 
   .fvl-fullscreen .fvl-spinner {
     width: 68px;
@@ -182,11 +240,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    /* WHY z-index 1600 (from CONFIG.Z_INDEX.scoped):
-       Ensures the loader sits above any content inside the target container.
-       The container itself becomes position:relative (set by JS) so this
-       z-index only applies within the container's stacking context. */
-    z-index: 1600;
+    z-index: 1; /* above content in target, can be overridden via JS */
     contain: layout style;
     pointer-events: auto;
   }
@@ -199,21 +253,14 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
-    padding: 18px;
+    gap: 10px;
+    padding: 14px;
     max-width: 90%;
     text-align: center;
   }
   .fvl-scoped .fvl-spinner {
-    width: 44px;
-    height: 44px;
-  }
-  /* WHY thicker stroke on scoped: spinner is smaller (44px vs 68px in
-     fullscreen), so we thicken the stroke slightly to keep it visible
-     at the smaller size — same approach as inline mode. */
-  .fvl-scoped .fvl-spinner .fvl-track,
-  .fvl-scoped .fvl-spinner .fvl-arc {
-    stroke-width: 4.5;
+    width: 40px;
+    height: 40px;
   }
   .fvl-scoped .fvl-msg {
     font-size: 13px;
@@ -258,7 +305,11 @@
     z-index: 17500;
     background: transparent;
     pointer-events: none;
-    contain: strict;
+    /* WHY `contain: layout style` instead of `contain: strict`:
+       Same reason as fullscreen — `strict` (which includes `paint` + `size`)
+       can freeze the indeterminate bar animation. `layout style` is enough. */
+    contain: layout style;
+    transform: translateZ(0);
   }
   .fvl-topbar-bar {
     position: absolute;
@@ -281,7 +332,7 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════
-     Animation states — entering / shown / leaving
+     Animation states — entering / shown / leaving / pulse
      ═══════════════════════════════════════════════════════════════════════════ */
 
   .fvl.fvl-entering {
@@ -298,6 +349,14 @@
     opacity: 0;
     transition: opacity 180ms cubic-bezier(0.4, 0, 0.2, 1);
     pointer-events: none;
+  }
+
+  /* Pulse state: brief opacity dip + scale to signal that a new operation
+     has started. Added by LoadingService._pulse() when show() is called
+     while the overlay is already visible. The animation runs once over
+     350ms and the class is removed by JS when it completes. */
+  .fvl.fvl-pulse {
+    animation: _fvl_pulse 350ms cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   /* Topbar has special enter/leave — slide in/out vertically */

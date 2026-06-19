@@ -196,9 +196,7 @@
           console.warn('[NavCore/Router] Navigation safety timeout (20s) — forcing reset');
           this.state.isNavigating = false;
           try {
-            // Force-reset the loading session — safety timeout means
-            // something went wrong, so we can't trust hide() to balance.
-            M.LoadingService?._forceReset?.();
+            M.LoadingService?.hide();
             this._setNavLoading(false);
           } catch (_) {}
           this._safetyTimer = null;
@@ -318,13 +316,17 @@
       } catch (err) {
         console.error('[NavCore/Router] navigateTo error:', err);
         try { Utils.showErrorFullscreen(err, { label: 'Navigation' }); } catch (_) {}
-        try { M.LoadingService?.hide(); } catch (_) {}
       } finally {
         this.state.isNavigating = false;
         if (this._safetyTimer) { clearTimeout(this._safetyTimer); this._safetyTimer = null; }
+        // ── Balance the show() from the start of navigateTo() ──────────────
+        // WHY in finally: this guarantees hide() is called regardless of
+        //   whether navigation succeeded, failed, or was cancelled. Without
+        //   this, the session counter would stay at 1 forever after a
+        //   successful navigation (since show() was called at the top but
+        //   hide() was only called in the catch block before).
+        try { M.LoadingService?.hide(); } catch (_) {}
         // ── Restore buttons visibility (fade nav back in) ────────────────────
-        // WHY small delay: gives the new content a frame to paint before
-        //   revealing the buttons → smoother visual transition
         try {
           requestAnimationFrame(() => {
             this._setNavLoading(false);
