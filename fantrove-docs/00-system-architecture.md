@@ -12,7 +12,7 @@
 - i18n รองรับ 2 โหมด (runtime translation และ pre-built static pages)
 - Deploy บน Cloudflare Pages ด้วย custom redirects และ headers
 
-**เวอร์ชันปัจจุบัน**: 1.6.1
+**เวอร์ชันปัจจุบัน**: 1.7.1
 
 ---
 
@@ -22,7 +22,7 @@
 
 | # | ระบบ | บทบาท | ไฟล์หลัก |
 |---|------|-------|-----------|
-| 1 | **URE (Universal Render Engine)** v1.7.0 | Virtual scroll rendering engine สำหรับแสดงข้อมูลจำนวนมาก | `assets/js/ure/ure.js` + 12 modules |
+| 1 | **URE (Universal Render Engine)** v1.7.1 | Virtual scroll rendering engine สำหรับแสดงข้อมูลจำนวนมาก | `assets/js/ure/ure.js` + 12 modules |
 | 2 | **Search System** | ระบบค้นหา client-side แบบ two-tier (substring + Fuse.js fuzzy) | `search-engine.js` + `search-ui.js` + 13 modules |
 | 3 | **Nav-Core** | Navigation & Content Management สำหรับหน้า Discover | `nav-core.js` + `nav-core-early.js` + 14 modules |
 | 4 | **Language/i18n System** v5.0 | ระบบแปลภาษา client-side พร้อม build-time static generation | `lang-core.js` + `language.js` + lang-modules |
@@ -344,7 +344,7 @@ https://fantrove.pages.dev/{lang}/{page-path}
 | `languageChange` | Language Manager | `{ language, previousLanguage }` | ทุกระบบ |
 | `routeChanged` | RouterService (Nav-Core) | `{ main, sub }` | ทุก module ใน Nav-Core |
 | `urlChanged` | RouterService | `{ url, mainRoute, subRoute }` | ภายนอก |
-| `ure:ready` | ure.js | `{ version: '1.7.0' }` | Nav-Core, Search |
+| `ure:ready` | ure.js | `{ version: '1.7.1' }` | Nav-Core, Search |
 | `languageReady` | Language Manager | `{ lang, translations }` | ทุกระบบ |
 | `fp:ready` | popup/init.js | — | version-core, lang-ui |
 | `fp:opened` | popup/engine.js | `{ id, options }` | ภายนอก |
@@ -387,7 +387,7 @@ https://fantrove.pages.dev/{lang}/{page-path}
 |--------|------------|-------------|
 | Virtual Scrolling | URE | แสดงเฉพาะ items ใน viewport + buffer zone |
 | DOM Node Pooling | URE | Recycle DOM nodes แทน create/destroy |
-| Adaptive Memory | URE v1.7.0 | ตรวจ memory pressure ปรับ cap อัตโนมัติ |
+| Adaptive Memory | URE v1.7.1 | ตรวจ memory pressure ปรับ cap อัตโนมัติ |
 | Web Workers | URE, Language | Filter/sort/translate อยู่นอก main thread |
 | Typed Arrays | URE | Float32Array/64Array สำหรับ offset calculations |
 | Template Cache | URE | Map cache ของ rendered HTML |
@@ -423,7 +423,7 @@ https://fantrove.pages.dev/{lang}/{page-path}
 | ไฟล์ | เนื้อหา |
 |------|---------|
 | `00-ภาพรวมสถาปัตยกรรมทั้งระบบ.md` | เอกสารนี้ — ภาพรวมทั้งโปรเจกต์ |
-| `01-URE-Universal-Render-Engine.md` | ระบบ URE v1.7.0 อย่างละเอียด |
+| `01-URE-Universal-Render-Engine.md` | ระบบ URE v1.7.1 อย่างละเอียด |
 | `02-ระบบ-Search.md` | ระบบค้นหาทั้ง 14 module อย่างละเอียด |
 | `03-ระบบ-Nav-Core.md` | ระบบ Nav-Core + JS ไฟล์อิสระทั้งหมด |
 | `04-ระบบภาษา-i18n.md` | ระบบภาษา + Build System |

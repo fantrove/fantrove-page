@@ -815,18 +815,18 @@
       var existing = State.getInstance(id);
       if (existing && existing.state !== 'hidden' && existing.state !== 'destroyed') {
         if (existing.state === 'hiding') {
-          // Cancel pending hide: cleanup any leave timers, jump back to shown
+          // Cancel pending hide:
+          //   1. Set _cancelHide = true so the pending Animator.leave callback
+          //      becomes a no-op (it will NOT call _cleanup or remove the DOM)
+          //   2. Restore visual state to 'shown' (remove leaving class, add shown)
+          //   3. Force reflow so CSS transition restarts cleanly
+          //   4. Update state to 'shown'
           try {
-            if (existing.leaveTimer) {
-              clearTimeout(existing.leaveTimer);
-              existing.leaveTimer = null;
-            }
-            // Remove leaving class, restore shown class
+            existing._cancelHide = true;
             if (existing.rootEl) {
               existing.rootEl.classList.remove('fvl-leaving');
               existing.rootEl.classList.add('fvl-shown');
-              // Force a reflow so the transition restarts cleanly
-              void existing.rootEl.offsetWidth;
+              void existing.rootEl.offsetWidth; // force reflow
             }
             existing.state = 'shown';
             // Update message if changed
@@ -962,20 +962,38 @@
     }
 
     // ── Hide by ID ──
+    //
+    // v1.7.1: Simplified, cancel-safe hide.
+    // The hide animation runs via Animator.leave() which fires its callback
+    // on animationend OR a safety timeout (whichever first). The callback
+    // performs cleanup and removes the DOM element.
+    //
+    // If show() is called DURING the leave animation, the existing-instance
+    // branch at the top of show() detects state='hiding' and:
+    //   1. Sets state back to 'shown'
+    //   2. Removes 'fvl-leaving' class, adds 'fvl-shown' class
+    //   3. Sets inst._cancelHide = true so the pending leave callback becomes a no-op
+    //
+    // This guarantees the leave callback NEVER cleans up an instance that
+    // has been re-shown, eliminating the state-vs-DOM desync bug.
     function hide(id) {
       var inst = State.getInstance(id);
       if (!inst || inst.state === 'hidden' || inst.state === 'destroyed') return Promise.resolve();
       if (inst.state === 'hiding') return Promise.resolve();
 
       inst.state = 'hiding';
+      inst._cancelHide = false; // flag checked by the leave callback
       if (inst.autoHideTimer) { clearTimeout(inst.autoHideTimer); inst.autoHideTimer = null; }
       State.emit('hiding', { id: id, mode: inst.mode });
 
       return new Promise(function(resolve) {
-        // Track the leaveTimer so show() can cancel it if a new show
-        // arrives mid-animation (rapid-click scenario).
-        inst.leaveTimer = setTimeout(function() {
-          inst.leaveTimer = null;
+        Animator.leave(inst, function() {
+          // If show() was called during the leave animation, this callback
+          // is a no-op — the instance has been re-shown and should stay visible.
+          if (inst._cancelHide) {
+            resolve();
+            return;
+          }
           _cleanup(inst);
           inst.state = 'hidden';
           State.emit('hidden', { id: id, mode: inst.mode });
@@ -983,10 +1001,7 @@
             try { inst.options.onHide(id); } catch (e) { console.error('[FVL] onHide error:', e); }
           }
           resolve();
-        }, CONFIG.TIMING.LEAVE + 100); // safety margin over CSS transition
-
-        // Also start the visual leave animation
-        try { Animator.leave(inst, function() {}); } catch (_) {}
+        });
       });
     }
 

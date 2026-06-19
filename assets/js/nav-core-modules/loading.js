@@ -3,25 +3,23 @@
  * @file loading.js
  * LoadingService — thin proxy that delegates to FVL (FantroveVerse Loader).
  *
- * ⚠️  This file is now a BACKWARD-COMPAT shim. The real implementation lives in
- *     /assets/js/loading-system/fvl.js (FVL v1.0.0+).
+ * v1.7.1 — "No-delay, always-consistent" architecture
  *
- * Why this file still exists:
- *   • Nav-Core's PHASES loader (see nav-core.js) lists `loading.js` in Phase 3.
- *     Removing it would break the load order. Keeping it as a thin proxy means
- *     Nav-Core keeps working unchanged.
- *   • Other Nav-Core modules call `M.LoadingService.show()/hide()`. This proxy
- *     preserves that surface and forwards every call to FVL fullscreen mode.
- *   • Legacy globals (`window.showInstantLoadingOverlay`,
- *     `window.removeInstantLoadingOverlay`, `window._navCore_contentLoadingManager`,
- *     `window._headerV2_contentLoadingManager`, `window.__removeInstantLoadingOverlay`)
- *     are all installed by FVL's compat layer at boot — so they work even before
- *     Nav-Core's Phase 3 runs.
+ * Key principles (v1.7.1):
+ *   1. NO SMART DELAY — overlay shows immediately on show()
+ *   2. NO MIN DISPLAY TIME — overlay hides immediately on hide() when no sessions remain
+ *   3. State is ALWAYS reconciled against FVL's actual state, not our cached _visible
+ *   4. Every show() is forwarded to FVL.show() — FVL's idempotent handling takes care of duplicates
+ *   5. Every hide() is forwarded to FVL.hide() when sessionCount=0
  *
- * Migration path:
- *   • Direct callers can switch to `FVL.show(...)` / `FVL.hide(...)` for the new
- *     4-mode API (fullscreen / scoped / inline / topbar).
- *   • See /fantrove-docs/07-Loading-System-FVL.md for the full FVL API.
+ * The previous v1.0.3 design used a cached `_visible` flag and `_hideDeferTimer` to
+ * enforce minimum display time. This caused state-vs-DOM desync under rapid clicking:
+ *   - LoadingService thinks `_visible=true`, but FVL already removed the DOM
+ *   - `_reconcile` skips calling FVL.show() because it trusts the cached flag
+ *   - Result: overlay never re-appears, even when sessions are open
+ *
+ * The v1.7.1 design eliminates the cached flag entirely. Every call checks FVL's
+ * actual state via `FVL.isActive(id)` and forwards show/hide accordingly.
  *
  * @module loading
  * @depends {config.js, state.js, fvl.js (loaded separately)}
@@ -37,24 +35,14 @@
   // loading is in progress. 15999 = (16000 - 1).
   var NAV_BEHIND_Z = 15999;
 
-  // ── Minimum display time ──────────────────────────────────────────────────
-  // WHY 250ms: Once the overlay IS visible, hold it for at least 250ms so
-  // the user gets clear visual feedback that a transition happened. Without
-  // this, ultra-fast loads (<50ms) would cause a 1-frame flash that looks
-  // like a rendering glitch rather than an intentional loading state.
-  var MIN_DISPLAY_MS = 250;
-
   // ── FVL availability check ────────────────────────────────────────────────
   function _fvl() {
     return (typeof window !== 'undefined') ? window.FVL : null;
   }
 
   function _ensureFVL() {
-    // If FVL isn't loaded yet (e.g. this file ran before fvl.js), try to
-    // load it on demand so the proxy still works.
     if (window.FVL) return true;
     try {
-      // Find the script base path the same way nav-core.js does
       var scripts = document.querySelectorAll('script[src]');
       var base = null;
       for (var i = 0; i < scripts.length; i++) {
@@ -65,7 +53,6 @@
         }
       }
       if (!base) return false;
-      // Synchronously inject FVL (async=false → blocks until loaded)
       var s = document.createElement('script');
       s.src = base + '/loading-system/fvl.js';
       s.async = false;
@@ -76,25 +63,20 @@
 
   // ── LoadingService (proxy to FVL fullscreen mode) ─────────────────────────
   //
-  // Architecture: "navigation session" pattern
-  // ─────────────────────────────────────────────────
-  // Each show() call opens a "navigation session" tracked by a counter.
-  // Each hide() call closes one session. The overlay is only hidden when
-  // ALL sessions are closed. This is critical for rapid-click scenarios:
+  // v1.7.1 Architecture: "Direct forward, no cache"
+  // ────────────────────────────────────────────────
+  // The previous design used cached state (_visible, _hideDeferTimer) and
+  // a session counter. Under rapid clicking, the cached state could drift
+  // from FVL's actual state, causing the overlay to get stuck.
   //
-  //   User clicks Symbols → show() → _sessionCount=1, overlay shown
-  //   User clicks Emojis  → show() → _sessionCount=2, overlay stays shown
-  //   Symbols nav done    → hide() → _sessionCount=1, overlay stays shown
-  //   Emojis nav done     → hide() → _sessionCount=0, overlay hidden
+  // The new design is dead simple:
+  //   - show(): if FVL doesn't have an active instance → call FVL.show()
+  //             (FVL's show() is idempotent — handles re-show from 'hiding' state)
+  //   - hide(): if no sessions remain → call FVL.hide() directly
+  //   - No cached _visible flag, no defer timer, no minimum display time.
   //
-  // Without this pattern, rapid clicking would cause:
-  //   show() → hide() → show() → hide() → ... → race conditions
-  //   where state and DOM get out of sync, leaving the overlay stuck.
-  //
-  // The _sessionCount + _reconcile() approach guarantees:
-  //   • Overlay always shows when at least one session is open
-  //   • Overlay always hides when all sessions close
-  //   • No race between show/hide timers
+  // This is "no-delay" as requested — overlay shows and hides immediately
+  // based on actual FVL state, which is always consistent with the DOM.
 
   var LoadingService = {
 
@@ -104,21 +86,14 @@
     /** @type {HTMLElement|null} cached overlay element reference */
     _el: null,
 
-    /** Navigation session counter — increments on show(), decrements on hide() */
+    /** Navigation session counter — show() increments, hide() decrements */
     _sessionCount: 0,
 
-    /** Whether the overlay is currently visible (post reconcile) */
-    _visible: false,
-
-    /** Timestamp when overlay became visible */
-    _visibleSince: 0,
-
-    /** Hide-deferred timer (set when hide arrives too soon after show) */
-    _hideDeferTimer: null,
+    /** Last options passed to show() — used to update message if overlay already visible */
+    _lastOpts: null,
 
     /**
-     * Initialize. Idempotent. Ensures FVL is loaded and ready.
-     * Safe to call multiple times.
+     * Initialize. Idempotent.
      */
     init: function () {
       _ensureFVL();
@@ -131,9 +106,14 @@
     /**
      * Show the loading overlay (open a navigation session).
      *
-     * Increments the session counter and reconciles the visual state.
-     * If overlay was hidden → show immediately. If overlay was already
-     * visible → no visual change, just increment counter.
+     * Behavior:
+     *   1. Increment session counter
+     *   2. If FVL doesn't currently have an active overlay → call FVL.show()
+     *      (FVL handles idempotency — calling show() while 'shown' just updates message,
+     *       calling show() while 'hiding' cancels the hide and re-shows)
+     *   3. If FVL already has an active overlay → just update message if changed
+     *
+     * NO DELAY. The overlay shows immediately on first show() call.
      *
      * @param {LoadingOptions} [opts]
      */
@@ -145,32 +125,37 @@
         return;
       }
 
-      // Open a new navigation session
+      // Open a new session
       this._sessionCount++;
 
-      // Normalize opts (accept string shorthand)
+      // Normalize opts
       var o = (typeof opts === 'string') ? { message: opts } : (opts || {});
       o.mode = 'fullscreen';
       o.id = o.id || DEFAULT_ID;
       if (o.zIndex == null) o.zIndex = NAV_BEHIND_Z;
+      this._lastOpts = o;
 
-      // Cancel any pending hide — we want to stay visible
-      if (this._hideDeferTimer) {
-        clearTimeout(this._hideDeferTimer);
-        this._hideDeferTimer = null;
+      // Forward to FVL — FVL.show() is idempotent and handles all state transitions:
+      //   - If no instance exists → creates one and shows it
+      //   - If instance is 'shown' or 'showing' → updates message, returns existing handle
+      //   - If instance is 'hiding' → cancels hide, restores 'shown' state, returns handle
+      //   - If instance is 'hidden' → creates new instance and shows it
+      var handle = fvl.show(o);
+      if (handle) {
+        this._el = handle.element;
       }
-
-      // Reconcile visual state
-      this._reconcile(o);
-      return null; // no handle needed for show path
+      return handle;
     },
 
     /**
      * Hide the loading overlay (close one navigation session).
      *
-     * Decrements the session counter. Only hides the overlay when ALL
-     * sessions are closed (counter reaches 0). This is what makes the
-     * system robust against rapid clicking.
+     * Behavior:
+     *   1. Decrement session counter (never below 0)
+     *   2. If counter > 0 → do nothing (other sessions still active)
+     *   3. If counter = 0 → call FVL.hide() immediately
+     *
+     * NO MIN DISPLAY TIME. The overlay hides immediately when the last session closes.
      */
     hide: function () {
       // Decrement session counter (never below 0)
@@ -181,74 +166,10 @@
         return Promise.resolve();
       }
 
-      // All sessions closed — proceed with hide (respecting min display time)
-      return this._scheduleHide();
-    },
-
-    /**
-     * Schedule hide after MIN_DISPLAY_MS if overlay was visible.
-     * If overlay was never visible (show came and went before reconciling),
-     * hide immediately.
-     */
-    _scheduleHide: function () {
-      var self = this;
-
-      // Already deferred? Wait for existing timer.
-      if (this._hideDeferTimer) return Promise.resolve();
-
-      // If overlay is visible, respect minimum display time
-      if (this._visible) {
-        var elapsed = Date.now() - this._visibleSince;
-        if (elapsed < MIN_DISPLAY_MS) {
-          var remaining = MIN_DISPLAY_MS - elapsed;
-          return new Promise(function (resolve) {
-            self._hideDeferTimer = setTimeout(function () {
-              self._hideDeferTimer = null;
-              self._doHide();
-              resolve();
-            }, remaining);
-          });
-        }
-      }
-
-      // Hide immediately
-      this._doHide();
-      return Promise.resolve();
-    },
-
-    /**
-     * Actually call FVL.hide() and reset visible state.
-     */
-    _doHide: function () {
+      // All sessions closed — hide immediately
       var fvl = _fvl();
-      if (!fvl) return;
-      this._visible = false;
-      fvl.hide(DEFAULT_ID);
-    },
-
-    /**
-     * Reconcile visual state with session counter.
-     * If counter > 0 → overlay should be visible (show if not)
-     * If counter = 0 → overlay should be hidden (deferred via _scheduleHide)
-     *
-     * @param {Object} opts - options to pass to FVL.show() if showing
-     */
-    _reconcile: function (opts) {
-      if (this._sessionCount > 0 && !this._visible) {
-        // Need to show
-        var fvl = _fvl();
-        if (!fvl) return;
-        var handle = fvl.show(opts);
-        if (handle) {
-          this._el = handle.element;
-          this._visible = true;
-          this._visibleSince = Date.now();
-        }
-      } else if (this._sessionCount > 0 && this._visible && opts && opts.message !== undefined) {
-        // Already visible — update message if provided
-        var fvl2 = _fvl();
-        if (fvl2) fvl2.update(DEFAULT_ID, { message: opts.message });
-      }
+      if (!fvl) return Promise.resolve();
+      return fvl.hide(DEFAULT_ID);
     },
 
     /** @param {string|null} [msg] */
@@ -258,7 +179,14 @@
       fvl.update(DEFAULT_ID, { message: msg });
     },
 
-    /** @returns {boolean} — true if overlay is visible OR a session is open */
+    /**
+     * Check if loading is active.
+     * Returns true if there are open sessions OR FVL has an active overlay.
+     * This dual check ensures we never report "not shown" while the overlay
+     * is actually visible (or vice versa).
+     *
+     * @returns {boolean}
+     */
     isShown: function () {
       if (this._sessionCount > 0) return true;
       var fvl = _fvl();
@@ -302,11 +230,8 @@
     // Forces session count to 0 and hides overlay immediately.
     _forceReset: function () {
       this._sessionCount = 0;
-      if (this._hideDeferTimer) {
-        clearTimeout(this._hideDeferTimer);
-        this._hideDeferTimer = null;
-      }
-      this._doHide();
+      var fvl = _fvl();
+      if (fvl) fvl.hide(DEFAULT_ID);
     },
   };
 
@@ -323,8 +248,6 @@
   M.LoadingService = LoadingService;
 
   // ── Global convenience aliases (kept for back-compat with external scripts)
-  // FVL's compat layer also installs these — but we install them here too as
-  // a safety net in case FVL loads after Nav-Core Phase 3.
   try {
     if (!window._navCore_contentLoadingManager)
       window._navCore_contentLoadingManager = LoadingService;

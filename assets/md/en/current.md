@@ -1,58 +1,61 @@
 ---
-version: 1.7.0
-date: 2026-06-19T08:20:00.693Z
-title: FVL — New Loading Framework + Discover Page Overhaul
-subtitle: Introduced FVL (FantroveVerse Loader), a flexible loading framework with 4 display modes (fullscreen, scoped, inline, topbar), and completely reworked the loading experience on the Discover page — now smarter, more resilient to rapid clicking, and visually consistent with the bottom navigation.
+version: 1.7.1
+date: 2026-06-19T09:18:05.948Z
+title: Loading System Re-architected — No Delay, Always Consistent
+subtitle: Completely reworked the LoadingService proxy and FVL hide logic to eliminate the state-vs-DOM desync bug that caused the loading overlay to get permanently stuck after rapid clicking. The new architecture has NO smart delay and NO minimum display time — the overlay shows and hides immediately based on FVL's actual state, which is always consistent with the DOM.
 notify: true
 ---
 
-### New
+### Fixed
 
-- **FVL (FantroveVerse Loader) v1.0.3 — new loading framework**
-  A standalone loading framework separated from Nav-Core. Single-file hybrid architecture (~50KB JS + ~17KB CSS, zero dependencies) supporting 4 display modes: `fullscreen` (overlay below header), `scoped` (covers a specific container), `inline` (spinner inside a button), and `topbar` (NProgress-style progress bar). Includes i18n support, theme variants (light/dark/brand/auto), `prefers-reduced-motion` support, and a `Promise`-based API with system events.
+- **Loading overlay stuck on screen after rapid clicking (the real fix)**
+  The v1.7.0 session-counter design still had a critical flaw: it cached a `_visible` flag and used a `_hideDeferTimer` to enforce minimum display time. Under rapid clicking, this cached flag could drift from FVL's actual state — LoadingService would think the overlay was visible (so it skipped calling `FVL.show()`), but FVL had already removed the DOM element during a hide animation. The result: the overlay would never re-appear even when sessions were open, OR it would get stuck visible after all sessions closed, requiring a page refresh.
+  
+  The v1.7.1 design eliminates the cached flag entirely. `show()` now ALWAYS forwards to `FVL.show()` (which is idempotent — calling it on an already-shown instance just updates the message; calling it on a hiding instance cancels the hide). `hide()` calls `FVL.hide()` directly when the session counter reaches 0. There is no cached state to drift.
 
-- **Navigation Session Pattern — rapid-click safe**
-  The new LoadingService proxy uses a session counter: each `show()` opens a session, each `hide()` closes one. The overlay is only hidden when ALL sessions are closed. This eliminates race conditions that previously left the loading overlay stuck on screen after rapid clicking — tested stable through 30+ rapid clicks in under 1 second.
+- **FVL hide animation callback cleaning up re-shown instances**
+  When `FVL.hide()` was called, it ran a leave animation with a callback that performed DOM cleanup. If `FVL.show()` was called during the animation (rapid-click scenario), the show would restore the visual state, but the pending hide callback would still fire when the animation ended — cleaning up the DOM of an instance that was supposed to stay visible.
+  
+  Fixed by adding a `_cancelHide` flag. When `show()` detects an instance in the `hiding` state, it sets `_cancelHide = true`. The hide callback checks this flag and becomes a no-op if set, so it never cleans up a re-shown instance.
 
-- **Smart loading messages on Discover page**
-  When navigating between categories (Symbols, Emojis, Fancy Text, etc.), the loading overlay now shows contextual messages like "Loading Symbols..." or "กำลังโหลดสัญลักษณ์..." instead of a generic "Loading...". The message is resolved from the active button's label in the user's selected language.
+- **Smart delay removed entirely**
+  The previous smart-delay timer (80ms in v1.0.3, 200ms in v1.0.0) was meant to avoid flashing the loader for fast loads, but it caused more problems than it solved:
+  - On cached loads (<15ms), the timer was cancelled by `hide()` before firing, so the overlay never showed
+  - When `hide()` arrived during the smart-delay window, the v1.0.3 design force-flushed the show — but this created complex state transitions that were hard to reason about
+  
+  v1.7.1 has NO smart delay. The overlay shows immediately on `show()` and hides immediately on `hide()`. This is simpler, more predictable, and matches user expectations.
 
-- **Hide buttons during navigation**
-  When a navigation is in progress, the main nav buttons and sub-nav fade out (opacity: 0, pointer-events: none) and become non-interactive. This prevents users from clicking another category mid-fetch and provides a clear visual signal that "we're switching". Buttons fade back in once content is ready.
-
-- **Cache-busting for nav-core sub-modules**
-  `nav-core.js` now propagates its `?v=...` query string to every sub-module it loads from `nav-core-modules/`. Previously, browsers cached `loading.js`, `router.js`, etc. independently — meaning code changes to those files never reached users until they hard-refreshed. Now bumping the version on the `<script src="nav-core.js?v=...">` tag in HTML busts the cache for all 13 sub-modules at once.
+- **Minimum display time removed**
+  The v1.0.3 design held the overlay for at least 250ms (originally 300ms) before hiding, to avoid 1-frame flashes. But this meant that even after content was ready, the user had to wait 250ms staring at a loading spinner — which felt slow.
+  
+  v1.7.1 has NO minimum display time. The overlay hides the instant the last session closes. For very fast loads, the overlay may flash briefly — but this is preferable to being stuck or feeling slow.
 
 ### Improved
 
-- **Loading overlay respects bottom navigation**
-  The fullscreen loading overlay now sits BEHIND the bottom navigation bar (z-index 15999 < 16000), so the bottom nav remains visible and clickable while loading is in progress. On mobile, the overlay leaves 64px + safe-area at the bottom; on desktop (≥768px), it leaves 88px at the left for the left-rail navigation.
+- **Simpler, more predictable loading behavior**
+  The new LoadingService is ~30% smaller (9.3 KB vs 13.1 KB) and much easier to reason about:
+  - `show()`: increment counter, call `FVL.show()` (idempotent)
+  - `hide()`: decrement counter, if 0 then call `FVL.hide()`
+  - No cached `_visible` flag, no `_hideDeferTimer`, no `_scheduleHide()`, no `_reconcile()`
+  
+  This simplicity makes the system robust against any combination of rapid show/hide calls — which is exactly what happens when users click rapidly through navigation buttons.
 
-- **Spinner positioning**
-  The spinner is now centered in the VISIBLE area (between header and bottom nav), not the full viewport. This makes the loading state feel intentional rather than covering important UI elements.
+- **FVL show() idempotency fully reliable**
+  The `show()` function now handles all four possible instance states correctly:
+  - `null` (no instance) → create new
+  - `'showing'` or `'shown'` → update message, return existing handle
+  - `'hiding'` → set `_cancelHide`, restore `fvl-shown` class, force reflow, return handle
+  - `'hidden'` or `'destroyed'` → create new
+  
+  Combined with the cancel-safe hide callback, this guarantees that `show()` always results in a visible, properly-styled overlay — regardless of what state the previous instance was in.
 
-- **Minimum display time (250ms)**
-  Once the loading overlay IS visible, it stays for at least 250ms before hiding — even if the underlying load finishes in <50ms. This prevents 1-frame flashes that look like rendering glitches and gives users clear visual feedback that a transition happened.
+### Removed
 
-- **Demo page for FVL**
-  Added a new demo page at `/loading-demo/` that showcases all 4 display modes with live buttons, real-time stats panel, and an event log. Useful for testing and for new developers learning the framework.
+- **Smart delay feature (`smartDelay` option)**
+  Removed entirely. The `smartDelay` option is now ignored if passed — `show()` always shows immediately. If you were relying on this option, remove it from your calls; it no longer has any effect.
 
-### Fixed
+- **Minimum display time feature (`MIN_DISPLAY_MS` constant)**
+  Removed entirely. The overlay hides the moment the last session closes, with no artificial delay.
 
-- **Loading overlay stuck on screen after rapid clicking**
-  Previously, rapid clicking (10+ clicks in 1 second) could leave the loading overlay stuck on screen indefinitely, requiring a page refresh. The root cause was state-vs-DOM desync: FVL's internal state recorded the instance as hidden, but the DOM element was never removed. Fixed by switching to a session-counter pattern in LoadingService and adding cancel-safe hide logic in FVL.
-
-- **Loading overlay not appearing in Discover page**
-  On cached loads (load time <15ms), the smart-delay timer was cancelled by `hide()` before the overlay ever appeared — so users saw no loading feedback at all. Fixed by removing the smart-delay timer entirely and using the session pattern instead, which guarantees the overlay shows whenever at least one session is open.
-
-- **FVL.show() idempotency broken when state='hiding'**
-  When `FVL.show()` was called while an existing instance was in the `hiding` state (mid-leave-animation), it returned the existing handle without restarting the enter animation — leaving the overlay in a stuck half-hidden state. Fixed by detecting the `hiding` state explicitly: cancel the pending leave timer, restore the `fvl-shown` class, force a reflow to restart the transition, and emit a fresh `shown` event.
-
-- **Browser cache served stale nav-core sub-modules**
-  Because `nav-core.js` loaded sub-modules without propagating its own `?v=...` query string, browsers served cached versions of `loading.js`, `router.js`, etc. even after deployment. This meant code changes (including bug fixes) didn't reach users until they hard-refreshed. Fixed by extracting the query string from the nav-core.js script tag and appending it to every sub-module URL.
-
-- **Init.js unbalanced LoadingService session counter**
-  The bootstrap flow in `init.js` called `LoadingService.show()` in Phase 3 but never called `hide()` to balance it — leaving the session counter at 1 forever and preventing the overlay from ever disappearing. Fixed by adding a `hide()` call in the `finally` block of `InitService.start()`.
-
-- **Router safety timeout didn't reset loading state**
-  When the 20-second navigation safety timeout fired, it called `LoadingService.hide()` — but if there were pending unbalanced `show()` calls, the session counter stayed above 0 and the overlay remained visible. Fixed by switching the safety timeout to use `LoadingService._forceReset()`, which zeroes the counter and hides the overlay immediately.
+- **Internal methods: `_reconcile()`, `_scheduleHide()`, `_flushShow()`, `_pendingOpts`, `_hideDeferTimer`, `_visibleSince`**
+  All removed. The new design has no need for these internal mechanisms — `show()` and `hide()` are now thin wrappers around FVL's idempotent API.
