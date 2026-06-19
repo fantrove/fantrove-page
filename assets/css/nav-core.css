@@ -61,7 +61,7 @@ nav ul li button.active {
 /* --- ส่วนของเส้นใต้ (Indicator) --- */
 nav ul li button::after {
   content:''; position:absolute; left:50%; bottom:0;
-  width:40%; height:3px; background:currentColor;
+  width:40%; height:3px; background:var(--fv-brand-teal-light);
   border-radius:10px 10px 0 0; 
   
   /* เริ่มต้นให้หดเหลือ 0 จากตรงกลาง */
