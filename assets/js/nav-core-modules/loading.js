@@ -1,255 +1,316 @@
 // @ts-check
 /**
  * @file loading.js
- * LoadingService — fullscreen loading overlay management.
+ * LoadingService — thin proxy that delegates to FVL (FantroveVerse Loader).
  *
- * Merges contentLoadingManager.js + overlay.js (legacy proxy) into one file.
+ * ⚠️  This file is now a BACKWARD-COMPAT shim. The real implementation lives in
+ *     /assets/js/loading-system/fvl.js (FVL v1.0.0+).
  *
- * Features:
- *  ① i18n: LOADING_MESSAGES map from CONFIG — add language = add one key only
- *  ② Dual-language display:
- *       .clp-msg  = active language (primary, bold)
- *       .clp-sub  = English subtitle (shown only when active ≠ en)
- *  ③ CSS var --clp-top tracks header + subnav height via ResizeObserver
- *  ④ Animation: fade-in on show, fade-out on hide (CSS in loading.css)
+ * Why this file still exists:
+ *   • Nav-Core's PHASES loader (see nav-core.js) lists `loading.js` in Phase 3.
+ *     Removing it would break the load order. Keeping it as a thin proxy means
+ *     Nav-Core keeps working unchanged.
+ *   • Other Nav-Core modules call `M.LoadingService.show()/hide()`. This proxy
+ *     preserves that surface and forwards every call to FVL fullscreen mode.
+ *   • Legacy globals (`window.showInstantLoadingOverlay`,
+ *     `window.removeInstantLoadingOverlay`, `window._navCore_contentLoadingManager`,
+ *     `window._headerV2_contentLoadingManager`, `window.__removeInstantLoadingOverlay`)
+ *     are all installed by FVL's compat layer at boot — so they work even before
+ *     Nav-Core's Phase 3 runs.
  *
- * CSS lives in /assets/css/loading.css — NOT injected here.
+ * Migration path:
+ *   • Direct callers can switch to `FVL.show(...)` / `FVL.hide(...)` for the new
+ *     4-mode API (fullscreen / scoped / inline / topbar).
+ *   • See /fantrove-docs/07-Loading-System-FVL.md for the full FVL API.
  *
  * @module loading
- * @depends {config.js, state.js}
+ * @depends {config.js, state.js, fvl.js (loaded separately)}
  */
 (function (M) {
   'use strict';
 
-  const { CONFIG } = M;
+  var DEFAULT_ID = 'fvl-default-fullscreen';
 
-  // ── i18n helper ───────────────────────────────────────────────────────────────
+  // ── Z-index strategy ──────────────────────────────────────────────────────
+  // WHY 15999: Bottom nav uses --fv-z-nav (16000). Loading overlay must sit
+  // BEHIND the bottom nav so the nav remains visible and clickable while
+  // loading is in progress. 15999 = (16000 - 1).
+  var NAV_BEHIND_Z = 15999;
 
-  /**
-   * Resolve a loading message for a given language.
-   * Fallback chain: requested lang → 'en' → first key in map.
-   * @param {string} [lang]
-   * @param {string} [key='loading']
-   * @returns {string}
-   */
-  function _getMsg(lang, key = 'loading') {
-    const msgs = CONFIG.LOADING_MESSAGES;
-    return msgs[lang]?.[key]
-      || msgs['en']?.[key]
-      || msgs[Object.keys(msgs)[0]]?.[key]
-      || 'Loading...';
+  // ── Minimum display time ──────────────────────────────────────────────────
+  // WHY 250ms: Once the overlay IS visible, hold it for at least 250ms so
+  // the user gets clear visual feedback that a transition happened. Without
+  // this, ultra-fast loads (<50ms) would cause a 1-frame flash that looks
+  // like a rendering glitch rather than an intentional loading state.
+  var MIN_DISPLAY_MS = 250;
+
+  // ── FVL availability check ────────────────────────────────────────────────
+  function _fvl() {
+    return (typeof window !== 'undefined') ? window.FVL : null;
   }
 
-  // ── LoadingService ────────────────────────────────────────────────────────────
-
-  const LoadingService = {
-
-    /** Content container ID — read by ContentService */
-    LOADING_CONTAINER_ID: CONFIG.DOM.CONTENT_LOADING_ID,
-
-    // ── Internal state ──────────────────────────────────────────────────────────
-    /** @type {HTMLElement|null} */ _el:          null,
-    /** @type {boolean}          */ _shown:       false,
-    /** @type {number|null}      */ _rafId:       null,
-    /** @type {number|null}      */ _leaveTimer:  null,
-    /** @type {ResizeObserver|null} */ _ro:        null,
-
-    // ── Initialization ──────────────────────────────────────────────────────────
-
-    /**
-     * Create the overlay element and attach ResizeObserver.
-     * Safe to call multiple times (idempotent).
-     */
-    init() {
-      if (!document.getElementById(CONFIG.DOM.OVERLAY_ID)) {
-        const el = document.createElement('div');
-        el.id = CONFIG.DOM.OVERLAY_ID;
-        el.setAttribute('role',       'status');
-        el.setAttribute('aria-live',  'polite');
-        el.setAttribute('aria-atomic', 'true');
-        el.hidden   = true;
-        el.innerHTML = this._html();
-        document.body.appendChild(el);
-        this._el = el;
-      } else {
-        this._el = document.getElementById(CONFIG.DOM.OVERLAY_ID);
+  function _ensureFVL() {
+    // If FVL isn't loaded yet (e.g. this file ran before fvl.js), try to
+    // load it on demand so the proxy still works.
+    if (window.FVL) return true;
+    try {
+      // Find the script base path the same way nav-core.js does
+      var scripts = document.querySelectorAll('script[src]');
+      var base = null;
+      for (var i = 0; i < scripts.length; i++) {
+        var src = (scripts[i].getAttribute('src') || '').split('?')[0];
+        if (/\/nav-core-modules\/loading\.js$/.test(src)) {
+          base = src.replace('/nav-core-modules/loading.js', '');
+          break;
+        }
       }
+      if (!base) return false;
+      // Synchronously inject FVL (async=false → blocks until loaded)
+      var s = document.createElement('script');
+      s.src = base + '/loading-system/fvl.js';
+      s.async = false;
+      document.head.appendChild(s);
+      return true;
+    } catch (_) { return false; }
+  }
 
-      this._updateTopVar();
+  // ── LoadingService (proxy to FVL fullscreen mode) ─────────────────────────
+  //
+  // Architecture: "navigation session" pattern
+  // ─────────────────────────────────────────────────
+  // Each show() call opens a "navigation session" tracked by a counter.
+  // Each hide() call closes one session. The overlay is only hidden when
+  // ALL sessions are closed. This is critical for rapid-click scenarios:
+  //
+  //   User clicks Symbols → show() → _sessionCount=1, overlay shown
+  //   User clicks Emojis  → show() → _sessionCount=2, overlay stays shown
+  //   Symbols nav done    → hide() → _sessionCount=1, overlay stays shown
+  //   Emojis nav done     → hide() → _sessionCount=0, overlay hidden
+  //
+  // Without this pattern, rapid clicking would cause:
+  //   show() → hide() → show() → hide() → ... → race conditions
+  //   where state and DOM get out of sync, leaving the overlay stuck.
+  //
+  // The _sessionCount + _reconcile() approach guarantees:
+  //   • Overlay always shows when at least one session is open
+  //   • Overlay always hides when all sessions close
+  //   • No race between show/hide timers
 
-      // Track header + subnav height changes so overlay aligns correctly
-      if (typeof ResizeObserver !== 'undefined' && !this._ro) {
-        this._ro = new ResizeObserver(() => this._updateTopVar());
-        const header = document.querySelector(CONFIG.DOM.HEADER_TAG);
-        const subnav = document.getElementById(CONFIG.DOM.SUB_NAV_ID);
-        if (header) this._ro.observe(header);
-        if (subnav) this._ro.observe(subnav);
+  var LoadingService = {
+
+    /** Content container ID — read by ContentService (kept for compat) */
+    LOADING_CONTAINER_ID: 'content-loading',
+
+    /** @type {HTMLElement|null} cached overlay element reference */
+    _el: null,
+
+    /** Navigation session counter — increments on show(), decrements on hide() */
+    _sessionCount: 0,
+
+    /** Whether the overlay is currently visible (post reconcile) */
+    _visible: false,
+
+    /** Timestamp when overlay became visible */
+    _visibleSince: 0,
+
+    /** Hide-deferred timer (set when hide arrives too soon after show) */
+    _hideDeferTimer: null,
+
+    /**
+     * Initialize. Idempotent. Ensures FVL is loaded and ready.
+     * Safe to call multiple times.
+     */
+    init: function () {
+      _ensureFVL();
+      var fvl = _fvl();
+      if (fvl) {
+        try { fvl.modules(); } catch (_) {}
       }
-
-      // Expose global helpers (used by legacy scripts)
-      try {
-        window.showInstantLoadingOverlay   = opts => this.show(opts);
-        window.removeInstantLoadingOverlay = ()   => this.hide();
-      } catch (_) {}
     },
-
-    /** @returns {string} Inner HTML for the overlay */
-    _html() {
-      return (
-        `<div class="clp-spinner" aria-hidden="true">` +
-          `<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">` +
-            `<circle class="clp-track" cx="26" cy="26" r="22"/>` +
-            `<circle class="clp-arc"   cx="26" cy="26" r="22"/>` +
-          `</svg>` +
-        `</div>` +
-        `<div class="clp-text">` +
-          `<div class="clp-msg"></div>` +
-          `<div class="clp-sub"></div>` +
-        `</div>`
-      );
-    },
-
-    // ── CSS variable ────────────────────────────────────────────────────────────
 
     /**
-     * Update --clp-top to = header height + subnav height.
-     * Called by ResizeObserver and before show().
+     * Show the loading overlay (open a navigation session).
+     *
+     * Increments the session counter and reconciles the visual state.
+     * If overlay was hidden → show immediately. If overlay was already
+     * visible → no visual change, just increment counter.
+     *
+     * @param {LoadingOptions} [opts]
      */
-    _updateTopVar() {
-      try {
-        const header = document.querySelector(CONFIG.DOM.HEADER_TAG);
-        const subnav = document.getElementById(CONFIG.DOM.SUB_NAV_ID);
-        let top = 0;
-        if (header) top += header.offsetHeight;
-        if (subnav && subnav.style.display !== 'none' && subnav.offsetHeight > 0)
-          top += subnav.offsetHeight;
-        document.documentElement.style.setProperty('--clp-top', `${top}px`);
-      } catch (_) {}
-    },
-
-    /** @returns {HTMLElement|null} */
-    _getEl() {
-      if (this._el) return this._el;
-      this.init();
-      return this._el;
-    },
-
-    // ── i18n text update ─────────────────────────────────────────────────────────
-
-    /**
-     * Update the overlay message.
-     * Primary = active language; subtitle = English (when active ≠ en).
-     * @param {string|null} [customMsg]
-     */
-    _setTexts(customMsg) {
-      const el = this._getEl();
-      if (!el) return;
-
-      const msgEl = el.querySelector('.clp-msg');
-      const subEl = el.querySelector('.clp-sub');
-      if (!msgEl) return;
-
-      if (customMsg) {
-        msgEl.textContent = customMsg;
-        if (subEl) subEl.textContent = '';
+    show: function (opts) {
+      _ensureFVL();
+      var fvl = _fvl();
+      if (!fvl) {
+        console.warn('[LoadingService] FVL not available, cannot show');
         return;
       }
 
-      const lang    = localStorage.getItem(CONFIG.LOADING.LANG_KEY) || 'en';
-      const primary = _getMsg(lang, 'loading');
-      msgEl.textContent = primary;
+      // Open a new navigation session
+      this._sessionCount++;
 
-      if (subEl) subEl.textContent = (lang !== 'en') ? _getMsg('en', 'loading') : '';
+      // Normalize opts (accept string shorthand)
+      var o = (typeof opts === 'string') ? { message: opts } : (opts || {});
+      o.mode = 'fullscreen';
+      o.id = o.id || DEFAULT_ID;
+      if (o.zIndex == null) o.zIndex = NAV_BEHIND_Z;
 
-      const ariaText = (lang !== 'en')
-        ? `${primary} / ${_getMsg('en', 'loading')}`
-        : primary;
-      el.setAttribute('aria-label', ariaText);
+      // Cancel any pending hide — we want to stay visible
+      if (this._hideDeferTimer) {
+        clearTimeout(this._hideDeferTimer);
+        this._hideDeferTimer = null;
+      }
+
+      // Reconcile visual state
+      this._reconcile(o);
+      return null; // no handle needed for show path
     },
-
-    // ── Show ─────────────────────────────────────────────────────────────────────
 
     /**
-     * Show the loading overlay.
-     * @param {LoadingOptions} [opts]
+     * Hide the loading overlay (close one navigation session).
+     *
+     * Decrements the session counter. Only hides the overlay when ALL
+     * sessions are closed (counter reaches 0). This is what makes the
+     * system robust against rapid clicking.
      */
-    show(opts = '') {
-      const msg = typeof opts === 'string' ? opts : (opts?.message || '');
-      const el  = this._getEl();
-      if (!el) return;
+    hide: function () {
+      // Decrement session counter (never below 0)
+      if (this._sessionCount > 0) this._sessionCount--;
 
-      if (this._leaveTimer) { clearTimeout(this._leaveTimer);  this._leaveTimer = null; }
-      if (this._rafId)      { cancelAnimationFrame(this._rafId); this._rafId = null; }
+      // If there are still open sessions, don't hide
+      if (this._sessionCount > 0) {
+        return Promise.resolve();
+      }
 
-      this._updateTopVar();
-      this._setTexts(msg || null);
-
-      el.classList.remove('leaving');
-      el.style.willChange = '';
-      el.hidden = false;
-
-      this._rafId = requestAnimationFrame(() => {
-        this._rafId = null;
-        el.classList.add('entering');
-        const onEnd = () => {
-          el.classList.remove('entering');
-          el.style.willChange = '';
-          el.removeEventListener('animationend', onEnd);
-        };
-        el.addEventListener('animationend', onEnd, { once: true, passive: true });
-      });
-
-      this._shown = true;
-
-      try {
-        window.__instantLoadingOverlayShown  = true;
-        window.__removeInstantLoadingOverlay = () => this.hide();
-      } catch (_) {}
-
-      if (opts?.autoHideAfterMs > 0)
-        setTimeout(() => this.hide(), opts.autoHideAfterMs);
+      // All sessions closed — proceed with hide (respecting min display time)
+      return this._scheduleHide();
     },
 
-    // ── Hide ─────────────────────────────────────────────────────────────────────
+    /**
+     * Schedule hide after MIN_DISPLAY_MS if overlay was visible.
+     * If overlay was never visible (show came and went before reconciling),
+     * hide immediately.
+     */
+    _scheduleHide: function () {
+      var self = this;
 
-    hide() {
-      const el = this._getEl();
-      if (!el || !this._shown) return;
+      // Already deferred? Wait for existing timer.
+      if (this._hideDeferTimer) return Promise.resolve();
 
-      this._shown = false;
-      try { window.__instantLoadingOverlayShown = false; } catch (_) {}
+      // If overlay is visible, respect minimum display time
+      if (this._visible) {
+        var elapsed = Date.now() - this._visibleSince;
+        if (elapsed < MIN_DISPLAY_MS) {
+          var remaining = MIN_DISPLAY_MS - elapsed;
+          return new Promise(function (resolve) {
+            self._hideDeferTimer = setTimeout(function () {
+              self._hideDeferTimer = null;
+              self._doHide();
+              resolve();
+            }, remaining);
+          });
+        }
+      }
 
-      if (this._rafId) { cancelAnimationFrame(this._rafId); this._rafId = null; }
-
-      el.classList.remove('entering');
-      el.style.willChange = 'opacity';
-      el.classList.add('leaving');
-
-      this._leaveTimer = setTimeout(() => {
-        this._leaveTimer = null;
-        el.classList.remove('leaving');
-        el.style.willChange = '';
-        el.hidden = true;
-      }, CONFIG.LOADING.FADE_OUT_MS + 10);
+      // Hide immediately
+      this._doHide();
+      return Promise.resolve();
     },
 
-    // ── Utilities ─────────────────────────────────────────────────────────────────
+    /**
+     * Actually call FVL.hide() and reset visible state.
+     */
+    _doHide: function () {
+      var fvl = _fvl();
+      if (!fvl) return;
+      this._visible = false;
+      fvl.hide(DEFAULT_ID);
+    },
+
+    /**
+     * Reconcile visual state with session counter.
+     * If counter > 0 → overlay should be visible (show if not)
+     * If counter = 0 → overlay should be hidden (deferred via _scheduleHide)
+     *
+     * @param {Object} opts - options to pass to FVL.show() if showing
+     */
+    _reconcile: function (opts) {
+      if (this._sessionCount > 0 && !this._visible) {
+        // Need to show
+        var fvl = _fvl();
+        if (!fvl) return;
+        var handle = fvl.show(opts);
+        if (handle) {
+          this._el = handle.element;
+          this._visible = true;
+          this._visibleSince = Date.now();
+        }
+      } else if (this._sessionCount > 0 && this._visible && opts && opts.message !== undefined) {
+        // Already visible — update message if provided
+        var fvl2 = _fvl();
+        if (fvl2) fvl2.update(DEFAULT_ID, { message: opts.message });
+      }
+    },
 
     /** @param {string|null} [msg] */
-    updateMessage(msg) { this._setTexts(msg || null); },
+    updateMessage: function (msg) {
+      var fvl = _fvl();
+      if (!fvl) return;
+      fvl.update(DEFAULT_ID, { message: msg });
+    },
 
-    /** @returns {boolean} */
-    isShown()       { return this._shown; },
+    /** @returns {boolean} — true if overlay is visible OR a session is open */
+    isShown: function () {
+      if (this._sessionCount > 0) return true;
+      var fvl = _fvl();
+      if (!fvl) return false;
+      return fvl.isActive(DEFAULT_ID);
+    },
 
     /** @returns {typeof CONFIG.LOADING_MESSAGES} */
-    getMessages()   { return CONFIG.LOADING_MESSAGES; },
+    getMessages: function () {
+      var fvl = _fvl();
+      if (fvl) return fvl.config().MESSAGES;
+      return Object.freeze({
+        en: Object.freeze({ loading: 'Loading...' }),
+        th: Object.freeze({ loading: 'กำลังโหลด...' }),
+      });
+    },
+
+    // ── Internal aliases (called by Nav-Core router/init) ──────────────────
+    _updateTopVar: function () {
+      var fvl = _fvl();
+      if (fvl) fvl.modules().Engine._updateTopVar();
+    },
+
+    _setTexts: function () {
+      var fvl = _fvl();
+      if (fvl) fvl.modules().Engine._setTexts(DEFAULT_ID);
+    },
+
+    _getEl: function () {
+      var fvl = _fvl();
+      if (!fvl) return this._el;
+      var handle = fvl.get(DEFAULT_ID);
+      return handle ? handle.element : this._el;
+    },
 
     // Aliases for call-site compatibility
-    showInContent(opts) { return this.show(opts); },
-    hideFromContent()   { return this.hide(); },
+    showInContent: function (opts) { return this.show(opts); },
+    hideFromContent: function ()   { return this.hide(); },
+
+    // ── Emergency reset (used by safety timeout in router) ────────────────
+    // Forces session count to 0 and hides overlay immediately.
+    _forceReset: function () {
+      this._sessionCount = 0;
+      if (this._hideDeferTimer) {
+        clearTimeout(this._hideDeferTimer);
+        this._hideDeferTimer = null;
+      }
+      this._doHide();
+    },
   };
 
-  // ── Auto-init ─────────────────────────────────────────────────────────────────
+  // ── Auto-init ──────────────────────────────────────────────────────────────
 
   function _autoInit() { LoadingService.init(); }
   if (document.readyState === 'loading')
@@ -257,16 +318,24 @@
   else
     _autoInit();
 
-  // ── Export ────────────────────────────────────────────────────────────────────
+  // ── Export into NavCoreModules namespace ──────────────────────────────────
 
   M.LoadingService = LoadingService;
 
-  // Global convenience aliases (used by external scripts)
+  // ── Global convenience aliases (kept for back-compat with external scripts)
+  // FVL's compat layer also installs these — but we install them here too as
+  // a safety net in case FVL loads after Nav-Core Phase 3.
   try {
     if (!window._navCore_contentLoadingManager)
       window._navCore_contentLoadingManager = LoadingService;
-    window.showInstantLoadingOverlay   = opts => LoadingService.show(opts);
-    window.removeInstantLoadingOverlay = ()   => LoadingService.hide();
+    if (!window._headerV2_contentLoadingManager)
+      window._headerV2_contentLoadingManager = LoadingService;
+    if (!window.showInstantLoadingOverlay)
+      window.showInstantLoadingOverlay = function (opts) { return LoadingService.show(opts); };
+    if (!window.removeInstantLoadingOverlay)
+      window.removeInstantLoadingOverlay = function () { return LoadingService.hide(); };
+    if (!window.__removeInstantLoadingOverlay)
+      window.__removeInstantLoadingOverlay = function () { return LoadingService.hide(); };
   } catch (_) {}
 
 })(window.NavCoreModules = window.NavCoreModules || {});

@@ -137,6 +137,20 @@
         console.error('[NavCore/Init] bootstrap error:', error);
         try { Utils.showErrorFullscreen(error, { label: 'App Bootstrap', title: 'เกิดข้อผิดพลาดในการโหลดแอพพลิเคชัน กรุณารีเฟรชหน้า' }); } catch (_) {}
       } finally {
+        // Balance the show() from Phase 3 — the LoadingService uses a
+        // navigation-session counter (show++/hide--). The initial show() opens
+        // a session that needs to be closed here, otherwise the counter stays
+        // at 1 forever and the overlay never disappears (even though router's
+        // own navigateTo show+hide calls are balanced).
+        //
+        // The router's initial navigateTo (Phase 8) handles its own session
+        // internally, so by the time we reach this finally block, the overlay
+        // should already be hidden if everything went well. This hide() call
+        // is just a safety net to balance the Phase 3 show in case anything
+        // went wrong (e.g. navigation skipped due to error).
+        try { LoadingService.hide(); } catch (_) {}
+
+        // Legacy cleanup (kept for backward-compat with older inline overlays)
         try {
           if (typeof window.__removeInstantLoadingOverlay === 'function'
             && window.__instantLoadingOverlayShown) {

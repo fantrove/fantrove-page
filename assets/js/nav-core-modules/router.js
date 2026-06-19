@@ -165,6 +165,17 @@
     // ── navigateTo ─────────────────────────────────────────────────────────────
 
     async navigateTo(route, options = {}) {
+      // ── Smart loading: enable fvl-nav-mode + nav-loading state ──────────────
+      // WHY fvl-nav-mode: tells FVL CSS to leave room for bottom nav so the
+      //   spinner is centered in the visible area, not the full viewport.
+      // WHY nav-loading: fades out the main nav buttons + sub-nav buttons so
+      //   the user can't click another category mid-fetch, and gets a clear
+      //   visual signal that "we're switching". Restored in finally block.
+      this._setNavLoading(true);
+
+      // ── Smart loading message based on route ──────────────────────────────
+      // WHY: "Loading emojis..." is more informative than generic "Loading..."
+      //   Resolved from button config AFTER we know the main button.
       try { M.LoadingService?.show(); } catch (_) {}
 
       if (this.state.isNavigating) {
@@ -184,7 +195,12 @@
         if (this.state.isNavigating) {
           console.warn('[NavCore/Router] Navigation safety timeout (20s) — forcing reset');
           this.state.isNavigating = false;
-          try { M.LoadingService?.hide(); } catch (_) {}
+          try {
+            // Force-reset the loading session — safety timeout means
+            // something went wrong, so we can't trust hide() to balance.
+            M.LoadingService?._forceReset?.();
+            this._setNavLoading(false);
+          } catch (_) {}
           this._safetyTimer = null;
         }
       }, 20000);
@@ -222,6 +238,22 @@
 
         const mainButton = (cfg.mainButtons || []).find(b => b.url === main || b.jsonFile === main);
         if (!mainButton) throw new Error('[NavCore/Router] mainButton not found for: ' + main);
+
+        // ── Smart loading message: use the active language label of the button ──
+        try {
+          const lang = localStorage.getItem('selectedLang') || 'en';
+          const btnLabel = mainButton.label?.[lang]
+                        || mainButton.name?.[lang]
+                        || mainButton.label?.en
+                        || mainButton.name?.en
+                        || '';
+          if (btnLabel) {
+            const msg = (lang === 'th')
+              ? 'กำลังโหลด' + btnLabel + '...'
+              : 'Loading ' + btnLabel + '...';
+            M.LoadingService?.updateMessage?.(msg);
+          }
+        } catch (_) {}
 
         const lang          = localStorage.getItem('selectedLang') || 'en';
         const hasSubButtons = mainButton.subButtons?.length > 0;
@@ -290,7 +322,49 @@
       } finally {
         this.state.isNavigating = false;
         if (this._safetyTimer) { clearTimeout(this._safetyTimer); this._safetyTimer = null; }
+        // ── Restore buttons visibility (fade nav back in) ────────────────────
+        // WHY small delay: gives the new content a frame to paint before
+        //   revealing the buttons → smoother visual transition
+        try {
+          requestAnimationFrame(() => {
+            this._setNavLoading(false);
+          });
+        } catch (_) {}
       }
+    },
+
+    /**
+     * Toggle the "nav-loading" state.
+     * Adds/removes the body class AND sets opacity directly via JS for
+     * browsers that don't honor `!important` opacity on `nav` elements
+     * (observed in some Chromium versions).
+     *
+     * @param {boolean} isLoading
+     */
+    _setNavLoading(isLoading) {
+      try {
+        if (isLoading) {
+          document.body.classList.add('fvl-nav-mode', 'nav-loading');
+        } else {
+          document.body.classList.remove('nav-loading');
+          // Keep fvl-nav-mode — it's a persistent page-mode class
+        }
+
+        // Direct style application (more reliable than CSS rules in some browsers)
+        const nav    = document.querySelector('header nav');
+        const subNav = document.getElementById('sub-nav');
+        const opacity = isLoading ? '0' : '';
+        const pe      = isLoading ? 'none' : '';
+
+        if (nav) {
+          nav.style.setProperty('opacity', opacity, 'important');
+          nav.style.setProperty('pointer-events', pe, 'important');
+        }
+        if (subNav) {
+          subNav.style.setProperty('opacity', opacity, 'important');
+          subNav.style.setProperty('pointer-events', pe, 'important');
+        }
+      } catch (_) {}
     },
 
     // ── _waitUntilFree ─────────────────────────────────────────────────────────

@@ -1,0 +1,417 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   FVL (FantroveVerse Loader) v1.0.0 — loading-system.css
+   assets/css/loading-system.css
+
+   Designed for maximum lightweight:
+   • CSS animations only (no JS-driven animation)
+   • `contain: strict` on overlay layers (isolation = better perf)
+   • `will-change` only applied during active transitions
+   • Composite-only properties (transform/opacity) — no layout thrash
+   • prefers-reduced-motion: reduce → animations disabled
+   • All colors via Fantrove design tokens (--fv-*)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@layer fvl {
+
+  /* ── Top offset var (fullscreen mode) ────────────────────────────────────── */
+  :root {
+    --fvl-top: 0px;
+    /* Keep --clp-top in sync for back-compat with legacy loading.css */
+    --clp-top: 0px;
+
+    /* FVL-internal theme tokens (override per [data-fvl-theme]) */
+    --fvl-bg:          var(--fv-surface-page);
+    --fvl-text:        #3c4043;
+    --fvl-text-sub:    #9aa0a6;
+    --fvl-spinner-track: #e8f5ef;
+    --fvl-spinner-arc: var(--fv-brand-teal-light);
+    --fvl-overlay-bg:  rgba(255, 255, 255, 0.96);
+    --fvl-topbar-bg:   var(--fv-brand-teal-light);
+  }
+
+  /* ── Keyframes ──────────────────────────────────────────────────────────── */
+  @keyframes _fvl_spin       { to { transform: rotate(360deg); } }
+  @keyframes _fvl_in         { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes _fvl_out        { from { opacity: 1; } to { opacity: 0; } }
+  @keyframes _fvl_topbar_indeterminate {
+    0%   { transform: translateX(-100%) scaleX(0.4); }
+    50%  { transform: translateX(0%)     scaleX(0.7); }
+    100% { transform: translateX(250%)   scaleX(0.4); }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     Root element — base styles shared across all modes
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  .fvl {
+    font-family: var(--fv-font-stack);
+    box-sizing: border-box;
+  }
+
+  /* ── Theme variants ───────────────────────────────────────────────────────── */
+  .fvl[data-fvl-theme="light"] {
+    --fvl-bg:            var(--fv-surface-page);
+    --fvl-text:          #3c4043;
+    --fvl-text-sub:      #9aa0a6;
+    --fvl-spinner-track: #e8f5ef;
+    --fvl-spinner-arc:   var(--fv-brand-teal-light);
+    --fvl-overlay-bg:    rgba(255, 255, 255, 0.96);
+    --fvl-topbar-bg:     var(--fv-brand-teal-light);
+  }
+  .fvl[data-fvl-theme="dark"] {
+    --fvl-bg:            #1a1d23;
+    --fvl-text:          #e8eaed;
+    --fvl-text-sub:      #9aa0a6;
+    --fvl-spinner-track: #2a2d33;
+    --fvl-spinner-arc:   var(--fv-brand-teal-light);
+    --fvl-overlay-bg:    rgba(20, 22, 26, 0.96);
+    --fvl-topbar-bg:     var(--fv-brand-teal-light);
+  }
+  .fvl[data-fvl-theme="brand"] {
+    --fvl-bg:            var(--fv-brand-teal);
+    --fvl-text:          #ffffff;
+    --fvl-text-sub:      rgba(255, 255, 255, 0.78);
+    --fvl-spinner-track: rgba(255, 255, 255, 0.18);
+    --fvl-spinner-arc:   #ffffff;
+    --fvl-overlay-bg:    rgba(19, 180, 127, 0.96);
+    --fvl-topbar-bg:     var(--fv-brand-teal-light);
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     Spinner (ring visualization) — shared element, sized per mode
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  .fvl-spinner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    will-change: transform;
+    isolation: isolate;
+    contain: size style;
+  }
+  .fvl-spinner svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    display: block;
+  }
+  .fvl-spinner .fvl-track {
+    stroke: var(--fvl-spinner-track);
+    stroke-width: 3.5;
+    fill: none;
+  }
+  .fvl-spinner .fvl-arc {
+    stroke: var(--fvl-spinner-arc);
+    stroke-width: 3.5;
+    stroke-linecap: round;
+    stroke-dasharray: 88 132;
+    fill: none;
+    transform-box: fill-box;
+    transform-origin: center;
+    will-change: transform;
+    animation: _fvl_spin 0.8s linear infinite;
+  }
+
+  /* Inline variant — slightly thicker stroke for visibility at small sizes */
+  .fvl-spinner-inline .fvl-track,
+  .fvl-spinner-inline .fvl-arc {
+    stroke-width: 5;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     MODE 1: fullscreen — overlay covering viewport below header
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  .fvl-fullscreen {
+    position: fixed;
+    top: var(--fvl-top);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+    background: var(--fvl-bg);
+    box-sizing: border-box;
+    contain: strict;
+  }
+  .fvl-fullscreen[hidden] { display: none !important; }
+
+  .fvl-fullscreen .fvl-spinner {
+    width: 68px;
+    height: 68px;
+  }
+  .fvl-fullscreen .fvl-text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    contain: layout style;
+  }
+  .fvl-fullscreen .fvl-msg {
+    font-size: 16px;
+    font-weight: var(--fv-font-semibold);
+    color: var(--fvl-text);
+    text-align: center;
+    line-height: 1.4;
+    min-width: 100px;
+    min-height: 1.4em;
+  }
+  .fvl-fullscreen .fvl-sub {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--fvl-text-sub);
+    text-align: center;
+    line-height: 1.4;
+  }
+  .fvl-fullscreen .fvl-sub:empty { display: none; }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     MODE 2: scoped — covers a specific container (absolute positioned)
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  .fvl-scoped {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* WHY z-index 1600 (from CONFIG.Z_INDEX.scoped):
+       Ensures the loader sits above any content inside the target container.
+       The container itself becomes position:relative (set by JS) so this
+       z-index only applies within the container's stacking context. */
+    z-index: 1600;
+    contain: layout style;
+    pointer-events: auto;
+  }
+  .fvl-scoped.fvl-scoped-overlay {
+    background: var(--fvl-overlay-bg);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+  }
+  .fvl-scoped .fvl-scoped-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 18px;
+    max-width: 90%;
+    text-align: center;
+  }
+  .fvl-scoped .fvl-spinner {
+    width: 44px;
+    height: 44px;
+  }
+  /* WHY thicker stroke on scoped: spinner is smaller (44px vs 68px in
+     fullscreen), so we thicken the stroke slightly to keep it visible
+     at the smaller size — same approach as inline mode. */
+  .fvl-scoped .fvl-spinner .fvl-track,
+  .fvl-scoped .fvl-spinner .fvl-arc {
+    stroke-width: 4.5;
+  }
+  .fvl-scoped .fvl-msg {
+    font-size: 13px;
+    font-weight: var(--fv-font-semibold);
+    color: var(--fvl-text);
+    line-height: 1.4;
+    max-width: 240px;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     MODE 3: inline — small spinner inside target (e.g. button)
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  .fvl-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    vertical-align: middle;
+    line-height: 0;
+  }
+  .fvl-inline .fvl-spinner {
+    width: 18px;
+    height: 18px;
+  }
+  .fvl-inline .fvl-inline-msg {
+    font-size: inherit;
+    font-weight: inherit;
+    color: inherit;
+    line-height: 1.4;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     MODE 4: topbar — thin progress bar at top of viewport (NProgress-style)
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  .fvl-topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    z-index: 17500;
+    background: transparent;
+    pointer-events: none;
+    contain: strict;
+  }
+  .fvl-topbar-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: var(--fvl-topbar-bg);
+    box-shadow: 0 0 8px rgba(19, 180, 127, 0.4);
+    will-change: transform, width;
+  }
+  /* Determinate: width is set via inline style */
+  .fvl-topbar-bar.fvl-topbar-determinate {
+    transition: width 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  /* Indeterminate: bar slides back and forth */
+  .fvl-topbar-bar.fvl-topbar-indeterminate {
+    width: 40%;
+    transform-origin: left center;
+    animation: _fvl_topbar_indeterminate 1.2s ease-in-out infinite;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     Animation states — entering / shown / leaving
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  .fvl.fvl-entering {
+    will-change: opacity;
+    opacity: 0;
+  }
+  .fvl.fvl-shown {
+    will-change: auto;
+    opacity: 1;
+    transition: opacity 140ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .fvl.fvl-leaving {
+    will-change: opacity;
+    opacity: 0;
+    transition: opacity 180ms cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+  }
+
+  /* Topbar has special enter/leave — slide in/out vertically */
+  .fvl-topbar.fvl-entering {
+    transform: translateY(-100%);
+    transition: transform 140ms cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 1;
+    will-change: transform;
+  }
+  .fvl-topbar.fvl-shown {
+    transform: translateY(0);
+    transition: transform 140ms cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: auto;
+    opacity: 1;
+  }
+  .fvl-topbar.fvl-leaving {
+    transform: translateY(-100%);
+    transition: transform 180ms cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
+    opacity: 1;
+    pointer-events: none;
+  }
+
+  /* Inline doesn't fade — just appears/disappears to avoid jank */
+  .fvl-inline.fvl-entering,
+  .fvl-inline.fvl-shown,
+  .fvl-inline.fvl-leaving {
+    opacity: 1;
+    transition: none;
+    will-change: auto;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     prefers-reduced-motion — disable all animations
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  @media (prefers-reduced-motion: reduce) {
+    .fvl-spinner .fvl-arc { animation: none; }
+    .fvl-topbar-bar.fvl-topbar-indeterminate { animation: none; transform: translateX(0); width: 100%; }
+    .fvl.fvl-entering,
+    .fvl.fvl-shown,
+    .fvl.fvl-leaving {
+      transition: none !important;
+      animation: none !important;
+      will-change: auto !important;
+      opacity: 1;
+    }
+    .fvl-topbar.fvl-entering,
+    .fvl-topbar.fvl-shown,
+    .fvl-topbar.fvl-leaving {
+      transform: none !important;
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     NAV-CORE INTEGRATION — fullscreen overlay respects bottom nav
+     ═══════════════════════════════════════════════════════════════════════════
+     When body has class "fvl-nav-mode" (added by nav-core router), the
+     fullscreen overlay leaves room for the bottom nav:
+       • Mobile (default): leave 64px + safe-area at bottom for bottom nav
+       • Desktop (>=768px): leave 88px at left for left-rail nav
+     This ensures the spinner is centered in the VISIBLE area (between
+     header and bottom nav), not the full viewport.
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  body.fvl-nav-mode .fvl-fullscreen {
+    /* Mobile: leave room at bottom for bottom nav + safe area */
+    bottom: calc(var(--fv-nav-bottom-h, 64px) + env(safe-area-inset-bottom, 0px));
+  }
+
+  @media (min-width: 768px) {
+    /* Desktop: bottom nav becomes left rail (88px wide) */
+    body.fvl-nav-mode .fvl-fullscreen {
+      bottom: 0;
+      left: 88px;
+    }
+  }
+
+} /* end @layer fvl */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NAV-LOADING STATE — UNLAYERED (high priority over nav-core.css)
+   ═══════════════════════════════════════════════════════════════════════════
+   When body has class "nav-loading" (added by nav-core router during
+   content fetch), the main nav buttons and sub-nav fade out + become
+   non-interactive. This prevents the user from clicking another category
+   while the previous one is still loading, and signals "we're switching".
+
+   The header container itself stays visible (logo, layout) — only the
+   interactive nav buttons fade.
+
+   IMPORTANT: This rule lives OUTSIDE @layer fvl so it has higher priority
+   than unlayered rules in nav-core.css / nav-core-ext.css that might
+   otherwise set opacity:1 on `header nav`.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+body.nav-loading header nav,
+body.nav-loading #sub-nav {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 180ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* When NOT loading, fade in smoothly */
+header nav,
+#sub-nav {
+  transition: opacity 220ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.nav-loading header nav,
+  body.nav-loading #sub-nav,
+  header nav,
+  #sub-nav {
+    transition: none !important;
+  }
+}

@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>FVL Demo — FantroveVerse Loader</title>
+
+  <!-- Design tokens (required for FVL theme variables) -->
+  <link rel="stylesheet" href="/assets/css/tokens.css">
+  <!-- FVL CSS (also auto-injected by fvl.js, but linked here for clarity) -->
+  <link rel="stylesheet" href="/assets/css/loading-system.css">
+
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--fv-font-stack);
+      background: var(--fv-surface-subtle);
+      color: var(--fv-text-primary);
+      min-height: 100vh;
+      padding: 40px 20px 80px;
+    }
+    .container { max-width: 980px; margin: 0 auto; }
+    h1 { font-size: 28px; margin: 0 0 8px; color: var(--fv-text-heading); }
+    .subtitle { color: var(--fv-text-muted); margin: 0 0 32px; font-size: 15px; }
+
+    .badge {
+      display: inline-block;
+      background: var(--fv-brand-teal);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: var(--fv-radius-pill);
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+
+    .card {
+      background: var(--fv-surface-card);
+      border-radius: var(--fv-radius-md);
+      padding: 24px;
+      box-shadow: var(--fv-shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      border: 1px solid var(--fv-border-subtle);
+    }
+
+    .card h3 {
+      margin: 0;
+      font-size: 17px;
+      color: var(--fv-text-heading);
+    }
+    .card p { margin: 0; font-size: 13px; color: var(--fv-text-muted); line-height: 1.5; }
+
+    .btn {
+      background: var(--fv-gradient-btn);
+      color: #fff;
+      border: none;
+      padding: 10px 18px;
+      border-radius: var(--fv-radius-pill);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: transform 150ms ease, box-shadow 150ms ease;
+      min-height: 40px;
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: var(--fv-shadow-teal); }
+    .btn:active { transform: translateY(0); }
+    .btn-secondary {
+      background: var(--fv-surface-soft);
+      color: var(--fv-text-primary);
+      border: 1px solid var(--fv-border-subtle);
+    }
+    .btn-secondary:hover { box-shadow: var(--fv-shadow-sm); }
+
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* Scoped demo card — becomes position:relative automatically when loader attaches */
+    .scoped-target {
+      background: var(--fv-surface-soft);
+      border: 1px dashed var(--fv-border-subtle);
+      border-radius: var(--fv-radius-sm);
+      padding: 32px 16px;
+      text-align: center;
+      color: var(--fv-text-muted);
+      font-size: 13px;
+      min-height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .code {
+      background: #1a1d23;
+      color: #e8eaed;
+      padding: 14px 16px;
+      border-radius: var(--fv-radius-sm);
+      font-family: 'SF Mono', Monaco, Menlo, monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      overflow-x: auto;
+      margin: 0;
+    }
+    .code .k { color: #ff79c6; }
+    .code .s { color: #f1fa8c; }
+    .code .c { color: #6272a4; font-style: italic; }
+    .code .n { color: #bd93f9; }
+
+    .stats-panel {
+      background: var(--fv-surface-card);
+      border: 1px solid var(--fv-border-subtle);
+      border-radius: var(--fv-radius-md);
+      padding: 20px;
+      margin-bottom: 24px;
+      box-shadow: var(--fv-shadow-sm);
+    }
+    .stats-panel h3 { margin: 0 0 12px; font-size: 15px; }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 12px;
+    }
+    .stat-item {
+      background: var(--fv-surface-soft);
+      padding: 10px 12px;
+      border-radius: var(--fv-radius-sm);
+    }
+    .stat-label { font-size: 11px; color: var(--fv-text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-value { font-size: 18px; font-weight: 700; color: var(--fv-text-heading); margin-top: 2px; }
+
+    .log-panel {
+      background: #1a1d23;
+      color: #e8eaed;
+      padding: 14px 16px;
+      border-radius: var(--fv-radius-sm);
+      font-family: 'SF Mono', Monaco, Menlo, monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .log-panel .log-entry { padding: 2px 0; }
+    .log-panel .log-time { color: #6272a4; }
+    .log-panel .log-event { color: #8be9fd; font-weight: 600; }
+
+    .footer {
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 1px solid var(--fv-border-subtle);
+      font-size: 13px;
+      color: var(--fv-text-muted);
+      line-height: 1.6;
+    }
+    .footer a { color: var(--fv-brand-teal); text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+
+    <span class="badge">FVL v1.0.0</span>
+    <h1>FantroveVerse Loader (FVL)</h1>
+    <p class="subtitle">
+      Framework หน้าโหลดแยกออกจาก nav-core — รองรับ 4 display modes,
+      lightweight, zero dependencies, ทำงานลื่นไหลบนทุกสเปค
+    </p>
+
+    <!-- ── Mode 1: Fullscreen ────────────────────────────────────────────── -->
+    <div class="grid">
+      <div class="card">
+        <h3>① Fullscreen Mode</h3>
+        <p>Overlay เต็มหน้าจอ — ใช้ตอนเปลี่ยนหน้าหรือโหลดข้อมูลใหญ่ เหมาะกับ fullscreen transitions</p>
+        <div class="actions">
+          <button class="btn" id="btn-fs-show">Show</button>
+          <button class="btn btn-secondary" id="btn-fs-hide">Hide</button>
+          <button class="btn btn-secondary" id="btn-fs-msg">Update msg</button>
+        </div>
+        <pre class="code"><span class="c">// ค่า default — ใช้ singleton ID</span>
+<span class="k">const</span> h = <span class="n">FVL</span>.show({
+  message: <span class="s">'กำลังโหลด...'</span>,
+  autoHideAfterMs: <span class="n">4000</span>
+});
+<span class="n">h</span>.hide();</pre>
+      </div>
+
+      <!-- ── Mode 2: Scoped ─────────────────────────────────────────────── -->
+      <div class="card">
+        <h3>② Scoped Mode</h3>
+        <p>ครอบ container เฉพาะ เช่น การ์ด/section ใดๆ ไม่เต็มจอ แค่ครอบพื้นที่ที่กำหนด</p>
+        <div class="actions">
+          <button class="btn" id="btn-sc-show">Show in box →</button>
+          <button class="btn btn-secondary" id="btn-sc-hide">Hide</button>
+        </div>
+        <pre class="code"><span class="n">FVL</span>.scoped({
+  target: <span class="s">'#demo-scoped-box'</span>,
+  message: <span class="s">'Fetching...'</span>
+});</pre>
+      </div>
+
+      <!-- ── Mode 3: Inline ─────────────────────────────────────────────── -->
+      <div class="card">
+        <h3>③ Inline Mode</h3>
+        <p>เล็ก แทรกในปุ่ม/element ใดๆ — เหมาะกับ submit button หรือ action button</p>
+        <div class="actions">
+          <button class="btn" id="btn-in-submit">Submit form</button>
+          <button class="btn btn-secondary" id="btn-in-replace">Replace mode</button>
+        </div>
+        <pre class="code"><span class="n">FVL</span>.inline({
+  target: <span class="s">'#my-btn'</span>
+});
+<span class="c">// หรือ replace content:</span>
+<span class="n">FVL</span>.inline({
+  target: <span class="s">'#my-btn'</span>,
+  replaceContent: <span class="k">true</span>,
+  message: <span class="s">'Working...'</span>
+});</pre>
+      </div>
+
+      <!-- ── Mode 4: Topbar ─────────────────────────────────────────────── -->
+      <div class="card">
+        <h3>④ Topbar Mode</h3>
+        <p>Progress bar บางๆ ติดด้านบน viewport — เหมือน NProgress เหมาะกับ navigation ระหว่างหน้า</p>
+        <div class="actions">
+          <button class="btn" id="btn-tb-indeterminate">Indeterminate</button>
+          <button class="btn btn-secondary" id="btn-tb-progress">Progress demo</button>
+        </div>
+        <pre class="code"><span class="c">// indeterminate:</span>
+<span class="n">FVL</span>.topbar();
+
+<span class="c">// determinate (0..1):</span>
+<span class="k">const</span> h = <span class="n">FVL</span>.topbar({ progress: <span class="n">0.3</span> });
+<span class="n">h</span>.setProgress(<span class="n">0.7</span>);
+<span class="n">h</span>.hide();</pre>
+      </div>
+    </div>
+
+    <!-- ── Scoped demo target ─────────────────────────────────────────────── -->
+    <div class="card" style="margin-bottom: 24px;">
+      <h3>Scoped target demo</h3>
+      <p>กดปุ่ม "Show in box →" ด้านบนเพื่อโหลด scoped loader ในกรอบนี้</p>
+      <div class="scoped-target" id="demo-scoped-box">
+        Original content here — loader will overlay this area.
+      </div>
+    </div>
+
+    <!-- ── Stats ──────────────────────────────────────────────────────────── -->
+    <div class="stats-panel">
+      <h3>FVL.stats() <button class="btn btn-secondary" id="btn-refresh-stats" style="float:right; padding:4px 10px; min-height:auto; font-size:12px;">Refresh</button></h3>
+      <div class="stats-grid" id="stats-grid"></div>
+    </div>
+
+    <!-- ── Event log ──────────────────────────────────────────────────────── -->
+    <div class="stats-panel">
+      <h3>System events <button class="btn btn-secondary" id="btn-clear-log" style="float:right; padding:4px 10px; min-height:auto; font-size:12px;">Clear</button></h3>
+      <div class="log-panel" id="event-log"></div>
+    </div>
+
+    <!-- ── Backward compat ────────────────────────────────────────────────── -->
+    <div class="card">
+      <h3>Backward Compatibility</h3>
+      <p>API เดิมจาก nav-core ทำงานเหมือนเดิมผ่าน proxy:</p>
+      <div class="actions">
+        <button class="btn" id="btn-compat-1">window.showInstantLoadingOverlay()</button>
+        <button class="btn btn-secondary" id="btn-compat-2">window.removeInstantLoadingOverlay()</button>
+      </div>
+      <pre class="code"><span class="c">// เหล่านี้ทำงานเหมือนเดิม:</span>
+<span class="n">window</span>.showInstantLoadingOverlay(<span class="s">'Loading...'</span>);
+<span class="n">window</span>.removeInstantLoadingOverlay();
+<span class="n">window</span>._navCore_contentLoadingManager.show();
+<span class="n">NavCoreModules</span>.LoadingService.hide();</pre>
+    </div>
+
+    <div class="footer">
+      <strong>FVL v1.0.0</strong> — FantroveVerse Loader framework ·
+      <a href="/fantrove-docs/07-Loading-System-FVL.md">Documentation</a> ·
+      Built with maximum lightweight priority: 1 JS file (~9KB), 1 CSS file (~4KB), zero dependencies.
+    </div>
+
+  </div>
+
+  <!-- Load FVL framework -->
+  <script src="/assets/js/loading-system/fvl.js?v=1.0.0"></script>
+
+  <script>
+    // ── Wait for FVL ready ─────────────────────────────────────────────────
+    function ready(fn) {
+      if (window.FVL && window.FVL._initialized) fn();
+      else window.addEventListener('fvl:ready', fn, { once: true });
+    }
+
+    ready(function() {
+
+      // ── Event log ─────────────────────────────────────────────────────────
+      var logEl = document.getElementById('event-log');
+      function logEvent(event, detail) {
+        var time = new Date().toLocaleTimeString('en-GB');
+        var entry = document.createElement('div');
+        entry.className = 'log-entry';
+        entry.innerHTML =
+          '<span class="log-time">[' + time + ']</span> ' +
+          '<span class="log-event">' + event + '</span> ' +
+          (detail ? '<span style="color:#f8f8f2">' + JSON.stringify(detail) + '</span>' : '');
+        logEl.insertBefore(entry, logEl.firstChild);
+        while (logEl.children.length > 30) logEl.removeChild(logEl.lastChild);
+      }
+
+      ['showing', 'shown', 'hiding', 'hidden', 'updated'].forEach(function(ev) {
+        FVL.on(ev, function(d) { logEvent(ev, d); });
+      });
+
+      // ── Stats refresh ─────────────────────────────────────────────────────
+      var statsGrid = document.getElementById('stats-grid');
+      function refreshStats() {
+        var s = FVL.stats();
+        statsGrid.innerHTML = '';
+        var items = [
+          { label: 'Active', value: s.active },
+          { label: 'Fullscreen', value: s.modes.fullscreen },
+          { label: 'Scoped', value: s.modes.scoped },
+          { label: 'Inline', value: s.modes.inline },
+          { label: 'Topbar', value: s.modes.topbar },
+        ];
+        items.forEach(function(item) {
+          var div = document.createElement('div');
+          div.className = 'stat-item';
+          div.innerHTML =
+            '<div class="stat-label">' + item.label + '</div>' +
+            '<div class="stat-value">' + item.value + '</div>';
+          statsGrid.appendChild(div);
+        });
+      }
+      document.getElementById('btn-refresh-stats').onclick = refreshStats;
+      refreshStats();
+      setInterval(refreshStats, 1000);
+
+      document.getElementById('btn-clear-log').onclick = function() {
+        logEl.innerHTML = '';
+      };
+
+      // ── Mode 1: Fullscreen ────────────────────────────────────────────────
+      document.getElementById('btn-fs-show').onclick = function() {
+        FVL.fullscreen({ message: 'กำลังโหลด...', autoHideAfterMs: 4000 });
+      };
+      document.getElementById('btn-fs-hide').onclick = function() {
+        FVL.hide();
+      };
+      document.getElementById('btn-fs-msg').onclick = function() {
+        FVL.update('fvl-default-fullscreen', { message: 'Almost done...' });
+      };
+
+      // ── Mode 2: Scoped ────────────────────────────────────────────────────
+      var scopedHandle = null;
+      document.getElementById('btn-sc-show').onclick = function() {
+        scopedHandle = FVL.scoped({
+          target: '#demo-scoped-box',
+          message: 'Fetching data...',
+          autoHideAfterMs: 3500,
+        });
+      };
+      document.getElementById('btn-sc-hide').onclick = function() {
+        if (scopedHandle) scopedHandle.hide();
+      };
+
+      // ── Mode 3: Inline ────────────────────────────────────────────────────
+      document.getElementById('btn-in-submit').onclick = function() {
+        var btn = this;
+        var h = FVL.inline({ target: btn });
+        // simulate async work
+        setTimeout(function() { h.hide(); }, 2000);
+      };
+      document.getElementById('btn-in-replace').onclick = function() {
+        var btn = this;
+        var original = btn.textContent;
+        var h = FVL.inline({
+          target: btn,
+          replaceContent: true,
+          message: 'Working...',
+        });
+        setTimeout(function() {
+          h.hide();
+          btn.textContent = original;
+        }, 2500);
+      };
+
+      // ── Mode 4: Topbar ────────────────────────────────────────────────────
+      document.getElementById('btn-tb-indeterminate').onclick = function() {
+        var h = FVL.topbar();
+        setTimeout(function() { h.hide(); }, 3000);
+      };
+      document.getElementById('btn-tb-progress').onclick = function() {
+        var h = FVL.topbar({ progress: 0.1 });
+        var p = 0.1;
+        var iv = setInterval(function() {
+          p += 0.15;
+          if (p >= 1) {
+            p = 1;
+            clearInterval(iv);
+            h.setProgress(1);
+            setTimeout(function() { h.hide(); }, 300);
+          } else {
+            h.setProgress(p);
+          }
+        }, 250);
+      };
+
+      // ── Backward compat ───────────────────────────────────────────────────
+      document.getElementById('btn-compat-1').onclick = function() {
+        window.showInstantLoadingOverlay('Proxy works!');
+        setTimeout(function() { window.removeInstantLoadingOverlay(); }, 2000);
+      };
+      document.getElementById('btn-compat-2').onclick = function() {
+        window.removeInstantLoadingOverlay();
+      };
+
+      logEvent('ready', { version: FVL.version });
+    });
+  </script>
+
+</body>
+</html>
