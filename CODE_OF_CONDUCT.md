@@ -1,8 +1,8 @@
-# Code of Conduct for FanTrove
+# Code of Conduct for Fantrove
 
 ## Introduction
 
-At **FanTrove**, we are committed to creating a welcoming and inclusive environment for all contributors, users, and visitors. We expect everyone interacting with this project to behave in a respectful, professional, and responsible manner. By participating in **FanTrove**, you agree to abide by the guidelines and expectations outlined in this document.
+At **Fantrove**, we are committed to creating a welcoming and inclusive environment for all contributors, users, and visitors. We expect everyone interacting with this project to behave in a respectful, professional, and responsible manner. By participating in **Fantrove**, you agree to abide by the guidelines and expectations outlined in this document.
 
 ### Our Values
 
@@ -13,7 +13,7 @@ At **FanTrove**, we are committed to creating a welcoming and inclusive environm
 
 ## Expected Behavior
 
-As a contributor or user of **FanTrove**, you should:
+As a contributor or user of **Fantrove**, you should:
 
 - Be respectful and professional in your communication and actions.
 - Encourage and support others in their efforts.
@@ -32,17 +32,17 @@ Unacceptable behaviors include, but are not limited to:
 - **Spamming**: Posting irrelevant or excessive content that disrupts the normal functioning of the community.
 - **Threats or Violence**: Threatening harm or advocating violence against any person or group.
   
-Any behavior that negatively impacts the safety and wellbeing of the **FanTrove** community is considered unacceptable.
+Any behavior that negatively impacts the safety and wellbeing of the **Fantrove** community is considered unacceptable.
 
 ## Intellectual Property and Copyright Compliance
 
-At **FanTrove**, we are committed to respecting intellectual property rights and ensuring that the content provided on the website complies with applicable copyright laws.
+At **Fantrove**, we are committed to respecting intellectual property rights and ensuring that the content provided on the website complies with applicable copyright laws.
 
 ### Content Responsibility
 
-- **Content Licensing**: The content shared within **FanTrove** is licensed under [Creative Commons Zero (CC0)](https://creativecommons.org/publicdomain/zero/1.0/), meaning it is free to use, share, and adapt without attribution. We strive to ensure that all content made available through the site falls under this license or is otherwise in the public domain.
+- **Content Licensing**: The content shared within **Fantrove** is licensed under [Creative Commons Zero (CC0)](https://creativecommons.org/publicdomain/zero/1.0/), meaning it is free to use, share, and adapt without attribution. We strive to ensure that all content made available through the site falls under this license or is otherwise in the public domain.
   
-- **Due Diligence**: While we make every effort to verify the source and copyright status of content before publishing it on **FanTrove**, there may be occasional oversights or errors in our process. We rely on contributors to provide accurate information regarding the content they submit, and we encourage all contributors to adhere to copyright laws.
+- **Due Diligence**: While we make every effort to verify the source and copyright status of content before publishing it on **Fantrove**, there may be occasional oversights or errors in our process. We rely on contributors to provide accurate information regarding the content they submit, and we encourage all contributors to adhere to copyright laws.
 
 ### Response to Copyright Infringement Claims
 
@@ -56,13 +56,13 @@ In the event that we receive a **valid copyright infringement notice**, we will 
 
 ### Safe Harbor for Users
 
-- **Reporting Mechanism**: We encourage anyone who believes content on **FanTrove** may infringe on their copyright to reach out with the proper legal documentation. This will allow us to promptly investigate and address the issue.
+- **Reporting Mechanism**: We encourage anyone who believes content on **Fantrove** may infringe on their copyright to reach out with the proper legal documentation. This will allow us to promptly investigate and address the issue.
   
 - **Transparency**: All copyright-related disputes will be handled transparently, and affected parties will be kept informed of the status of their claims or disputes. We will ensure that all actions taken comply with applicable copyright laws and that all stakeholders are treated fairly.
 
 ### Conclusion
 
-We take copyright matters seriously and will work diligently to ensure that **FanTrove** remains compliant with all applicable laws. Our goal is to provide a platform for open and legal sharing of content, but we also acknowledge that mistakes can happen. Should any copyright issues arise, we will resolve them in a fair and transparent manner, ensuring that all parties involved are treated with respect.
+We take copyright matters seriously and will work diligently to ensure that **Fantrove** remains compliant with all applicable laws. Our goal is to provide a platform for open and legal sharing of content, but we also acknowledge that mistakes can happen. Should any copyright issues arise, we will resolve them in a fair and transparent manner, ensuring that all parties involved are treated with respect.
 
 ## Reporting Violations
 
@@ -75,8 +75,8 @@ We take all reports seriously and will handle them in a timely and respectful ma
 
 ## Enforcement
 
-Project maintainers are responsible for enforcing this Code of Conduct. Any participant or contributor who engages in unacceptable behavior may be subject to temporary or permanent bans from **FanTrove**.
+Project maintainers are responsible for enforcing this Code of Conduct. Any participant or contributor who engages in unacceptable behavior may be subject to temporary or permanent bans from **Fantrove**.
 
 ---
 
-Thank you for contributing to **FanTrove**! Together, we can create a welcoming and productive community.
+Thank you for contributing to **Fantrove**! Together, we can create a welcoming and productive community.

@@ -586,6 +586,92 @@ const handle = URE.mount({
   diffing: true,                  // เปิด data diffing (default: true)
   keyField: 'id',                 // field สำหรับ identity (default: 'id')
   lang: 'th',                     // ภาษา (default: 'en' หรือ localStorage)
+});
+```
+
+---
+
+## 11. Quick Start (สำหรับการใช้งานรวดเร็ว)
+
+> ส่วนนี้รวมมาจาก `assets/js/ure/Readme.md` เดิม เพื่อให้นักพัฒนา/AI สามารถเริ่มใช้งาน URE ได้ทันทีโดยไม่ต้องอ่านเอกสารยาวทั้งหมด
+
+### 11.1 การโหลด
+
+```html
+<script src="/assets/js/ure/ure.js"></script>
+```
+
+### 11.2 การใช้งานขั้นต่ำ
+
+```js
+window.addEventListener('ure:ready', () => {
+  const list = URE.mount({
+    container : '#app',
+    data      : myJsonArray,
+    template  : (item, lang) => `<div class="card">${item.name?.[lang] || item.name?.en}</div>`,
+  });
+});
+```
+
+### 11.3 ตัวเลือก `URE.mount(options)` แบบเต็ม
+
+| Option | Type | Default | คำอธิบาย |
+|---|---|---|---|
+| `container` | `Element\|string` | **required** | DOM element หรือ CSS selector |
+| `data` | `any[]` | `[]` | Array ของ data items |
+| `template` | `(item, lang) => string` | **required** | HTML string สำหรับแต่ละ item |
+| `buffer` | `number` | `600` | px ที่ pre-render ไว้นอก viewport (clamped to memory budget) |
+| `overscan` | `number` | `0` | จำนวน items นอก viewport ที่จะ pre-render (override buffer px) |
+| `columns` | `number` | `1` | Grid layout columns (>1 = grid mode) |
+| `gap` | `number` | `0` | ระยะห่างระหว่าง item/row ใน px |
+| `recycling` | `boolean` | `true` | เปิด DOM node pool |
+| `diffing` | `boolean` | `true` | เปิด diff — re-render เฉพาะ item ที่เปลี่ยน |
+| `keyField` | `string` | `'id'` | Field ที่ใช้เป็น identity ใน diff |
+| `itemKey` | `(item) => string` | `null` | Function-based key extraction — override `keyField` |
+| `lang` | `string` | `localStorage.selectedLang \|\| 'en'` | ภาษาเริ่มต้น |
+| `poolCap` | `number` | `60` | Max nodes ใน pool (clamped to memory budget at mount time) |
+| `horizontal` | `boolean` | `false` | Horizontal scroll mode |
+| `cacheKey` | `string` | `container.id + '_' + keyField` | Key สำหรับ sessionStorage |
+| `onVisible` | `(item, el) => void` | - | Callback เมื่อ item เข้า viewport |
+| `onHidden` | `(item) => void` | - | Callback เมื่อ item ออก viewport |
+| `onUpdate` | `({added, removed, changed}) => void` | - | หลัง data update |
+| `onItemClick` | `(event, item) => void` | - | Delegated click |
+| `onScrollEnd` | `() => void` | - | Callback เมื่อ scroll หยุด |
+
+> **v1.7.0:** `poolCap` และ `buffer` จะถูก clamp ด้วย memory budget ณ เวลา mount — ค่า `Math.min(userValue, budget)` — ป้องกัน low-memory device เริ่มต้นด้วย cap ใหญ่เกินไป
+
+### 11.4 EngineHandle methods
+
+```js
+// Data
+handle.setData(newArray)
+handle.append(items)
+handle.prepend(items)
+handle.removeByKey(keyValue)
+handle.updateMany(items)
+await handle.loadChunked(source, chunkSize?)
+
+// Async Worker
+await handle.filter(predicates)
+await handle.sort(field, dir)
+handle.resetFilter()
+await handle.paginate(page, size)
+
+// UI
+handle.setLang(lang)
+handle.setTemplate(newTemplateFn)
+handle.setColumns(n)
+handle.scrollToIndex(index, behavior?)
+handle.scrollToKey(key, behavior?)
+handle.scrollBy(dy, behavior?)
+
+// Lifecycle
+handle.destroy()
+```
+
+### 11.5 ไฟล์อ้างอิง
+
+- `assets/js/ure/ure-examples.js` — ตัวอย่างโค้ดอ้างอิง (ห้ามโหลดใน production)
 
 ---
 
