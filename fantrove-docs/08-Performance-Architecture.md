@@ -366,7 +366,7 @@ vl.stats();
 vl.destroy();
 ```
 
-ดูรายละเอียดเพิ่มเติมใน [01-URE](./01-URE-Universal-Render-Engine.md) §3.11
+ดูรายละเอียดเพิ่มเติมใน [01-URE](./01-Virtual-Scroll-Rendering.md) §3.11
 
 ---
 
@@ -1486,7 +1486,7 @@ header{position:relative;z-index:${hz};contain:layout style;}
 .fvl-overlay { contain: strict; }
 ```
 
-ดูรายละเอียดใน [07-Loading-System-FVL](./07-Loading-System-FVL.md) §3.3
+ดูรายละเอียดใน [07-Loading-System-FVL](./07-Loading-System.md) §3.3
 
 ---
 
@@ -2266,13 +2266,13 @@ URE ใช้ `will-change: transform` แทน — `will-change` ให้ bro
 
 | เอกสาร | ความเชื่อมโยง |
 |--------|----------------|
-| [00-System-Architecture](./00-system-architecture.md) | §7 Performance Architecture — ตารางสรุปเทคนิคทั้งหมดที่ cross-cut ทุกระบบ |
-| [01-URE-Universal-Render-Engine](./01-URE-Universal-Render-Engine.md) | §3.3 memory.js, §3.4 scheduler.js, §3.5 pool.js, §3.9 worker.js, §3.10 lazy-assets.js, §3.11 virtual-list.js, §3.12 engine.js — รายละเอียด module ที่ใช้เทคนิคในเอกสารนี้ |
+| [00-System-Architecture](./00-System-Architecture.md) | §7 Performance Architecture — ตารางสรุปเทคนิคทั้งหมดที่ cross-cut ทุกระบบ |
+| [01-URE-Universal-Render-Engine](./01-Virtual-Scroll-Rendering.md) | §3.3 memory.js, §3.4 scheduler.js, §3.5 pool.js, §3.9 worker.js, §3.10 lazy-assets.js, §3.11 virtual-list.js, §3.12 engine.js — รายละเอียด module ที่ใช้เทคนิคในเอกสารนี้ |
 | [02-Search-System](./02-Search-System.md) | ระบบ Search ใช้ URE เป็น virtual scroll engine — `search-modules/rendering.js` reuse URE instance ข้ามการค้นหา |
-| [03-Nav-Core-System](./03-Nav-Core-System.md) | `nav-core-modules/performance.js` — ScrollService RAF sticky nav + PerformanceService native lazy img + Connection API |
-| [04-Language-i18n-System](./04-Language-i18n-System.md) | Language System ใช้ Web Worker แยกสำหรับ translation; `languageChange` event trigger URE re-render |
-| [05-ConData-Service](./05-ConData-Service.md) | Data provider — chunk size ของ `loadChunked()` อิง `LARGE_DATASET.INIT_CHUNK_SIZE` |
-| [07-Loading-System-FVL](./07-Loading-System-FVL.md) | §3.3 Lightweight Techniques — FVL ใช้ CSS animations + `contain: strict` + composite-only properties |
+| [03-Nav-Core-System](./03-Navigation-And-Content.md) | `nav-core-modules/performance.js` — ScrollService RAF sticky nav + PerformanceService native lazy img + Connection API |
+| [04-Language-i18n-System](./04-Internationalization-And-Build.md) | Language System ใช้ Web Worker แยกสำหรับ translation; `languageChange` event trigger URE re-render |
+| [05-ConData-Service](./05-Content-Data-Service.md) | Data provider — chunk size ของ `loadChunked()` อิง `LARGE_DATASET.INIT_CHUNK_SIZE` |
+| [07-Loading-System-FVL](./07-Loading-System.md) | §3.3 Lightweight Techniques — FVL ใช้ CSS animations + `contain: strict` + composite-only properties |
 
 ### ไฟล์ซอร์สโค้ดที่อ้างถึง
 

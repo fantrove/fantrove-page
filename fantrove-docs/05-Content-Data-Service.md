@@ -428,6 +428,8 @@ Layer 1: index.json (Top-Level Registry)
 
 **ตัวอย่าง — Card Item (collection):**
 
+> ⚠️ หมายเหตุ: `ai_tools` เป็นข้อมูลตัวอย่าง/ทดสอบ ไม่ใช่เนื้อหาจริงของเว็บ — ใช้สำหรับอธิบายโครงสร้าง collection type เท่านั้น
+
 ```json
 {
   "id": "ai_tools",
@@ -1428,9 +1430,9 @@ export { ConDataRegistry };
 
 ## 16. อ้างอิงข้ามเอกสาร
 
-- [`00-System-Architecture.md`](./00-system-architecture.md) — ภาพรวมสถาปัตยกรรมทั้งโปรเจกต์
+- [`00-System-Architecture.md`](./00-System-Architecture.md) — ภาพรวมสถาปัตยกรรมทั้งโปรเจกต์
 - [`02-Search-System.md`](./02-Search-System.md) — Search ที่ใช้ `ConDataService.getAssembled()` สำหรับค้นหา
-- [`03-Nav-Core-System.md`](./03-Nav-Core-System.md) — Nav-Core ที่ใช้ ConData สำหรับ render หมวดหมู่
+- [`03-Navigation-And-Content.md`](./03-Navigation-And-Content.md) — Nav-Core ที่ใช้ ConData สำหรับ render หมวดหมู่
 - [`10-Content-Guide.md`](./10-Content-Guide.md) — คู่มือเพิ่ม/แก้ content แบบ step-by-step
 - [`AI_CODING_GUIDE.md`](./AI_CODING_GUIDE.md) — มาตรฐานโค้ดที่ต้องยึดเมื่อแก้ ConData
 - [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) — กฎเหล็ก (โดยเฉพาะห้ามเพิ่ม collection types ลงใน `index.json`)

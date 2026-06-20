@@ -1425,11 +1425,11 @@ tService._onClick(e)
 
 ## 22. อ้างอิงข้ามเอกสาร
 
-- [`00-System-Architecture.md`](./00-system-architecture.md) — ภาพรวมสถาปัตยกรรมทั้งโปรเจกต์
-- [`01-URE-Universal-Render-Engine.md`](./01-URE-Universal-Render-Engine.md) — URE ที่ใช้ใน `content.js`
-- [`05-ConData-Service.md`](./05-ConData-Service.md) — ConDataService ที่เป็นแหล่งข้อมูล
+- [`00-System-Architecture.md`](./00-System-Architecture.md) — ภาพรวมสถาปัตยกรรมทั้งโปรเจกต์
+- [`01-Virtual-Scroll-Rendering.md`](./01-Virtual-Scroll-Rendering.md) — URE ที่ใช้ใน `content.js`
+- [`05-Content-Data-Service.md`](./05-Content-Data-Service.md) — ConDataService ที่เป็นแหล่งข้อมูล
 - [`06-Popup-System.md`](./06-Popup-System.md) — PopupSystem ที่ใช้ใน `utils.js` (`showErrorFullscreen`)
-- [`07-Loading-System-FVL.md`](./07-Loading-System-FVL.md) — FVL ที่ `loading.js` เป็น thin proxy ไปยัง
+- [`07-Loading-System.md`](./07-Loading-System.md) — FVL ที่ `loading.js` เป็น thin proxy ไปยัง
 - [`08-Performance-Architecture.md`](./08-Performance-Architecture.md) — เทคนิค performance ที่ใช้ (FeedService, ScrollService, PerformanceService)
 - [`10-Content-Guide.md`](./10-Content-Guide.md) — วิธีเพิ่ม/แก้ content ที่ Nav-Core แสดง
 - [`AI_CODING_GUIDE.md`](./AI_CODING_GUIDE.md) — มาตรฐานโค้ดที่ต้องยึดเมื่อแก้ Nav-Core

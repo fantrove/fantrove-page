@@ -1,6 +1,6 @@
 # 📚 Fantrove Docs — สารบัญเอกสารทั้งหมด
 
-> ศูนย์กลางเอกสารของโปรเจกต์ **Fantrove** (หรือชื่อเต็มคือ **Fantrove Verse**) — แพลตฟอร์มคลังอีโมจิ สัญลักษณ์ ข้อความแฟนซี และ AI tool cards ที่ทำงานเป็น static website บน Cloudflare Pages
+> ศูนย์กลางเอกสารของโปรเจกต์ **Fantrove** (หรือชื่อเต็มคือ **Fantrove Verse**) — แพลตฟอร์มคลังอีโมจิ สัญลักษณ์ ข้อความแฟนซี และคอลเลกชันอื่น ๆ ที่ทำงานเป็น static website บน Cloudflare Pages
 
 ทุกเอกสารที่เกี่ยวกับระบบ การพัฒนา และการดูแลโปรเจกต์อยู่ที่นี่ที่เดียว อ่านตามลำดับหมายเลขหรือเลือกเฉพาะที่ต้องการได้
 
@@ -39,18 +39,18 @@
 
 | # | เอกสาร | อธิบาย | ไฟล์หลักที่ครอบคลุม |
 |---|---|---|---|
-| 00 | [System Architecture](./00-system-architecture.md) | ภาพรวมสถาปัตยกรรมทั้งโปรเจกต์ — 7 ระบบหลัก, การเชื่อมต่อ, โครงสร้างไฟล์, URL routing | ทั้งโปรเจกต์ |
-| 01 | [URE — Universal Render Engine](./01-URE-Universal-Render-Engine.md) | Virtual scroll engine สำหรับแสดงข้อมูลจำนวนมาก พร้อม memory management | `assets/js/ure/` |
+| 00 | [System Architecture](./00-System-Architecture.md) | ภาพรวมสถาปัตยกรรมทั้งโปรเจกต์ — 7 ระบบหลัก, การเชื่อมต่อ, โครงสร้างไฟล์, URL routing | ทั้งโปรเจกต์ |
+| 01 | [Virtual Scroll Rendering](./01-Virtual-Scroll-Rendering.md) | Virtual scroll engine สำหรับแสดงข้อมูลจำนวนมาก พร้อม memory management | `assets/js/ure/` |
 | 02 | [Search System](./02-Search-System.md) | ระบบค้นหา client-side แบบ two-tier (substring + Fuse.js fuzzy) | `assets/js/search-*` |
-| 03 | [Nav-Core System](./03-Nav-Core-System.md) | Navigation & content management สำหรับหน้า Discover (SPA) | `assets/js/nav-core*` |
-| 04 | [Language i18n System](./04-Language-i18n-System.md) | ระบบแปลภาษา client-side พร้อม build-time static generation | `assets/js/lang*` |
-| 05 | [ConData Service](./05-ConData-Service.md) | Data access layer สำหรับ content (emoji, symbol, fancy, cards) | `assets/js/con-data-service/` |
+| 03 | [Navigation & Content](./03-Navigation-And-Content.md) | Navigation & content management สำหรับหน้า Discover (SPA) | `assets/js/nav-core*` |
+| 04 | [Internationalization & Build](./04-Internationalization-And-Build.md) | ระบบแปลภาษา client-side พร้อม build-time static generation | `assets/js/lang*` |
+| 05 | [Content Data Service](./05-Content-Data-Service.md) | Data access layer สำหรับ content (emoji, symbol, fancy, cards) | `assets/js/con-data-service/` |
 | 06 | [Popup System](./06-Popup-System.md) | ระบบ popup ส่วนกลาง — 9 presets, fullscreen, zero coupling | `assets/js/popup.js` + modules |
-| 07 | [Loading System — FVL](./07-Loading-System-FVL.md) | Fullscreen Visual Loader — หน้าจอโหลดที่ครอบการเปลี่ยนเนื้อหา | `assets/js/loading-system/fvl.js` |
+| 07 | [Loading System](./07-Loading-System.md) | Fullscreen Visual Loader — หน้าจอโหลดที่ครอบการเปลี่ยนเนื้อหา | `assets/js/loading-system/fvl.js` |
 | 08 | [Performance Architecture](./08-Performance-Architecture.md) | เทคนิค performance ทั้งโปรเจกต์ — virtual scroll, web worker, cache, memory + Core Web Vitals | cross-cutting |
 | 09 | [Deployment Guide](./09-Deployment-Guide.md) | วิธี deploy บน Cloudflare Pages, build script, environment variables | `scripts/`, `_redirects`, `_headers` |
 | 10 | [Content Guide](./10-Content-Guide.md) | วิธีเพิ่ม/แก้ content (emoji, symbol, fancy, cards) | `assets/db/con-data/` |
-| 11 | [What's New System](./11-Whats-New-System.md) | ระบบหน้า "มีอะไรใหม่" — release notes ที่อ่านจาก markdown | `assets/md/`, `assets/js/new.js` |
+| 11 | [Release Notes System](./11-Release-Notes-System.md) | ระบบหน้า "มีอะไรใหม่" — release notes ที่อ่านจาก markdown | `assets/md/`, `assets/js/new.js` |
 | 12 ⭐ | [SEO Guide](./12-SEO-Guide.md) | กลยุทธ์ SEO ระดับ platform — Technical SEO, structured data, Core Web Vitals, international SEO, E-E-A-T | cross-cutting (highest priority) |
 
 ---
@@ -138,7 +138,7 @@
 ### สถานการณ์ 2: เพิ่มหมวดอีโมจิใหม่
 
 1. `10-Content-Guide.md` — รู้วิธีเพิ่ม content
-2. `05-ConData-Service.md` — เข้าใจโครงสร้างข้อมูล
+2. `05-Content-Data-Service.md` — เข้าใจโครงสร้างข้อมูล
 3. `12-SEO-Guide.md` — เช็ค SEO ของ content ใหม่ (heading hierarchy, image alt, structured data)
 4. เพิ่มไฟล์ JSON ใน `assets/db/con-data/`
 5. อัปเดต index.json + sitemap
@@ -154,7 +154,7 @@
 
 1. `09-Deployment-Guide.md` — เข้าใจ build & routing
 2. `12-SEO-Guide.md` — เข้าใจ SEO requirements สำหรับหน้าใหม่ (meta tags, hreflang, structured data, sitemap)
-3. `04-Language-i18n-System.md` — เพิ่ม translation
+3. `04-Internationalization-And-Build.md` — เพิ่ม translation
 4. สร้าง HTML + ทุกภาษา
 5. อัปเดต sitemap
 

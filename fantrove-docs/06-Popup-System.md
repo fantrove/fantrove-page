@@ -587,10 +587,10 @@ showErrorFullscreen(error, { lang: 'th' });
 
 ## 11. อ้างอิงข้ามเอกสาร
 
-- [`00-System-Architecture.md`](./00-system-architecture.md) — ภาพรวมสถาปัตยกรรมทั้งโปรเจกต์
-- [`04-Language-i18n-System.md`](./04-Language-i18n-System.md) — Language System ที่ใช้ PopupSystem ใน `lang-modules/ui.js` v6.0
-- [`03-Nav-Core-System.md`](./03-Nav-Core-System.md) — Nav-Core ที่ใช้ `PopupSystem.fullscreen()` ใน `utils.js`
-- [`11-Whats-New-System.md`](./11-Whats-New-System.md) — `version-core.js` ที่ใช้ PopupSystem แสดง popup แจ้งอัปเดต
+- [`00-System-Architecture.md`](./00-System-Architecture.md) — ภาพรวมสถาปัตยกรรมทั้งโปรเจกต์
+- [`04-Internationalization-And-Build.md`](./04-Internationalization-And-Build.md) — Language System ที่ใช้ PopupSystem ใน `lang-modules/ui.js` v6.0
+- [`03-Navigation-And-Content.md`](./03-Navigation-And-Content.md) — Nav-Core ที่ใช้ `PopupSystem.fullscreen()` ใน `utils.js`
+- [`11-Release-Notes-System.md`](./11-Release-Notes-System.md) — `version-core.js` ที่ใช้ PopupSystem แสดง popup แจ้งอัปเดต
 - [`AI_CODING_GUIDE.md`](./AI_CODING_GUIDE.md) — มาตรฐานโค้ดที่ต้องยึดเมื่อแก้ Popup System
 - [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) — กฎเหล็ก (โดยเฉพาะห้ามใช้ `alert()`/`confirm()`/`prompt()` — ใช้ PopupSystem แทน)
 - [`12-SEO-Guide.md`](./12-SEO-Guide.md) — ⭐ SEO considerations (priority สูงสุด) ที่เกี่ยวข้องกับระบบนี้

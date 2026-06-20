@@ -62,7 +62,7 @@ assets/js/nav-core-modules/
 └── loading.js                              ← Thin proxy (delegates to FVL)
 
 fantrove-docs/
-└── 07-Loading-System-FVL.md                ← This document
+└── 07-Loading-System.md                ← This document
 ```
 
 ---
@@ -552,8 +552,8 @@ NavCoreModules.LoadingService.hide();
 
 ## 11. อ้างอิงข้ามเอกสาร
 
-- [`00-System-Architecture.md`](./00-system-architecture.md) — ภาพรวมสถาปัตยกรรมทั้งโปรเจกต์
-- [`03-Nav-Core-System.md`](./03-Nav-Core-System.md) — Nav-Core ที่ `loading.js` เป็น thin proxy ไปยัง FVL
+- [`00-System-Architecture.md`](./00-System-Architecture.md) — ภาพรวมสถาปัตยกรรมทั้งโปรเจกต์
+- [`03-Navigation-And-Content.md`](./03-Navigation-And-Content.md) — Nav-Core ที่ `loading.js` เป็น thin proxy ไปยัง FVL
 - [`08-Performance-Architecture.md`](./08-Performance-Architecture.md) — เทคนิค performance ที่ใช้ใน FVL (single-file, CSS animations, `contain: strict`)
 - [`AI_CODING_GUIDE.md`](./AI_CODING_GUIDE.md) — มาตรฐานโค้ดที่ต้องยึดเมื่อแก้ FVL
 - [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) — กฎเหล็กก่อนแตะ FVL

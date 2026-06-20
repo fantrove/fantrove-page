@@ -25,7 +25,7 @@
 
 ## 1. โปรเจกต์คืออะไร
 
-**Fantrove** (หรือชื่อเต็ม **Fantrove Verse`) เป็นแพลตฟอร์มคลังอีโมจิ สัญลักษณ์ (symbol) ข้อความแฟนซี (fancy text) และคอลเลกชันอื่น ๆ (เช่น AI tool cards) ที่ทำงานเป็น static website บน **Cloudflare Pages** ที่ URL `fantrove.pages.dev`
+**Fantrove** (หรือชื่อเต็ม **Fantrove Verse`) เป็นแพลตฟอร์มคลังอีโมจิ สัญลักษณ์ (symbol) ข้อความแฟนซี (fancy text) และคอลเลกชันอื่น ๆ ที่ทำงานเป็น static website บน **Cloudflare Pages** ที่ URL `fantrove.pages.dev`
 
 ### 1.1 คุณสมบัติหลัก
 
@@ -38,9 +38,9 @@
 
 ### 1.2 ภาษาที่รองรับ
 
-ปัจจุบันรองรับ 2 ภาษา: `en` (English) และ `th` (Thai) — ภาษาเพิ่มเติมสามารถเพิ่มได้ตามกระบวนการใน [`04-Language-i18n-System.md`](./04-Language-i18n-System.md)
+ปัจจุบันรองรับ 2 ภาษา: `en` (English) และ `th` (Thai) — ภาษาเพิ่มเติมสามารถเพิ่มได้ตามกระบวนการใน [`04-Internationalization-And-Build.md`](./04-Internationalization-And-Build.md)
 
-> ⚠️ ตัวเลขจำนวน content (อีโมจิกี่ตัว, สัญลักษณ์กี่หมวด) เป็นข้อมูลที่เปลี่ยนได้ตลอดเวลา — ดูได้จาก `assets/db/con-data/index.json` หรือเอกสาร [`05-ConData-Service.md`](./05-ConData-Service.md) และ [`10-Content-Guide.md`](./10-Content-Guide.md)
+> ⚠️ ตัวเลขจำนวน content (อีโมจิกี่ตัว, สัญลักษณ์กี่หมวด) เป็นข้อมูลที่เปลี่ยนได้ตลอดเวลา — ดูได้จาก `assets/db/con-data/index.json` หรือเอกสาร [`05-Content-Data-Service.md`](./05-Content-Data-Service.md) และ [`10-Content-Guide.md`](./10-Content-Guide.md)
 
 ---
 
@@ -48,15 +48,15 @@
 
 | # | ระบบ | บทบาท | ไฟล์หลัก | เอกสาร |
 |---|------|-------|-----------|---------|
-| 1 | **URE (Universal Render Engine)** | Virtual scroll rendering engine สำหรับแสดงข้อมูลจำนวนมาก | `assets/js/ure/ure.js` + 12 modules | [`01-URE`](./01-URE-Universal-Render-Engine.md) |
+| 1 | **URE (Universal Render Engine)** | Virtual scroll rendering engine สำหรับแสดงข้อมูลจำนวนมาก | `assets/js/ure/ure.js` + 12 modules | [`01-URE`](./01-Virtual-Scroll-Rendering.md) |
 | 2 | **Search System** | ระบบค้นหา client-side แบบ two-tier (substring + Fuse.js fuzzy) | `assets/js/search-engine.js` + `search-ui.js` + 12 modules | [`02-Search`](./02-Search-System.md) |
-| 3 | **Nav-Core** | Navigation & Content Management สำหรับหน้า Discover (SPA) | `assets/js/nav-core.js` + `nav-core-early.js` + 14 modules | [`03-Nav-Core`](./03-Nav-Core-System.md) |
-| 4 | **Language/i18n System** | ระบบแปลภาษา client-side พร้อม build-time static generation | `assets/js/lang-core.js` + `language.js` + 14 modules (static mode: 6) | [`04-Language`](./04-Language-i18n-System.md) |
-| 5 | **ConData Service** | Data access layer สำหรับ content (emoji, symbol, fancy, cards) | `assets/js/con-data-service/con-data-service.js` + `con-data-registry.js` | [`05-ConData`](./05-ConData-Service.md) |
+| 3 | **Nav-Core** | Navigation & Content Management สำหรับหน้า Discover (SPA) | `assets/js/nav-core.js` + `nav-core-early.js` + 14 modules | [`03-Nav-Core`](./03-Navigation-And-Content.md) |
+| 4 | **Language/i18n System** | ระบบแปลภาษา client-side พร้อม build-time static generation | `assets/js/lang-core.js` + `language.js` + 14 modules (static mode: 6) | [`04-Language`](./04-Internationalization-And-Build.md) |
+| 5 | **ConData Service** | Data access layer สำหรับ content (emoji, symbol, fancy, cards) | `assets/js/con-data-service/con-data-service.js` + `con-data-registry.js` | [`05-ConData`](./05-Content-Data-Service.md) |
 | 6 | **Popup System** | ระบบ popup ส่วนกลาง — 9 presets, fullscreen, zero coupling | `assets/js/popup.js` + 12 popup-modules | [`06-Popup`](./06-Popup-System.md) |
-| 7 | **Loading System (FVL)** | Fullscreen Visual Loader — หน้าจอโหลดที่ครอบการเปลี่ยนเนื้อหา | `assets/js/loading-system/fvl.js` (single file, 9 inline sections) | [`07-Loading`](./07-Loading-System-FVL.md) |
+| 7 | **Loading System (FVL)** | Fullscreen Visual Loader — หน้าจอโหลดที่ครอบการเปลี่ยนเนื้อหา | `assets/js/loading-system/fvl.js` (single file, 9 inline sections) | [`07-Loading`](./07-Loading-System.md) |
 
-> เอกสารเพิ่มเติมที่ครอบคลุม cross-cutting concerns: [`08-Performance`](./08-Performance-Architecture.md), [`09-Deployment`](./09-Deployment-Guide.md), [`10-Content`](./10-Content-Guide.md), [`11-Whats-New`](./11-Whats-New-System.md)
+> เอกสารเพิ่มเติมที่ครอบคลุม cross-cutting concerns: [`08-Performance`](./08-Performance-Architecture.md), [`09-Deployment`](./09-Deployment-Guide.md), [`10-Content`](./10-Content-Guide.md), [`11-Whats-New`](./11-Release-Notes-System.md)
 
 ### 2.1 แผนภาพการเชื่อมต่อระบบ
 
@@ -318,7 +318,7 @@ assets/db/con-data/
 }
 ```
 
-> รายการ types และ subcategories ทั้งหมดอยู่ในไฟล์ JSON จริง — ดูได้จาก `assets/db/con-data/index.json` หรือเอกสาร [`05-ConData-Service.md`](./05-ConData-Service.md)
+> รายการ types และ subcategories ทั้งหมดอยู่ในไฟล์ JSON จริง — ดูได้จาก `assets/db/con-data/index.json` หรือเอกสาร [`05-Content-Data-Service.md`](./05-Content-Data-Service.md)
 
 ### 6.3 Item schema มาตรฐาน
 
@@ -506,16 +506,16 @@ SEO เป็น priority ระดับพิเศษที่สูงสุ
 
 ## 11. อ้างอิงข้ามเอกสาร
 
-- [`01-URE-Universal-Render-Engine.md`](./01-URE-Universal-Render-Engine.md) — URE internals
+- [`01-Virtual-Scroll-Rendering.md`](./01-Virtual-Scroll-Rendering.md) — URE internals
 - [`02-Search-System.md`](./02-Search-System.md) — Search system internals
-- [`03-Nav-Core-System.md`](./03-Nav-Core-System.md) — Nav-Core internals
-- [`04-Language-i18n-System.md`](./04-Language-i18n-System.md) — Language + Build System
-- [`05-ConData-Service.md`](./05-ConData-Service.md) — ConData Service internals
+- [`03-Navigation-And-Content.md`](./03-Navigation-And-Content.md) — Nav-Core internals
+- [`04-Internationalization-And-Build.md`](./04-Internationalization-And-Build.md) — Language + Build System
+- [`05-Content-Data-Service.md`](./05-Content-Data-Service.md) — ConData Service internals
 - [`06-Popup-System.md`](./06-Popup-System.md) — Popup System internals
-- [`07-Loading-System-FVL.md`](./07-Loading-System-FVL.md) — Loading System (FVL) internals
+- [`07-Loading-System.md`](./07-Loading-System.md) — Loading System (FVL) internals
 - [`08-Performance-Architecture.md`](./08-Performance-Architecture.md) — Cross-cutting performance
 - [`09-Deployment-Guide.md`](./09-Deployment-Guide.md) — Build & deploy
 - [`10-Content-Guide.md`](./10-Content-Guide.md) — Content management
-- [`11-Whats-New-System.md`](./11-Whats-New-System.md) — Release notes system
+- [`11-Release-Notes-System.md`](./11-Release-Notes-System.md) — Release notes system
 - [`12-SEO-Guide.md`](./12-SEO-Guide.md) — ⭐ SEO strategy (priority สูงสุด)
 - [`INDEX.md`](./INDEX.md) — สารบัญเอกสารทั้งหมด

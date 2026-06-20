@@ -228,7 +228,7 @@ routing พัง
 
 ### 5.1 ห้ามใช้ `localStorage.getItem('selectedLang')` โดยตรง
 
-ใช้ `FvLang.lang` แทน — ดู [`11-Whats-New-System.md`](./11-Whats-New-System.md) ส่วน FvLang
+ใช้ `FvLang.lang` แทน — ดู [`11-Release-Notes-System.md`](./11-Release-Notes-System.md) ส่วน FvLang
 
 ### 5.2 ห้ามใช้ `languageChange` event
 

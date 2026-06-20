@@ -1,6 +1,6 @@
 # 10 — คู่มือระบบ Content (Content Guide)
 
-> เอกสารนี้อธิบายวิธีเพิ่ม/แก้ content ของ **Fantrove** — อีโมจิ, สัญลักษณ์, ข้อความแฟนซี, และ AI tool cards
+> เอกสารนี้อธิบายวิธีเพิ่ม/แก้ content ของ **Fantrove** — อีโมจิ, สัญลักษณ์, ข้อความแฟนซี, และคอลเลกชันอื่น ๆ
 >
 > **สำหรับ:** ผู้พัฒนา, AI ที่รับงานต่อ, หรือตัวเองในอนาคต
 >
@@ -222,6 +222,8 @@ assets/
 
 **Collection subcategory** (ต้องระบุ `type` เสมอ):
 
+> ⚠️ หมายเหตุ: `ai_tools` เป็นข้อมูลตัวอย่าง/ทดสอบ ไม่ใช่เนื้อหาจริงของเว็บ — ใช้สำหรับอธิบาย syntax เท่านั้น
+
 ```json
 [{ "category": "ai_tools", "type": "cards", "as": "cards" }]
 [{ "category": "ai_tools", "type": "cards", "as": "cards", "horizontal": true }]
@@ -392,16 +394,16 @@ assets/
 │     └─ สร้างไฟล์ + เพิ่มใน index.json (copyable types อนุญาต)
 │
 └─ เพิ่มภาษาใหม่ (เช่น ja)?
-      └─ อ่าน 04-Language-i18n-System.md ส่วนการเพิ่มภาษา
+      └─ อ่าน 04-Internationalization-And-Build.md ส่วนการเพิ่มภาษา
 ```
 
 ---
 
 ## 10. อ้างอิงข้ามเอกสาร
 
-- [`05-ConData-Service.md`](./05-ConData-Service.md) — รายละเอียด ConDataService internals (registry, assembled DB, fetch strategies)
-- [`03-Nav-Core-System.md`](./03-Nav-Core-System.md) — ContentService ที่ใช้ content JSON (อยู่ใน nav-core-modules/content.js)
-- [`01-URE-Universal-Render-Engine.md`](./01-URE-Universal-Render-Engine.md) — ระบบที่ render items สุดท้าย
+- [`05-Content-Data-Service.md`](./05-Content-Data-Service.md) — รายละเอียด ConDataService internals (registry, assembled DB, fetch strategies)
+- [`03-Navigation-And-Content.md`](./03-Navigation-And-Content.md) — ContentService ที่ใช้ content JSON (อยู่ใน nav-core-modules/content.js)
+- [`01-Virtual-Scroll-Rendering.md`](./01-Virtual-Scroll-Rendering.md) — ระบบที่ render items สุดท้าย
 - [`02-Search-System.md`](./02-Search-System.md) — Search อ่าน assembled DB ของ ConDataService
 - [`12-SEO-Guide.md`](./12-SEO-Guide.md) — ⭐ Content SEO: ใช้ keyword ที่ผู้ใช้ค้นหาจริงใน `name.en`/`name.th`, content freshness ส่งผลต่อ ranking
 - [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) — กฎเหล็กที่ AI ต้องรู้ก่อนแก้ content

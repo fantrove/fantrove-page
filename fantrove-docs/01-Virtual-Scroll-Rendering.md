@@ -702,9 +702,9 @@ handle.destroy()
 
 ## 12. อ้างอิงข้ามเอกสาร
 
-- [`00-System-Architecture.md`](./00-system-architecture.md) — ภาพรวมสถาปัตยกรรมทั้งโปรเจกต์
+- [`00-System-Architecture.md`](./00-System-Architecture.md) — ภาพรวมสถาปัตยกรรมทั้งโปรเจกต์
 - [`02-Search-System.md`](./02-Search-System.md) — Search system ที่ใช้ URE ใน `rendering.js`
-- [`03-Nav-Core-System.md`](./03-Nav-Core-System.md) — Nav-Core ที่ใช้ URE ใน `content.js`
+- [`03-Navigation-And-Content.md`](./03-Navigation-And-Content.md) — Nav-Core ที่ใช้ URE ใน `content.js`
 - [`08-Performance-Architecture.md`](./08-Performance-Architecture.md) — รายละเอียดเทคนิค performance ทั้งหมด (virtual scroll, memory, worker, cache, lazy load)
 - [`AI_CODING_GUIDE.md`](./AI_CODING_GUIDE.md) — มาตรฐานโค้ดที่ต้องยึดเมื่อแก้ URE
 - [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) — กฎเหล็กก่อนแตะ URE
