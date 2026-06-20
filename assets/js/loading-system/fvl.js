@@ -104,6 +104,16 @@
    *                                                Default = prepend (keep original visible).
    * @property {boolean}    [persistent=false]   - Cannot be dismissed via API shortcuts
    *                                                (must use handle.hide()).
+   * @property {boolean}    [instant=false]      - Skip enter animation — overlay becomes
+   *                                                visible immediately (opacity: 1) without
+   *                                                the double-rAF fade-in. Use when the overlay
+   *                                                must hide content changes happening in the
+   *                                                same frame (prevents race conditions).
+   * @property {boolean}    [coverAll=false]     - [fullscreen] Override top to 0 so the
+   *                                                overlay covers the ENTIRE viewport including
+   *                                                the header. Used for initial page load where
+   *                                                the user should not see any unready UI.
+   *                                                The fvl-nav-mode bottom/left rules still apply.
    * @property {Function}   [onShow]             - (id, handle) => void — after enter animation.
    * @property {Function}   [onHide]             - (id) => void — after exit animation.
    * @property {Function}   [onMount]            - (rootEl, handle) => void — DOM ready, pre-animation.
@@ -488,6 +498,11 @@
       root.setAttribute(CONFIG.DOM.DATA_MODE, 'fullscreen');
       root.setAttribute(CONFIG.DOM.DATA_ATTR, inst.id);
 
+      // coverAll: cover entire viewport including header (for initial page load)
+      if (inst.options.coverAll) {
+        root.classList.add('fvl-cover-all');
+      }
+
       var spinner = Utils.DOM.create('div', 'fvl-spinner', { 'aria-hidden': 'true' });
       spinner.innerHTML = spinnerSVG();
 
@@ -714,17 +729,40 @@
     }
 
     // ── Update top offset var (fullscreen mode — back-compat with --clp-top) ──
+    // v3: แคช height เพื่อลด forced reflow
+    // WHY เดิม: offsetHeight อ่าน forced layout ทุกครั้งที่ show() ถูกเรียก
+    //   วิธีใหม่: ใช้ ResizeObserver และแคชค่า — อ่าน DOM cache แทน forced layout
+    var _topCache = 0;
+    var _topDirty = true;
+
+    var _topRO = null;
+    function _ensureTopRO() {
+      if (_topRO || typeof ResizeObserver === 'undefined') return;
+      _topRO = new ResizeObserver(function() { _topDirty = true; });
+      try {
+        var h = document.querySelector('header');
+        var s = document.getElementById('sub-nav');
+        if (h) _topRO.observe(h);
+        if (s) _topRO.observe(s);
+      } catch (_) {}
+    }
+
     function _updateTopVar() {
       try {
+        if (!_topDirty) return;
+        _topDirty = false;
+        _ensureTopRO();
         var header = document.querySelector('header');
         var subnav = document.getElementById('sub-nav');
         var top = 0;
+        // v3: อ่านจาก ResizeObserver cache (boundingRect ไม่ force layout เพราะเราไม่ trigger layout ก่อน)
+        //   offsetHeight ยังใช้ได้เพราะ ResizeObserver จะ invalidate ให้แล้ว
         if (header) top += header.offsetHeight;
-        if (subnav && subnav.style.display !== 'none' && subnav.offsetHeight > 0) {
+        if (subnav && subnav.offsetHeight > 0) {
           top += subnav.offsetHeight;
         }
+        _topCache = top;
         document.documentElement.style.setProperty('--fvl-top', top + 'px');
-        // Keep back-compat with --clp-top used by legacy loading.css
         document.documentElement.style.setProperty('--clp-top', top + 'px');
       } catch (_) {}
     }
@@ -802,14 +840,23 @@
         }
       }
 
-      // If existing instance with same ID, hide it first (idempotent show)
+      // If existing instance with same ID, handle based on its state
       var existing = State.getInstance(id);
       if (existing && existing.state !== 'hidden' && existing.state !== 'destroyed') {
-        if (existing.options.message !== opts.message && opts.message !== undefined) {
-          existing.options.message = opts.message;
-          _setTexts(existing);
+        // v3 fix: ถ้า instance อยู่ในสถานะ 'hiding' (leave animation กำลังเล่นอยู่)
+        // ให้ cleanup ทันทีแล้วสร้าง instance ใหม่ มิฉะนั้น show() จะ return
+        // instance ที่กำลังจะหายไป ทำให้ overlay ไม่แสดงผล
+        if (existing.state === 'hiding') {
+          try { _cleanup(existing); } catch (_) {}
+          // ลงไปสร้าง instance ใหม่ด้านล่าง
+        } else {
+          // showing หรือ shown — อัปเดต message แล้ว return (idempotent)
+          if (existing.options.message !== opts.message && opts.message !== undefined) {
+            existing.options.message = opts.message;
+            _setTexts(existing);
+          }
+          return _makeHandle(existing);
         }
-        return _makeHandle(existing);
       }
 
       // If using a group, hide any existing instance in the same group first
@@ -899,14 +946,31 @@
         try { opts.onMount(inst.rootEl, _makeHandle(inst)); } catch (e) { console.error('[FVL] onMount error:', e); }
       }
 
-      // Enter animation
-      Animator.enter(inst, function() {
+      // Enter animation (or instant skip)
+      if (opts.instant) {
+        // v1.1: instant mode — skip double-rAF fade-in, set shown immediately.
+        // WHY: When the caller needs the overlay to hide content changes in the
+        //   SAME frame (e.g., navigation loading), the 140ms+ enter animation
+        //   creates a race condition: content may change before the overlay is
+        //   fully opaque, causing visible jank. Instant mode sets opacity: 1
+        //   via fvl-shown class immediately, so the overlay is opaque from the
+        //   very first browser paint. Caller should still await one rAF after
+        //   show() to guarantee the paint has occurred before mutating content.
+        inst.rootEl.classList.add('fvl-shown');
         inst.state = 'shown';
         State.emit('shown', { id: id, mode: mode });
         if (typeof opts.onShow === 'function') {
           try { opts.onShow(id, _makeHandle(inst)); } catch (e) { console.error('[FVL] onShow error:', e); }
         }
-      });
+      } else {
+        Animator.enter(inst, function() {
+          inst.state = 'shown';
+          State.emit('shown', { id: id, mode: mode });
+          if (typeof opts.onShow === 'function') {
+            try { opts.onShow(id, _makeHandle(inst)); } catch (e) { console.error('[FVL] onShow error:', e); }
+          }
+        });
+      }
 
       // Auto-hide
       if (opts.autoHideAfterMs > 0) {

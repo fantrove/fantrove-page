@@ -160,6 +160,8 @@
 
         btn.addEventListener('click', async ev => {
           ev.preventDefault();
+          // v4: ข้ามเมื่อคลิกปุ่มที่ active อยู่แล้ว — ไม่ต้อง re-fetch/re-render ซ้ำ
+          if (btn.classList.contains('active')) return;
           navList.querySelectorAll('button').forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
           State.buttons.currentMainButton    = btn;
@@ -346,6 +348,8 @@
         if (fullUrl === activeUrl) btn.classList.add('active');
 
         btn.addEventListener('click', async () => {
+          // v4: ข้ามเมื่อคลิกปุ่มที่ active อยู่แล้ว — ไม่ต้อง re-fetch/re-render ซ้ำ
+          if (btn.classList.contains('active')) return;
           ctr.querySelectorAll('.button-sub').forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
           State.buttons.currentSubButton = btn;

@@ -1,61 +1,42 @@
 ---
-version: 1.7.2
-date: 2026-06-19T15:18:20.246Z
-title: โหลดแสดงทุกครั้ง + สปินเนอร์หมุนลื่นไหล
-subtitle: แก้ปัญหาสำคัญ 2 อย่างของระบบ loading: (1) overlay ตอนนี้แสดงทุกครั้งที่นำทาง แม้ติดกัน พร้อม pulse animation เพื่อส่งสัญญาณ operation ใหม่; (2) สปินเนอร์ตอนนี้หมุนลื่นไหลที่ refresh rate เต็ม โดยย้าย CSS keyframes ออกจาก @layer ลบ transform: translateZ(0) ที่ขัดแย้ง และเพิ่ม backface-visibility สำหรับ GPU acceleration
+version: 1.8.0
+date: 2026-06-20T00:00:00.000Z
+title: การโหลดเรียบเนียนกว่า + ป้องกันการกดซ้ำ
+subtitle: ระบบหน้าโหลดปรับปรุงให้เนียนเหมือนแอปขนาดใหญ่ — กดปุ่มซ้ำไม่ทำให้ระบบโหลดใหม่ บล็อกการเลื่อนระหว่างโหลด และแก้ race condition ที่ทำให้เนื้อหากระตุกเบื้องหลังหน้าโหลด
 notify: true
 ---
 
 ### Fixed
 
-- **Loading overlay ไม่แสดงทุกครั้งที่นำทาง**
-  เมื่อนำทางระหว่างหมวดหมู่เร็วๆ design v1.7.1 เดิมพึ่ง idempotency ของ FVL — การเรียก show() บน instance ที่ shown อยู่แค่ update message แปลว่า navigation ถัดไปไม่มี loading state ที่มองเห็น เพราะ overlay อยู่แล้ว
-  
-  v1.7.2 แก้โดย ALWAYS เรียก FVL.show() (ซึ่งเป็น idempotent และจัดการ state ทั้งหมดถูกต้อง) แล้วเพิ่ม "pulse" animation (opacity dip สั้นๆ + scale) เมื่อ overlay อยู่แล้ว ทำให้ผู้ใช้เห็น feedback ชัดเจนว่า operation ใหม่เริ่มแล้ว แม้ระหว่าง navigation ติดกัน
+- **หน้าโหลดค้างเมื่อกดปุ่มรัวๆ**
+  เมื่อกดปุ่มหมวดหมู่หลายครั้งเร็วๆ หน้าโหลดอาจค้างไม่ซ่อน แก้โดยใช้ generation counter — เฉพาะการนำทางล่าสุดเท่านั้นที่จะจัดการ cleanup ส่วนการนำทางเก่าที่ถูกแทนที่จะถูกข้ามโดยอัตโนมัติ
 
-- **สปินเนอร์ดูค้าง / หมุนน้อยมาก**
-  ปัญหา CSS 2 อย่างทำให้สปินเนอร์ค้างหรือหมุนช้ามาก:
-  1. `@keyframes _fvl_spin` อยู่ใน `@layer fvl` — browser บางตัว (และ headless test environments) ไม่ parse keyframes ใน @layer อย่างสมบูรณ์ ทำให้ animation ไม่ทำงาน
-  2. `transform: translateZ(0)` ถูกตั้งบน arc element — มัน OVERRIDE animation's `transform: rotate()` ทำให้สปินเนอร์ค้างที่ 0deg
-  
-  แก้โดย:
-  - ย้าย @keyframes ทั้งหมดออกจาก @layer (มันเป็น global โดยธรรมชาติ ไม่ต้องการ layer isolation)
-  - ลบ `transform: translateZ(0)` จาก arc — ใช้ `will-change: transform` + `backface-visibility: hidden` แทนสำหรับ GPU acceleration
-  - ลบ `contain: strict` จาก fullscreen/topbar overlays (เปลี่ยนเป็น `contain: layout style`) — `strict` รวม `paint` + `size` containment ที่อาจ freeze child animations
-  - เพิ่ม `animation-play-state: running` อย่างชัดเจนเพื่อป้องกัน paused state ที่ inherited
+- **เนื้อหากระตุกเบื้องหลังหน้าโหลดในช่วงโหลดเร็ว**
+  เมื่อข้อมูลโหลดเร็วมาก (เช่น cached) หน้าโหลดอาจถูกลบก่อน browser จะได้ paint ทำให้ผู้ใช้เห็นเนื้อหาเปลี่ยนอยู่เบื้องหลัง แก้โดยรอให้ browser paint หน้าโหลดอย่างน้อย 1 ครั้งก่อนจะลบ
 
-- **Overlay มองไม่เห็นเพราะ `hidden` attribute ค้าง**
-  `buildFullscreen()` renderer เดิมตั้ง `hidden=""` attribute บน overlay element แต่ CSS มี rule `.fvl-fullscreen[hidden] { display: none !important }` ที่ซ่อนถาวร แม้เราจะลบ CSS rule ในเวอร์ชั่นก่อน แต่ attribute ยังถูกตั้ง ทำให้ `display: none` ใน browser บางตัว
-  
-  แก้โดยลบ `hidden` attribute จาก renderer ทั้งหมด — visibility ควบคุมด้วย class `.fvl-entering` / `.fvl-shown` / `.fvl-leaving` (opacity transitions) เท่านั้น
-
-- **LoadingService.hide() ถูกเรียกเร็วเกินไปโดย ContentService**
-  ContentService เรียก LoadingService.hide() หลายครั้งหลัง render content ใน cached loads (<50ms) ทำให้ overlay flash 1 frame แล้วหาย — เร็วเกินไปที่ผู้ใช้จะเห็น v1.7.2 เพิ่ม MIN_VISIBLE_MS (200ms) check: ถ้า overlay แสดงน้อยกว่า 200ms ที่ผ่านมา hide() จะถูกเลื่อนจนกว่า 200ms จะครบ นี่ไม่ใช่ delay บน show() (overlay แสดงทันที) เป็นเพียง minimum visible time บน hide()
-
-- **Router ไม่ balance LoadingService sessions**
-  router เรียก LoadingService.show() ที่จุดเริ่ม navigateTo() แต่เรียก hide() ใน catch block — แปลว่า navigation สำเร็จ session counter ค้างที่ 1 ตลอดไป v1.7.2 ย้าย hide() call ไป finally block เพื่อให้ทำงานเสมอ ไม่ว่า navigation จะสำเร็จหรือล้มเหลว
+- **Overlay ไม่ครอบคลุมพอเมื่อเนื้อหาเปลี่ยนแปลง**
+  บางครั้งผู้ใช้เห็นเนื้อหาเปลี่ยนขยับอยู่เบื้องหลังหน้าโหลด เพราะ overlay มี fade-in 140ms ทำให้ช่วงเปลี่ยนเนื้อหา overlay ยังไม่โปร่งใสเต็มที่ แก้โดยตั้งค่าให้แสดงทันที (instant) และรอให้ browser paint ก่อนเริ่มเปลี่ยนเนื้อหา
 
 ### Improved
 
-- **สปินเนอร์หมุนแบบ GPU-accelerated และ refresh-rate-independent**
-  arc ของสปินเนอร์ใช้ `will-change: transform` + `backface-visibility: hidden` สำหรับ compositor-layer promotion animation หมุนทั้งหมดบน GPU แยกจาก main thread (ซึ่งอาจยุ่งกับ navigation/data-fetching) แปลว่า:
-  - หมุนลื่นไหลที่ refresh rate ใดๆ (60Hz, 90Hz, 120Hz, 144Hz)
-  - ไม่ stutter เมื่อ main thread โหลด
-  - ความเร็วหมุนสม่ำเสมอไม่ว่า CPU จะใช้มากแค่ไหน
+- **กดปุ่มที่เลือกอยู่แล้วไม่ทำอะไร**
+  กดปุ่มหมวดหมู่ที่กำลัง active อยู่แล้ว ระบบจะข้ามทันที ไม่โหลดข้อมูลซ้ำ ไม่ render ซ้ำ ไม่แสดงหน้าโหลดซ้ำ ทำให้การใช้งานลื่นไหลขึ้น
 
-- **ระยะเวลาหมุน 0.7s ตามมาตรฐาน**
-  เปลี่ยนระยะเวลาหมุนจาก 0.8s เป็น 0.7s ต่อรอบ — มาตรฐาน de-facto สำหรับ Material Design และ iOS spinners รู้สึก responsive มากขึ้นโดยไม่เร็วเกินไป
+- **บล็อกการเลื่อนระหว่างหน้าโหลดแสดง**
+  ระหว่างที่หน้าโหลดแสดงอยู่ ผู้ใช้ไม่สามารถเลื่อนหน้าได้ ป้องกันปัญหาที่อาจเกิดขึ้นจากการเลื่อนขณะที่เนื้อหายังไม่พร้อม
 
-- **Pulse animation ส่งสัญญาณ operation ใหม่**
-  เมื่อ show() ถูกเรียกขณะ overlay อยู่แล้ว (เช่น ผู้ใช้คลิกหมวดหมู่อื่นระหว่างโหลดอันก่อน) overlay จะ dip เป็น 0.6 opacity + scale เป็น 0.97 สั้นๆ แล้วกลับปกติ pulse 350ms นี้ให้ feedback ชัดเจนว่า operation ใหม่เริ่มแล้ว แม้สปินเนอร์กำลังหมุนอยู่
+- **หน้าโหลดแสดงทันทีโดยไม่มี fade-in**
+  หน้าโหลดปรากฏทันทีจากการ paint แรก โดยไม่มี animation เข้าหา เพื่อให้ครอบคลุมการเปลี่ยนแปลงของเนื้อหาได้ทันที ทำให้ผู้ใช้ไม่เห็นเนื้อหาขยับหรือกระพริบเบื้องหลัง
+
+### New
+
+- **FVL: ตัวเลือก `instant` สำหรับ skip enter animation**
+  เพิ่ม option ใน FVL framework สำหรับข้าม animation เข้าหา ตั้งค่าให้แสดงทันที (opacity: 1) ใช้เมื่อ caller ต้องการให้ overlay ครอบคลุมการเปลี่ยนแปลงใน frame เดียวกัน ป้องกัน race condition
+
+- **FVL: ตัวเลือก `coverAll` สำหรับครอบทั้ง viewport**
+  เพิ่ม option ใน FVL framework สำหรับ fullscreen overlay ที่ครอบคลุมทั้ง viewport รวม header ใช้สำหรับหน้าโหลดครั้งแรกที่เข้าเว็บ โดยที่แถบนำทางด้านล่างยังคงเห็นและใช้งานได้
 
 ### Removed
 
-- **`transform: translateZ(0)` บน spinner arc**
-  ลบเพราะมัน override animation's `transform: rotate()` ทำให้สปินเนอร์ค้าง แทนที่ด้วย `backface-visibility: hidden` สำหรับ GPU acceleration
-
-- **`contain: strict` บน fullscreen และ topbar overlays**
-  เปลี่ยนเป็น `contain: layout style` — `strict` รวม `paint` + `size` containment ที่อาจ freeze child animations ใน browser บางตัว
-
-- **`@keyframes` ใน `@layer fvl`**
-  ย้าย @keyframes ทั้งหมดออกจาก @layer เพื่อ browser compatibility สูงสุด keyframes เป็น global โดยธรรมชาติ ไม่ได้ประโยชน์จาก layer isolation
+- **Content fade-in animation**
+  ลบ animation เข้าหาของเนื้อหา (stagger effect) เพราะมีหน้าโหลดอยู่แล้วที่ครอบคลุมการเปลี่ยนแปลง ทำให้เนื้อหาไม่ต้องมี animation ซ้ำซ้อน

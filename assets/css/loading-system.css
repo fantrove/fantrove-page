@@ -435,6 +435,22 @@
     }
   }
 
+  /* ═══════════════════════════════════════════════════════════════════════════
+     COVER-ALL VARIANT — full-viewport coverage including header
+     ═══════════════════════════════════════════════════════════════════════════
+     When .fvl-cover-all is added (via FVL option coverAll: true), the
+     fullscreen overlay covers the ENTIRE viewport from top: 0, hiding
+     the header and all navigation. Used for initial page load where
+     the user should not see any unready UI state.
+
+     The fvl-nav-mode bottom/left rules still apply, so the bottom nav
+     (or left-rail on desktop) remains accessible.
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  .fvl-fullscreen.fvl-cover-all {
+    top: 0;
+  }
+
 } /* end @layer fvl */
 
 /* ═══════════════════════════════════════════════════════════════════════════

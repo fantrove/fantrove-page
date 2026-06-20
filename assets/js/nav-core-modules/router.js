@@ -9,7 +9,13 @@
  *     renderFeed จัดการ clearContent + infinite scroll ภายในตัวเอง
  *     ดังนั้นจึงข้าม clearContent ภายนอกสำหรับ route นี้
  *
- * (patched: navigateTo guard hides loading, safety timeout, auto-recovery)
+ * v3 — "Latest-wins" navigation:
+ *   • แก้ไข bug: คลิกรัวๆ ทำให้ loading overlay ติดค้าง
+ *   • ใช้ _navGen (generation counter) — เฉพาะ navigation ล่าสุดเท่านั้น
+ *     ที่จะทำ cleanup (hide overlay, restore nav)
+ *   • ลบ _waitUntilFree — ไม่ต่อคิวแล้ว คลิกใหม่ = รีเสร็จทั้งหมดทันที
+ *   • เรียก LoadingService._forceReset() ก่อน show() เสมอ
+ *     เพื่อรีเซ็ต session counter และลบ overlay เดิมทิ้ง
  */
 (function (M) {
   'use strict';
@@ -28,6 +34,10 @@
 
     _initialNavigation: true,
     _safetyTimer: null,
+    /** @type {number} Navigation generation — แต่ละครั้งที่ navigateTo เริ่มจะบวก 1
+     *  finally block จะตรวจว่า gen ตรงกับ _navGen ปัจจุบันหรือไม่
+     *  ถ้าไม่ตรง = navigation นี้ถูกแทนที่แล้ว ไม่ต้องทำ cleanup */
+    _navGen: 0,
 
     // ── URL normalization ──────────────────────────────────────────────────────
 
@@ -165,6 +175,12 @@
     // ── navigateTo ─────────────────────────────────────────────────────────────
 
     async navigateTo(route, options = {}) {
+      // ── v3: Reset loading state ทันทีทุกครั้งที่เริ่ม navigation ใหม่ ──────
+      // WHY: ถ้าผู้ใช้คลิกรัวๆ session counter จะสะสม ทำให้ overlay ไม่ซ่อน
+      //   _forceReset() จะรีเซ็ต counter เป็น 0 และลบ overlay เดิมทิ้งทันที
+      //   ทำให้ navigation ใหม่เริ่มต้นด้วยสถานะสะอาดเสมอ
+      try { M.LoadingService?._forceReset(); } catch (_) {}
+
       // ── Smart loading: enable fvl-nav-mode + nav-loading state ──────────────
       // WHY fvl-nav-mode: tells FVL CSS to leave room for bottom nav so the
       //   spinner is centered in the visible area, not the full viewport.
@@ -173,30 +189,36 @@
       //   visual signal that "we're switching". Restored in finally block.
       this._setNavLoading(true);
 
-      // ── Smart loading message based on route ──────────────────────────────
-      // WHY: "Loading emojis..." is more informative than generic "Loading..."
-      //   Resolved from button config AFTER we know the main button.
+      // ── Show loading overlay (เริ่ม session ใหม่ หลัง reset แล้ว) ────────
       try { M.LoadingService?.show(); } catch (_) {}
 
-      if (this.state.isNavigating) {
-        try {
-          await this._waitUntilFree(10000);
-        } catch (_) {
-          console.warn('[NavCore/Router] isNavigating timeout — forcing reset');
-          this.state.isNavigating = false;
-        }
-      }
+      // ── v4: Guarantee overlay paint before mutating content ──────────
+      // WHY: LoadingService.show() ใช้ instant=true ซึ่ง set fvl-shown
+      //   (opacity: 1) ทันที แต่ browser ยังไม่ได้ paint. ถ้าเราเริ่ม
+      //   clearContent/fetch ใน microtask เดียวกัน browser จะ paint
+      //   overlay และ content change พร้อมกัน → ผู้ใช้เห็น jank
+      //   รอ 1 rAF จะทำให้ browser paint overlay ก่อน แล้วค่อยเปลี่ยน
+      //   content ใน frame ถัดไป → ผู้ใช้เห็น loading เนียน ไม่กระตุก
+      await new Promise(function (r) { requestAnimationFrame(r); });
 
+      // ── Navigation generation: เฉพาะ navigation ล่าสุดที่จะทำ cleanup ──
+      // WHY: เมื่อคลิกรัวๆ navigation เก่าๆ จะถูกแทนที่ ไม่ต้อง hide overlay
+      //   เพราะ navigation ใหม่จะเป็นคนจัดการเอง
+      this._navGen++;
+      const myGen = this._navGen;
+
+      // ไม่ต่อคิวแล้ว — คลิกใหม่ = บังคับเริ่ม navigation ใหม่ทันที
       this.state.isNavigating       = true;
       this.state.lastScrollPosition = window.pageYOffset || 0;
 
       if (this._safetyTimer) clearTimeout(this._safetyTimer);
       this._safetyTimer = setTimeout(() => {
-        if (this.state.isNavigating) {
+        // ตรวจ myGen ด้วย — ถ้ามี navigation ใหม่แล้ว ไม่ต้อง reset
+        if (this.state.isNavigating && this._navGen === myGen) {
           console.warn('[NavCore/Router] Navigation safety timeout (20s) — forcing reset');
           this.state.isNavigating = false;
           try {
-            M.LoadingService?.hide();
+            M.LoadingService._forceReset();
             this._setNavLoading(false);
           } catch (_) {}
           this._safetyTimer = null;
@@ -210,9 +232,14 @@
         if (typeof route === 'string' && route.startsWith('?'))
           normalized = this.normalizeUrl(route);
 
+        // ── Superseded check: ถ้ามี navigation ใหม่มาแล้ว หยุดทันที ───────
+        if (myGen !== this._navGen) return;
+
         let valid = false;
         try { valid = await this.validateUrl(normalized); } catch (_) {}
         if (!valid) normalized = await this.getDefaultRoute();
+
+        if (myGen !== this._navGen) return;
 
         const { main, sub } = this.parseUrl(normalized);
         this.state.currentMainRoute = main;
@@ -230,6 +257,8 @@
             { replace: !!options.replace }
           );
         }
+
+        if (myGen !== this._navGen) return;
 
         const cfg = State.buttons.config;
         if (!cfg) throw new Error('[NavCore/Router] buttonConfig not found');
@@ -274,6 +303,8 @@
           try { M.LoadingService?._updateTopVar(); } catch (_) {}
         }
 
+        if (myGen !== this._navGen) return;
+
         // ── Content rendering ──────────────────────────────────────────────────
         // WHY: All feed route ข้าม clearContent ภายนอก
         //      เพราะ renderFeed() จัดการ clearContent + FeedService.reset() ภายในตัวเอง
@@ -298,10 +329,13 @@
 
           if (jobs.length) {
             const results  = await Promise.all(jobs);
+            if (myGen !== this._navGen) return;
             const combined = results.flatMap(r => Array.isArray(r) ? r : (r ? [r] : []));
             if (combined.length) await M.ContentService.renderContent(combined);
           }
         }
+
+        if (myGen !== this._navGen) return;
 
         this.setActiveButtons(main, chosenSub?.url || chosenSub?.jsonFile || sub);
 
@@ -314,24 +348,28 @@
         }
 
       } catch (err) {
-        console.error('[NavCore/Router] navigateTo error:', err);
-        try { Utils.showErrorFullscreen(err, { label: 'Navigation' }); } catch (_) {}
+        // เฉพาะ navigation ล่าสุดเท่านั้นที่แสดง error
+        if (myGen === this._navGen) {
+          console.error('[NavCore/Router] navigateTo error:', err);
+          try { Utils.showErrorFullscreen(err, { label: 'Navigation' }); } catch (_) {}
+        }
       } finally {
-        this.state.isNavigating = false;
-        if (this._safetyTimer) { clearTimeout(this._safetyTimer); this._safetyTimer = null; }
-        // ── Balance the show() from the start of navigateTo() ──────────────
-        // WHY in finally: this guarantees hide() is called regardless of
-        //   whether navigation succeeded, failed, or was cancelled. Without
-        //   this, the session counter would stay at 1 forever after a
-        //   successful navigation (since show() was called at the top but
-        //   hide() was only called in the catch block before).
-        try { M.LoadingService?.hide(); } catch (_) {}
-        // ── Restore buttons visibility (fade nav back in) ────────────────────
-        try {
-          requestAnimationFrame(() => {
-            this._setNavLoading(false);
-          });
-        } catch (_) {}
+        // ── v3: เฉพาะ navigation ล่าสุดเท่านั้นที่ทำ cleanup ─────────────────
+        // WHY: navigation เก่าๆ ที่ถูกแทนที่ ไม่ต้องทำอะไรเลย
+        //   content.js จัดการ hideInstant() เองแล้วหลัง render เสร็จ
+        //   ถ้า finally มา hide อีกรอบ → counter ผิดเพี้ยน
+        if (myGen === this._navGen) {
+          this.state.isNavigating = false;
+          if (this._safetyTimer) { clearTimeout(this._safetyTimer); this._safetyTimer = null; }
+          // v3: ไม่เรียก hide() ที่นี่แล้ว — content.js จัดการเอง
+          //   ยกเว้นกรณี content.js ไม่ถูกเรียก (เช่น error ก่อนถึง render)
+          //   ในกรณีนั้น safety timer (20s) จะจัดการแทน
+          try {
+            requestAnimationFrame(() => {
+              this._setNavLoading(false);
+            });
+          } catch (_) {}
+        }
       }
     },
 

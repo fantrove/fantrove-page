@@ -35,15 +35,14 @@
   const INIT_CHUNK_SIZE = CONFIG.LARGE_DATASET.INIT_CHUNK_SIZE;
 
   // ── One-time CSS ──────────────────────────────────────────────────────────
+  // v3: ลบ content fade-in animation ออก เพราะมี loading overlay แล้ว
+  // เนื้อหาควรปรากฏทันทีเมื่อ loading ซ่อน
   const _VL_CSS_ID = '_ure_vl_css';
   function _ensureVLCss() {
     if (document.getElementById(_VL_CSS_ID)) return;
     const s = document.createElement('style');
     s.id = _VL_CSS_ID;
-    s.textContent = `
-@keyframes _ure_fi{from{opacity:0}to{opacity:1}}
-.ure-new{animation:_ure_fi 0.16s cubic-bezier(0.22,1,0.36,1) both;will-change:opacity;}
-.ure-new.ure-done{will-change:auto;animation:none;}`;
+    s.textContent = '';
     document.head.appendChild(s);
   }
 
@@ -409,15 +408,9 @@
       el.innerHTML = _preCache.get(i) ?? _renderWithCache(_items[i], i);
       _preCache.delete(i);
 
+      // v3: ไม่ใส่ animation class แล้ว — เนื้อหาปรากฏทันที
       if (!_seenIdx[i]) {
         _seenIdx[i] = 1;
-        el.classList.add('ure-new');
-        el.style.animationDelay = (applyStagger && staggerIndex > 0) ? `${staggerIndex * 18}ms` : '';
-        el.addEventListener('animationend', () => {
-          el.classList.remove('ure-new');
-          el.classList.add('ure-done');
-          el.style.animationDelay = '';
-        }, { once: true, passive: true });
       }
 
       frag.appendChild(el);

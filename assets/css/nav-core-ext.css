@@ -1,5 +1,8 @@
 main { margin-top:30px; margin-bottom:80px; contain: layout style; }
 
+/* v3: เพิ่ม contain ให้ content container — จำกัด reflow scope */
+#content-loading { contain: layout style; }
+
 .button-sub {
   margin:0; padding:11px 13px;
   background:var(--fv-surface-page); color:var(--fv-text-secondary);
@@ -133,6 +136,5 @@ main { margin-top:30px; margin-bottom:80px; contain: layout style; }
 .img-d1 img { width:100%; border-radius:var(--fv-radius-md); }
 
 @media (prefers-reduced-motion:reduce) {
-  .cm-in, .cm-in.cm-done { animation:none; }
-  :where(.button-content), :where(.card)
+  :where(.button-content), :where(.card) { transition: none; }
 }

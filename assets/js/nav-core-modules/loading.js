@@ -154,6 +154,16 @@
       o.mode = 'fullscreen';
       o.id = o.id || DEFAULT_ID;
       if (o.zIndex == null) o.zIndex = NAV_BEHIND_Z;
+      // v1.8: Framework-level enhancements
+      // WHY instant: Skip 140ms fade-in — overlay is opaque from the first paint.
+      //   This prevents a race condition where content changes behind the
+      //   overlay before it's fully visible (visible jank). The caller
+      //   (router.js) awaits one rAF after show() to guarantee the paint.
+      // WHY lockScroll: Block scrolling while loading — user should not be
+      //   able to scroll the (hidden) content behind the overlay. This is
+      //   a framework-level feature (FVL handles position:fixed + restore).
+      o.instant = o.instant !== false;       // default true (caller can opt out)
+      o.lockScroll = o.lockScroll !== false;  // default true
       this._lastOpts = o;
 
       // Check if overlay was already active (for pulse decision)
@@ -193,17 +203,14 @@
       // Add pulse class (CSS handles the opacity dip)
       el.classList.add('fvl-pulse');
 
-      // Restart spinner animation by removing/re-adding the arc element's
-      // animation. This forces the rotation to start from 0deg again.
+      // v3: Restart spinner โดยไม่ forced reflow
+      // WHY เดิม: getComputedStyle() + void arc.offsetWidth = forced synchronous layout
+      //   ทำให้ main thread block 5-20ms ระหว่าง navigation
+      // วิธีใหม่: clone node → replace → animation restart โดยไม่ต้องอ่าน layout
       var arc = el.querySelector('.fvl-arc');
       if (arc) {
-        var computedAnim = window.getComputedStyle(arc).animationName;
-        // Toggle animation to force restart
-        arc.style.animation = 'none';
-        // Force reflow
-        void arc.offsetWidth;
-        // Restore animation
-        arc.style.animation = '';
+        var clone = arc.cloneNode(true);
+        arc.parentNode.replaceChild(clone, arc);
       }
 
       // Remove pulse class after animation completes
@@ -302,11 +309,87 @@
       return handle ? handle.element : this._el;
     },
 
-    // Aliases for call-site compatibility
+    /**
+     * v3→v4: Hide loading แบบ instant — ไม่มี fade-out animation
+     * WHY: เมื่อ content พร้อมแล้ว ไม่ต้อง fade-out 180ms
+     *   ซ่อนทันทีแบบ Google/Microsoft — content ปรากฏปั๊บ
+     *   ลด forced reflow จาก CSS transition ด้วย
+     *
+     * v4: rAF guard — ถ้า overlay ถูกสร้างใน frame เดียวกับที่ hide
+     *   ถูกเรียก (เช่น cached load เร็วมาก), browser อาจไม่เคย paint
+     *   overlay เลย → ผู้ใช้เห็น content เปลี่ยนอยู่เบื้องหลัง
+     *   วิธีแก้: ถ้า overlay อยู่ในสถานะ 'showing' (ยังไม่ถูก paint),
+     *   รอ 1 rAF ก่อนลบ เพื่อให้ browser ได้ paint อย่างน้อย 1 ครั้ง
+     */
+    hideInstant: function () {
+      if (this._sessionCount > 0) this._sessionCount--;
+      if (this._sessionCount > 0) return Promise.resolve();
+
+      this._visibleSince = 0;
+      if (this._pendingHideTimer) {
+        clearTimeout(this._pendingHideTimer);
+        this._pendingHideTimer = null;
+      }
+
+      var self = this;
+
+      // v4: Check if FVL instance is still in 'showing' state (not yet painted).
+      // If so, defer removal by 1 rAF to guarantee at least one paint.
+      var fvl = _fvl();
+      var inst = null;
+      if (fvl) {
+        try {
+          inst = fvl.modules().State.getInstance(DEFAULT_ID);
+        } catch (_) {}
+      }
+
+      if (inst && inst.state === 'showing') {
+        // Overlay was created but browser hasn't painted it yet.
+        // Wait 1 frame so the user sees at least 1 frame of loading,
+        // then remove. This prevents content jank from being visible.
+        requestAnimationFrame(function () {
+          self._removeOverlayNow(fvl);
+        });
+        return Promise.resolve();
+      }
+
+      // Normal case: overlay was fully shown — remove immediately.
+      this._removeOverlayNow(fvl);
+      return Promise.resolve();
+    },
+
+    /**
+     * v4: Internal — actually remove overlay DOM + FVL instance.
+     * Split from hideInstant() so the rAF guard can call it deferred.
+     */
+    _removeOverlayNow: function (fvl) {
+      if (!fvl) fvl = _fvl();
+      // ลบ DOM ทันที — ไม่ผ่าน FVL animation
+      if (this._el) {
+        try {
+          if (this._el.parentNode) this._el.parentNode.removeChild(this._el);
+        } catch (_) {}
+        this._el = null;
+      }
+      if (fvl) {
+        try {
+          var modules = fvl.modules();
+          var inst = modules.State.getInstance(DEFAULT_ID);
+          if (inst) {
+            inst.state = 'destroyed';
+            modules.State.removeInstance(DEFAULT_ID);
+          }
+        } catch (_) {}
+      }
+    },
     showInContent: function (opts) { return this.show(opts); },
     hideFromContent: function ()   { return this.hide(); },
 
-    // ── Emergency reset (used by safety timeout in router) ────────────────
+    // ── Emergency reset (used at start of each navigateTo) ───────────────
+    // v3: ลบ overlay DOM ทันที ไม่รอ leave animation
+    // WHY: เมื่อคลิกรัวๆ เราต้องการ "รีเซ็ตทุกอย่างใหม่" ไม่ใช่ "รอให้เลือนหาย"
+    //   การเรียก fvl.hide() จะมี animation delay 180ms ซึ่งทำให้ show() ตัวใหม่
+    //   อาจเจอ instance ที่อยู่ในสถานะ 'hiding' แล้วทำให้การแสดงผลผิดพลาด
     _forceReset: function () {
       this._sessionCount = 0;
       this._pulseInProgress = false;
@@ -315,8 +398,37 @@
         clearTimeout(this._pendingHideTimer);
         this._pendingHideTimer = null;
       }
+      // ลบ overlay DOM ทันที — ไม่รอ animation
+      if (this._el) {
+        try {
+          if (this._el.parentNode) this._el.parentNode.removeChild(this._el);
+        } catch (_) {}
+        this._el = null;
+      }
+      // ลบ FVL instance ออกจาก registry ทันที
       var fvl = _fvl();
-      if (fvl) fvl.hide(DEFAULT_ID);
+      if (fvl) {
+        try {
+          var modules = fvl.modules();
+          var inst = modules.State.getInstance(DEFAULT_ID);
+          if (inst) {
+            // ทำ cleanup เหมือน FVL ภายใน แต่ทันที (skip animation)
+            if (inst.mode === 'fullscreen' && inst._lockedScrollY != null) {
+              try {
+                document.body.style.position = '';
+                document.body.style.top = '';
+                document.body.style.width = '';
+                window.scrollTo(0, inst._lockedScrollY);
+              } catch (_) {}
+            }
+            inst.state = 'destroyed';
+            modules.State.removeInstance(DEFAULT_ID);
+          }
+        } catch (_) {
+          // Fallback: ลอง hide ปกติ ถ้า internal API ใช้ไม่ได้
+          try { fvl.hide(DEFAULT_ID); } catch (__) {}
+        }
+      }
     },
   };
 

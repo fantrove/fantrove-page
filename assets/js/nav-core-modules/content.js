@@ -178,8 +178,9 @@
         const items = await this._resolveAll(data, lang);
         if (sess !== _sess) return;
 
-        try { M.LoadingService?.hide(); } catch (err) { console.warn('[Content] LoadingService.hide failed:', err); }
-
+        // v3: Render content ก่อน แล้วค่อยซ่อน loading
+        // WHY: ถ้าซ่อน loading ก่อน → ผู้ใช้เห็นหน้าว่างช่วงระหว่าง fade-out กับ render
+        //   เหมือน Google/Microsoft — content พร้อมก่อน ถึงจะซ่อน overlay
         _ureHandle = window.URE.mount({
           container          : ctr,
           data               : items,
@@ -194,6 +195,11 @@
       } catch (e) {
         console.error('[NavCore/Content] renderContent error:', e);
         try { M.LoadingService?.hide(); } catch (err) { console.warn('[Content] LoadingService.hide failed in catch:', err); }
+      } finally {
+        // v3: ซ่อน loading หลัง render เสร็จ (ถ้ายังไม่ถูกซ่อน)
+        //   render เสร็จแล้ว ซ่อนทันที ไม่ต้องรอ animation
+        //   ใช้ hideInstant() — ลบ DOM ทันที เหมือน Google/Microsoft
+        try { M.LoadingService?.hideInstant(); } catch (_) {}
       }
     },
 
@@ -233,8 +239,6 @@
         });
         if (sess !== _sess) return;
 
-        try { M.LoadingService?.hide(); } catch (_) {}
-
         // Delegated click — attach ครั้งเดียว ตลอดอายุ ctr element
         this._ensureFeedClickDelegate(ctr);
 
@@ -246,6 +250,12 @@
         if (firstGroups.length) {
           await this._appendFeedGroups(ctr, firstGroups, lang, null);
         }
+
+        // v3: ซ่อน loading หลัง content แสดงผลแล้วเท่านั้น
+        // WHY: ถ้าซ่อนก่อน render → ผู้ใช้เห็นหน้าว่าง 180ms+ (blank flash)
+        //   ตอนนี้ content render เสร็จแล้ว → ซ่อน loading ทันที
+        //   ใช้ hideInstant() — ลบ DOM ทันที เหมือน Google/Microsoft
+        try { M.LoadingService?.hideInstant(); } catch (_) {}
 
         if (sess !== _sess) return;
 
