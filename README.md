@@ -1,5 +1,5 @@
 
-  <img src="/assets/images/fantrove-hub.png" alt="fantrove-verse.png" onerror="this.style.display='none'">
+  <img src="assets/images/fantrove-verse.png" alt="Fantrove Logo" onerror="this.style.display='none'">
 
 # 🌟 Fantrove — The Ultimate Collection of Special Characters, Emojis & Symbols
 
