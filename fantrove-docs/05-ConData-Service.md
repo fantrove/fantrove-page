@@ -1,13 +1,17 @@
-# ระบบ ConData Service — เอกสารอ้างอิงฉบับสมบูรณ์
+# 05 — ระบบ ConData Service (ConData Service)
 
-> **โปรเจกต์:** Fantrove (Fantrove Verse)
-> **เวอร์ชันระบบ:** v2.2.0
+> เอกสารนี้อธิบายระบบ **ConData Service** ของ Fantrove — ระบบศูนย์กลางข้อมูล (Neutral Data Service) ที่เป็น Single Source of Truth สำหรับข้อมูลทุกประเภท (อีโมจิ, สัญลักษณ์, ข้อความแฟนซี, คอลเลกชัน)
+>
+> **สำหรับ:** AI และนักพัฒนาที่จะแก้/ขยาย ConData Service หรือเพิ่ม type/subcategory ใหม่
+>
 > **ไฟล์หลัก:**
-> - `assets/js/con-data-service/con-data-service.js` — บริการข้อมูลหลัก
+> - `assets/js/con-data-service/con-data-service.js` — บริการข้อมูลหลัก (ES module + global)
 > - `assets/js/con-data-service/con-data-registry.js` — Schema Registry, Path Resolver, Validator, Normalizer
 > - `assets/db/con-data/index.json` — Registry ระดับบนสุด (Top-Level Index)
 > - `assets/db/con-data/{type}.json` — Type Index แต่ละประเภท
 > - `assets/db/con-data/{type}/{subcategory}.json` — ไฟล์ข้อมูลรายหมวดหมู่
+>
+> **เวอร์ชันระบบ:** v2.2.0
 
 ---
 
@@ -1419,3 +1423,14 @@ export { ConDataRegistry };
 ---
 
 > **เอกสารฉบับนี้สร้างขึ้นเพื่อให้ AI หรือนักพัฒนาสามารถเข้าใจระบบ ConData Service ทั้งหมดได้จากเอกสารฉบับเดียว — โดยไม่ต้องอ่าน source code โดยตรง**�ั้นนำของโลก", "en": "Creator of ChatGPT and GPT-4, a leading AI research company." },
+
+---
+
+## 16. อ้างอิงข้ามเอกสาร
+
+- [`00-System-Architecture.md`](./00-system-architecture.md) — ภาพรวมสถาปัตยกรรมทั้งโปรเจกต์
+- [`02-Search-System.md`](./02-Search-System.md) — Search ที่ใช้ `ConDataService.getAssembled()` สำหรับค้นหา
+- [`03-Nav-Core-System.md`](./03-Nav-Core-System.md) — Nav-Core ที่ใช้ ConData สำหรับ render หมวดหมู่
+- [`10-Content-Guide.md`](./10-Content-Guide.md) — คู่มือเพิ่ม/แก้ content แบบ step-by-step
+- [`AI_CODING_GUIDE.md`](./AI_CODING_GUIDE.md) — มาตรฐานโค้ดที่ต้องยึดเมื่อแก้ ConData
+- [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) — กฎเหล็ก (โดยเฉพาะห้ามเพิ่ม collection types ลงใน `index.json`)

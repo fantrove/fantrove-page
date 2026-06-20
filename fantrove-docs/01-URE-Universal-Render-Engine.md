@@ -1,12 +1,37 @@
-# URE (Universal Render Engine) v1.7.0
+# 01 — URE (Universal Render Engine)
+
+> เอกสารนี้อธิบายระบบ **URE (Universal Render Engine)** ของ Fantrove — virtual scrolling engine หลักสำหรับแสดงข้อมูลจำนวนมหาศาล (หลายหมื่นถึงหลายแสนรายการ) บนหน้าเว็บโดยไม่ทำให้หน้าเว็บช้า
+>
+> **สำหรับ:** AI และนักพัฒนาที่จะแก้/ขยาย URE หรือใช้ URE mount list ในหน้าใหม่
+>
+> **ไฟล์หลัก:** `assets/js/ure/ure.js` (entry) + `assets/js/ure/ure-modules/` (12 modules) + `assets/js/ure/ure.css` (auto-injected) + `assets/js/ure/Readme.md` (API reference สั้น)
+>
+> **เวอร์ชัน:** 1.7.0 (เพิ่ม Adaptive Memory Management)
+
+---
+
+## สารบัญ
+
+1. [ภาพรวม](#1-ภาพรวม)
+2. [สถาปัตยกรรม](#2-สถาปัตยกรรม)
+3. [รายละเอียด Module ทั้ง 12](#3-รายละเอียด-module-ทั้ง-12)
+4. [Public API — `window.URE`](#4-public-api--windowure)
+5. [EngineHandle API](#5-enginehandle-api)
+6. [Memory Management (v1.7.0)](#6-memory-management-v170)
+7. [Virtual Scroll Algorithm](#7-virtual-scroll-algorithm)
+8. [Worker Bridge](#8-worker-bridge)
+9. [Lazy Asset Loading](#9-lazy-asset-loading)
+10. [Integration กับระบบอื่น](#10-integration-กับระบบอื่น)
+11. [Quick Start](#11-quick-start)
+12. [อ้างอิงข้ามเอกสาร](#12-อ้างอิงข้ามเอกสาร)
+
+---
 
 ## 1. ภาพรวม
 
-**URE** เป็น virtual scrolling engine หลักของโปรเจกต์ Fantrove (หรือ Fantrove Verse) ที่ออกแบบมาเพื่อแสดงข้อมูลจำนวนมหาศาล (หลายหมื่นถึงหลายแสนรายการ) บนหน้าเว็บโดยไม่ทำให้หน้าเว็บช้า URE ทำงานโดยแสดงเฉพาะ DOM elements ที่อยู่ภายใน viewport และ buffer zone เท่านั้น และรีไซเคิล DOM nodes ที่หมดการใช้งานกลับเข้าสู่ pool แทนที่จะสร้าง/ทำลายใหม่ทุกครั้ง ซึ่งลด GC pressure ลงได้ 80-95%
+**URE** ทำงานโดยแสดงเฉพาะ DOM elements ที่อยู่ภายใน viewport และ buffer zone เท่านั้น และรีไซเคิล DOM nodes ที่หมดการใช้งานกลับเข้าสู่ pool แทนที่จะสร้าง/ทำลายใหม่ทุกครั้ง ซึ่งลด GC pressure ลงได้ 80-95%
 
-URE โหลดผ่าน `<script src="/assets/js/ure/ure.js">` เพียง tag เดียว จากนั้นระบบจะทำการโหลด module ทั้ง 12 ไฟล์ตามลำดับ dependency อัตโนมัติ รวมถึง auto-inject CSS ด้วย
-
-**เวอร์ชันปัจจุบัน**: 1.7.0 (เพิ่ม Adaptive Memory Management)
+URE โหลดผ่าน `<script src="/assets/js/ure/ure.js">` เพียง tag เดียว จากนั้นระบบจะทำการโหลด module ทั้ง 12 ไฟล์ตามลำดับ dependency อัตโนมัติ (sequential load) รวมถึง auto-inject CSS ด้วย
 
 ---
 
@@ -675,4 +700,13 @@ handle.destroy()
 
 ---
 
-> **เอกสารฉบับนี้สร้างขึ้นเพื่อให้ AI หรือนักพัฒนาสามารถเข้าใจระบบ URE ทั้งหมดได้จากเอกสารฉบับเดียว — โดยไม่ต้องอ่าน source code โดยตรง**
+## 12. อ้างอิงข้ามเอกสาร
+
+- [`00-System-Architecture.md`](./00-system-architecture.md) — ภาพรวมสถาปัตยกรรมทั้งโปรเจกต์
+- [`02-Search-System.md`](./02-Search-System.md) — Search system ที่ใช้ URE ใน `rendering.js`
+- [`03-Nav-Core-System.md`](./03-Nav-Core-System.md) — Nav-Core ที่ใช้ URE ใน `content.js`
+- [`08-Performance-Architecture.md`](./08-Performance-Architecture.md) — รายละเอียดเทคนิค performance ทั้งหมด (virtual scroll, memory, worker, cache, lazy load)
+- [`AI_CODING_GUIDE.md`](./AI_CODING_GUIDE.md) — มาตรฐานโค้ดที่ต้องยึดเมื่อแก้ URE
+- [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) — กฎเหล็กก่อนแตะ URE
+
+> เอกสารนี้ครอบคลุม architecture + modules + API ของ URE สำหรับการใช้งานแบบรวดเร็วดู `assets/js/ure/Readme.md` (API reference สั้น)

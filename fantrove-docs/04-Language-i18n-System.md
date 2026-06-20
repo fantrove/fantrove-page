@@ -1,8 +1,14 @@
 # 04 — ระบบภาษา (i18n) และ Build System
 
-> เอกสารนี้อธิบายระบบ internationalization (i18n) และระบบ Build ของโปรเจกต์ **Fantrove** (Fantrove Verse) อย่างละเอียดครบถ้วน ครอบคลุม FvLang Central API (v5.0), Runtime Mode (แปลภาษาด้วย JS บนเบราว์เซอร์) และ Pre-built Static Mode (แปลภาษาด้วย Build Script ก่อน deploy) รวมถึง Build System ที่สร้าง static HTML สำหรับทุกภาษา
+> เอกสารนี้อธิบายระบบ internationalization (i18n) และระบบ Build ของ **Fantrove** อย่างละเอียดครบถ้วน ครอบคลุม FvLang Central API (v5.0), Runtime Mode (แปลภาษาด้วย JS บนเบราว์เซอร์) และ Pre-built Static Mode (แปลภาษาด้วย Build Script ก่อน deploy) รวมถึง Build System ที่สร้าง static HTML สำหรับทุกภาษา
 >
-> **อัพเดทล่าสุด:** v1.6.1 — ย้าย popup เลือกภาษามาใช้ PopupSystem (ui.js v6.0), ลบ hand-rolled dropdown
+> **สำหรับ:** AI และนักพัฒนาที่จะแก้ระบบภาษา เพิ่มภาษาใหม่ หรือแก้ Build System
+>
+> **ไฟล์หลัก:** `assets/js/lang-core.js` (FvLang core, load first) + `assets/js/language.js` (entry) + `assets/js/lang-proxy.js` + `assets/js/lang-links.js` + `assets/js/lang-modules/` (14 modules, static mode uses 6)
+>
+> **เวอร์ชัน:** v5.0 (FvLang integration), ui.js v6.0 (PopupSystem-backed language popup)
+>
+> **Migration note:** ระบบกำลัง migrate จาก `languageChange` (legacy) ไปยัง `fv:langchange` (new) — โค้ดปัจจุบันส่วนใหญ่ฟังทั้งสอง event เพื่อ backward compat
 
 ---
 
@@ -2237,3 +2243,13 @@ window.LangModules = {
 ---
 
 > **สรุป:** ระบบภาษาของ Fantrove ออกแบบมาเป็น modular architecture ที่รองรับทั้ง runtime translation (เหมาะกับ development) และ pre-built static HTML (เหมาะกับ production SEO) โดยมี **FvLang (lang-core.js)** เป็นชั้น API กลางที่ resolve ภาษาแบบ synchronous และเป็น single source of truth สำหรับทุกระบบ JS ผ่าน `FvLang.lang`, `FvLang.onChange()`, และ event `fv:langchange`
+---
+
+## 11. อ้างอิงข้ามเอกสาร
+
+- [`00-System-Architecture.md`](./00-system-architecture.md) — ภาพรวมสถาปัตยกรรมทั้งโปรเจกต์
+- [`06-Popup-System.md`](./06-Popup-System.md) — PopupSystem ที่ใช้ใน `lang-modules/ui.js` v6.0
+- [`09-Deployment-Guide.md`](./09-Deployment-Guide.md) — รายละเอียด Build System และ deployment
+- [`11-Whats-New-System.md`](./11-Whats-New-System.md) — FvLang API ที่ใช้ในระบบ What's New
+- [`AI_CODING_GUIDE.md`](./AI_CODING_GUIDE.md) — มาตรฐานโค้ดที่ต้องยึดเมื่อแก้ระบบภาษา
+- [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) — กฎเหล็ก (โดยเฉพาะห้ามใช้ `localStorage.getItem('selectedLang')` โดยตรง — ใช้ `FvLang.lang` แทน)

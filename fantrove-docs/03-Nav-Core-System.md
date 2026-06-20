@@ -1,6 +1,10 @@
 # 03 — ระบบ Nav-Core และไฟล์ JavaScript อิสระ
 
-> เอกสารนี้อธิบายระบบ Nav-Core ซึ่งเป็นหัวใจสำคัญของการนำทางแบบ SPA (Single Page Application) และการจัดการเนื้อหาทั้งหมดของ Fantrove Verse รวมถึงไฟล์ JavaScript อิสระที่ทำงานร่วมกับ Nav-Core
+> เอกสารนี้อธิบายระบบ Nav-Core ของ **Fantrove** ซึ่งเป็นหัวใจสำคัญของการนำทางแบบ SPA (Single Page Application) และการจัดการเนื้อหาบนหน้า Discover รวมถึงไฟล์ JavaScript อิสระที่ทำงานร่วมกับ Nav-Core
+>
+> **สำหรับ:** AI และนักพัฒนาที่จะแก้/ขยาย Nav-Core หรือไฟล์อิสระที่เกี่ยวข้อง
+>
+> **ไฟล์หลัก:** `assets/js/nav-core.js` (orchestrator, parallel loader) + `assets/js/nav-core-early.js` (instant bootstrap) + `assets/js/nav-core-modules/` (14 modules)
 
 ---
 
@@ -1417,3 +1421,16 @@ tService._onClick(e)
                           └── copyNotification.js
                                 ├── resolveName() (optional ConDataService lookup)
      
+---
+
+## 22. อ้างอิงข้ามเอกสาร
+
+- [`00-System-Architecture.md`](./00-system-architecture.md) — ภาพรวมสถาปัตยกรรมทั้งโปรเจกต์
+- [`01-URE-Universal-Render-Engine.md`](./01-URE-Universal-Render-Engine.md) — URE ที่ใช้ใน `content.js`
+- [`05-ConData-Service.md`](./05-ConData-Service.md) — ConDataService ที่เป็นแหล่งข้อมูล
+- [`06-Popup-System.md`](./06-Popup-System.md) — PopupSystem ที่ใช้ใน `utils.js` (`showErrorFullscreen`)
+- [`07-Loading-System-FVL.md`](./07-Loading-System-FVL.md) — FVL ที่ `loading.js` เป็น thin proxy ไปยัง
+- [`08-Performance-Architecture.md`](./08-Performance-Architecture.md) — เทคนิค performance ที่ใช้ (FeedService, ScrollService, PerformanceService)
+- [`10-Content-Guide.md`](./10-Content-Guide.md) — วิธีเพิ่ม/แก้ content ที่ Nav-Core แสดง
+- [`AI_CODING_GUIDE.md`](./AI_CODING_GUIDE.md) — มาตรฐานโค้ดที่ต้องยึดเมื่อแก้ Nav-Core
+- [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) — กฎเหล็กก่อนแตะ Nav-Core

@@ -1,8 +1,12 @@
-# ระบบ Search — เอกสารประกอบระบบ
+# 02 — ระบบ Search (Search System)
 
-> สำหรับโปรเจกต์ **Fantrove** (Fantrove Verse)
+> เอกสารนี้อธิบายระบบ Search ของ **Fantrove** — ระบบค้นหา client-side แบบ two-tier (substring + Fuse.js fuzzy) ที่ทำงานร่วมกับ URE สำหรับ virtual scroll rendering
 >
-> ครอบคลุม: สถาปัตยกรรม, อัลกอริทึม, โมดูลทั้งหมด, การผสานรวมกับ URE, การจัดการ URL/History, และการเพิ่มประสิทธิภาพ
+> **สำหรับ:** AI และนักพัฒนาที่จะแก้/ขยายระบบ Search
+>
+> **ไฟล์หลัก:** `assets/js/search-engine.js` (Fuse engine singleton) + `assets/js/search-ui.js` (orchestrator, public API `window.__searchUI`) + `assets/js/search-modules/` (12 modules)
+>
+> **ครอบคลุม:** สถาปัตยกรรม, อัลกอริทึม, โมดูลทั้งหมด, การผสานรวมกับ URE, URL/History, performance
 
 ---
 
@@ -1731,4 +1735,16 @@ fallback → fetch('/assets/db/db.min.json')
 RenderingService.renderResults()
   → URE.mount({ container, data, template, lang, buffer, recycling, keyField })
   → URE จัดการ virtual scroll + DOM pool + diff
-  → ครั้งต่อไป: URE
+  → ครั้งต่อไป: URE ใช้ instance เดิม (single instance reuse, rendering.js v6.0)
+```
+
+---
+
+## 17. อ้างอิงข้ามเอกสาร
+
+- [`00-System-Architecture.md`](./00-system-architecture.md) — ภาพรวมสถาปัตยกรรมทั้งโปรเจกต์
+- [`01-URE-Universal-Render-Engine.md`](./01-URE-Universal-Render-Engine.md) — URE ที่ใช้ render ผลลัพธ์การค้นหา
+- [`05-ConData-Service.md`](./05-ConData-Service.md) — ConDataService ที่เป็นแหล่งข้อมูล
+- [`08-Performance-Architecture.md`](./08-Performance-Architecture.md) — เทคนิค performance ที่ใช้
+- [`AI_CODING_GUIDE.md`](./AI_CODING_GUIDE.md) — มาตรฐานโค้ดที่ต้องยึดเมื่อแก้ Search
+- [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) — กฎเหล็กก่อนแตะ Search

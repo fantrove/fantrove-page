@@ -1,40 +1,68 @@
-# ภาพรวมสถาปัตยกรรมระบบ Fantrove
+# 00 — ภาพรวมสถาปัตยกรรมระบบ (System Architecture)
 
-## 1. โปรเจกต์คืออะไร
-
-**Fantrove** (หรือชื่ออีกชื่อว่า **Fantrove Verse**) เป็นแพลตฟอร์มคลังอีโมจิ สัญลักษณ์ (symbol) และข้อความแฟนซี (fancy text) ที่ทำงานเป็น static website บน **Cloudflare Pages** (`fantrove.pages.dev`) โปรเจกต์รองรับหลายภาษา (ปัจจุบัน `en` และ `th`) มี SEO optimization ผ่านการสร้าง static HTML แยกตามภาษาด้วย build script
-
-คุณสมบัติหลักของโปรเจกต์:
-- แสดงอีโมจิหลายพันตัว, สัญลักษณ์ 27 หมวดหมู่, ข้อความแฟนซี 10 สไตล์, และ AI tool cards
-- ระบบค้นหา client-side แบบทันที (substring + fuzzy search)
-- Virtual scrolling สำหรับแสดงข้อมูลจำนวนมหาศาล
-- SPA-style navigation บนหน้า Discover และ Search
-- i18n รองรับ 2 โหมด (runtime translation และ pre-built static pages)
-- Deploy บน Cloudflare Pages ด้วย custom redirects และ headers
-
-**เวอร์ชันปัจจุบัน**: 1.7.1
+> เอกสารนี้อธิบายภาพรวมสถาปัตยกรรมของโปรเจกต์ **Fantrove** (หรือชื่อเต็ม **Fantrove Verse`) — แพลตฟอร์มคลังอีโมจิ สัญลักษณ์ ข้อความแฟนซี และคอลเลกชันอื่น ๆ ที่ทำงานเป็น static website บน Cloudflare Pages
+>
+> **สำหรับ:** AI และนักพัฒนาที่ต้องการเข้าใจภาพรวมก่อนเข้าระบบใดระบบหนึ่งเป็นพิเศษ
+>
+> **เวอร์ชันอ้างอิง:** ดูจากเอกสารประกอบของแต่ละระบบ — เอกสารนี้ไม่อ้างอิงเวอร์ชันเฉพาะเพื่อหลีกเลี่ยงความไม่ตรงเมื่อระบบอัปเดต
 
 ---
 
-## 2. สถาปัตยกรรมรวม
+## สารบัญ
 
-### 2.1 ระบบหลัก 7 ระบบ
+1. [โปรเจกต์คืออะไร](#1-โปรเจกต์คืออะไร)
+2. [ระบบหลัก 7 ระบบ](#2-ระบบหลัก-7-ระบบ)
+3. [Module Pattern ทั้งระบบ](#3-module-pattern-ทั้งระบบ)
+4. [โครงสร้างไฟล์โปรเจกต์](#4-โครงสร้างไฟล์โปรเจกต์)
+5. [URL Structure และ Routing](#5-url-structure-และ-routing)
+6. [Data Architecture](#6-data-architecture)
+7. [การสื่อสารระหว่างระบบ](#7-การสื่อสารระหว่างระบบ)
+8. [Performance Architecture](#8-performance-architecture)
+9. [Third-Party Integrations](#9-third-party-integrations)
+10. [อ้างอิงข้ามเอกสาร](#10-อ้างอิงข้ามเอกสาร)
 
-| # | ระบบ | บทบาท | ไฟล์หลัก |
-|---|------|-------|-----------|
-| 1 | **URE (Universal Render Engine)** v1.7.1 | Virtual scroll rendering engine สำหรับแสดงข้อมูลจำนวนมาก | `assets/js/ure/ure.js` + 12 modules |
-| 2 | **Search System** | ระบบค้นหา client-side แบบ two-tier (substring + Fuse.js fuzzy) | `search-engine.js` + `search-ui.js` + 13 modules |
-| 3 | **Nav-Core** | Navigation & Content Management สำหรับหน้า Discover | `nav-core.js` + `nav-core-early.js` + 14 modules |
-| 4 | **Language/i18n System** v5.0 | ระบบแปลภาษา client-side พร้อม build-time static generation | `lang-core.js` + `language.js` + lang-modules |
-| 5 | **Con-Data Service** v2.2.0 | Data access layer สำหรับ content (emoji, symbol, fancy, cards) | `con-data-service.js` + `con-data-registry.js` |
-| 6 | **Popup System** v1.1.0 | ระบบ popup ส่วนกลาง — 9 presets, fullscreen, zero coupling | `assets/js/popup.js` + popup-modules (12 modules) |
-| 7 | **Build System** | สร้าง static HTML แยกภาษา, sitemap, redirects | `scripts/build.js` + 4 lib files |
+---
 
-### 2.2 แผนภาพการเชื่อมต่อระบบ
+## 1. โปรเจกต์คืออะไร
+
+**Fantrove** (หรือชื่อเต็ม **Fantrove Verse`) เป็นแพลตฟอร์มคลังอีโมจิ สัญลักษณ์ (symbol) ข้อความแฟนซี (fancy text) และคอลเลกชันอื่น ๆ (เช่น AI tool cards) ที่ทำงานเป็น static website บน **Cloudflare Pages** ที่ URL `fantrove.pages.dev`
+
+### 1.1 คุณสมบัติหลัก
+
+- แสดง content ที่ copy ได้ (อีโมจิ, สัญลักษณ์, ข้อความแฟนซี) และ collection (cards) จากคลังข้อมูลที่เพิ่ม/ลดได้ตลอด — ดู [`10-Content-Guide.md`](./10-Content-Guide.md) สำหรับรายละเอียด
+- ระบบค้นหา client-side แบบ two-tier (substring + Fuse.js fuzzy)
+- Virtual scrolling สำหรับแสดงข้อมูลจำนวนมหาศาลโดยไม่ทำให้หน้าเว็บช้า
+- SPA-style navigation บนหน้า Discover และ Search
+- i18n รองรับ 2 โหมด: runtime translation (dev) และ pre-built static pages (production)
+- Deploy บน Cloudflare Pages ด้วย build script ที่สร้าง HTML แยกตามภาษา
+
+### 1.2 ภาษาที่รองรับ
+
+ปัจจุบันรองรับ 2 ภาษา: `en` (English) และ `th` (Thai) — ภาษาเพิ่มเติมสามารถเพิ่มได้ตามกระบวนการใน [`04-Language-i18n-System.md`](./04-Language-i18n-System.md)
+
+> ⚠️ ตัวเลขจำนวน content (อีโมจิกี่ตัว, สัญลักษณ์กี่หมวด) เป็นข้อมูลที่เปลี่ยนได้ตลอดเวลา — ดูได้จาก `assets/db/con-data/index.json` หรือเอกสาร [`05-ConData-Service.md`](./05-ConData-Service.md) และ [`10-Content-Guide.md`](./10-Content-Guide.md)
+
+---
+
+## 2. ระบบหลัก 7 ระบบ
+
+| # | ระบบ | บทบาท | ไฟล์หลัก | เอกสาร |
+|---|------|-------|-----------|---------|
+| 1 | **URE (Universal Render Engine)** | Virtual scroll rendering engine สำหรับแสดงข้อมูลจำนวนมาก | `assets/js/ure/ure.js` + 12 modules | [`01-URE`](./01-URE-Universal-Render-Engine.md) |
+| 2 | **Search System** | ระบบค้นหา client-side แบบ two-tier (substring + Fuse.js fuzzy) | `assets/js/search-engine.js` + `search-ui.js` + 12 modules | [`02-Search`](./02-Search-System.md) |
+| 3 | **Nav-Core** | Navigation & Content Management สำหรับหน้า Discover (SPA) | `assets/js/nav-core.js` + `nav-core-early.js` + 14 modules | [`03-Nav-Core`](./03-Nav-Core-System.md) |
+| 4 | **Language/i18n System** | ระบบแปลภาษา client-side พร้อม build-time static generation | `assets/js/lang-core.js` + `language.js` + 14 modules (static mode: 6) | [`04-Language`](./04-Language-i18n-System.md) |
+| 5 | **ConData Service** | Data access layer สำหรับ content (emoji, symbol, fancy, cards) | `assets/js/con-data-service/con-data-service.js` + `con-data-registry.js` | [`05-ConData`](./05-ConData-Service.md) |
+| 6 | **Popup System** | ระบบ popup ส่วนกลาง — 9 presets, fullscreen, zero coupling | `assets/js/popup.js` + 12 popup-modules | [`06-Popup`](./06-Popup-System.md) |
+| 7 | **Loading System (FVL)** | Fullscreen Visual Loader — หน้าจอโหลดที่ครอบการเปลี่ยนเนื้อหา | `assets/js/loading-system/fvl.js` (single file, 9 inline sections) | [`07-Loading`](./07-Loading-System-FVL.md) |
+
+> เอกสารเพิ่มเติมที่ครอบคลุม cross-cutting concerns: [`08-Performance`](./08-Performance-Architecture.md), [`09-Deployment`](./09-Deployment-Guide.md), [`10-Content`](./10-Content-Guide.md), [`11-Whats-New`](./11-Whats-New-System.md)
+
+### 2.1 แผนภาพการเชื่อมต่อระบบ
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    HTML Pages (14 หน้า)                   │
+│                    HTML Pages (16 หน้า)                   │
 │  home / search / discover / setting / about / ...        │
 └──────┬──────────┬──────────────┬────────────┬────────────┘
        │          │              │            │
@@ -46,7 +74,7 @@
        │          │             │             │
        ▼          ▼             ▼             │
   ┌─────────────────────────────────────┐     │
-  │     Con-Data Service v2.2.0         │     │
+  │       ConData Service (frozen)      │     │
   │  (emoji, symbol, fancy, cards DB)   │     │
   └──────────────┬──────────────────────┘     │
                  │                            │
@@ -60,23 +88,31 @@
   └──────────┘        └──────────┘   └─────────────┘
 
   Cross-system Communication:
-  ─ Custom Events: languageChange, routeChanged, urlChanged, ure:ready
-  ─ Global Variables: window.URE, window.SearchEngine, window.ConDataService
+  ─ Custom Events: fv:langchange (new), languageChange (legacy),
+                   routeChanged, urlChanged, ure:ready, fp:*, fvl:*
+  ─ Global Variables: window.URE, window.PopupSystem, window.FVL,
+                       window.FvLang, window.ConDataService, window.__searchUI
   ─ BroadcastChannel('fv-lang-v3'): ซิงค์ภาษาระหว่าง tabs
 ```
 
-**การพึ่งพาระหว่างระบบ:**
-- **URE** ← ถูกเรียกใช้โดย Search (rendering.js) และ Nav-Core (content.js)
-- **Con-Data Service** ← เป็น data provider หลักให้ Search และ Nav-Core
-- **Language System** ← ทุกระบบฟัง `languageChange` event เพื่ออัปเดต UI
-- **Build System** ← อ่าน HTML + translation ทุกหน้า → สร้าง static pages
+### 2.2 การพึ่งพาระหว่างระบบ
 
-### 2.3 Module Pattern ทั้งระบบ
+- **URE** ← ถูกเรียกใช้โดย Search (`search-modules/rendering.js`) และ Nav-Core (`nav-core-modules/content.js`)
+- **ConData Service** ← เป็น data provider หลักให้ Search, Nav-Core และ Home
+- **Language System** ← ทุกระบบฟัง `fv:langchange` หรือ `languageChange` event เพื่ออัปเดต UI
+- **Build System** ← อ่าน HTML + translation ทุกหน้า → สร้าง static pages สำหรับแต่ละภาษา
+- **Popup System** ← ใช้โดย `version-core.js`, `lang-modules/ui.js`, `nav-core-modules/utils.js`
+- **Loading System (FVL)** ← ใช้โดย Nav-Core (`nav-core-modules/loading.js` เป็น thin proxy ไปยัง FVL)
 
-ทั้ง 4 ระบบหลัก (URE, Search, Nav-Core, Language) ใช้ **IIFE pattern** เดียวกัน:
+---
+
+## 3. Module Pattern ทั้งระบบ
+
+ทุกระบบหลัก (URE, Search, Nav-Core, Language, Popup) ใช้ **IIFE pattern** เดียวกัน — ไม่มี ES modules หรือ framework ใด ๆ
+
+### 3.1 รูปแบบมาตรฐาน
 
 ```javascript
-// ทุก module ใช้รูปแบบนี้:
 (function(M) {
   'use strict';
   // ... module code ...
@@ -84,157 +120,136 @@
 })(window.SomeNamespace = window.SomeNamespace || {});
 ```
 
-**Namespace ของแต่ละระบบ:**
-- URE: `window.UREModules`
-- Search: `window.SearchModules`
-- Nav-Core: `window.NavCoreModules`
-- Language: `window.LangModules`
+### 3.2 Namespace ของแต่ละระบบ
 
-**ลักษณะสำคัญที่ต้องรู้:**
-- ไม่มี ES modules หรือ import/export
+| ระบบ | Internal namespace | Public API |
+|---|---|---|
+| URE | `window.UREModules` | `window.URE` (frozen) |
+| Search | `window.SearchModules` | `window.SearchEngine` + `window.__searchUI` |
+| Nav-Core | `window.NavCoreModules` | `window._navCore` (boot marker) |
+| Language | `window.LangModules` | `window.FvLang` + `window.languageManager` |
+| ConData | (ไม่มี modules) | `window.ConDataService` + `window.ConDataRegistry` |
+| Popup | `window.PopupModules` | `window.PopupSystem` (frozen) |
+| FVL | `window.FVLModules` (inline) | `window.FVL` (frozen) |
+
+### 3.3 ลักษณะสำคัญที่ต้องรู้
+
+- ไม่มี ES modules หรือ `import`/`export` (ยกเว้น `con-data-service.js` ที่เป็นได้ทั้ง ES module และ global)
 - ไม่มี reactive system — state เป็น shared mutable object
-- การสื่อสารระหว่าง module ทำผ่าน direct method calls
-- การสื่อสารระหว่างระบบทำผ่าน Custom Events + global variables
+- การสื่อสารระหว่าง module ในระบบเดียวกัน: direct method calls
+- การสื่อสารระหว่างระบบ: Custom Events + global variables
 - ทุก module มี `destroy()` function สำหรับ cleanup
+- Loading strategies:
+  - **Sequential**: URE (12 modules), Popup (12 modules) — ต้องโหลดตามลำดับ dependency
+  - **Parallel-within-phase**: Search (5 phases), Nav-Core (5 phases), Language (3 phases) — โหลดกลุ่ม module พร้อมกัน
+  - **Inline single-file**: FVL (9 sections ในไฟล์เดียว, 1 HTTP request)
+
+> ดูมาตรฐานการเขียนโค้ดทั้งหมดใน [`AI_CODING_GUIDE.md`](./AI_CODING_GUIDE.md)
 
 ---
 
-## 3. โครงสร้างไฟล์โปรเจกต์
-
-### 3.1 Directory Tree
+## 4. โครงสร้างไฟล์โปรเจกต์
 
 ```
 fantrove-page/
-├── index.html                          # 404 fallback page
+├── index.html                          # 404 fallback / root redirect target
 ├── home/index.html                     # Landing page
-├── search/index.html                   # Search page (full)
-├── data/verse/discover/index.html      # Discover/browse page
-├── data/verse/scope/index.html         # Placeholder (empty)
+├── search/index.html                   # Search page
+├── data/verse/discover/index.html      # Discover/browse page (SPA)
+├── data/verse/scope/index.html         # Scope page
 ├── setting/index.html                  # Settings page
-├── info/about/index.html               # About page
-├── info/roadmap/index.html             # Roadmap page
-├── info/whats_new/index.html           # What's New page
-├── us/index.html                       # User hub page
-├── us/contact/index.html               # Contact form
-├── us/report/index.html                # Report form
+├── platform/about/index.html           # About page
+├── platform/roadmap/index.html         # Roadmap page
+├── platform/whats_new/index.html       # What's New page
+├── community/index.html                # Community hub
+├── community/contact/index.html        # Contact form
+├── community/report/index.html         # Report form
 ├── beta.html                           # UI mockup test
 ├── n.html                              # SVG playground
+├── cn.html                             # Legacy/test page
+├── google6b646fa60e0f9f2f.html         # Google verification
 │
 ├── assets/
 │   ├── js/
-│   │   ├── ure/                        # ★ URE Engine (13 files)
+│   │   ├── ure/                        # ★ URE Engine
 │   │   │   ├── ure.js                  # Entry point
 │   │   │   ├── ure.css                 # Auto-injected styles
+│   │   │   ├── ure-examples.js         # Reference only — not loaded in prod
+│   │   │   ├── Readme.md               # API reference (short)
 │   │   │   └── ure-modules/            # 12 module files
 │   │   │
-│   │   ├── search-modules/             # ★ Search modules (13 files)
-│   │   ├── search-engine.js            # Search algorithm (global)
-│   │   ├── search-ui.js                # Search orchestrator
+│   │   ├── search-modules/             # ★ Search modules (12 files)
+│   │   ├── search-engine.js            # Fuse-based engine (singleton)
+│   │   ├── search-ui.js                # Search orchestrator (public API)
 │   │   │
 │   │   ├── nav-core-modules/           # ★ Nav-Core modules (14 files)
-│   │   ├── nav-core.js                 # Nav-Core orchestrator
-│   │   ├── nav-core-early.js           # Early bootstrap
+│   │   ├── nav-core.js                 # Nav-Core orchestrator (parallel loader)
+│   │   ├── nav-core-early.js           # Early bootstrap (instant)
 │   │   │
-│   │   ├── lang-modules/               # ★ Language modules (14 files)
-│   │   ├── language.js                 # Language entry point
-│   │   ├── lang-proxy.js               # URL language proxy (head script)
-│   │   ├── lang-links.js               # Smart link prefix
+│   │   ├── lang-modules/               # ★ Language modules (14 files; static mode uses 6)
+│   │   ├── lang-core.js                # FvLang core (load FIRST in <head>)
+│   │   ├── language.js                 # Language entry point + phase loader
+│   │   ├── lang-proxy.js               # URL language proxy (early, redirects)
+│   │   ├── lang-links.js               # Smart link prefix manager
 │   │   │
 │   │   ├── con-data-service/           # ★ Data service (2 files)
+│   │   │   ├── con-data-service.js     # ES module + global
+│   │   │   └── con-data-registry.js    # Schema registry
+│   │   │
+│   │   ├── popup.js                    # Popup System entry (sequential loader)
+│   │   ├── popup-modules/              # 12 popup modules
+│   │   ├── loading-system/
+│   │   │   └── fvl.js                  # Single-file FVL (9 inline sections)
 │   │   │
 │   │   ├── modern-navigation.js        # Bottom nav bar
 │   │   ├── copyNotification.js         # Copy feedback UI
 │   │   ├── footer-template.js          # Footer injection
-│   │   ├── banner-engine.js            # Banner system v5.0.0
+│   │   ├── banner-engine.js            # Banner system
 │   │   ├── home.js                     # Home page logic
 │   │   ├── new.js                      # What's New renderer
 │   │   ├── roadmap.js                  # Roadmap renderer
 │   │   ├── version-core.js             # Update notification
 │   │   ├── back-to-top.js              # Scroll-to-top button
-│   │   ├── back-button.js              # Back navigation
-│   │   ├── lang-proxy.js               # Language URL proxy
-│   │   └── popup.js                    # PopupSystem v1.1.0 entry point
+│   │   └── back-button.js              # Back navigation
 │   │
-│   ├── css/                            # 17 CSS files
-│   │   ├── tokens.css                  # Design tokens (load first!)
-│   │   ├── bg.css, home.css, search.css, setting.css, about.css
-│   │   ├── nav-core.css, nav-core-ext.css, loading.css
-│   │   ├── footer.css, popup.css, back-to-top.css
-│   │   ├── modern-styles.css, top-navigation-bar.css
-│   │   ├── new.css, roadmap.css
-│   │   └── search-compact-overrides.css
-│   │
-│   ├── db/con-data/                    # Content data (new system)
-│   │   ├── index.json                  # Registry (4 types)
-│   │   ├── emoji.json                  # 9 categories
-│   │   ├── symbol.json                 # 27 categories
-│   │   ├── fancy.json                  # 10 categories
-│   │   ├── cards.json                  # 1 category
-│   │   ├── emoji/                      # 9 data files
-│   │   ├── symbol/                     # 27 data files
-│   │   ├── fancy/                      # 10 data files
-│   │   └── cards/                      # 1 data file
-│   │
-│   ├── json/                           # Config + template data
-│   │   ├── buttons.json                # Nav button config
-│   │   ├── template/template.json      # Bottom nav config
-│   │   ├── whats-new.json              # Release notes
-│   │   ├── release-history.json        # Version history
-│   │   ├── current-stage.json          # Dev stage info
-│   │   └── content/                    # Old template data
-│   │
-│   ├── lang/                           # Translation files
-│   │   ├── en.json                     # English translations
-│   │   ├── th.json                     # Thai translations
-│   │   └── options/db.json             # Language config
-│   │
+│   ├── css/                            # 18+ CSS files (tokens.css loads first!)
+│   ├── db/con-data/                    # Content data — see 10-Content-Guide
+│   ├── json/                           # Config + content descriptors
+│   ├── lang/                           # Translation files (en.json, th.json, options/db.json)
 │   ├── template-html/                  # HTML templates
-│   │   ├── footer-template.html        # Footer template
-│   │   ├── home-templates.html         # Home page templates
-│   │   └── intro-template.html         # Intro template
-│   │
 │   ├── fonts/                          # Custom fonts
 │   └── images/                         # Images and assets
 │
 ├── scripts/                            # Build scripts
 │   ├── build.js                        # Main build orchestrator
 │   ├── generate-sitemap.js             # Sitemap generator
-│   ├── update-version.js               # Version bumper
+│   ├── update-version.js               # Version bumper (run manually)
 │   └── lib/
-│       ├── file-utils.js               # File utilities
-│       ├── html-transformer.js         # HTML transformer (Cheerio)
+│       ├── file-utils.js
+│       ├── html-transformer.js         # Cheerio-based HTML transformation
 │       └── marker-parser.js            # Translation marker parser
 │
-├── package.json                        # Node.js config
-├── _redirects                          # Cloudflare redirects
+├── fantrove-docs/                      # 📚 All documentation (this folder)
+├── package.json                        # Node.js config (single dep: cheerio)
+├── _redirects                          # Dev redirects (production version generated by build)
 ├── _headers                            # Cloudflare headers
 ├── robots.txt                          # Search engine rules
 ├── sitemap.xml                         # Auto-generated sitemap
-└── ads.txt                             # AdSense config
+├── ads.txt                             # AdSense config
+├── LICENSE                             # Apache 2.0
+├── NOTICE                              # Attribution
+└── README.md                           # Repo entry — links to fantrove-docs/INDEX.md
 ```
 
-### 3.2 หน้าเว็บทั้งหมด (14 หน้า)
+### 4.1 หน้าเว็บทั้งหมด
 
-| หน้า | Path | บทบาท | JS หลัก | ระบบที่ใช้ |
-|------|------|--------|---------|------------|
-| 404 | `/index.html` | Fallback page | language, footer, lang-links | Language |
-| Home | `/home/` | Landing page พร้อม carousel | home.js, banner-engine, version-core | URE, Con-Data |
-| Search | `/search/` | ค้นหาเต็มรูปแบบ | search-engine, search-ui, URE | Search, URE, Con-Data |
-| Discover | `/data/verse/discover/` | Browse content แบบ SPA | nav-core, nav-core-early, URE | Nav-Core, URE, Con-Data |
-| Scope | `/data/verse/scope/` | Placeholder (ว่าง) | - | - |
-| Settings | `/setting/` | ตั้งค่า + เลือกภาษา | language, modern-nav, version-core | Language |
-| About | `/info/about/` | ข้อมูลเว็บ + License | language, back-button | Language |
-| Roadmap | `/info/roadmap/` | แผนพัฒนา | roadmap.js | - |
-| What's New | `/info/whats_new/` | Release notes | new.js | - |
-| User Hub | `/us/` | Hub แยก contact/report | language, back-button | Language |
-| Contact | `/us/contact/` | ติดต่อ (Gmail/Form) | language + inline | Language |
-| Report | `/us/report/` | รายงานปัญหา (Form) | language + inline | Language |
+ตรวจสอบรายการหน้าเว็บปัจจุบันได้จาก `scripts/generate-sitemap.js` และ `sitemap.xml` — รายการหน้าเว็บเปลี่ยนได้ตามการพัฒนา ไม่ควร hardcode ในเอกสาร
 
 ---
 
-## 4. URL Structure และ Routing
+## 5. URL Structure และ Routing
 
-### 4.1 URL Format
+### 5.1 URL Format (Production)
 
 ```
 https://fantrove.pages.dev/{lang}/{page-path}
@@ -242,166 +257,209 @@ https://fantrove.pages.dev/{lang}/{page-path}
 
 **ตัวอย่าง:**
 ```
-/en/home/                              → Home ภาษาอังกฤษ
-/th/home/                              → Home ภาษาไทย
-/en/search/?q=heart                    → ค้นหา "heart"
+/en/home/                                          → Home ภาษาอังกฤษ
+/th/home/                                          → Home ภาษาไทย
+/en/search/?q=heart                                → ค้นหา "heart"
 /en/data/verse/discover/?type=symbols__&page=arrows
-/th/setting/                           → ตั้งค่าภาษาไทย
+/th/setting/                                       → ตั้งค่าภาษาไทย
 ```
 
-### 4.2 Cloudflare _redirects (Production)
+### 5.2 Routing 3 ชั้น
 
-```
-/                    → /en/home/              (302)
-/index.html          → /en/home/              (302)
-/en                  → /en/home/              (302)
-/th                  → /th/home/              (302)
-/{lang}/*            → /{lang}/:splat         (200, serve static)
-/assets/*            → /assets/:splat         (200, passthrough)
-/*                  → /en/home/              (404 fallback)
-```
+#### 5.2.1 Cloudflare `_redirects` (server-level)
 
-### 4.3 ระบบ Routing ภายใน
+ไฟล์ `_redirects` ใน repo root เป็นเวอร์ชั่น **dev** — production version ถูก generate โดย `scripts/build.js` และมี rules ที่ต่างออกไป (เช่น root redirect ไป `/en/home/` 302)
 
-**Discover page (Nav-Core SPA routing):**
+ดูรายละเอียดเต็มใน [`09-Deployment-Guide.md`](./09-Deployment-Guide.md) ส่วน URL Routing & Redirects
+
+#### 5.2.2 SPA routing ในหน้า Discover (Nav-Core)
+
 - Format: `?type={mainRoute}__&page={subRoute}`
 - ตัวอย่าง: `?type=symbols__&page=arrows`
 - Default route: `_all` (infinite feed)
 - ใช้ `history.pushState`/`replaceState` + `popstate` handler
+- Dispatch event `urlChanged` และ `routeChanged`
 
-**Search page:**
+#### 5.2.3 Search page history
+
 - Format: `?q={query}&type={type}__&category={category}`
-- ใช้ Two-Stack browser history model
+- ใช้ Two-Stack browser history model (`search-modules/url-history.js`)
 
-**Language routing:**
-- Production: URL prefix `/en/`, `/th/`
-- Development (localhost): ไม่มี prefix ใช้ JS translation
+#### 5.2.4 Language routing
+
+- **Production (built pages)**: URL prefix `/en/`, `/th/` ฝังใน HTML ตอน build
+- **Development (localhost)**: ไม่มี prefix — ใช้ `lang-proxy.js` สำหรับ detect และ JS translation runtime
+- **Tab sync**: BroadcastChannel `fv-lang-v3` ซิงค์ภาษาระหว่าง tabs ที่เปิดเว็บเดียวกัน
 
 ---
 
-## 5. Data Architecture
+## 6. Data Architecture
 
-### 5.1 Content Data — ระบบใหม่ (con-data)
+### 6.1 Content Data — ระบบ con-data
 
-โครงสร้างแบบ hierarchical:
+ระบบ content แยกข้อมูลออกเป็น 2 ชั้น: **ข้อมูลดิบ** (raw data) กับ **ใบสั่งงาน** (descriptor) — ดูรายละเอียดเต็มใน [`10-Content-Guide.md`](./10-Content-Guide.md)
+
+```
+assets/db/con-data/
+├── index.json              # Registry ของ top-level types
+├── {type}.json             # Subcategory registry ของแต่ละ type
+└── {type}/{subcategory}.json  # ข้อมูลดิบ items
+```
+
+### 6.2 โครงสร้าง index.json (Registry)
 
 ```json
 {
-  "type": [
+  "categories": [
     {
       "id": "emoji",
       "name": { "en": "Emoji", "th": "อีโมจิ" },
-      "categories": [
-        {
-          "id": "smileys_emotion",
-          "name": { "en": "Smileys", "th": "หน้ายิ้ม" },
-          "file": "/assets/db/con-data/emoji/smileys_emotion.json"
-        }
-      ]
+      "file": "emoji.json"
     }
+    // ... types อื่น ๆ
   ]
 }
 ```
 
-**Item structure มาตรฐาน:**
+> รายการ types และ subcategories ทั้งหมดอยู่ในไฟล์ JSON จริง — ดูได้จาก `assets/db/con-data/index.json` หรือเอกสาร [`05-ConData-Service.md`](./05-ConData-Service.md)
+
+### 6.3 Item schema มาตรฐาน
+
+**Copyable item** (emoji, symbol, fancy):
+
 ```json
 {
-  "api": "U+2190",
-  "text": "←",
-  "name": { "th": "ลูกศรซ้าย", "en": "Leftwards Arrow" }
+  "api":  "U+1F600",
+  "text": "😀",
+  "name": { "th": "หน้ายิ้ม", "en": "Grinning Face" }
 }
 ```
 
-**Card item structure:**
+**Collection item** (cards):
+
 ```json
 {
-  "api": "card-openai",
-  "text": "OpenAI",
-  "name": { "th": "โอเพ่นเอไอ", "en": "OpenAI" },
+  "api":         "card-openai",
+  "text":        "OpenAI",
+  "name":        { "th": "โอเพ่นเอไอ", "en": "OpenAI" },
   "description": { "th": "...", "en": "..." },
-  "image": "/assets/images/cards/openai.png",
-  "link": "https://openai.com"
+  "image":       "/assets/images/cards/openai.png",
+  "link":        "https://openai.com"
 }
 ```
 
-### 5.2 ปริมาณข้อมูล
+### 6.4 Content descriptor (ใบสั่งงาน)
 
-| Type | Categories | รายละเอียด |
-|------|-----------|-------------|
-| Emoji | 9 | smileys, people, animals, food, travel, activities, objects, symbols, flags |
-| Symbol | 27 | arrows, math, currency, punctuation, latin, greek, cyrillic, geometric, box_drawing, ฯลฯ |
-| Fancy | 10 | math_bold, math_italic, math_script, math_fraktur, math_double_struck, ฯลฯ |
-| Cards | 1 | ai_tools (OpenAI, Anthropic) |
+ไฟล์ใน `assets/json/content/` เป็น "ใบสั่งงาน" ที่บอกว่าจะดึง content อะไร + แสดงผลแบบไหน:
+
+```json
+[{ "source": "emoji" }]
+[{ "category": "ai_tools", "type": "cards", "as": "cards" }]
+```
+
+ดูวิธีเขียนทั้งหมดใน [`10-Content-Guide.md`](./10-Content-Guide.md)
 
 ---
 
-## 6. การสื่อสารระหว่างระบบ
+## 7. การสื่อสารระหว่างระบบ
 
-### 6.1 Custom Events
+### 7.1 Custom Events Catalog
 
-| Event | ผู้ส่ง | Detail | ผู้ฟัง |
-|-------|-------|-------|--------|
-| `languageChange` | Language Manager | `{ language, previousLanguage }` | ทุกระบบ |
-| `routeChanged` | RouterService (Nav-Core) | `{ main, sub }` | ทุก module ใน Nav-Core |
-| `urlChanged` | RouterService | `{ url, mainRoute, subRoute }` | ภายนอก |
-| `ure:ready` | ure.js | `{ version: '1.7.1' }` | Nav-Core, Search |
-| `languageReady` | Language Manager | `{ lang, translations }` | ทุกระบบ |
-| `fp:ready` | popup/init.js | — | version-core, lang-ui |
-| `fp:opened` | popup/engine.js | `{ id, options }` | ภายนอก |
-| `fp:closed` | popup/engine.js | `{ id, result }` | ภายนอก |
+| Event | ผู้ส่ง | Detail shape | ผู้ฟัง |
+|-------|-------|--------------|--------|
+| `ure:ready` | `ure.js` | `{ version }` | Nav-Core (`content.js`), Search |
+| `fp:ready` | `popup-modules/init.js` | `{ version }` | `version-core.js`, `lang-modules/ui.js` |
+| `fp:opening`, `fp:opened` | `popup-modules/state.js` | instance detail | ภายนอก |
+| `fp:closing`, `fp:closed` | `popup-modules/state.js` | instance detail | ภายนอก |
+| `fp:destroyed`, `fp:queued`, `fp:updated` | `popup-modules/state.js` | instance detail | ภายนอก |
+| `fvl:ready` | `fvl.js` | `{ version }` | ภายนอก |
+| `fvl:showing`, `fvl:shown` | `fvl.js` | loader detail | ภายนอก |
+| `fvl:hiding`, `fvl:hidden` | `fvl.js` | loader detail | ภายนอก |
+| `fvl:destroyed`, `fvl:updated` | `fvl.js` | loader detail | ภายนอก |
+| `fv:langchange` ✨ (new) | `lang-core.js` (FvLang) | `{ lang, previousLang }` | `new.js`, `home.js`, `modern-navigation.js` |
+| `languageChange` ⚠️ (legacy) | `lang-modules/manager.js`, `modern-navigation.js` | `{ language }` | ระบบเดิม — กำลัง migrate ไป `fv:langchange` |
+| `languageReady` | `lang-modules/gate.js` | gate detail | (ใช้ผ่าน `window.languageReady` Promise แทน) |
+| `routeChanged` | `nav-core-modules/router.js` | `{ main, sub }` | ภายนอก (ปัจจุบันใช้น้อย) |
+| `urlChanged` | `nav-core-modules/router.js` | `{ url, mainRoute, subRoute }` | ภายนอก |
 
-### 6.2 Global Variables สำคัญ
+> ⚠️ **การ migrate ภาษา:** ระบบภาษากำลัง migrate จาก `languageChange` (legacy) ไปยัง `fv:langchange` (ใหม่) — โค้ดปัจจุบันส่วนใหญ่ฟัง **ทั้งสอง** event เพื่อ backward compat โค้ดใหม่ควรใช้ `fv:langchange` เท่านั้น
+
+### 7.2 Global Variables สำคัญ
+
+#### Public APIs (frozen objects)
 
 | Variable | ตั้งโดย | ใช้โดย |
 |----------|---------|--------|
-| `window.URE` | ure.js | Nav-Core, Search |
-| `window.UREModules` | ทุก URE module | URE internal |
-| `window.SearchEngine` | search-engine.js | search-ui.js |
-| `window.__searchUI` | search-ui.js | ภายนอก |
-| `window.SearchModules` | ทุก Search module | Search internal |
-| `window.ConDataService` | con-data-service.js | Nav-Core, Search, Home |
-| `window.ConDataRegistry` | con-data-registry.js | Con-Data Service |
-| `window.NavCoreModules` | ทุก Nav-Core module | Nav-Core internal |
-| `window.LangModules` | ทุก Language module | Language internal |
-| `window.languageManager` | language.js | ทุกระบบ |
-| `window.languageReady` | language.js | ทุกระบบ (Promise) |
-| `window.modernNav` | modern-navigation.js | ทุกหน้า |
-| `window.BannerEngine` | banner-engine.js | Home page |
-| `window.unifiedCopyToClipboard` | nav-core/init.js | ContentService |
-| `window.showCopyNotification` | copyNotification.js | Search, Nav-Core |
-| `window.showInstantLoadingOverlay` | loading.js | ภายนอก |
-| `window.PopupSystem` | popup.js (init.js) | version-core, lang-ui, nav-core |
-| `window.PopupModules` | ทุก popup module | Popup internal |
+| `window.URE` | `ure/ure.js` | Nav-Core, Search |
+| `window.PopupSystem` | `popup-modules/init.js` | version-core, lang-ui, nav-core |
+| `window.FVL` | `loading-system/fvl.js` | nav-core (loading.js proxy), ภายนอก |
+| `window.FvLang` | `lang-core.js` | ทุกระบบ (read lang, subscribe changes) |
+| `window.ConDataService` | `con-data-service.js` (auto-preloads) | Nav-Core, Search, Home |
+| `window.ConDataRegistry` | `con-data-registry.js` | ConData Service |
+| `window.SearchEngine` | `search-engine.js` | search-ui.js (internal) |
+| `window.__searchUI` | `search-ui.js` | ภายนอก (user-facing API) |
+| `window.languageManager` | `language.js` | ทุกระบบ (alias to `LangModules.LanguageManager`) |
 
-### 6.3 BroadcastChannel
+#### Internal namespaces (mutable, populated by every module)
+
+| Variable | ระบบ |
+|----------|-------|
+| `window.UREModules` | URE |
+| `window.SearchModules` | Search |
+| `window.NavCoreModules` | Nav-Core |
+| `window.LangModules` | Language |
+| `window.PopupModules` | Popup |
+| `window.FVLModules` | FVL (inline) |
+
+#### Boot markers & Promise
+
+| Variable | ตั้งโดย | ความหมาย |
+|----------|---------|----------|
+| `window._navCore = { _initialized: true }` | `nav-core-modules/init.js` | Nav-Core boot เสร็จ |
+| `window.__langUI = { _initialized: true }` | `language.js` | Language UI boot เสร็จ |
+| `window.languageReady` | `lang-core.js` / `language.js` | Promise ที่ resolve เมื่อภาษาพร้อม |
+| `window.onLanguageReady(fn)` | `lang-core.js` | Callback-style API สำหรับรอภาษาพร้อม |
+
+#### Legacy compatibility aliases
+
+`nav-core-modules/init.js` ตั้ง aliases หลายตัวบน `window` สำหรับ backward compat:
+- `_navCore_*` family (14 aliases): `_navCore_utils`, `_navCore_dataManager`, `_navCore_contentManager`, ฯลฯ
+- `_headerV2_*` family (14 aliases): mirror set สำหรับ header refactor ที่กำลังดำเนิน
+
+> โค้ดใหม่ไม่ควรใช้ aliases เหล่านี้ — ใช้ `window.NavCoreModules.*` แทน
+
+### 7.3 BroadcastChannel
 
 - **Channel**: `fv-lang-v3`
 - **Message**: `{ lang, url, ts }`
-- **ใช้สำหรับ**: ซิงค์การเปลี่ยนภาษาระหว่าง browser tabs
+- **ใช้สำหรับ**: ซิงค์การเปลี่ยนภาษาระหว่าง browser tabs ที่เปิดเว็บเดียวกัน
 
 ---
 
-## 7. Performance Architecture
+## 8. Performance architecture
 
-| เทคนิค | ระบบที่ใช้ | รายละเอียด |
-|--------|------------|-------------|
-| Virtual Scrolling | URE | แสดงเฉพาะ items ใน viewport + buffer zone |
-| DOM Node Pooling | URE | Recycle DOM nodes แทน create/destroy |
-| Adaptive Memory | URE v1.7.1 | ตรวจ memory pressure ปรับ cap อัตโนมัติ |
-| Web Workers | URE, Language | Filter/sort/translate อยู่นอก main thread |
-| Typed Arrays | URE | Float32Array/64Array สำหรับ offset calculations |
-| Template Cache | URE | Map cache ของ rendered HTML |
-| Height Cache | URE | sessionStorage บันทึกความสูง item |
-| Lazy Asset Loading | URE | img/iframe/bg โหลดเมื่อเข้า viewport |
-| CSS Containment | URE | `contain: layout style paint` บน items |
-| Content Visibility | Nav-Core Feed | `content-visibility: auto` บน feed pages |
-| requestIdleCallback | ทั่วไป | Fuse index build, data warmup |
-| DocumentFragment | ทั่วไป | Batch DOM insert |
-| RAF Batching | ทั่วไป | Single paint per frame |
+ดูรายละเอียดเต็มใน [`08-Performance-Architecture.md`](./08-Performance-Architecture.md) — ครอบคลุมทุกเทคนิค cross-cutting (virtual scroll, DOM pool, adaptive memory, web workers, typed arrays, lazy loading, CSS containment, rAF batching, profiling, budgets)
+
+### 8.1 สรุปเทคนิคหลัก
+
+| เทคนิค | ระบบที่ใช้ |
+|--------|------------|
+| Virtual Scrolling | URE |
+| DOM Node Pooling | URE |
+| Adaptive Memory Management | URE (MemoryManager) |
+| Web Workers | URE (filter/sort), Language (translation) |
+| Typed Arrays (Float32/Float64) | URE (offset calculations) |
+| Template Cache + Height Cache | URE |
+| Lazy Asset Loading | URE (img/iframe/bg) |
+| CSS Containment + content-visibility | URE, Nav-Core Feed |
+| requestIdleCallback | Search (Fuse index), ConData (warmup) |
+| RAF Batching | URE Scheduler |
+| DocumentFragment | ทั่วไป |
+| Single-file inline modules | FVL (1 HTTP request) |
 
 ---
 
-## 8. Third-Party Integrations
+## 9. Third-Party Integrations
 
 | Service | ID/URL | ใช้ที่ไหน |
 |---------|--------|-----------|
@@ -409,94 +467,25 @@ https://fantrove.pages.dev/{lang}/{page-path}
 | Google Analytics 4 | G-R4DGR81NZ6 | ทุกหน้า |
 | Cookiebot | 16a70d79-... | ทุกหน้า |
 | Google AdSense | ca-pub-8233915433564101 | ทุกหน้า |
-| Fuse.js v6.6.2 | CDN (lazy load) | Search system |
-| Cheerio | npm dependency | Build system only |
+| Fuse.js | CDN (lazy load) — `unpkg.com/fuse.js@6.6.2` | Search system |
+| Cheerio | npm dependency (build only) | Build System |
 | Ko-fi | nontakorn_nonsurat | Settings page |
 | Patreon | rowings_official | Settings page |
 | Banner API | fantrove-banner.vercel.app | Home page |
-| Wave Effect | marcumat-js.pages.dev | Navigation |
 
 ---
 
-## 9. ไฟล์เอกสารประกอบในชุดนี้
+## 10. อ้างอิงข้ามเอกสาร
 
-| ไฟล์ | เนื้อหา |
-|------|---------|
-| `00-ภาพรวมสถาปัตยกรรมทั้งระบบ.md` | เอกสารนี้ — ภาพรวมทั้งโปรเจกต์ |
-| `01-URE-Universal-Render-Engine.md` | ระบบ URE v1.7.1 อย่างละเอียด |
-| `02-ระบบ-Search.md` | ระบบค้นหาทั้ง 14 module อย่างละเอียด |
-| `03-ระบบ-Nav-Core.md` | ระบบ Nav-Core + JS ไฟล์อิสระทั้งหมด |
-| `04-ระบบภาษา-i18n.md` | ระบบภาษา + Build System |
-| `05-ConData-Service.md` | Content Data Service v2.2.0 |
-| `06-Popup-System.md` | Fantrove Popup System v1.1.0 |
-
----
-
-## 10. Popup System — ระบบ Popup ส่วนกลาง
-
-> **เวอร์ชัน:** v1.1.0 | **Namespace:** `window.PopupSystem` | **ไฟล์:** `assets/js/popup.js` + `popup-modules/` (12 modules)
-
-Popup System เป็นระบบ popup ส่วนกลางของ Fantrove ที่ทุก popup ทั่วทั้งเว็บใช้ร่วมกัน ออกแบบมาเหมือน URE — ใช้ IIFE module pattern, zero coupling กับระบบอื่น, และ auto-inject CSS
-
-### 10.1 Public API
-
-```javascript
-// เปิด popup (API หลัก)
-const handle = await PopupSystem.open({
-  type: 'dialog',          // preset type
-  title: 'Title',
-  body: '<p>Content</p>', // ใช้ body ไม่ใช้ content
-  size: 'md',
-  theme: 'light',
-  group: 'my-group',
-  onMount: (bodyEl, handle) => { /* bind events */ },
-  onClose: (id, result) => { /* handle result */ },
-});
-
-// Shortcut methods
-await PopupSystem.alert('Message');
-const ok = await PopupSystem.confirm('Are you sure?');
-await PopupSystem.toast('Saved!');
-const handle = await PopupSystem.fullscreen({ body: '...' });
-
-// Management
-PopupSystem.close(id);
-PopupSystem.closeAll();
-PopupSystem.closeByGroup('my-group');
-PopupSystem.destroy(id);
-PopupSystem.stats();
-PopupSystem.on('opened', (detail) => {});
-```
-
-### 10.2 Presets (9 ประเภท)
-
-dialog, alert, confirm, sheet, toast, drawer, tooltip, popover, **fullscreen**
-
-### 10.3 ระบบที่ใช้ PopupSystem
-
-| ระบบ | วิธีใช้ |
-|------|----------|
-| version-core.js | `PopupSystem.open()` แสดง popup แจ้งอัพเดทเวอร์ชัน |
-| lang-modules/ui.js | `PopupSystem.open()` หน้าต่างเลือกภาษา |
-| nav-core/utils.js | `PopupSystem.fullscreen()` แสดงข้อผิดพลาดผ่าน `showErrorFullscreen()` |
-
-### 10.4 Global Variables
-
-| Variable | ตั้งโดย | ใช้โดย |
-|----------|---------|--------|
-| `window.PopupSystem` | init.js | version-core, lang-ui, nav-core |
-| `window.PopupModules` | ทุก popup module | Popup internal |
-
-### 10.5 Custom Events
-
-| Event | ผู้ส่ง | Detail |
-|-------|-------|--------|
-| `fp:ready` | init.js | — |
-| `fp:opened` | engine.js | `{ id, options }` |
-| `fp:closed` | engine.js | `{ id, result }` |
-
-ดูรายละเอียดเต็มใน [`06-Popup-System.md`](06-Popup-System.md)
-
----
-
-> **เอกสารฉบับนี้สร้างขึ้นเพื่อให้ AI หรือนักพัฒนาสามารถเข้าใจสถาปัตยกรรมระบบ Fantrove ทั้งหมดได้จากเอกสารฉบับเดียว — โดยไม่ต้องอ่าน source code โดยตรง**
+- [`01-URE-Universal-Render-Engine.md`](./01-URE-Universal-Render-Engine.md) — URE internals
+- [`02-Search-System.md`](./02-Search-System.md) — Search system internals
+- [`03-Nav-Core-System.md`](./03-Nav-Core-System.md) — Nav-Core internals
+- [`04-Language-i18n-System.md`](./04-Language-i18n-System.md) — Language + Build System
+- [`05-ConData-Service.md`](./05-ConData-Service.md) — ConData Service internals
+- [`06-Popup-System.md`](./06-Popup-System.md) — Popup System internals
+- [`07-Loading-System-FVL.md`](./07-Loading-System-FVL.md) — Loading System (FVL) internals
+- [`08-Performance-Architecture.md`](./08-Performance-Architecture.md) — Cross-cutting performance
+- [`09-Deployment-Guide.md`](./09-Deployment-Guide.md) — Build & deploy
+- [`10-Content-Guide.md`](./10-Content-Guide.md) — Content management
+- [`11-Whats-New-System.md`](./11-Whats-New-System.md) — Release notes system
+- [`INDEX.md`](./INDEX.md) — สารบัญเอกสารทั้งหมด

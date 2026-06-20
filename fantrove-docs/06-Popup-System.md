@@ -1,7 +1,30 @@
-# 06 — Popup System (Fantrove Popup System v1.1.0)
+# 06 — Popup System (Fantrove Popup System)
 
-> **Placement**: `assets/js/popup.js` (entry point), `assets/js/popup-modules/` (sub-modules), `assets/css/popup.css`
-> **Namespace**: `window.PopupSystem` (public API), `window.PopupModules` (internal)
+> เอกสารนี้อธิบายระบบ **Popup System** ของ Fantrove — ระบบ popup ส่วนกลางที่ทุก popup ทั่วทั้งเว็บใช้ร่วมกัน (9 presets, fullscreen, zero coupling กับระบบอื่น)
+>
+> **สำหรับ:** AI และนักพัฒนาที่จะแก้ Popup System หรือเรียกใช้ popup ในโค้ดใหม่
+>
+> **ไฟล์หลัก:** `assets/js/popup.js` (entry, sequential loader) + `assets/js/popup-modules/` (12 modules) + `assets/css/popup.css` (auto-injected)
+>
+> **Namespace:** `window.PopupSystem` (public API, frozen) + `window.PopupModules` (internal)
+>
+> **เวอร์ชัน:** v1.1.0
+
+---
+
+## สารบัญ
+
+1. [Overview](#1-overview)
+2. [ไฟล์และโครงสร้าง](#2-ไฟล์และโครงสร้าง)
+3. [Public API](#3-public-api)
+4. [Presets (9 ประเภท)](#4-presets-9-ประเภท)
+5. [Z-index Layers](#5-z-index-layers)
+6. [Queue System](#6-queue-system)
+7. [Events](#7-events)
+8. [Accessibility](#8-accessibility)
+9. [Theme System](#9-theme-system)
+10. [Integration กับระบบอื่น](#10-integration-กับระบบอื่น)
+11. [อ้างอิงข้ามเอกสาร](#11-อ้างอิงข้ามเอกสาร)
 
 ---
 
@@ -559,3 +582,14 @@ showErrorFullscreen(error, { lang: 'th' });
 ---
 
 > **เอกสารฉบับนี้สร้างขึ้นเพื่อให้ AI หรือนักพัฒนาสามารถเข้าใจระบบ Popup System ทั้งหมดได้จากเอกสารฉบับเดียว — โดยไม่ต้องอ่าน source code โดยตรง**
+
+---
+
+## 11. อ้างอิงข้ามเอกสาร
+
+- [`00-System-Architecture.md`](./00-system-architecture.md) — ภาพรวมสถาปัตยกรรมทั้งโปรเจกต์
+- [`04-Language-i18n-System.md`](./04-Language-i18n-System.md) — Language System ที่ใช้ PopupSystem ใน `lang-modules/ui.js` v6.0
+- [`03-Nav-Core-System.md`](./03-Nav-Core-System.md) — Nav-Core ที่ใช้ `PopupSystem.fullscreen()` ใน `utils.js`
+- [`11-Whats-New-System.md`](./11-Whats-New-System.md) — `version-core.js` ที่ใช้ PopupSystem แสดง popup แจ้งอัปเดต
+- [`AI_CODING_GUIDE.md`](./AI_CODING_GUIDE.md) — มาตรฐานโค้ดที่ต้องยึดเมื่อแก้ Popup System
+- [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) — กฎเหล็ก (โดยเฉพาะห้ามใช้ `alert()`/`confirm()`/`prompt()` — ใช้ PopupSystem แทน)

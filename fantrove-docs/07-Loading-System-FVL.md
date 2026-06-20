@@ -1,8 +1,30 @@
-# 07 — Loading System (FVL — FantroveVerse Loader v1.0.0)
+# 07 — Loading System (FVL — FantroveVerse Loader)
 
-> **Placement**: `assets/js/loading-system/fvl.js` (entry + internal modules, single file), `assets/css/loading-system.css`
-> **Namespace**: `window.FVL` (public API), `window.FVLModules` (internal)
-> **Demo page**: `/loading-demo/`
+> เอกสารนี้อธิบายระบบ **FVL (FantroveVerse Loader)** ของ Fantrove — ระบบ loading ส่วนกลางที่แยกออกมาจาก Nav-Core เดิม ออกแบบมาเพื่อให้ทุก loading indicator ทั่วทั้งเว็บมีคุณภาพระดับเดียวกันและยืดหยุ่นพอที่จะแสดงได้ในทุกบริบท — ตั้งแต่ overlay เต็มหน้าจอ ไปจนถึง spinner เล็ก ๆ ในปุ่ม
+>
+> **สำหรับ:** AI และนักพัฒนาที่จะแก้ FVL หรือเรียกใช้ loading indicator ในโค้ดใหม่
+>
+> **ไฟล์หลัก:** `assets/js/loading-system/fvl.js` (single-file: entry + 9 inline sections, 1 HTTP request) + `assets/css/loading-system.css` (auto-injected)
+>
+> **Namespace:** `window.FVL` (public API, frozen) + `window.FVLModules` (internal, inline)
+>
+> **เวอร์ชัน:** v1.0.0
+
+---
+
+## สารบัญ
+
+1. [Overview](#1-overview)
+2. [ไฟล์และโครงสร้าง](#2-ไฟล์และโครงสร้าง)
+3. [Public API](#3-public-api)
+4. [Display Modes (4 แบบ)](#4-display-modes-4-แบบ)
+5. [Z-index Layers](#5-z-index-layers)
+6. [Backward Compatibility](#6-backward-compatibility)
+7. [Events](#7-events)
+8. [Accessibility](#8-accessibility)
+9. [Performance](#9-performance)
+10. [Integration กับระบบอื่น](#10-integration-กับระบบอื่น)
+11. [อ้างอิงข้ามเอกสาร](#11-อ้างอิงข้ามเอกสาร)
 
 ---
 
@@ -525,3 +547,13 @@ NavCoreModules.LoadingService.hide();
 ---
 
 > **เอกสารฉบับนี้สร้างขึ้นเพื่อให้ AI หรือนักพัฒนาสามารถเข้าใจระบบ FVL ทั้งหมดได้จากเอกสารฉบับเดียว — โดยไม่ต้องอ่าน source code โดยตรง**
+
+---
+
+## 11. อ้างอิงข้ามเอกสาร
+
+- [`00-System-Architecture.md`](./00-system-architecture.md) — ภาพรวมสถาปัตยกรรมทั้งโปรเจกต์
+- [`03-Nav-Core-System.md`](./03-Nav-Core-System.md) — Nav-Core ที่ `loading.js` เป็น thin proxy ไปยัง FVL
+- [`08-Performance-Architecture.md`](./08-Performance-Architecture.md) — เทคนิค performance ที่ใช้ใน FVL (single-file, CSS animations, `contain: strict`)
+- [`AI_CODING_GUIDE.md`](./AI_CODING_GUIDE.md) — มาตรฐานโค้ดที่ต้องยึดเมื่อแก้ FVL
+- [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) — กฎเหล็กก่อนแตะ FVL
