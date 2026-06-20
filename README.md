@@ -1,5 +1,5 @@
 <div align="center">
-  <img height="200" src="assets/images/fantrove-hub.png" alt="Fantrove Logo" onerror="this.style.display='none'">
+  <img height="200" src="assets/images/fantrove-verse.png" alt="Fantrove Logo" onerror="this.style.display='none'">
 </div>
 
 # 🌟 Fantrove — The Ultimate Collection of Special Characters, Emojis & Symbols
