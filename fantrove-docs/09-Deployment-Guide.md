@@ -679,3 +679,9 @@ cp _redirects dist/_redirects
 ---
 
 > หากมีปัญหาที่ไม่อยู่ใน troubleshooting ให้ตรวจสอบ Cloudflare Pages build logs ก่อน แล้วค่อยเปิด issue ใน GitHub
+
+---
+
+## 14. Cross-references (เพิ่มเติม)
+
+- [`12-SEO-Guide.md`](./12-SEO-Guide.md) — ⭐ SEO requirements สำหรับ deployment: sitemap submission, _redirects สำหรับ 301, _headers สำหรับ caching, robots.txt — ทุก deploy ต้องผ่าน SEO checklist ใน `12-SEO-Guide.md` ส่วน 17

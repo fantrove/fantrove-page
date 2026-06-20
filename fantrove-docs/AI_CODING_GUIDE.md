@@ -604,7 +604,150 @@ async function initSearch() {
 
 ---
 
-## 11. สรุป
+## 11. SEO-friendly Code Patterns
+
+> ⚠️ SEO เป็น priority สูงสุดของ Fantrove — ดู [`12-SEO-Guide.md`](./12-SEO-Guide.md) สำหรับรายละเอียดเต็ม และ [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) ส่วน SEO violations สำหรับสิ่งที่ห้ามทำ
+
+### 11.1 Semantic HTML เสมอ
+
+```html
+<!-- ✅ ดี -->
+<header>...</header>
+<nav>...</nav>
+<main>
+  <article>
+    <h1>Page Title</h1>
+    <section>
+      <h2>Section</h2>
+      <p>Content</p>
+    </section>
+  </article>
+</main>
+<aside>...</aside>
+<footer>...</footer>
+
+<!-- ❌ ห้าม -->
+<div class="header">...</div>
+<div class="nav">...</div>
+<div class="main">...</div>
+```
+
+### 11.2 1 `<h1>` ต่อหน้า, ไม่ skip level
+
+```html
+<!-- ✅ ดี -->
+<h1>Page Title</h1>
+<h2>Section</h2>
+<h3>Subsection</h3>
+
+<!-- ❌ ห้าม — 2 h1 -->
+<h1>Page Title</h1>
+<h1>Another Title</h1>
+
+<!-- ❌ ห้าม — skip h2 -->
+<h1>Page Title</h1>
+<h3>Section</h3>
+```
+
+### 11.3 รูปต้องมี `alt` + `width` + `height`
+
+```html
+<!-- ✅ ดี — ป้องกัน CLS + accessibility + SEO -->
+<img src="banner.jpg"
+     alt="Fantrove banner with emojis and symbols"
+     width="1200"
+     height="630">
+
+<!-- ✅ ดี — รูป decorative ใช้ alt ว่าง -->
+<img src="decorative-line.png" alt="" width="100" height="2">
+
+<!-- ❌ ห้าม — ไม่มี alt -->
+<img src="banner.jpg">
+```
+
+### 11.4 Lazy load รูปที่ไม่ใช่ hero
+
+```html
+<!-- ✅ ดี — hero image ไม่ lazy (เห็นทันทีตอนโหลด) -->
+<img src="hero.jpg" alt="..." width="1200" height="630">
+
+<!-- ✅ ดี — รูปอื่น ๆ lazy load -->
+<img src="content.jpg" alt="..." width="800" height="600" loading="lazy" decoding="async">
+```
+
+### 11.5 Link ที่ crawl ได้
+
+```html
+<!-- ✅ ดี — link ปกติ, Googlebot crawl ได้ -->
+<a href="/en/search/">Search emojis</a>
+
+<!-- ❌ ห้าม — JavaScript-only link, Googlebot อาจไม่ตาม -->
+<span onclick="window.location='/en/search/'">Search emojis</span>
+<div data-href="/en/search/" onclick="navigate(this)">Search emojis</div>
+```
+
+### 11.6 ห้าม render เนื้อหาสำคัญด้วย JS อย่างเดียว
+
+```javascript
+// ❌ ห้าม — title และ main content ต้องอยู่ใน static HTML
+document.title = 'Page Title';
+document.getElementById('main').innerHTML = '<h1>Main Content</h1>';
+
+// ✅ ถูก — static HTML มีเนื้อหา, JS เพิ่ม interactivity เท่านั้น
+// <title>Page Title</title>
+// <main><h1>Main Content</h1></main>
+// JS แค่ bind event handlers
+```
+
+### 11.7 ใช้ `<button>` สำหรับ action, `<a>` สำหรับ navigation
+
+```html
+<!-- ✅ ดี — navigation ใช้ <a> -->
+<a href="/en/search/">Go to search</a>
+
+<!-- ✅ ดี — action ใช้ <button> -->
+<button type="button" onclick="copyToClipboard()">Copy</button>
+```
+
+### 11.8 Form ต้องมี `<label>`
+
+```html
+<!-- ✅ ดี -->
+<label for="search-input">Search</label>
+<input type="text" id="search-input" name="q">
+
+<!-- ❌ ห้าม — ไม่มี label -->
+<input type="text" name="q" placeholder="Search">
+```
+
+### 11.9 หลีกเลี่ยง layout shift
+
+```css
+/* ✅ ดี — กำหนด aspect-ratio ล่วงหน้า */
+.image-container {
+  aspect-ratio: 16 / 9;
+  width: 100%;
+}
+
+/* ❌ ไม่ดี — ไม่กำหนดขนาด ทำให้ CLS */
+.image-container {
+  width: 100%;
+  /* ไม่มี height หรือ aspect-ratio */
+}
+```
+
+### 11.10 Preload critical resources
+
+```html
+<!-- ✅ ดี — preload ไฟล์สำคัญที่ใช้ทันที -->
+<link rel="preload" href="/assets/css/tokens.css" as="style">
+<link rel="preload" href="/assets/js/lang-core.js" as="script">
+<link rel="preload" href="/assets/images/hero.jpg" as="image" fetchpriority="high">
+```
+
+---
+
+## 12. สรุป
 
 | หลักการ | สรุป |
 |---|---|
@@ -619,5 +762,6 @@ async function initSearch() {
 | Async | async/await ไม่ใช่ .then() |
 | DOM | Cache + delegate + fragment |
 | Performance | rAF + debounce + lazy load |
+| **SEO** | **Semantic HTML + alt text + 1 h1 + static content + crawlable links** |
 
-> จำไว้เสมอ: **AI ที่ดีเขียนโค้ดที่อ่านเหมือนคนในทีมเขียน ไม่ใช่โค้ดที่ "สวยตามทฤษฎี"**
+> จำไว้เสมอ: **AI ที่ดีเขียนโค้ดที่อ่านเหมือนคนในทีมเขียน ไม่ใช่โค้ดที่ "สวยตามทฤษฎี"** — และต้องไม่ทำลาย SEO

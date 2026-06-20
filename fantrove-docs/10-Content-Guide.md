@@ -403,4 +403,5 @@ assets/
 - [`03-Nav-Core-System.md`](./03-Nav-Core-System.md) — ContentService ที่ใช้ content JSON (อยู่ใน nav-core-modules/content.js)
 - [`01-URE-Universal-Render-Engine.md`](./01-URE-Universal-Render-Engine.md) — ระบบที่ render items สุดท้าย
 - [`02-Search-System.md`](./02-Search-System.md) — Search อ่าน assembled DB ของ ConDataService
+- [`12-SEO-Guide.md`](./12-SEO-Guide.md) — ⭐ Content SEO: ใช้ keyword ที่ผู้ใช้ค้นหาจริงใน `name.en`/`name.th`, content freshness ส่งผลต่อ ranking
 - [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) — กฎเหล็กที่ AI ต้องรู้ก่อนแก้ content

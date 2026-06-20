@@ -2299,3 +2299,9 @@ URE ใช้ `will-change: transform` แทน — `will-change` ให้ bro
 ---
 
 > **สรุป**: ประสิทธิภาพของ Fantrove ไม่ใช่เทคนิคเดียว แต่เป็นการซ้อนทับกัน 6 ชั้น (Layer 1–6) ที่ออกแบบมาทำงานร่วมกัน — Virtual Scrolling ลด DOM size, Pooling ลด GC, Adaptive Memory ปรับตามอุปกรณ์, Worker ย้ายงานออกจาก main thread, Scheduler รวมเป็น paint เดียว, CSS Containment จำกัด layout scope เมื่อแก้ปัญหา performance ใหม่ ให้เริ่มจากการวัดก่อน (§12) แล้วค่อยเลือกเลเยอร์ที่จะ optimize
+
+---
+
+## 16. Cross-references (เพิ่มเติม)
+
+- [`12-SEO-Guide.md`](./12-SEO-Guide.md) — ⭐ Core Web Vitals เป็น SEO ranking factor — performance ที่ดี = SEO ที่ดี ทุกการ optimize ในเอกสารนี้ส่งผลโดยตรงต่อ LCP/INP/CLS ที่ Google ใช้พิจารณา ranking

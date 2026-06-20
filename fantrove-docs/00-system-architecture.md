@@ -164,9 +164,6 @@ fantrove-page/
 ├── community/index.html                # Community hub
 ├── community/contact/index.html        # Contact form
 ├── community/report/index.html         # Report form
-├── beta.html                           # UI mockup test
-├── n.html                              # SVG playground
-├── cn.html                             # Legacy/test page
 ├── google6b646fa60e0f9f2f.html         # Google verification
 │
 ├── assets/
@@ -470,12 +467,44 @@ assets/db/con-data/
 | Fuse.js | CDN (lazy load) — `unpkg.com/fuse.js@6.6.2` | Search system |
 | Cheerio | npm dependency (build only) | Build System |
 | Ko-fi | nontakorn_nonsurat | Settings page |
-| Patreon | rowings_official | Settings page |
+| Patreon | rowingsco | Settings page |
 | Banner API | fantrove-banner.vercel.app | Home page |
 
 ---
 
-## 10. อ้างอิงข้ามเอกสาร
+## 10. SEO Architecture (priority สูงสุด)
+
+SEO เป็น priority ระดับพิเศษที่สูงสุดของ Fantrove — ทุกการตัดสินใจทางเทคนิคต้องคำนึงถึงผลกระทบต่อ search engine visibility ดูรายละเอียดเต็มใน [`12-SEO-Guide.md`](./12-SEO-Guide.md)
+
+### 10.1 SEO layers ในสถาปัตยกรรมปัจจุบัน
+
+| Layer | ส่วนที่เกี่ยวข้อง | บทบาท SEO |
+|---|---|---|
+| **Static HTML pre-build** | Build System (`scripts/build.js`) | แปล translation markers → text จริงใน HTML ตอน build เพื่อให้ search engine crawl เนื้อหาที่แปลแล้วได้โดยตรง (ไม่ต้องรอ JS) |
+| **Meta tags** | HTML templates + `html-transformer.js` | `<title>`, `<meta description>`, Open Graph, Twitter Card ฝังในทุกหน้า |
+| **hreflang & canonical** | `html-transformer.js` v2.1 | เพิ่ม `<link rel="canonical">` และ `<link rel="alternate" hreflang="...">` ให้ทุกหน้า × ทุกภาษาตอน build |
+| **Sitemap** | `scripts/generate-sitemap.js` | สร้าง `sitemap.xml` ครอบคลุมทุกหน้า × ทุกภาษา ส่งให้ Google Search Console |
+| **robots.txt** | root `/robots.txt` | อนุญาตให้ crawl ทุกหน้า, ชี้ไป sitemap.xml |
+| **URL structure** | `_redirects` (production, generated) | URL สะอาด (`/en/home/`, `/th/search/?q=heart`) ไม่มี query พัง ๆ |
+| **Core Web Vitals** | URE + FVL + Build System | LCP/INP/CLS ผ่าน thresholds ของ Google (ดู `08-Performance-Architecture.md`) |
+| **Structured data** | HTML templates | JSON-LD Schema.org markup (เช่น WebSite, SearchAction, BreadcrumbList) |
+| **Image SEO** | URE lazy-assets.js + HTML | `loading="lazy"`, `alt` text, format optimization |
+| **International SEO** | Language System + Build System | 2 ภาษา × pre-built pages = search engine เข้าใจเนื้อหาแต่ละภาษาแยกกัน |
+
+### 10.2 กฎเหล็กด้าน SEO
+
+- ทุกหน้าต้องมี `<title>` และ `<meta name="description">` ที่เป็นภาษาของหน้านั้น (ไม่ใช่ default ภาษาเดียว)
+- ทุกหน้าต้องมี `<link rel="canonical">` ที่ถูกต้อง — ป้องกัน duplicate content
+- ทุกหน้าต้องมี hreflang tags ครบทุกภาษาที่รองรับ
+- ห้ามใช้ `noindex` บนหน้าที่ต้องการให้ index (ยกเว้น beta/test pages)
+- ห้าม render เนื้อหาสำคัญด้วย JavaScript อย่างเดียว — ต้องอยู่ใน static HTML
+- ทุกหน้าใหม่ต้องเพิ่มใน `sitemap.xml`
+
+> ดู checklist สำหรับ AI/นักพัฒนาใน [`12-SEO-Guide.md`](./12-SEO-Guide.md) ส่วน SEO Checklist และสิ่งที่ห้ามทำใน [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) ส่วน SEO violations
+
+---
+
+## 11. อ้างอิงข้ามเอกสาร
 
 - [`01-URE-Universal-Render-Engine.md`](./01-URE-Universal-Render-Engine.md) — URE internals
 - [`02-Search-System.md`](./02-Search-System.md) — Search system internals
@@ -488,4 +517,5 @@ assets/db/con-data/
 - [`09-Deployment-Guide.md`](./09-Deployment-Guide.md) — Build & deploy
 - [`10-Content-Guide.md`](./10-Content-Guide.md) — Content management
 - [`11-Whats-New-System.md`](./11-Whats-New-System.md) — Release notes system
+- [`12-SEO-Guide.md`](./12-SEO-Guide.md) — ⭐ SEO strategy (priority สูงสุด)
 - [`INDEX.md`](./INDEX.md) — สารบัญเอกสารทั้งหมด

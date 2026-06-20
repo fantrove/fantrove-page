@@ -273,3 +273,4 @@ Runtime จะลองอ่าน release notes ตามลำดับ:
 - [`04-Language-i18n-System.md`](./04-Language-i18n-System.md) — ระบบภาษาทั้งหมด (FvLang เป็นส่วนหนึ่ง)
 - [`06-Popup-System.md`](./06-Popup-System.md) — PopupSystem ที่ `version-core.js` ใช้
 - [`09-Deployment-Guide.md`](./09-Deployment-Guide.md) — Version bumping ใน CI/CD
+- [`12-SEO-Guide.md`](./12-SEO-Guide.md) — ⭐ Content freshness ส่งผลต่อ SEO — release notes แสดงให้เห็นว่าเว็บมีการอัปเดตต่อเนื่อง

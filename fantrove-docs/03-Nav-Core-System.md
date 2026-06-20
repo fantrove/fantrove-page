@@ -1434,3 +1434,4 @@ tService._onClick(e)
 - [`10-Content-Guide.md`](./10-Content-Guide.md) — วิธีเพิ่ม/แก้ content ที่ Nav-Core แสดง
 - [`AI_CODING_GUIDE.md`](./AI_CODING_GUIDE.md) — มาตรฐานโค้ดที่ต้องยึดเมื่อแก้ Nav-Core
 - [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) — กฎเหล็กก่อนแตะ Nav-Core
+- [`12-SEO-Guide.md`](./12-SEO-Guide.md) — ⭐ SEO considerations (priority สูงสุด) ที่เกี่ยวข้องกับระบบนี้

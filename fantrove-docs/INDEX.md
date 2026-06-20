@@ -6,6 +6,19 @@
 
 ---
 
+## 🎯 Priority ของโปรเจกต์
+
+งานทุกอย่างใน Fantrove มีความสำคัญอยู่แล้ว แต่มี priority ที่สูงเป็นพิเศษ 2 ด้านที่ต้องคำนึงถึงเสมอเมื่อตัดสินใจอะไรก็ตาม:
+
+| Priority | ระดับ | คำอธิบาย |
+|---|---|---|
+| 🥇 **SEO** | สูงสุด (พิเศษ) | Search engine visibility เป็นหัวใจของการเติบโต — ทุกการเปลี่ยนแปลงต้องไม่ทำลาย SEO และควรเสริม SEO ถ้าเป็นไปได้ ดู [`12-SEO-Guide.md`](./12-SEO-Guide.md) |
+| 🥈 **Performance** | สูง | Core Web Vitals ส่งผลต่อทั้ง UX และ SEO — ดู [`08-Performance-Architecture.md`](./08-Performance-Architecture.md) |
+
+> **กฎเหล็ก:** เมื่อมี conflict ระหว่าง feature ใหม่กับ SEO — **ให้ SEO ชนะเสมอ** เว้นแต่จะมีเหตุผลที่ชัดเจนมากเป็นพิเศษ และต้องบันทึกเหตุผลนั้นไว้ใน PR description
+
+---
+
 ## 🚀 เริ่มอ่านที่ไหน?
 
 | คุณคือใคร | เริ่มที่ไหน |
@@ -16,27 +29,29 @@
 | 🎨 **เพิ่มอีโมจิ/สัญลักษณ์** | [`10-Content-Guide.md`](./10-Content-Guide.md) |
 | 🚢 **deploy เว็บ** | [`09-Deployment-Guide.md`](./09-Deployment-Guide.md) |
 | ⚡ **ปรับประสิทธิภาพ** | [`08-Performance-Architecture.md`](./08-Performance-Architecture.md) |
+| 🔍 **ทำ SEO / เพิ่ม ranking** | [`12-SEO-Guide.md`](./12-SEO-Guide.md) ⭐ |
 
 ---
 
-## 📖 เอกสารระบบ (00–11)
+## 📖 เอกสารระบบ (00–12)
 
 เอกสารหมายเลขนี้อธิบายระบบทั้งหมดของ Fantrove ตั้งแต่ภาพรวมไปจนถึงรายละเอียด module และ function เขียนเป็นภาษาไทย เน้นความลึกเพื่อให้ AI และนักพัฒนาเข้าใจระบบได้ครบถ้วนโดยไม่ต้องอ่านโค้ดโดยตรง
 
 | # | เอกสาร | อธิบาย | ไฟล์หลักที่ครอบคลุม |
 |---|---|---|---|
-| 00 | [System Architecture](./00-System-Architecture.md) | ภาพรวมสถาปัตยกรรมทั้งโปรเจกต์ — 7 ระบบหลัก, การเชื่อมต่อ, โครงสร้างไฟล์, URL routing | ทั้งโปรเจกต์ |
-| 01 | [URE — Universal Render Engine](./01-URE-Universal-Render-Engine.md) | Virtual scroll engine สำหรับแสดงข้อมูลจำนวนมาก พร้อม memory management | `assets/js/ure/` (13 ไฟล์) |
-| 02 | [Search System](./02-Search-System.md) | ระบบค้นหา client-side แบบ two-tier (substring + Fuse.js fuzzy) | `assets/js/search-*` (15 ไฟล์) |
-| 03 | [Nav-Core System](./03-Nav-Core-System.md) | Navigation & content management สำหรับหน้า Discover (SPA) | `assets/js/nav-core*` (16 ไฟล์) |
-| 04 | [Language i18n System](./04-Language-i18n-System.md) | ระบบแปลภาษา client-side พร้อม build-time static generation | `assets/js/lang*` (16 ไฟล์) |
+| 00 | [System Architecture](./00-system-architecture.md) | ภาพรวมสถาปัตยกรรมทั้งโปรเจกต์ — 7 ระบบหลัก, การเชื่อมต่อ, โครงสร้างไฟล์, URL routing | ทั้งโปรเจกต์ |
+| 01 | [URE — Universal Render Engine](./01-URE-Universal-Render-Engine.md) | Virtual scroll engine สำหรับแสดงข้อมูลจำนวนมาก พร้อม memory management | `assets/js/ure/` |
+| 02 | [Search System](./02-Search-System.md) | ระบบค้นหา client-side แบบ two-tier (substring + Fuse.js fuzzy) | `assets/js/search-*` |
+| 03 | [Nav-Core System](./03-Nav-Core-System.md) | Navigation & content management สำหรับหน้า Discover (SPA) | `assets/js/nav-core*` |
+| 04 | [Language i18n System](./04-Language-i18n-System.md) | ระบบแปลภาษา client-side พร้อม build-time static generation | `assets/js/lang*` |
 | 05 | [ConData Service](./05-ConData-Service.md) | Data access layer สำหรับ content (emoji, symbol, fancy, cards) | `assets/js/con-data-service/` |
 | 06 | [Popup System](./06-Popup-System.md) | ระบบ popup ส่วนกลาง — 9 presets, fullscreen, zero coupling | `assets/js/popup.js` + modules |
 | 07 | [Loading System — FVL](./07-Loading-System-FVL.md) | Fullscreen Visual Loader — หน้าจอโหลดที่ครอบการเปลี่ยนเนื้อหา | `assets/js/loading-system/fvl.js` |
-| 08 | [Performance Architecture](./08-Performance-Architecture.md) | เทคนิค performance ทั้งโปรเจกต์ — virtual scroll, web worker, cache, memory | cross-cutting |
+| 08 | [Performance Architecture](./08-Performance-Architecture.md) | เทคนิค performance ทั้งโปรเจกต์ — virtual scroll, web worker, cache, memory + Core Web Vitals | cross-cutting |
 | 09 | [Deployment Guide](./09-Deployment-Guide.md) | วิธี deploy บน Cloudflare Pages, build script, environment variables | `scripts/`, `_redirects`, `_headers` |
 | 10 | [Content Guide](./10-Content-Guide.md) | วิธีเพิ่ม/แก้ content (emoji, symbol, fancy, cards) | `assets/db/con-data/` |
-| 11 | [What's New System](./11-Whats-New-System.md) | ระบบหน้า "มีอะไรใหม่" — release notes ที่อ่านจาก markdown | `assets/md/`, `assets/js/new.js`, `version-core.js` |
+| 11 | [What's New System](./11-Whats-New-System.md) | ระบบหน้า "มีอะไรใหม่" — release notes ที่อ่านจาก markdown | `assets/md/`, `assets/js/new.js` |
+| 12 ⭐ | [SEO Guide](./12-SEO-Guide.md) | กลยุทธ์ SEO ระดับ platform — Technical SEO, structured data, Core Web Vitals, international SEO, E-E-A-T | cross-cutting (highest priority) |
 
 ---
 
@@ -46,11 +61,11 @@
 
 | เอกสาร | วัตถุประสงค์ |
 |---|---|
-| [AI_CODING_GUIDE.md](./AI_CODING_GUIDE.md) | มาตรฐานการเขียนโค้ด — naming, pattern, structure, file organization ที่ต้องยึดติด |
-| [AI_TASK_WORKFLOW.md](./AI_TASK_WORKFLOW.md) | วิธีทำงานแบบ task-based — อ่านระบบก่อน → วางแผน → ทำ → ตรวจ → สรุป |
+| [AI_CODING_GUIDE.md](./AI_CODING_GUIDE.md) | มาตรฐานการเขียนโค้ด — naming, pattern, structure, file organization, **SEO-friendly code** ที่ต้องยึดติด |
+| [AI_TASK_WORKFLOW.md](./AI_TASK_WORKFLOW.md) | วิธีทำงานแบบ task-based — อ่านระบบก่อน → วางแผน (รวม SEO impact) → ทำ → ตรวจ → สรุป |
 | [AI_COMMIT_GUIDE.md](./AI_COMMIT_GUIDE.md) | มาตรฐาน commit message, PR description, changelog |
-| [AI_REVIEW_CHECKLIST.md](./AI_REVIEW_CHECKLIST.md) | Checklist สำหรับ AI ตรวจงานตัวเองก่อนส่งมอบ |
-| [AI_FORBIDDEN.md](./AI_FORBIDDEN.md) | สิ่งที่ห้ามทำ — pattern ที่ห้ามใช้, ไฟล์ที่ห้ามแก้, assumption ที่ผิดบ่อย |
+| [AI_REVIEW_CHECKLIST.md](./AI_REVIEW_CHECKLIST.md) | Checklist สำหรับ AI ตรวจงานตัวเองก่อนส่งมอบ — รวม **SEO checks** |
+| [AI_FORBIDDEN.md](./AI_FORBIDDEN.md) | สิ่งที่ห้ามทำ — pattern ที่ห้ามใช้, ไฟล์ที่ห้ามแก้, **SEO violations**, assumption ที่ผิดบ่อย |
 
 ---
 
@@ -62,11 +77,17 @@
 
 ---
 
-## 📋 เอกสาร Project Meta
+## 📋 เอกสารที่อยู่นอก fantrove-docs/
 
-| เอกสาร | วัตถุประสงค์ |
-|---|---|
-| [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) | จรรยาบรรณของชุมชนผู้มีส่วนร่วมในโปรเจกต์ |
+เอกสารเหล่านี้อยู่นอก `fantrove-docs/` เพราะเป็นมาตรฐานของ GitHub หรือ runtime ต้องการ path เฉพาะ
+
+| เอกสาร | ตำแหน่ง | เหตุผล |
+|---|---|---|
+| `README.md` | root | GitHub standard — แสดงบนหน้า repo |
+| `LICENSE` | root | GitHub standard — ต้องอยู่ที่ root |
+| `NOTICE` | root | Apache 2.0 license requirement |
+| `CODE_OF_CONDUCT.md` | root | GitHub community standard — คาดหวังให้อยู่ที่ root |
+| Release notes | `assets/md/{en,th}/` | runtime อ่านจาก path นี้ (`new.js`, `version-core.js`) |
 
 ---
 
@@ -78,10 +99,12 @@
         ┌───────────────┼───────────────┐
         ▼               ▼               ▼
    📚 เอกสารระบบ    🤖 เอกสาร AI    📝 มาตรฐาน
-   (00-11)          (AI_*)           (RELEASE_NOTES_*)
+   (00-12)          (AI_*)           (RELEASE_NOTES_*)
         │               │
         ▼               │
    00-System-Arch ───────┐ (จุดเริ่มต้น)
+        │               │
+        ├──── 12-SEO-Guide ⭐ (priority สูงสุด)
         │               │
         ▼               ▼
    01-URE ◄──────── AI_TASK_WORKFLOW
@@ -89,15 +112,12 @@
    03-Nav-Core           │
    04-Language           ▼
    05-ConData       AI_FORBIDDEN
-   06-Popup         (กฎเหล็กก่อนแก้โค้ด)
+   06-Popup         (กฎเหล็กก่อนแก้โค้ด — รวม SEO violations)
    07-Loading            │
    08-Performance        ▼
-   09-Deployment    AI_CODING_GUIDE
-   10-Content       (มาตรฐานโค้ด)
-   11-Whats-New          │
-                         ▼
-                   AI_REVIEW_CHECKLIST
-                   (ก่อนส่งมอบ)
+   09-Deployment    AI_REVIEW_CHECKLIST
+   10-Content       (ก่อนส่งมอบ — รวม SEO checks)
+   11-Whats-New
 ```
 
 ---
@@ -107,20 +127,22 @@
 ### สถานการณ์ 1: AI รับ task แก้ bug ในระบบ search
 
 1. `AI_TASK_WORKFLOW.md` — เข้าใจวิธีทำงาน
-2. `AI_FORBIDDEN.md` — รู้สิ่งที่ห้ามทำ
+2. `AI_FORBIDDEN.md` — รู้สิ่งที่ห้ามทำ (รวม SEO violations)
 3. `00-System-Architecture.md` — เข้าใจภาพรวม
 4. `02-Search-System.md` — เข้าใจระบบที่จะแก้
-5. แก้โค้ด
-6. `AI_REVIEW_CHECKLIST.md` — ตรวจก่อนส่ง
-7. `AI_COMMIT_GUIDE.md` — เขียน commit message
+5. `12-SEO-Guide.md` — เช็คว่าการแก้นี้กระทบ SEO ไหม
+6. แก้โค้ด
+7. `AI_REVIEW_CHECKLIST.md` — ตรวจก่อนส่ง (รวม SEO checks)
+8. `AI_COMMIT_GUIDE.md` — เขียน commit message
 
 ### สถานการณ์ 2: เพิ่มหมวดอีโมจิใหม่
 
 1. `10-Content-Guide.md` — รู้วิธีเพิ่ม content
 2. `05-ConData-Service.md` — เข้าใจโครงสร้างข้อมูล
-3. เพิ่มไฟล์ JSON ใน `assets/db/con-data/`
-4. อัปเดต index.json
-5. ทดสอบบนเว็บ
+3. `12-SEO-Guide.md` — เช็ค SEO ของ content ใหม่ (heading hierarchy, image alt, structured data)
+4. เพิ่มไฟล์ JSON ใน `assets/db/con-data/`
+5. อัปเดต index.json + sitemap
+6. ทดสอบบนเว็บ
 
 ### สถานการณ์ 3: เขียน release notes หลัง ship เวอร์ชั่นใหม่
 
@@ -128,33 +150,29 @@
 2. เขียน `assets/md/th/current.md` และ `assets/md/en/current.md`
 3. รันผ่าน checklist ใน guide
 
-### สถานการณ์ 4: เปลี่ยนภาษา UI ของหน้าใหม่
+### สถานการณ์ 4: เพิ่มหน้าเว็บใหม่
 
-1. `04-Language-i18n-System.md` — เข้าใจระบบภาษา
-2. เพิ่ม key ใน `assets/lang/en.json` และ `th.json`
-3. ใช้ marker `data-i18n` ใน HTML
-4. ทดสอบสลับภาษา
+1. `09-Deployment-Guide.md` — เข้าใจ build & routing
+2. `12-SEO-Guide.md` — เข้าใจ SEO requirements สำหรับหน้าใหม่ (meta tags, hreflang, structured data, sitemap)
+3. `04-Language-i18n-System.md` — เพิ่ม translation
+4. สร้าง HTML + ทุกภาษา
+5. อัปเดต sitemap
 
----
+### สถานการณ์ 5: ปรับ Core Web Vitals
 
-## 🔗 เอกสารที่อยู่นอก fantrove-docs/
-
-เอกสารเหล่านี้อยู่นอก `fantrove-docs/` เพราะเป็นของที่ระบบ runtime ต้องใช้ หรือเป็นมาตรฐานของ GitHub
-
-| เอกสาร | ตำแหน่ง | เหตุผลที่ไม่ย้าย |
-|---|---|---|
-| `README.md` | root | GitHub standard — แสดงบนหน้า repo |
-| `LICENSE` | root | GitHub standard — ต้องอยู่ที่ root |
-| `NOTICE` | root | Apache 2.0 license requirement |
-| Release notes | `assets/md/{en,th}/` | runtime อ่านจาก path นี้ (`new.js`, `version-core.js`) |
+1. `08-Performance-Architecture.md` — เข้าใจเทคนิค performance
+2. `12-SEO-Guide.md` — ดู Core Web Vitals thresholds และวิธีวัด
+3. ปรับโค้ด
+4. วัดด้วย Lighthouse / PageSpeed Insights
 
 ---
 
 ## 📅 วิธีดูแลเอกสาร
 
-- เมื่อเพิ่มระบบใหม่ → สร้างเอกสารหมายเลขใหม่ (12, 13, ...) และอัปเดต INDEX.md
-- เมื่อเปลี่ยนแปลงระบบหลัก → อัปเดตเอกสารหมายเลขนั้น + อัปเดต 00-System-Architecture.md ถ้าจำเป็น
-- เมื่อเปลี่ยนมาตรฐานการทำงาน → อัปเดตเอกสาร AI_* หรือ RELEASE_NOTES_GUIDE.md
+- เมื่อเพิ่มระบบใหม่ → สร้างเอกสารหมายเลขใหม่ (13, 14, ...) และอัปเดต INDEX.md
+- เมื่อเปลี่ยนแปลงระบบหลัก → อัปเดตเอกสารหมายเลขนั้น + อัปเดต `00-System-Architecture.md` ถ้าจำเป็น
+- เมื่อเปลี่ยนแปลงที่กระทบ SEO → อัปเดต `12-SEO-Guide.md` ด้วย
+- เมื่อเปลี่ยนมาตรฐานการทำงาน → อัปเดตเอกสาร `AI_*` หรือ `RELEASE_NOTES_GUIDE.md`
 - ทุกการแก้ไขเอกสาร → commit พร้อมข้อความ `docs: ...` ตามมาตรฐานใน `AI_COMMIT_GUIDE.md`
 
 ---

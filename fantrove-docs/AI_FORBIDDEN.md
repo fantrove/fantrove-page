@@ -319,13 +319,146 @@ elements.forEach((el, i) => {
 
 ---
 
-## 8. เมื่อไม่แน่ใจ
+## 8. กฎเกี่ยวกับ SEO (priority สูงสุด)
+
+> ⚠️ SEO เป็น priority ระดับพิเศษที่สูงสุดของ Fantrove — กฎในส่วนนี้ผิดนิดเดียวอาจทำให้ ranking ตก ดู [`12-SEO-Guide.md`](./12-SEO-Guide.md) สำหรับรายละเอียดเต็ม
+
+### 8.1 ห้ามลบ meta tags และ SEO elements
+
+```html
+<!-- ❌ ห้ามลบทั้งหมดนี้จาก HTML -->
+<title>...</title>
+<meta name="description" content="...">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="...">
+<link rel="alternate" hreflang="en" href="...">
+<link rel="alternate" hreflang="th" href="...">
+<link rel="alternate" hreflang="x-default" href="...">
+<meta property="og:*" ...>
+<meta name="twitter:*" ...>
+<meta name="viewport" content="...">
+<html lang="...">
+```
+
+### 8.2 ห้าม render เนื้อหาสำคัญด้วย JavaScript อย่างเดียว
+
+Search engine crawl static HTML — ถ้าเนื้อหาสำคัญ (title, heading, description, main content) ต้องใช้ JS ถึงจะแสดง Google อาจไม่เห็น
+
+```javascript
+// ❌ ห้าม — สำหรับเนื้อหาสำคัญ
+document.getElementById('title').textContent = 'Page Title';
+
+// ✅ ถูก — เนื้อหาสำคัญต้องอยู่ใน static HTML
+// <h1>Page Title</h1>
+```
+
+### 8.3 ห้ามใช้ `noindex` บนหน้าที่ต้องการให้ index
+
+ยกเว้น beta/test pages และหน้าที่กำลังพัฒนา
+
+### 8.4 ห้ามเปลี่ยน URL โดยไม่ตั้ง 301 redirect
+
+```javascript
+// ❌ ห้าม — URL เปลี่ยนแล้ว redirect ไม่ได้ตั้ง
+// /en/old-page/ → /en/new-page/
+
+// ✅ ถูก — ตั้ง 301 redirect ใน _redirects และอัปเดต sitemap
+```
+
+### 8.5 ห้ามใช้ `<div>` แทน semantic HTML
+
+```html
+<!-- ❌ ห้าม -->
+<div class="header">...</div>
+<div class="nav">...</div>
+<div class="main">...</div>
+
+<!-- ✅ ถูก -->
+<header>...</header>
+<nav>...</nav>
+<main>...</main>
+```
+
+### 8.6 ห้ามใช้ `<h1>` มากกว่า 1 อันต่อหน้า
+
+```html
+<!-- ❌ ห้าม -->
+<h1>Page Title</h1>
+<h1>Section Title</h1>  <!-- ห้าม -->
+
+<!-- ✅ ถูก -->
+<h1>Page Title</h1>
+<h2>Section Title</h2>
+```
+
+### 8.7 ห้าม skip heading level
+
+```html
+<!-- ❌ ห้าม — ข้าม h2 -->
+<h1>Page Title</h1>
+<h3>Section</h3>
+
+<!-- ✅ ถูก -->
+<h1>Page Title</h1>
+<h2>Section</h2>
+```
+
+### 8.8 ห้ามลืม `alt` text ในรูป
+
+```html
+<!-- ❌ ห้าม -->
+<img src="banner.jpg">
+
+<!-- ✅ ถูก -->
+<img src="banner.jpg" alt="Fantrove banner with emojis and symbols" width="1200" height="630">
+```
+
+### 8.9 ห้ามใช้ `loading="lazy"` บน hero image
+
+```html
+<!-- ❌ ห้าม — hero image ที่เห็นทันทีตอนโหลด -->
+<img src="hero.jpg" loading="lazy" alt="...">
+
+<!-- ✅ ถูก — hero image ไม่ lazy -->
+<img src="hero.jpg" alt="..." width="1200" height="630">
+```
+
+### 8.10 ห้าม deploy ถ้า Lighthouse ไม่ผ่าน
+
+ห้าม deploy ถ้า:
+- Performance < 80
+- SEO < 100
+- Accessibility < 90
+- LCP > 4s
+- CLS > 0.25
+- INP > 500ms
+
+### 8.11 ห้าม keyword stuffing
+
+```html
+<!-- ❌ ห้าม — ใส่ keyword ซ้ำ ๆ ไม่เป็นธรรมชาติ -->
+<title>Emoji Emoji Emoji - Best Emoji Site for Emoji</title>
+<meta name="description" content="Emoji site with emoji for emoji lovers who want emoji">
+
+<!-- ✅ ถูก — ใส่ keyword ตามธรรมชาติ -->
+<title>Emojis, Symbols & Fancy Text — Fantrove</title>
+<meta name="description" content="Find, copy, and use thousands of emojis, symbols, and fancy text instantly. No installation required.">
+```
+
+### 8.12 ห้ามลบหน้าจาก sitemap โดยไม่ตั้ง redirect หรือ 410
+
+ถ้าลบหน้าจริง ๆ ให้ตั้ง 410 Gone หรือ 301 redirect ไปหน้าอื่น — ไม่ใช่แค่ลบจาก sitemap
+
+---
+
+## 9. เมื่อไม่แน่ใจ
 
 ถ้า AI ไม่แน่ใจว่าสิ่งที่จะทำผิดกฎหรือไม่:
 
 1. **หยุด** — อย่าเดา
 2. **อ่านเอกสารที่เกี่ยวข้อง** — ดู [`INDEX.md`](./INDEX.md) ว่าเอกสารไหนเกี่ยวข้อง
-3. **ตรวจสอบโค้ดจริง** — ดู source code ในไฟล์ที่จะแก้
-4. **ถ้ายังไม่แน่ใจ** — เปิด issue ถาม อย่าเดาแล้วทำ
+3. **ถ้ากระทบ SEO** — อ่าน [`12-SEO-Guide.md`](./12-SEO-Guide.md) เสมอ
+4. **ตรวจสอบโค้ดจริง** — ดู source code ในไฟล์ที่จะแก้
+5. **ถ้ายังไม่แน่ใจ** — เปิด issue ถาม อย่าเดาแล้วทำ
 
 > การถามดีกว่าการทำผิดแล้วทำให้เว็บพัง

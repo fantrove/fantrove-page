@@ -593,3 +593,4 @@ showErrorFullscreen(error, { lang: 'th' });
 - [`11-Whats-New-System.md`](./11-Whats-New-System.md) — `version-core.js` ที่ใช้ PopupSystem แสดง popup แจ้งอัปเดต
 - [`AI_CODING_GUIDE.md`](./AI_CODING_GUIDE.md) — มาตรฐานโค้ดที่ต้องยึดเมื่อแก้ Popup System
 - [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) — กฎเหล็ก (โดยเฉพาะห้ามใช้ `alert()`/`confirm()`/`prompt()` — ใช้ PopupSystem แทน)
+- [`12-SEO-Guide.md`](./12-SEO-Guide.md) — ⭐ SEO considerations (priority สูงสุด) ที่เกี่ยวข้องกับระบบนี้

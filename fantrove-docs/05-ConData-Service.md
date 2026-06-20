@@ -1434,3 +1434,4 @@ export { ConDataRegistry };
 - [`10-Content-Guide.md`](./10-Content-Guide.md) — คู่มือเพิ่ม/แก้ content แบบ step-by-step
 - [`AI_CODING_GUIDE.md`](./AI_CODING_GUIDE.md) — มาตรฐานโค้ดที่ต้องยึดเมื่อแก้ ConData
 - [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) — กฎเหล็ก (โดยเฉพาะห้ามเพิ่ม collection types ลงใน `index.json`)
+- [`12-SEO-Guide.md`](./12-SEO-Guide.md) — ⭐ SEO considerations (priority สูงสุด) ที่เกี่ยวข้องกับระบบนี้

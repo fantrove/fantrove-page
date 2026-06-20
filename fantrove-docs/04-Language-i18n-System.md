@@ -2251,5 +2251,6 @@ window.LangModules = {
 - [`06-Popup-System.md`](./06-Popup-System.md) — PopupSystem ที่ใช้ใน `lang-modules/ui.js` v6.0
 - [`09-Deployment-Guide.md`](./09-Deployment-Guide.md) — รายละเอียด Build System และ deployment
 - [`11-Whats-New-System.md`](./11-Whats-New-System.md) — FvLang API ที่ใช้ในระบบ What's New
+- [`12-SEO-Guide.md`](./12-SEO-Guide.md) — ⭐ hreflang & international SEO (priority สูงสุด) — ระบบภาษาส่งผลโดยตรงต่อ SEO ในหลายภาษา
 - [`AI_CODING_GUIDE.md`](./AI_CODING_GUIDE.md) — มาตรฐานโค้ดที่ต้องยึดเมื่อแก้ระบบภาษา
 - [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) — กฎเหล็ก (โดยเฉพาะห้ามใช้ `localStorage.getItem('selectedLang')` โดยตรง — ใช้ `FvLang.lang` แทน)

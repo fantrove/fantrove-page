@@ -125,6 +125,72 @@
 
 ---
 
+## 📋 Phase C2: SEO (priority สูงสุด)
+
+> ⚠️ ทุกการเปลี่ยนแปลงต้องผ่าน SEO checks นี้ — ดู [`12-SEO-Guide.md`](./12-SEO-Guide.md) และ [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) ส่วน SEO violations
+
+### C2.1 ถ้าแก้/เพิ่ม HTML page
+
+- [ ] มี `<title>` unique, 50-60 ตัวอักษร, ภาษาของหน้า
+- [ ] มี `<meta name="description">` unique, 150-160 ตัวอักษร
+- [ ] มี `<link rel="canonical">` ที่ถูกต้อง (absolute URL)
+- [ ] มี hreflang tags ครบทุกภาษา (en, th, x-default)
+- [ ] มี Open Graph tags (og:title, og:description, og:image, og:url)
+- [ ] มี Twitter Card tags
+- [ ] มี `<html lang="...">` ที่ถูกต้อง
+- [ ] มี `<meta name="viewport" content="width=device-width, initial-scale=1">`
+- [ ] มี `<h1>` อันเดียวที่อธิบายหน้า
+- [ ] ใช้ semantic HTML (`<header>`, `<main>`, `<nav>`, `<footer>`)
+- [ ] ไม่ skip heading level (h1 → h2 → h3, ไม่ใช่ h1 → h3)
+- [ ] ทุกรูปมี `alt` text ที่สื่อความหมาย
+- [ ] ทุกรูปมี `width` + `height` หรือ `aspect-ratio`
+- [ ] รูป hero ไม่ใช้ `loading="lazy"`
+- [ ] รูปอื่น ๆ ใช้ `loading="lazy" decoding="async"`
+- [ ] Link ใช้ `<a href>` ปกติ (ไม่ใช่ JavaScript-only)
+- [ ] เนื้อหาสำคัญอยู่ใน static HTML (ไม่ใช่ render ด้วย JS อย่างเดียว)
+- [ ] ถ้ามี structured data → ทดสอบด้วย Rich Results Test
+
+### C2.2 ถ้าแก้ URL routing
+
+- [ ] ถ้าเปลี่ยน URL → ตั้ง 301 redirect (ไม่ใช่ 302)
+- [ ] อัปเดต sitemap.xml (`generate-sitemap.js`)
+- [ ] อัปเดต internal links ทุกที่
+- [ ] อัปเด트 hreflang tags ทุกหน้า
+- [ ] อัปเดต canonical tags ทุกหน้า
+
+### C2.3 ถ้าแก้ content (emoji, symbol, fancy, cards)
+
+- [ ] ไม่ลบ `api`, `text`, `name` field จาก item เดิม (search index พัง)
+- [ ] ถ้าเพิ่ม subcategory → อัปเดต type registry
+- [ ] ถ้าเพิ่ม type ใหม่ → อัปเดต index.json + sitemap strategy
+- [ ] ใช้ keyword ที่ผู้ใช้ค้นหาจริง ๆ ใน `name.en` และ `name.th`
+
+### C2.4 ถ้าแก้ performance
+
+- [ ] Lighthouse Performance ≥ 90 (mobile + desktop)
+- [ ] LCP ≤ 2.5s (Good)
+- [ ] INP ≤ 200ms (Good)
+- [ ] CLS ≤ 0.1 (Good)
+- [ ] ไม่เพิ่ม layout shift ใหม่
+
+### C2.5 ถ้าแก้ translation
+
+- [ ] เพิ่ม key ใน `assets/lang/en.json`
+- [ ] เพิ่ม key เดียวกันใน `assets/lang/th.json`
+- [ ] ถ้า key นั้นเป็น meta tag → แปลให้เป็นภาษาของไฟล์
+- [ ] ทดสอบสลับภาษาแล้ว content เปลี่ยน
+
+### C2.6 ทุกกรณี — ตรวจสอบก่อน deploy
+
+- [ ] Build script (`npm run build`) ผ่าน
+- [ ] `dist/` มีทุกหน้า × ทุกภาษา
+- [ ] `dist/sitemap.xml` อัปเดต
+- [ ] `dist/robots.txt` ถูกต้อง
+- [ ] Lighthouse SEO = 100 บนหน้าสำคัญ
+- [ ] ไม่มี SEO violations ใน [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) ส่วน 8
+
+---
+
 ## 📋 Phase D: Documentation (ถ้าจำเป็น)
 
 ### D.1 อัปเดตเอกสารระบบ
@@ -232,6 +298,10 @@
 - ❌ มี commented-out code
 - ❌ มี `console.log` debug เหลืออยู่
 - ❌ มี TODO ที่ไม่ได้ระบุ owner
+- ❌ **ละเมิด SEO rules** — ลบ meta tag, เปลี่ยน URL ไม่ตั้ง redirect, เนื้อหา JS-only
+- ❌ **Lighthouse SEO < 100** บนหน้าที่แก้
+- ❌ **Lighthouse Performance < 80** บนหน้าที่แก้
+- ❌ **CLS > 0.25** หรือ **LCP > 4s** บนหน้าที่แก้
 
 ---
 

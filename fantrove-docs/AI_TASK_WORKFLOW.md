@@ -126,10 +126,24 @@ Files to modify:
 คิดว่าการแก้นี้จะกระทบระบบอื่นไหม:
 
 - ถ้าแก้ search → กระทบ URE (render), Nav-Core (display)
-- ถ้าแก้ language → กระทบทุกระบบ (ทุกระบบฟัง `languageChange`)
+- ถ้าแก้ language → กระทบทุกระบบ (ทุกระบบฟัง `languageChange` หรือ `fv:langchange`)
 - ถ้าแก้ ConData → กระทบ search, nav-core, home
 
-### Step 2.4: วางแผนการทดสอบ
+### Step 2.4: ประเมินผลกระทบต่อ SEO (priority สูงสุด)
+
+> ⚠️ SEO เป็น priority ระดับพิเศษที่สูงสุด — ดู [`12-SEO-Guide.md`](./12-SEO-Guide.md)
+
+ถามตัวเองก่อนทำ:
+
+- การแก้นี้กระทบ URL ไหม? → ถ้าใช่ ต้องตั้ง 301 redirect + อัปเดต sitemap + hreflang
+- การแก้นี้กระทบ meta tags ไหม? → ถ้าใช่ ต้องมีในทุกภาษา
+- การแก้นี้กระทบ structured data ไหม? → ถ้าใช่ ทดสอบ Rich Results Test
+- การแก้นี้กระทบ Core Web Vitals ไหม? → ถ้าใช่ ทดสอบ Lighthouse ก่อน/หลัง
+- การแก้นี้กระทบ crawlability ไหม? → ถ้าใช่ ตรวจสอบ robots.txt + sitemap
+
+ถ้าตอบ "ใช่" อย่างน้อย 1 ข้อ → อ่าน `12-SEO-Guide.md` ก่อนทำ และเพิ่ม SEO checks ใน Phase 4
+
+### Step 2.5: วางแผนการทดสอบ
 
 ก่อนเริ่มทำ คิดไว้เลยว่าจะทดสอบยังไง:
 
