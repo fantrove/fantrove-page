@@ -180,7 +180,16 @@
 - [ ] ถ้า key นั้นเป็น meta tag → แปลให้เป็นภาษาของไฟล์
 - [ ] ทดสอบสลับภาษาแล้ว content เปลี่ยน
 
-### C2.6 ทุกกรณี — ตรวจสอบก่อน deploy
+### C2.6 ถ้าแก้ release notes
+
+- [ ] แก้ `assets/md/en/current.md` และ `assets/md/th/current.md` ทั้งคู่
+- [ ] **ห้าม**สร้างไฟล์ใน `assets/md/{en,th}/releases/` (build script สร้างจาก git history อัตโนมัติ)
+- [ ] **ห้าม**แก้ `assets/json/release-history.json` หรือ `version.json` (build script สร้าง)
+- [ ] เปลี่ยน `version:` ใน frontmatter เป็นเวอร์ชั่นใหม่
+- [ ] ปฏิบัติตาม `RELEASE_NOTES_GUIDE.md` checklist ส่วน 10
+- [ ] Commit message: `release: vX.Y.Z`
+
+### C2.7 ทุกกรณี — ตรวจสอบก่อน deploy
 
 - [ ] Build script (`npm run build`) ผ่าน
 - [ ] `dist/` มีทุกหน้า × ทุกภาษา
@@ -211,6 +220,61 @@
 
 - [ ] ถ้าเป็น user-facing change → เตรียม release note ตาม [`RELEASE_NOTES_GUIDE.md`](./RELEASE_NOTES_GUIDE.md)
 - [ ] ถ้าเป็น breaking change → ระบุใน release note
+
+---
+
+## 📋 Phase D2: Documentation Sync (priority #1 สูงสุด)
+
+> 🥇 เอกสารเป็น priority สูงสุด — สูงกว่า SEO และ Performance ดู [`13-Documentation-Standard.md`](./13-Documentation-Standard.md) และ [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) section 10
+
+### D2.1 ระบุเอกสารที่ต้องอัปเดต
+
+ใช้ตารางใน [`13-Documentation-Standard.md`](./13-Documentation-Standard.md) section 8.1:
+
+- [ ] ถ้าเพิ่ม/ลด module → อัปเดตเอกสารระบบนั้น + `00-System-Architecture.md`
+- [ ] ถ้าเปลี่ยน public API → อัปเดตเอกสารระบบนั้น + `00-System-Architecture.md`
+- [ ] ถ้าเปลี่ยน namespace (`window.X`) → อัปเดต `00-System-Architecture.md`
+- [ ] ถ้าเปลี่ยน version → อัปเดต header ของเอกสารระบบนั้น
+- [ ] ถ้าเพิ่ม/ลด custom event → อัปเดต `00-System-Architecture.md`
+- [ ] ถ้าเปลี่ยน build process → อัปเดต `09-Deployment-Guide.md`
+- [ ] ถ้าเพิ่ม/ลด content type → อัปเดต `10-Content-Guide.md` + `05-Content-Data-Service.md`
+- [ ] ถ้าเพิ่ม/ลด ภาษา → อัปเดต `04-Internationalization-And-Build.md` + `12-SEO-Guide.md`
+- [ ] ถ้าเพิ่ม/ลด หน้าเว็บ → อัปเดต `00-System-Architecture.md` + `09-Deployment-Guide.md`
+
+### D2.2 อัปเดตเอกสารตามมาตรฐาน
+
+- [ ] ใช้ H1 + header blockquote + สารบัญ + cross-references
+- [ ] ใช้ "Fantrove" ไม่ใช่ "FanTrove" หรือ "Fantrove Page"
+- [ ] ใช้ relative path ใน cross-references
+- [ ] ใช้ชื่อไฟล์จริง (หลัง rename)
+- [ ] ใช้ language tag ใน code blocks
+- [ ] ใช้ ✅/❌ markers สำหรับตัวอย่างดี/ไม่ดี
+- [ ] น้ำเสียงเป็นมิตร ตรงไปตรงมา ไม่ทางการเกินไป
+- [ ] ไม่มีคำต้องห้าม (ปฏิวัติ, พลิกโฉม, สุดยอด)
+
+### D2.3 Verify เอกสารอื่นที่อ้างถึง
+
+- [ ] ใช้ `grep -rn "keyword" fantrove-docs/` หาเอกสารอื่นที่อ้างถึงสิ่งที่เปลี่ยน
+- [ ] ตรวจทุกไฟล์ที่พบว่ายังตรงไหม
+- [ ] อัปเดตถ้าจำเป็น
+
+### D2.4 ตรวจสอบว่าเอกสารตรงกับโค้ดจริง
+
+- [ ] ชื่อ module/function/variable ที่อ้างถึงมีจริงในโค้ด
+- [ ] เลข version ตรงกับ source code
+- [ ] File paths ตรงกับจริง
+- [ ] API signatures ตรงกับจริง
+
+### D2.5 Commit code + docs ใน commit เดียวกัน
+
+- [ ] ไม่แยก commit code และ docs (ยกเว้นกรณีพิเศษ)
+- [ ] Commit message ระบุทั้ง code และ docs ที่เปลี่ยน
+
+### D2.6 ถ้าเจอเอกสารไม่ตรงจริง (ที่ไม่เกี่ยวกับ task ปัจจุบัน)
+
+- [ ] บันทึกใน PR description: "พบเอกสารไม่ตรงจริงที่ [path]:[line]"
+- [ ] (optional) แก้เอกสารนั้นด้วย ถ้าเป็นเรื่องเล็ก
+- [ ] (ถ้าใหญ่) เปิด issue แยก
 
 ---
 

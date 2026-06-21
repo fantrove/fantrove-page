@@ -128,6 +128,7 @@ Files to modify:
 - ถ้าแก้ search → กระทบ URE (render), Nav-Core (display)
 - ถ้าแก้ language → กระทบทุกระบบ (ทุกระบบฟัง `languageChange` หรือ `fv:langchange`)
 - ถ้าแก้ ConData → กระทบ search, nav-core, home
+- ถ้าแก้ release notes → แก้ `assets/md/{en,th}/current.md` อย่างเดียว — **ห้าม**สร้างไฟล์ใน `releases/` (build script สร้างจาก git history อัตโนมัติ) ดู [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) ส่วน 9
 
 ### Step 2.4: ประเมินผลกระทบต่อ SEO (priority สูงสุด)
 
@@ -255,12 +256,84 @@ npm run build
 - [ ] ระบบที่ฟัง event เดียวกัน — ยังทำงานไหม
 - [ ] Build script — ยังผ่านไหม
 
-### Step 4.4: อัปเดตเอกสาร (ถ้าจำเว็บ)
+### Step 4.4: อัปเดตเอกสาร (เบื้องต้น)
 
-ถ้าการแก้:
-- เพิ่มฟีเจอร์ใหม่ → อัปเดตเอกสารระบบนั้น
-- เปลี่ยน API → อัปเดตเอกสาร
-- แก้ bug → อาจต้องเขียน release note (ถ้าใกล้ release)
+ถ้าการแก้กระทบสิ่งใดในตาราง section 8.1 ของ [`13-Documentation-Standard.md`](./13-Documentation-Standard.md) → ให้เริ่มอัปเดตเอกสารตอนนี้ (รายละเอียดเต็มใน Phase 4.5 ด้านล่าง)
+
+---
+
+## Phase 4.5: Documentation Sync (priority #1 สูงสุด)
+
+> 🥇 เอกสารเป็น priority สูงสุดของ Fantrove — สูงกว่า SEO และ Performance ทุกการเปลี่ยนแปลงระบบต้อง sync กับเอกสาร ดู [`13-Documentation-Standard.md`](./13-Documentation-Standard.md) สำหรับมาตรฐานเต็ม
+
+### Step 4.5.1: ระบุเอกสารที่ต้องอัปเดต
+
+ดูตาราง "สิ่งที่เปลี่ยน → เอกสารที่ต้องอัปเดต" ใน [`13-Documentation-Standard.md`](./13-Documentation-Standard.md) section 8.1:
+
+| สิ่งที่เปลี่ยน | เอกสารที่ต้องอัปเดต |
+|---|---|
+| เพิ่ม/ลด module | เอกสารระบบนั้น + `00-System-Architecture.md` |
+| เปลี่ยน public API | เอกสารระบบนั้น + `00-System-Architecture.md` |
+| เปลี่ยน namespace | `00-System-Architecture.md` |
+| เปลี่ยน version | เอกสารระบบนั้น (header) |
+| เพิ่ม/ลด custom event | `00-System-Architecture.md` |
+| เปลี่ยน build process | `09-Deployment-Guide.md` |
+| เพิ่ม/ลด content type | `10-Content-Guide.md` + `05-Content-Data-Service.md` |
+| เพิ่ม/ลด ภาษา | `04-Internationalization-And-Build.md` + `12-SEO-Guide.md` |
+| เพิ่ม/ลด หน้าเว็บ | `00-System-Architecture.md` + `09-Deployment-Guide.md` |
+
+ถ้าไม่แน่ใจว่าต้องอัปเดตไหม → **อัปเดต** (better safe than sorry)
+
+### Step 4.5.2: อัปเดตเอกสารตามมาตรฐาน
+
+ปฏิบัติตาม [`13-Documentation-Standard.md`](./13-Documentation-Standard.md):
+
+- ใช้ H1 + header blockquote + สารบัญ + cross-references
+- ใช้ "Fantrove" ไม่ใช่ "FanTrove" หรือ "Fantrove Page"
+- ใช้ relative path ใน cross-references
+- ใช้ language tag ใน code blocks
+- ใช้ ✅/❌ markers สำหรับตัวอย่างดี/ไม่ดี
+- น้ำเสียงเป็นมิตร ตรงไปตรงมา ไม่ทางการเกินไป
+
+### Step 4.5.3: Verify เอกสารอื่นที่อ้างถึง
+
+ตรวจสอบว่าเอกสารอื่นที่อ้างถึงสิ่งที่เปลี่ยน ยังตรงไหม:
+
+```bash
+# ตัวอย่าง: ถ้าเปลี่ยน API ของ URE.mount()
+grep -rn "URE.mount" fantrove-docs/
+# ตรวจทุกไฟล์ที่พบว่ายังอ้างถึง API เดิมไหม
+```
+
+### Step 4.5.4: ตรวจสอบว่าเอกสารตรงกับโค้ดจริง
+
+ก่อน commit เอกสาร ต้อง verify:
+
+- ชื่อ module/function/variable ที่อ้างถึงมีจริงในโค้ด
+- เลข version ตรงกับ source code
+- File paths ตรงกับจริง
+- API signatures ตรงกับจริง
+
+> ถ้าไม่แน่ใจ → ถือว่าโค้ดเป็นความจริง แล้วแก้เอกสารให้ตรง
+
+### Step 4.5.5: ถ้าเจอเอกสารไม่ตรงจริงระหว่างทำ (ที่ไม่เกี่ยวกับ task ปัจจุบัน)
+
+- บันทึกใน PR description: "พบเอกสารไม่ตรงจริงที่ [path]:[line]"
+- (optional) แก้เอกสารนั้นด้วย ถ้าเป็นเรื่องเล็ก
+- (ถ้าใหญ่) เปิด issue แยก
+- กลับไปทำ task เดิม
+
+### Step 4.5.6: Commit code + docs ใน commit เดียวกัน
+
+```bash
+# ❌ ห้าม — แยก commit
+git commit -m "feat(ure): add new module"
+git commit -m "docs(ure): update for new module"
+
+# ✅ ถูก — รวมใน commit เดียว
+git add assets/js/ure/ure-modules/new-module.js fantrove-docs/01-Virtual-Scroll-Rendering.md
+git commit -m "feat(ure): add new module + update docs"
+```
 
 ---
 

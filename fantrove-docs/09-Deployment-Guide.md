@@ -468,14 +468,11 @@ Script นี้ทำงานใน CI/CD pipeline หลังจาก git p
 ### 9.2 ขั้นตอน release เวอร์ชั่นใหม่
 
 ```bash
-# 1. ย้าย current.md เดิมไป releases/
-cp assets/md/en/current.md assets/md/en/releases/v1.7.1.md
-cp assets/md/th/current.md assets/md/th/releases/v1.7.1.md
+# 1. เขียน current.md ใหม่ (ทั้งสองภาษา) ตาม RELEASE_NOTES_GUIDE.md
+#    แก้ version: 1.8.0 ใน frontmatter
+#    ⚠️ ห้าม copy current.md ไป releases/ — build script สร้างประวัติจาก git history อัตโนมัติ
 
-# 2. เขียน current.md ใหม่ (ทั้งสองภาษา) ตาม RELEASE_NOTES_GUIDE.md
-# แก้ version: 1.8.0 ใน frontmatter
-
-# 3. Commit
+# 2. Commit
 git add assets/md/
 git commit -m "release: v1.8.0"
 git push

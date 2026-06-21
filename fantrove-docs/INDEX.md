@@ -8,14 +8,15 @@
 
 ## 🎯 Priority ของโปรเจกต์
 
-งานทุกอย่างใน Fantrove มีความสำคัญอยู่แล้ว แต่มี priority ที่สูงเป็นพิเศษ 2 ด้านที่ต้องคำนึงถึงเสมอเมื่อตัดสินใจอะไรก็ตาม:
+งานทุกอย่างใน Fantrove มีความสำคัญอยู่แล้ว แต่มี priority ที่สูงเป็นพิเศษ 3 ด้านที่ต้องคำนึงถึงเสมอเมื่อตัดสินใจอะไรก็ตาม:
 
 | Priority | ระดับ | คำอธิบาย |
 |---|---|---|
-| 🥇 **SEO** | สูงสุด (พิเศษ) | Search engine visibility เป็นหัวใจของการเติบโต — ทุกการเปลี่ยนแปลงต้องไม่ทำลาย SEO และควรเสริม SEO ถ้าเป็นไปได้ ดู [`12-SEO-Guide.md`](./12-SEO-Guide.md) |
-| 🥈 **Performance** | สูง | Core Web Vitals ส่งผลต่อทั้ง UX และ SEO — ดู [`08-Performance-Architecture.md`](./08-Performance-Architecture.md) |
+| 🥇 **Documentation** | #1 สูงสุด | เอกสารเป็นตัวอธิบายระบบ — ถ้าผิด ทุกอย่างตามผิด ทุกการเปลี่ยนแปลงระบบต้อง sync กับเอกสาร ดู [`13-Documentation-Standard.md`](./13-Documentation-Standard.md) |
+| 🥈 **SEO** | สูงสุด (พิเศษ) | Search engine visibility เป็นหัวใจของการเติบโต — ทุกการเปลี่ยนแปลงต้องไม่ทำลาย SEO และควรเสริม SEO ถ้าเป็นไปได้ ดู [`12-SEO-Guide.md`](./12-SEO-Guide.md) |
+| 🥉 **Performance** | สูง | Core Web Vitals ส่งผลต่อทั้ง UX และ SEO — ดู [`08-Performance-Architecture.md`](./08-Performance-Architecture.md) |
 
-> **กฎเหล็ก:** เมื่อมี conflict ระหว่าง feature ใหม่กับ SEO — **ให้ SEO ชนะเสมอ** เว้นแต่จะมีเหตุผลที่ชัดเจนมากเป็นพิเศษ และต้องบันทึกเหตุผลนั้นไว้ใน PR description
+> **กฎเหล็ก:** เมื่อมี conflict ระหว่าง feature ใหม่กับ Documentation — **อัปเดตเอกสารก่อน** แล้วค่อย merge feature เมื่อมี conflict ระหว่าง feature ใหม่กับ SEO — **ให้ SEO ชนะเสมอ** เว้นแต่จะมีเหตุผลที่ชัดเจนมากเป็นพิเศษ และต้องบันทึกเหตุผลนั้นไว้ใน PR description
 
 ---
 
@@ -30,10 +31,11 @@
 | 🚢 **deploy เว็บ** | [`09-Deployment-Guide.md`](./09-Deployment-Guide.md) |
 | ⚡ **ปรับประสิทธิภาพ** | [`08-Performance-Architecture.md`](./08-Performance-Architecture.md) |
 | 🔍 **ทำ SEO / เพิ่ม ranking** | [`12-SEO-Guide.md`](./12-SEO-Guide.md) ⭐ |
+| 📝 **เขียน/แก้เอกสาร** | [`13-Documentation-Standard.md`](./13-Documentation-Standard.md) 🥇 (priority #1) |
 
 ---
 
-## 📖 เอกสารระบบ (00–12)
+## 📖 เอกสารระบบ (00–13)
 
 เอกสารหมายเลขนี้อธิบายระบบทั้งหมดของ Fantrove ตั้งแต่ภาพรวมไปจนถึงรายละเอียด module และ function เขียนเป็นภาษาไทย เน้นความลึกเพื่อให้ AI และนักพัฒนาเข้าใจระบบได้ครบถ้วนโดยไม่ต้องอ่านโค้ดโดยตรง
 
@@ -51,7 +53,8 @@
 | 09 | [Deployment Guide](./09-Deployment-Guide.md) | วิธี deploy บน Cloudflare Pages, build script, environment variables | `scripts/`, `_redirects`, `_headers` |
 | 10 | [Content Guide](./10-Content-Guide.md) | วิธีเพิ่ม/แก้ content (emoji, symbol, fancy, cards) | `assets/db/con-data/` |
 | 11 | [Release Notes System](./11-Release-Notes-System.md) | ระบบหน้า "มีอะไรใหม่" — release notes ที่อ่านจาก markdown | `assets/md/`, `assets/js/new.js` |
-| 12 ⭐ | [SEO Guide](./12-SEO-Guide.md) | กลยุทธ์ SEO ระดับ platform — Technical SEO, structured data, Core Web Vitals, international SEO, E-E-A-T | cross-cutting (highest priority) |
+| 12 ⭐ | [SEO Guide](./12-SEO-Guide.md) | กลยุทธ์ SEO ระดับ platform — Technical SEO, structured data, Core Web Vitals, international SEO, E-E-A-T | cross-cutting (priority #2) |
+| 13 🥇 | [Documentation Standard](./13-Documentation-Standard.md) | มาตรฐานการเขียน/อัปเดตเอกสาร — โครงสร้าง, น้ำเสียง, cross-references, docs sync with code | cross-cutting (priority #1 สูงสุด) |
 
 ---
 
@@ -99,12 +102,13 @@
         ┌───────────────┼───────────────┐
         ▼               ▼               ▼
    📚 เอกสารระบบ    🤖 เอกสาร AI    📝 มาตรฐาน
-   (00-12)          (AI_*)           (RELEASE_NOTES_*)
+   (00-13)          (AI_*)           (RELEASE_NOTES_*)
         │               │
         ▼               │
    00-System-Arch ───────┐ (จุดเริ่มต้น)
         │               │
-        ├──── 12-SEO-Guide ⭐ (priority สูงสุด)
+        ├──── 13-Documentation-Standard 🥇 (priority #1 สูงสุด)
+        ├──── 12-SEO-Guide ⭐ (priority #2)
         │               │
         ▼               ▼
    01-URE ◄──────── AI_TASK_WORKFLOW
@@ -112,11 +116,11 @@
    03-Nav-Core           │
    04-Language           ▼
    05-ConData       AI_FORBIDDEN
-   06-Popup         (กฎเหล็กก่อนแก้โค้ด — รวม SEO violations)
+   06-Popup         (กฎเหล็กก่อนแก้โค้ด — รวม SEO + Documentation violations)
    07-Loading            │
    08-Performance        ▼
    09-Deployment    AI_REVIEW_CHECKLIST
-   10-Content       (ก่อนส่งมอบ — รวม SEO checks)
+   10-Content       (ก่อนส่งมอบ — รวม SEO + Documentation Sync checks)
    11-Whats-New
 ```
 

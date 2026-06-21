@@ -747,7 +747,110 @@ document.getElementById('main').innerHTML = '<h1>Main Content</h1>';
 
 ---
 
-## 12. สรุป
+## 12. Documentation Maintenance Patterns
+
+> 🥇 เอกสารเป็น priority #1 สูงสุดของ Fantrove — สูงกว่า SEO และ Performance ดู [`13-Documentation-Standard.md`](./13-Documentation-Standard.md) สำหรับมาตรฐานเต็ม และ [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) section 10 สำหรับกฎเหล็ก
+
+### 12.1 Code และ Docs ต้อง sync เสมอ
+
+```javascript
+// ❌ ห้าม — เพิ่ม module ใหม่โดยไม่อัปเดตเอกสาร
+// commit เฉพาะ assets/js/ure/ure-modules/new-module.js
+
+// ✅ ถูก — อัปเดตทั้งโค้ดและเอกสารใน commit เดียวกัน
+// - เพิ่ม assets/js/ure/ure-modules/new-module.js
+// - อัปเดต fantrove-docs/01-Virtual-Scroll-Rendering.md
+// - อัปเดต fantrove-docs/00-System-Architecture.md (ถ้ากระทบภาพรวม)
+```
+
+### 12.2 Comments ใน code ต้องตรงกับเอกสาร
+
+```javascript
+// ❌ ห้าม — comment ใน code ขัดแย้งกับเอกสาร
+/**
+ * @version 1.5.0  ← แต่เอกสารบอก 1.7.0
+ */
+
+// ✅ ถูก — comment และเอกสารตรงกัน
+/**
+ * @version 1.7.0  ← ตรงกับ fantrove-docs/01-Virtual-Scroll-Rendering.md
+ */
+```
+
+### 12.3 ฟังก์ชันใหม่ต้องมี JSDoc ที่สมบูรณ์
+
+```javascript
+// ❌ ห้าม — ฟังก์ชันใหม่ไม่มี doc
+function processItems(items, options) {
+  // ...
+}
+
+// ✅ ถูก — มี JSDoc ครบ
+/**
+ * ประมวลผล items ตาม options ที่กำหนด
+ *
+ * @param {Array} items - รายการที่จะประมวลผล
+ * @param {Object} [options={}] - ตัวเลือก
+ * @param {boolean} [options.strict=false] - โหมดเข้มงวด
+ * @returns {Array} ผลลัพธ์ที่ประมวลผลแล้ว
+ *
+ * @example
+ * const result = processItems([1, 2, 3], { strict: true });
+ */
+function processItems(items, options = {}) {
+  // ...
+}
+```
+
+### 12.4 เมื่อเปลี่ยน API → อัปเดตเอกสารทันที
+
+```javascript
+// ถ้าเปลี่ยน signature ของ URE.mount():
+//   เดิม: URE.mount(container, data, template)
+//   ใหม่: URE.mount({ container, data, template })
+
+// ต้องอัปเดต:
+// 1. fantrove-docs/01-Virtual-Scroll-Rendering.md (section API)
+// 2. fantrove-docs/00-System-Architecture.md (ถ้ามีตัวอย่าง)
+// 3. assets/js/ure/Readme.md (API reference สั้น)
+// 4. JSDoc ใน source code
+```
+
+### 12.5 การ verify เอกสารก่อน commit
+
+ก่อน commit เอกสาร ให้ใช้คำสั่งนี้เพื่อ verify:
+
+```bash
+# ตรวจว่าไม่มี "Fantrove Page" หลงเหลือ
+grep -rn "Fantrove Page" fantrove-docs/
+
+# ตรวจว่าไม่มี "FanTrove" (case-sensitive)
+grep -rn "FanTrove" fantrove-docs/
+
+# ตรวจว่า cross-references ไม่ broken (ชื่อไฟล์ตรงกับจริง)
+ls fantrove-docs/*.md | sort > /tmp/existing.txt
+grep -ohE '\./[A-Za-z0-9_-]+\.md' fantrove-docs/*.md | sort -u | sed 's|^\./||' > /tmp/refs.txt
+comm -23 /tmp/refs.txt /tmp/existing.txt  # ควรว่าง (ไม่มี refs ไปไฟล์ที่ไม่มี)
+```
+
+### 12.6 เมื่อเจอเอกสารไม่ตรงจริงระหว่างทำ task
+
+```javascript
+// ถ้ากำลังแก้ task A แล้วเจอเอกสาร B ไม่ตรงจริง:
+
+// ❌ ห้าม — ปล่อยผ่าน ทำ task A ต่อ
+// (เดี๋ยวคนอื่นจะแก้เอง)
+
+// ✅ ถูก — บันทึกใน PR description
+// "พบเอกสารไม่ตรงจริงที่ fantrove-docs/XX.md:LINE — อธิบาย..."
+// แล้วทำ task A ต่อ
+```
+
+> ดูมาตรฐานเอกสารเต็มใน [`13-Documentation-Standard.md`](./13-Documentation-Standard.md)
+
+---
+
+## 13. สรุป
 
 | หลักการ | สรุป |
 |---|---|
@@ -763,5 +866,6 @@ document.getElementById('main').innerHTML = '<h1>Main Content</h1>';
 | DOM | Cache + delegate + fragment |
 | Performance | rAF + debounce + lazy load |
 | **SEO** | **Semantic HTML + alt text + 1 h1 + static content + crawlable links** |
+| **Documentation** | **Code และ docs ต้อง sync เสมอ + JSDoc ครบ + verify กับโค้ดจริง** |
 
-> จำไว้เสมอ: **AI ที่ดีเขียนโค้ดที่อ่านเหมือนคนในทีมเขียน ไม่ใช่โค้ดที่ "สวยตามทฤษฎี"** — และต้องไม่ทำลาย SEO
+> จำไว้เสมอ: **AI ที่ดีเขียนโค้ดที่อ่านเหมือนคนในทีมเขียน ไม่ใช่โค้ดที่ "สวยตามทฤษฎี"** — ต้องไม่ทำลาย SEO และต้องอัปเดตเอกสารทุกครั้งที่แก้ระบบ (priority #1)

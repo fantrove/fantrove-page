@@ -472,9 +472,9 @@ assets/db/con-data/
 
 ---
 
-## 10. SEO Architecture (priority สูงสุด)
+## 10. SEO Architecture (priority #2)
 
-SEO เป็น priority ระดับพิเศษที่สูงสุดของ Fantrove — ทุกการตัดสินใจทางเทคนิคต้องคำนึงถึงผลกระทบต่อ search engine visibility ดูรายละเอียดเต็มใน [`12-SEO-Guide.md`](./12-SEO-Guide.md)
+SEO เป็น priority ระดับพิเศษที่สูงเป็นอันดับ 2 ของ Fantrove (รองจาก Documentation) — ทุกการตัดสินใจทางเทคนิคต้องคำนึงถึงผลกระทบต่อ search engine visibility ดูรายละเอียดเต็มใน [`12-SEO-Guide.md`](./12-SEO-Guide.md)
 
 ### 10.1 SEO layers ในสถาปัตยกรรมปัจจุบัน
 
@@ -504,7 +504,42 @@ SEO เป็น priority ระดับพิเศษที่สูงสุ
 
 ---
 
-## 11. อ้างอิงข้ามเอกสาร
+## 11. Documentation Priority (#1 สูงสุด)
+
+เอกสารเป็น priority สูงสุดของ Fantrove — สูงกว่า SEO และ Performance เพราะเป็นตัวอธิบายระบบและทำให้การพัฒนาเป็นไปได้อย่างราบรื่น ถ้าเอกสารไม่ตรงจริง ทุกคน (รวมถึง AI) จะสับสน
+
+### 11.1 มาตรฐานเอกสาร
+
+ทุกไฟล์ markdown ใน `fantrove-docs/` ต้องปฏิบัติตามมาตรฐานใน [`13-Documentation-Standard.md`](./13-Documentation-Standard.md):
+
+- โครงสร้าง: H1 + header blockquote + สารบัญ + cross-references
+- ภาษา: ไทย (ยกเว้น code blocks และ technical terms)
+- น้ำเสียง: เป็นมิตร ตรงไปตรงมา ไม่ทางการเกินไป
+- ชื่อ: ใช้ "Fantrove" ไม่ใช่ "FanTrove" หรือ "Fantrove Page"
+- Cross-references: relative path + backtick-wrapped filename + description
+
+### 11.2 กฎ Docs Sync With Code
+
+ทุกการเปลี่ยนแปลงระบบที่กระทบสิ่งต่อไปนี้ **ต้องอัปเดตเอกสารใน commit เดียวกัน**:
+
+- เพิ่ม/ลด module, public API, namespace, version, custom event
+- เปลี่ยน build process, content type, ภาษา, หน้าเว็บ
+
+ดูตารางเต็มและวงจรการอัปเดตใน [`13-Documentation-Standard.md`](./13-Documentation-Standard.md) section 8-9
+
+### 11.3 กฎเหล็ก
+
+- 🥇 เอกสาร priority #1 — เมื่อ conflict กับ feature ใหม่ → **อัปเดตเอกสารก่อน**
+- ห้ามแก้ระบบโดยไม่อัปเดตเอกสาร
+- ห้าม commit code และ docs แยกกัน
+- ห้ามเขียนเอกสารโดยไม่ verify กับโค้ดจริง
+- ห้ามปล่อยเอกสารไม่ตรงจริงไว้ — ถ้าเจอ ให้แก้ทันทีหรือเปิด issue
+
+> ดูมาตรฐานเต็มใน [`13-Documentation-Standard.md`](./13-Documentation-Standard.md) และกฎเหล็กใน [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) section 10
+
+---
+
+## 12. อ้างอิงข้ามเอกสาร
 
 - [`01-Virtual-Scroll-Rendering.md`](./01-Virtual-Scroll-Rendering.md) — URE internals
 - [`02-Search-System.md`](./02-Search-System.md) — Search system internals
@@ -517,5 +552,6 @@ SEO เป็น priority ระดับพิเศษที่สูงสุ
 - [`09-Deployment-Guide.md`](./09-Deployment-Guide.md) — Build & deploy
 - [`10-Content-Guide.md`](./10-Content-Guide.md) — Content management
 - [`11-Release-Notes-System.md`](./11-Release-Notes-System.md) — Release notes system
-- [`12-SEO-Guide.md`](./12-SEO-Guide.md) — ⭐ SEO strategy (priority สูงสุด)
+- [`12-SEO-Guide.md`](./12-SEO-Guide.md) — ⭐ SEO strategy (priority #2)
+- [`13-Documentation-Standard.md`](./13-Documentation-Standard.md) — 🥇 มาตรฐานการเขียนเอกสาร (priority #1 สูงสุด)
 - [`INDEX.md`](./INDEX.md) — สารบัญเอกสารทั้งหมด

@@ -451,7 +451,127 @@ document.getElementById('title').textContent = 'Page Title';
 
 ---
 
-## 9. เมื่อไม่แน่ใจ
+## 9. กฎเกี่ยวกับ Release Notes
+
+### 9.1 ห้ามสร้างไฟล์ใน `assets/md/{en,th}/releases/`
+
+โฟลเดอร์ `releases/` เป็น **fallback เท่านั้น** — build script อ่าน `current.md` จาก git history ของทุก commit โดยตรง ทุกเวอร์ชั่นที่เคยอยู่ใน `current.md` จะถูกเก็บใน `release-history.json` อัตโนมัติ
+
+```bash
+# ❌ ห้าม — ไม่จำเป็น และไม่มีผลต่อ release-history.json
+cp assets/md/en/current.md assets/md/en/releases/v1.7.1.md
+cp assets/md/th/current.md assets/md/th/releases/v1.7.1.md
+
+# ❌ ห้าม — สร้างไฟล์ release note ใหม่ใน releases/
+echo "..." > assets/md/en/releases/v1.8.0.md
+
+# ✅ ถูก — แก้ current.md อย่างเดียว แล้ว commit
+# git จะเก็บ history ของ current.md ไว้ให้ build script อ่าน
+```
+
+### 9.2 ห้ามแก้ไฟล์ใน `assets/json/`
+
+ไฟล์ต่อไปนี้ถูกสร้างโดย build script โดยอัตโนมัติ — ห้ามแก้เด็ดขาด:
+
+- `assets/json/release-history.json` — สร้างจาก git history ของ `current.md`
+- `assets/json/version.json` — สร้างโดย `scripts/update-version.js`
+- `assets/json/whats-new.json` — (deprecated) fallback เท่านั้น
+
+### 9.3 ห้ามลบ `version:` หรือ `date:` จาก frontmatter ของ `current.md`
+
+Build script ใช้ `version` และ `date` ในการระบุ release — ถ้าลบ จะไม่ถูกเก็บในประวัติ
+
+### 9.4 ห้ามเขียน release note เป็นภาษาเดียว
+
+ต้องเขียนทั้ง `assets/md/en/current.md` และ `assets/md/th/current.md` พร้อมกัน — ถ้าเขียนภาษาเดียว อีกภาษาจะ fallback ไปใช้ของเดิม
+
+> ดูรายละเอียดใน [`11-Release-Notes-System.md`](./11-Release-Notes-System.md) และ [`RELEASE_NOTES_GUIDE.md`](./RELEASE_NOTES_GUIDE.md)
+
+---
+
+## 10. กฎเกี่ยวกับเอกสาร (Documentation — priority #1 สูงสุด)
+
+> 🥇 เอกสารเป็น priority สูงสุดของ Fantrove — สูงกว่า SEO และ Performance เพราะเป็นตัวอธิบายระบบ ดู [`13-Documentation-Standard.md`](./13-Documentation-Standard.md) สำหรับมาตรฐานเต็ม
+
+### 10.1 ห้ามแก้ระบบโดยไม่อัปเดตเอกสาร
+
+ทุกการเปลี่ยนแปลงระบบที่กระทบสิ่งต่อไปนี้ **ต้องอัปเดตเอกสารใน commit เดียวกัน**:
+
+```javascript
+// ❌ ห้าม — เพิ่ม module ใหม่แต่ไม่อัปเดตเอกสารระบบ
+// (เพิ่มไฟล์ assets/js/ure/ure-modules/new-module.js แล้ว commit เลย)
+
+// ✅ ถูก — อัปเดตทั้งโค้ดและเอกสารใน commit เดียวกัน
+// - เพิ่ม assets/js/ure/ure-modules/new-module.js
+// - อัปเดต fantrove-docs/01-Virtual-Scroll-Rendering.md (เพิ่ม section)
+// - อัปเดต fantrove-docs/00-System-Architecture.md (ถ้ากระทบภาพรวม)
+// - อัปเดต INDEX.md (ถ้าจำเป็น)
+```
+
+ดูตาราง "สิ่งที่เปลี่ยน → เอกสารที่ต้องอัปเดต" ใน [`13-Documentation-Standard.md`](./13-Documentation-Standard.md) section 8.1
+
+### 10.2 ห้าม commit code และ docs แยกกัน
+
+```bash
+# ❌ ห้าม — แยก commit
+git commit -m "feat(ure): add new module"
+git commit -m "docs(ure): update for new module"
+
+# ✅ ถูก — รวมใน commit เดียว
+git add assets/js/ure/ure-modules/new-module.js fantrove-docs/01-Virtual-Scroll-Rendering.md
+git commit -m "feat(ure): add new module + update docs"
+```
+
+### 10.3 ห้ามเขียนเอกสารโดยไม่ verify กับโค้ดจริง
+
+ก่อน commit เอกสาร ต้องเช็คว่า:
+
+- ชื่อ module/function/variable ที่อ้างถึงมีจริงในโค้ด
+- เลข version ตรงกับ source code
+- File paths ตรงกับจริง
+- API signatures ตรงกับจริง
+
+ถ้าไม่แน่ใจ → ถือว่าโค้ดเป็นความจริง แล้วแก้เอกสารให้ตรง
+
+### 10.4 ห้ามปล่อยเอกสารไม่ตรงจริงไว้
+
+ถ้าเจอเอกสารที่ไม่ตรงกับโค้ดจริงระหว่างทำ task อื่น:
+
+```javascript
+// ❌ ห้าม — เห็นแล้วไม่สนใจ ทำ task ต่อ
+// (เดี๋ยวคนอื่นจะแก้เอง)
+
+// ✅ ถูก — บันทึกใน PR description หรือเปิด issue แยก
+// "พบเอกสารไม่ตรงจริงที่ fantrove-docs/XX.md:LINE — อธิบาย..."
+```
+
+### 10.5 ห้ามละเว้นมาตรฐานเอกสาร
+
+ทุกไฟล์ markdown ใน `fantrove-docs/` ต้องปฏิบัติตามมาตรฐานใน [`13-Documentation-Standard.md`](./13-Documentation-Standard.md):
+
+- มี H1 + header blockquote + สารบัญ + cross-references
+- ใช้ "Fantrove" ไม่ใช่ "FanTrove" หรือ "Fantrove Page"
+- ใช้ relative path ใน cross-references
+- ใช้ชื่อไฟล์จริง (หลัง rename)
+- ใช้ language tag ใน code blocks
+
+### 10.6 ห้าม rename ไฟล์โดยไม่อัปเดต cross-references
+
+```bash
+# ❌ ห้าม — rename แล้วไม่อัปเดต links
+mv fantrove-docs/01-old-name.md fantrove-docs/01-new-name.md
+git commit -m "rename"
+
+# ✅ ถูก — rename + อัปเดต cross-references ทุกที่
+mv fantrove-docs/01-old-name.md fantrove-docs/01-new-name.md
+python3 scripts/fix_cross_refs.py  # หรืออัปเดต manual
+# อัปเดต INDEX.md ด้วย
+git commit -m "docs: rename 01-old → 01-new + update cross-refs"
+```
+
+---
+
+## 11. เมื่อไม่แน่ใจ
 
 ถ้า AI ไม่แน่ใจว่าสิ่งที่จะทำผิดกฎหรือไม่:
 

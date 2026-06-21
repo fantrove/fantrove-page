@@ -2,81 +2,111 @@
 
 ## Introduction
 
-At **Fantrove**, we are committed to creating a welcoming and inclusive environment for all contributors, users, and visitors. We expect everyone interacting with this project to behave in a respectful, professional, and responsible manner. By participating in **Fantrove**, you agree to abide by the guidelines and expectations outlined in this document.
+**Fantrove** (หรือชื่อเต็ม **Fantrove Verse`) เป็นเว็บไซต์แบบ static ที่รวบรวมอีโมจิ สัญลักษณ์ ข้อความแฟนซี และคอลเลกชันอื่น ๆ ไว้ให้ผู้ใช้คัดลอกและใช้งานได้ฟรี ผู้ใช้ทั่วไปไม่ต้องสมัครสมาชิก ไม่ต้อง login ไม่สามารถโพสต์หรือแก้ไขเนื้อหาบนเว็บได้ — ใช้งานได้ทันทีเพียงแค่เปิดเว็บ
+
+เอกสารฉบับนี้กำหนดมาตรฐานพฤติกรรมสำหรับทุกคนที่มีส่วนร่วมในโปรเจกต์ — ไม่ว่าจะเป็นผู้มีเยี่ยมชมเว็บ สมาชิก Discord ผู้รายงานปัญหาผ่าน GitHub Issues หรือผู้ร่วมพัฒนาโค้ด เราต้องการให้ทุกคนรู้สึกปลอดภัยและได้รับการเคารพเสมอ
 
 ### Our Values
 
-- **Inclusivity**: We believe in creating a space where everyone feels welcome, regardless of their background, experience level, or identity.
-- **Respect**: We respect the opinions, thoughts, and contributions of all community members.
-- **Collaboration**: We encourage collaboration and constructive feedback. We aim to work together in a positive and productive manner.
-- **Responsibility**: We encourage everyone to take responsibility for their actions and to hold others accountable in a respectful way.
-
-## Expected Behavior
-
-As a contributor or user of **Fantrove**, you should:
-
-- Be respectful and professional in your communication and actions.
-- Encourage and support others in their efforts.
-- Provide constructive feedback that helps improve the project.
-- Acknowledge and respect the contributions of others.
-- Report any issues, concerns, or violations of this Code of Conduct to the project maintainers.
-
-## Unacceptable Behavior
-
-Unacceptable behaviors include, but are not limited to:
-
-- **Harassment**: Harassment in any form, including offensive comments, verbal abuse, or intimidation.
-- **Discrimination**: Discriminatory or exclusionary behavior based on race, ethnicity, gender, sexual orientation, disability, age, religion, or any other protected characteristic.
-- **Trolling**: Deliberately provoking others or causing disruption within the community.
-- **Personal Attacks**: Engaging in personal attacks or hostile behavior towards individuals or groups.
-- **Spamming**: Posting irrelevant or excessive content that disrupts the normal functioning of the community.
-- **Threats or Violence**: Threatening harm or advocating violence against any person or group.
-  
-Any behavior that negatively impacts the safety and wellbeing of the **Fantrove** community is considered unacceptable.
-
-## Intellectual Property and Copyright Compliance
-
-At **Fantrove**, we are committed to respecting intellectual property rights and ensuring that the content provided on the website complies with applicable copyright laws.
-
-### Content Responsibility
-
-- **Content Licensing**: The content shared within **Fantrove** is licensed under [Creative Commons Zero (CC0)](https://creativecommons.org/publicdomain/zero/1.0/), meaning it is free to use, share, and adapt without attribution. We strive to ensure that all content made available through the site falls under this license or is otherwise in the public domain.
-  
-- **Due Diligence**: While we make every effort to verify the source and copyright status of content before publishing it on **Fantrove**, there may be occasional oversights or errors in our process. We rely on contributors to provide accurate information regarding the content they submit, and we encourage all contributors to adhere to copyright laws.
-
-### Response to Copyright Infringement Claims
-
-In the event that we receive a **valid copyright infringement notice**, we will take the following actions:
-
-1. **Review**: We will promptly review the claim and ensure that all necessary documentation supporting the claim is provided, including proof of ownership of the copyrighted material.
-  
-2. **Content Removal**: If the claim is substantiated, we will remove or disable access to the content in question as soon as possible. However, **content will only be removed after a formal copyright infringement claim is provided**. Without proper documentation, no content will be removed or modified.
-
-3. **Dispute Process**: If a contributor believes their content has been unfairly removed due to a copyright claim, they have the right to dispute the removal. A formal process will be followed to review and resolve the matter.
-
-### Safe Harbor for Users
-
-- **Reporting Mechanism**: We encourage anyone who believes content on **Fantrove** may infringe on their copyright to reach out with the proper legal documentation. This will allow us to promptly investigate and address the issue.
-  
-- **Transparency**: All copyright-related disputes will be handled transparently, and affected parties will be kept informed of the status of their claims or disputes. We will ensure that all actions taken comply with applicable copyright laws and that all stakeholders are treated fairly.
-
-### Conclusion
-
-We take copyright matters seriously and will work diligently to ensure that **Fantrove** remains compliant with all applicable laws. Our goal is to provide a platform for open and legal sharing of content, but we also acknowledge that mistakes can happen. Should any copyright issues arise, we will resolve them in a fair and transparent manner, ensuring that all parties involved are treated with respect.
-
-## Reporting Violations
-
-If you encounter any behavior that violates this Code of Conduct, please report it to the project maintainers at the following contact:
-
-- Email: [fantrove.official@gmail.com]  
-- GitHub Issues: [https://github.com/fantrove/fantrove.github.io/issues]  
-
-We take all reports seriously and will handle them in a timely and respectful manner. Depending on the severity of the violation, appropriate action may be taken, ranging from a warning to permanent removal from the project.
-
-## Enforcement
-
-Project maintainers are responsible for enforcing this Code of Conduct. Any participant or contributor who engages in unacceptable behavior may be subject to temporary or permanent bans from **Fantrove**.
+- **Inclusivity**: ทุกคนยินดีต้อนรับ ไม่ว่าภาษา พื้นฐาน หรือระดับความเชี่ยวชาญ
+- **Respect**: เคารพความคิดเห็นและผลงานของผู้อื่น
+- **Constructiveness**: ให้ feedback เชิงสร้างสรรค์ที่ช่วยให้โปรเจกต์ดีขึ้น
+- **Responsibility**: รับผิดชอบต่อสิ่งที่ตัวเองพูดและทำ
 
 ---
 
-Thank you for contributing to **Fantrove**! Together, we can create a welcoming and productive community.
+## Expected Behavior
+
+พฤติกรรมที่คาดหวังจากทุกคนในชุมชน Fantrove:
+
+- สื่อสารอย่างสุภาพและเป็นมิตร
+- ให้ความช่วยเหลือผู้อื่นเมื่อทำได้
+- รายงานปัญหา (bug, content ผิดพลาด, คำแนะนำ) ผ่านช่องทางที่เหมาะสม
+- เคารพผลงานและเวลาของผู้ร่วมพัฒนา
+- ยอมรับว่าความคิดเห็นอาจแตกต่างกันได้
+
+---
+
+## Unacceptable Behavior
+
+พฤติกรรมที่ไม่สามารถยอมรับได้ ได้แก่:
+
+- **Harassment**: การคุกคามในทุกรูปแบบ รวมถึงความคิดเห็นที่ไม่เหมาะสม การดูถูก หรือการข่มขู่
+- **Discrimination**: การเลือกปฏิบัติหรือกีดกันโดยอิงจากเชื้อชาติ เพศ อายุ ศาสนา หรือลักษณะอื่นใด
+- **Personal attacks**: การโจมตีบุคคลแทนที่จะวิจารณ์ไอเดียหรือโค้ด
+- **Trolling**: การก่อกวนหรือยั่วยุให้เกิดความขัดแย้งโดยเจตนา
+- **Spam**: การส่งข้อความซ้ำ ๆ หรือโฆษณาในช่องทางสื่อสารของโปรเจกต์ (Discord, GitHub Issues, อีเมล)
+- **Threats or violence**: การข่มขู่หรือสนับสนุนความรุนแรง
+
+---
+
+## About the Website
+
+เพื่อให้เข้าใจขอบเขตของ Code of Conduct นี้ ควรทราบลักษณะของเว็บ Fantrove:
+
+### 3.1 ลักษณะการใช้งาน
+
+- **Static website**: เว็บทำงานฝั่ง client ทั้งหมด ไม่มี backend server หรือ database ของผู้ใช้
+- **No user accounts**: ผู้ใช้ไม่ต้องสมัครสมาชิกหรือ login
+- **No user-generated content**: ผู้ใช้ไม่สามารถโพสต์ อัปโหลด หรือแก้ไขเนื้อหาบนเว็บได้
+- **Read and copy only**: ผู้ใช้ทั่วไปดูและคัดลอก content (อีโมจิ สัญลักษณ์ ข้อความแฟนซี) ได้เท่านั้น
+- **No tracking of individual users**: เราไม่เก็บข้อมูลส่วนบุคคลของผู้ใช้ — มีเพียง analytics แบบรวม (Google Analytics 4) สำหรับดูสถิติการใช้งานโดยรวม
+
+### 3.2 ช่องทางมีส่วนร่วม
+
+ผู้ใช้สามารถมีส่วนร่วมกับโปรเจกต์ได้ผ่าน:
+
+- **GitHub Issues**: รายงาน bug เสนอ feature ถามคำถาม
+- **Discord**: พูดคุยกับชุมชนและทีมพัฒนา
+- **Email**: ติดต่อส่วนตัวกับทีมพัฒนา
+- **Pull Request**: สำหรับนักพัฒนาที่ต้องการร่วมพัฒนาโค้ด
+
+### 3.3 Content บนเว็บ
+
+- Content ทั้งหมด (อีโมจิ สัญลักษณ์ ข้อความแฟนซี) เป็นสาธารณสมบัติหรือมี license ที่อนุญาตให้ใช้งานได้ฟรี
+- โค้ดของโปรเจกต์ใช้ **Apache License 2.0** — ดูได้ที่ [`LICENSE`](./LICENSE)
+- Content ที่ผู้ใช้คัดลอกไปใช้เป็นความรับผิดชอบของผู้ใช้เอง — เราไม่รับผิดชอบต่อการใช้งาน
+
+---
+
+## Reporting Issues
+
+### 4.1 รายงาน bug หรือเสนอ feature
+
+- **GitHub Issues**: [github.com/fantrove/fantrove-page/issues](https://github.com/fantrove/fantrove-page/issues)
+- อธิบายปัญหาหรือคำขอให้ชัดเจน พร้อมขั้นตอนที่ทำให้เกิดปัญหา (ถ้ามี)
+
+### 4.2 รายงานพฤติกรรมไม่เหมาะสม
+
+ถ้าพบพฤติกรรมที่ละเมิด Code of Conduct นี้ สามารถรายงานได้ที่:
+
+- **Email**: [fantrove.official@gmail.com](mailto:fantrove.official@gmail.com)
+- **Discord**: ส่งข้อความส่วนตัวให้ moderator
+
+เราจะตรวจสอบทุกรายงานอย่างเป็นส่วนตัวและเร็วที่สุดเท่าที่ทำได้
+
+### 4.3 รายงานปัญหาลิขสิทธิ์
+
+ถ้าเชื่อว่า content ใดบนเว็บละเมิดลิขสิทธิ์ ส่งหลักฐานการเป็นเจ้าของมาที่อีเมลข้างต้น เราจะตรวจสอบและลบ content นั้นออกหากพบว่าเป็นการละเมิดจริง
+
+---
+
+## Enforcement
+
+ทีมพัฒนาของ Fantrove รับผิดชอบการบังคับใช้ Code of Conduct นี้ ผู้ที่ละเมิดอาจได้รับ:
+
+- การเตือนเป็นลายลักษณ์อักษร
+- การระงับสิทธิ์ในช่องทางสื่อสาร (Discord, GitHub)
+- การแบนถาวรในกรณีร้ายแรง
+
+การตัดสินใจทั้งหมดขึ้นอยู่กับดุลยพินิจของทีมพัฒนา และจะบันทึกเหตุผลไว้เป็นลายลักษณ์อักษร
+
+---
+
+## Attribution
+
+Code of Conduct นี้ปรับปรุงให้เหมาะสมกับบริบทของ Fantrove (static website ที่ผู้ใช้ใช้งานแบบ read-only) โดยอ้างอิงหลักการจาก [Contributor Covenant](https://www.contributor-covenant.org/) และ [GitHub Community Guidelines](https://docs.github.com/en/site-policy/github-terms/github-community-guidelines)
+
+---
+
+ขอบคุณที่ช่วยกันรักษาชุมชน Fantrove ให้เป็นมิตรและปลอดภัยสำหรับทุกคน 🙏

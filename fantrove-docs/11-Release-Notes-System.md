@@ -66,21 +66,11 @@ Deploy ขึ้น Cloudflare Pages
 ```
 assets/md/
   en/
-    current.md              ← อัปเดตปัจจุบัน (ภาษาอังกฤษ)
-    releases/
-      v1.3.0.md             ← ประวัติ (ภาษาอังกฤษ)
-      v1.2.0.md
-      v1.1.0.md
-      v1.0.9.md
-      v1.0.8.md
+    current.md              ← อัปเดตปัจจุบัน (ภาษาอังกฤษ) — ไฟล์เดียวที่ต้องแก้
+    releases/               ← ⚠️ ไม่ต้องเขียนเอง — build script สร้างประวัติจาก git history ของ current.md
   th/
-    current.md              ← อัปเดตปัจจุบัน (ภาษาไทย)
-    releases/
-      v1.3.0.md             ← ประวัติ (ภาษาไทย)
-      v1.2.0.md
-      v1.1.0.md
-      v1.0.9.md
-      v1.0.8.md
+    current.md              ← อัปเดตปัจจุบัน (ภาษาไทย) — ไฟล์เดียวที่ต้องแก้
+    releases/               ← ⚠️ ไม่ต้องเขียนเอง — build script สร้างประวัติจาก git history ของ current.md
 
 assets/json/
   release-history.json      ← สร้างโดย build script (อัตโนมัติ ไม่ต้องแก้)
@@ -92,6 +82,10 @@ assets/js/
   new.js                    ← หน้า What's New — อ่าน MD ตามภาษา + history JSON
   version-core.js           ← Popup แจ้งเตือน — อ่าน MD ตามภาษา, ใช้ PopupSystem.open()
 ```
+
+> ⚠️ **สำคัญ:** โฟลเดอร์ `releases/` เป็น **fallback เท่านั้น** — ไม่ต้อง copy `current.md` ไปไว้ในนั้นเอง Build script อ่าน `current.md` จากทุก git commit ในประวัติ ดังนั้นทุกเวอร์ชั่นที่เคยมีอยู่ใน `current.md` จะถูกเก็บไว้ใน `release-history.json` โดยอัตโนมัติ
+>
+> ห้ามสร้างไฟล์ใน `releases/` เอง — ดู [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) ส่วน Release Notes
 
 ### 2.1 หน้าเว็บที่เกี่ยวข้อง
 
@@ -203,14 +197,7 @@ notify: true
 
 ## 5. ขั้นตอนเมื่ออัปเดตเวอร์ชั่นใหม่
 
-### 5.1 ย้ายเวอร์ชั่นเก่าไป `releases/`
-
-```bash
-cp assets/md/en/current.md assets/md/en/releases/v1.4.1.md
-cp assets/md/th/current.md assets/md/th/releases/v1.4.1.md
-```
-
-### 5.2 เขียน release note ใหม่
+### 5.1 เขียน release note ใหม่ใน `current.md`
 
 แก้ `assets/md/en/current.md` และ `assets/md/th/current.md`:
 
@@ -218,7 +205,9 @@ cp assets/md/th/current.md assets/md/th/releases/v1.4.1.md
 - เขียน `title`, `subtitle`, sections ในแต่ละภาษา
 - ปฏิบัติตาม [`RELEASE_NOTES_GUIDE.md`](./RELEASE_NOTES_GUIDE.md)
 
-### 5.3 Commit & deploy
+> ⚠️ **ห้าม copy `current.md` ไป `releases/`** — build script อ่าน `current.md` จาก git history โดยตรง การ copy ไป `releases/` เป็นการทำซ้ำที่ไม่จำเป็นและไม่มีผลต่อ release-history.json
+
+### 5.2 Commit & deploy
 
 ```bash
 git add assets/md/
@@ -230,14 +219,14 @@ git fetch --unshallow
 APP_VERSION=1.5.0 node scripts/update-version.js
 ```
 
-### 5.4 Build script ทำอัตโนมัติ
+### 5.3 Build script ทำอัตโนมัติ
 
-- อ่าน `en/current.md` + `th/current.md` จาก git history
+- อ่าน `en/current.md` + `th/current.md` จาก **git history ของทุก commit** (ไม่ใช่จากไฟล์ใน `releases/`)
 - รวมทุกภาษาเป็น `release-history.json`
 - อัปเดต `version.json` และ date ใน MD files
 - Cache-bust HTML (เพิ่ม `?v=` query string ให้ assets)
 
-### 5.5 ตรวจสอบหลัง deploy
+### 5.4 ตรวจสอบหลัง deploy
 
 - [ ] เปิดหน้า What's New บนเว็บ — ควรแสดง release ใหม่
 - [ ] ทดสอบในหน้าต่าง incognito — ถ้า `notify: true` popup ควรเด้ง

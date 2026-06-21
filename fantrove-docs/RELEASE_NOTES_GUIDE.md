@@ -445,19 +445,13 @@ FVL (Fullscreen Visual Loading) คือหน้าจอโหลดเต็
 
 เมื่อเขียน release note ใหม่เสร็จแล้ว ให้ทำตามขั้นตอนต่อไปนี้
 
-### 11.1 ย้ายเวอร์ชั่นเก่าไป releases/ (ถ้ามี current.md เดิม)
+> ⚠️ **ห้าม copy `current.md` ไป `releases/` โฟลเดอร์** — build script อ่าน `current.md` จาก git history ของทุก commit โดยตรง การ copy ไป `releases/` เป็นการทำซ้ำที่ไม่จำเป็นและไม่มีผลต่อ `release-history.json` โฟลเดอร์ `releases/` เป็น fallback เท่านั้น และไม่ต้องเขียนเอง
 
-```bash
-# ตัวอย่าง: ถ้า current.md ปัจจุบันคือ v1.7.1 แล้วจะอัปเดตเป็น v1.8.0
-cp assets/md/en/current.md assets/md/en/releases/v1.7.1.md
-cp assets/md/th/current.md assets/md/th/releases/v1.7.1.md
-```
-
-### 11.2 เขียน release note ใหม่ใน current.md
+### 11.1 เขียน release note ใหม่ใน current.md
 
 แก้ไฟล์ `assets/md/en/current.md` และ `assets/md/th/current.md` ตามมาตรฐานในเอกสารนี้ รันผ่าน checklist ทั้งหมดในส่วนที่ 10
 
-### 11.3 Commit และ deploy
+### 11.2 Commit และ deploy
 
 ```bash
 git add assets/md/
@@ -467,12 +461,12 @@ git push
 
 Build script จะทำสิ่งต่อไปนี้อัตโนมัติ:
 
-- อ่าน `en/current.md` และ `th/current.md` จาก git history
+- อ่าน `en/current.md` และ `th/current.md` จาก **git history ของทุก commit** (ไม่ใช่จากไฟล์ใน `releases/`)
 - รวมทุกภาษาเป็น `release-history.json`
 - อัปเดต `version.json`
 - บังคับโหลด HTML เวอร์ชั่นใหม่ (cache-bust)
 
-### 11.4 ตรวจสอบหลัง deploy
+### 11.3 ตรวจสอบหลัง deploy
 
 - เปิดหน้า What's New บนเว็บ ดูว่าแสดงผลถูกต้อง
 - ถ้าตั้ง `notify: true` ให้ทดสอบในหน้าต่างใหม่ (incognito) ว่า popup แสดง
