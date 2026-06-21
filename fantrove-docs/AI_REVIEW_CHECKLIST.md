@@ -184,7 +184,7 @@
 
 - [ ] แก้ `assets/md/en/current.md` และ `assets/md/th/current.md` ทั้งคู่
 - [ ] **ห้าม**สร้างไฟล์ใน `assets/md/{en,th}/releases/` (build script สร้างจาก git history อัตโนมัติ)
-- [ ] **ห้าม**แก้ `assets/json/release-history.json` หรือ `version.json` (build script สร้าง)
+- [ ] **ห้าม**แก้ `assets/json/release-dates.json`, `release-history.json` หรือ `version.json` (build script สร้าง/อัปเดต — ดู `11-Release-Notes-System.md` section 2.3)
 - [ ] เปลี่ยน `version:` ใน frontmatter เป็นเวอร์ชั่นใหม่
 - [ ] ปฏิบัติตาม `RELEASE_NOTES_GUIDE.md` checklist ส่วน 10
 - [ ] Commit message: `release: vX.Y.Z`

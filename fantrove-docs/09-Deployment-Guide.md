@@ -460,10 +460,18 @@ Cloudflare Pages ใช้ `_headers` สำหรับกำหนด HTTP hea
 Script นี้ทำงานใน CI/CD pipeline หลังจาก git push:
 
 1. อ่าน `APP_VERSION` environment variable
-2. อัปเดต `version` ใน `current.md` (ทั้ง en และ th)
-3. อัปเดต `version.json`
-4. อ่าน git history ของ `current.md` สร้าง `release-history.json`
-5. อัปเดต `date` ใน frontmatter
+2. โหลด `release-dates.json` (registry ของ "วันที่ build ครั้งแรกของแต่ละ version" — commit ลง git)
+3. กำหนด release date ของ version ปัจจุบัน:
+   - ถ้า version มีอยู่แล้วใน registry → ใช้ date เดิม (stable)
+   - ถ้า version ใหม่ และมี `date:` ใน `current.md` → ใช้ date นั้น
+   - ถ้า version ใหม่ และไม่มี `date:` ใน `current.md` → ใช้ `NOW`
+4. อัปเดต `version.json` (พร้อม `date` จาก registry)
+5. อ่าน git history ของ `current.md` สร้าง `release-history.json` (ใช้ date จาก registry)
+6. อัปเดต `date:` ใน `current.md` (เฉพาะเมื่อ version เปลี่ยน หรือ date ไม่ตรง registry)
+7. บันทึก `release-dates.json` ที่อัปเดตแล้วกลับลง disk (commit ไฟล์นี้ลง git)
+8. Cache-bust HTML (`?v={version}-{dateStr}`)
+
+> ⚠️ **ห้ามแก้ `release-dates.json` เอง** — ดู [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) section 9.2 และ [`11-Release-Notes-System.md`](./11-Release-Notes-System.md) section 2.3
 
 ### 9.2 ขั้นตอน release เวอร์ชั่นใหม่
 

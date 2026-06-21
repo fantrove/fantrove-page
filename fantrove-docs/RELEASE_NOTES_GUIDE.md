@@ -461,10 +461,15 @@ git push
 
 Build script จะทำสิ่งต่อไปนี้อัตโนมัติ:
 
+- โหลด `assets/json/release-dates.json` (registry ของ "วันที่ build ครั้งแรกของแต่ละ version")
+- ถ้าเป็น version ใหม่ → บันทึก release date ใหม่เข้า registry (priority: `date:` ใน `current.md` > `NOW`)
+- ถ้าเป็น version เดิม → คง release date เดิมจาก registry (ไม่เปลี่ยน แม้ `current.md` ถูกแก้)
 - อ่าน `en/current.md` และ `th/current.md` จาก **git history ของทุก commit** (ไม่ใช่จากไฟล์ใน `releases/`)
-- รวมทุกภาษาเป็น `release-history.json`
-- อัปเดต `version.json`
+- รวมทุกภาษาเป็น `release-history.json` (ใช้ date จาก registry)
+- อัปเดต `version.json` (พร้อม `date` จาก registry)
 - บังคับโหลด HTML เวอร์ชั่นใหม่ (cache-bust)
+
+> ดูรายละเอียดเพิ่มเติมใน [`11-Release-Notes-System.md`](./11-Release-Notes-System.md) section 2.3 (Stable Release Date) และ section 5.5 (อัปเดทเนื้อหาแต่ไม่เปลี่ยน version)
 
 ### 11.3 ตรวจสอบหลัง deploy
 

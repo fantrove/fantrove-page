@@ -6,6 +6,8 @@ Allow: /
 # Block crawling of internal JSON endpoints that shouldn't be indexed
 Disallow: /assets/json/whats-new.json
 Disallow: /assets/json/release-history.json
+Disallow: /assets/json/release-dates.json
+Disallow: /assets/json/version.json
 Disallow: /assets/json/current-stage.json
 
 # Block test/development pages from being indexed

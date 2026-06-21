@@ -471,11 +471,14 @@ echo "..." > assets/md/en/releases/v1.8.0.md
 
 ### 9.2 ห้ามแก้ไฟล์ใน `assets/json/`
 
-ไฟล์ต่อไปนี้ถูกสร้างโดย build script โดยอัตโนมัติ — ห้ามแก้เด็ดขาด:
+ไฟล์ต่อไปนี้ถูกสร้างหรืออัปเดตโดย build script โดยอัตโนมัติ — ห้ามแก้เด็ดขาด:
 
-- `assets/json/release-history.json` — สร้างจาก git history ของ `current.md`
-- `assets/json/version.json` — สร้างโดย `scripts/update-version.js`
+- `assets/json/release-dates.json` — registry ของ "วันที่ build ครั้งแรกของแต่ละ version" — **commit ลง git** แต่ build script ดูแลไฟล์นี้เอง (สร้าง/อัปเดตใน `scripts/update-version.js` v4+)
+- `assets/json/release-history.json` — สร้างจาก git history ของ `current.md` + `release-dates.json` (ไม่ commit)
+- `assets/json/version.json` — สร้างโดย `scripts/update-version.js` (ไม่ commit)
 - `assets/json/whats-new.json` — (deprecated) fallback เท่านั้น
+
+> ⚠️ `release-dates.json` เป็น **source of truth** ของ release date — ถ้า conflict กับ `date:` ใน `current.md`, registry ชนะเสมอ (ยกเว้นเมื่อ version เปลี่ยน) ดู [`11-Release-Notes-System.md`](./11-Release-Notes-System.md) section 2.3
 
 ### 9.3 ห้ามลบ `version:` หรือ `date:` จาก frontmatter ของ `current.md`
 
