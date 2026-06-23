@@ -453,36 +453,57 @@ document.getElementById('title').textContent = 'Page Title';
 
 ## 9. กฎเกี่ยวกับ Release Notes
 
-### 9.1 ห้ามสร้างไฟล์ใน `assets/md/{en,th}/releases/`
+### 9.1 ห้ามสร้างไฟล์ใน `assets/md/{en,th}/releases/` ด้วยตนเอง
 
-โฟลเดอร์ `releases/` เป็น **fallback เท่านั้น** — build script อ่าน `current.md` จาก git history ของทุก commit โดยตรง ทุกเวอร์ชั่นที่เคยอยู่ใน `current.md` จะถูกเก็บใน `release-history.json` อัตโนมัติ
+ตั้งแต่ v4.1 เป็นต้นไป build script สร้างไฟล์ `releases/v{version}.md` อัตโนมัติเมื่อ bump version ใหม่ — ผู้ใช้ไม่ต้องสร้างเอง
 
 ```bash
-# ❌ ห้าม — ไม่จำเป็น และไม่มีผลต่อ release-history.json
-cp assets/md/en/current.md assets/md/en/releases/v1.7.1.md
-cp assets/md/th/current.md assets/md/th/releases/v1.7.1.md
+# ❌ ห้าม — build script สร้างให้อัตโนมัติเมื่อ bump version
+cp assets/md/en/current.md assets/md/en/releases/v1.9.1.md
+cp assets/md/th/current.md assets/md/th/releases/v1.9.1.md
 
-# ❌ ห้าม — สร้างไฟล์ release note ใหม่ใน releases/
-echo "..." > assets/md/en/releases/v1.8.0.md
+# ❌ ห้าม — สร้างไฟล์ release note ใหม่ใน releases/ เอง
+echo "..." > assets/md/en/releases/v1.9.1.md
 
-# ✅ ถูก — แก้ current.md อย่างเดียว แล้ว commit
-# git จะเก็บ history ของ current.md ไว้ให้ build script อ่าน
+# ✅ ถูก — แก้ current.md อย่างเดียว (เขียนเฉพาะ version/title/subtitle/sections — ไม่ต้องเขียน date)
+# แล้ว commit + push → CI/CD รัน update-version.js → script สร้าง releases/v{version}.md ให้อัตโนมัติ
 ```
 
-### 9.2 ห้ามแก้ไฟล์ใน `assets/json/`
+> 💡 ไฟล์เก่าที่สร้างไว้ก่อน v4.1 (เช่น `v1.3.0.md`, `v1.0.8.md`) ยังคงใช้ได้ — build script จะอ่าน date จากไฟล์เหล่านั้นแล้ว backfill registry
+
+### 9.2 ห้ามแก้ไฟล์ใน `assets/json/` และ `assets/md/releases/`
 
 ไฟล์ต่อไปนี้ถูกสร้างหรืออัปเดตโดย build script โดยอัตโนมัติ — ห้ามแก้เด็ดขาด:
 
 - `assets/json/release-dates.json` — registry ของ "วันที่ build ครั้งแรกของแต่ละ version" — **commit ลง git** แต่ build script ดูแลไฟล์นี้เอง (สร้าง/อัปเดตใน `scripts/update-version.js` v4+)
-- `assets/json/release-history.json` — สร้างจาก git history ของ `current.md` + `release-dates.json` (ไม่ commit)
+- `assets/md/releases/index.json` — manifest สำหรับ client — **commit ลง git** แต่ build script ดูแลไฟล์นี้เอง (v4.1+)
+- `assets/md/{lang}/releases/v{version}.md` — release notes แยกตาม version — **commit ลง git** แต่ build script สร้างให้อัตโนมัติเมื่อ bump version (v4.1+)
 - `assets/json/version.json` — สร้างโดย `scripts/update-version.js` (ไม่ commit)
 - `assets/json/whats-new.json` — (deprecated) fallback เท่านั้น
+- ⚠️ `assets/json/release-history.json` — **ยกเลิกใน v4.1** — ใช้ `releases/index.json` + `releases/v{version}.md` แทน
 
-> ⚠️ `release-dates.json` เป็น **source of truth** ของ release date — ถ้า conflict กับ `date:` ใน `current.md`, registry ชนะเสมอ (ยกเว้นเมื่อ version เปลี่ยน) ดู [`11-Release-Notes-System.md`](./11-Release-Notes-System.md) section 2.3
+> ⚠️ `release-dates.json` เป็น **source of truth** ของ release date — ถ้า conflict กับ `date:` ใน `current.md`, registry ชนะเสมอ ดู [`11-Release-Notes-System.md`](./11-Release-Notes-System.md) section 2.3
 
-### 9.3 ห้ามลบ `version:` หรือ `date:` จาก frontmatter ของ `current.md`
+### 9.3 ห้ามเขียน `date:` ใน `current.md` เอง
 
-Build script ใช้ `version` และ `date` ในการระบุ release — ถ้าลบ จะไม่ถูกเก็บในประวัติ
+ตั้งแต่ v4 เป็นต้นไป ระบบจะ sync `date:` ใน `current.md` ให้ตรงกับ registry เสมอ — ผู้ใช้ไม่ต้องเขียนเอง
+
+```markdown
+# ❌ ห้าม — ระบบจะเขียนทับด้วยค่าจาก registry
+---
+version: 1.9.1
+date: 2026-06-21T00:00:00.000Z
+title: ...
+---
+
+# ✅ ถูก — เขียนเฉพาะ version/title/subtitle/sections
+---
+version: 1.9.1
+title: ...
+---
+```
+
+ห้ามลบ `version:` จาก frontmatter — build script ใช้ `version` ในการระบุ release
 
 ### 9.4 ห้ามเขียน release note เป็นภาษาเดียว
 

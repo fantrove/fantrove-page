@@ -183,11 +183,13 @@
 ### C2.6 ถ้าแก้ release notes
 
 - [ ] แก้ `assets/md/en/current.md` และ `assets/md/th/current.md` ทั้งคู่
-- [ ] **ห้าม**สร้างไฟล์ใน `assets/md/{en,th}/releases/` (build script สร้างจาก git history อัตโนมัติ)
-- [ ] **ห้าม**แก้ `assets/json/release-dates.json`, `release-history.json` หรือ `version.json` (build script สร้าง/อัปเดต — ดู `11-Release-Notes-System.md` section 2.3)
+- [ ] **ห้าม**สร้างไฟล์ใน `assets/md/{en,th}/releases/` เอง (v4.1+ build script สร้างให้อัตโนมัติเมื่อ bump version)
+- [ ] **ห้าม**เขียน `date:` ใน `current.md` เอง (v4+ ระบบ sync ให้อัตโนมัติจาก registry)
+- [ ] **ห้าม**แก้ `assets/json/release-dates.json`, `assets/md/releases/index.json`, `assets/md/{lang}/releases/v{version}.md` หรือ `version.json` (build script สร้าง/อัปเดต)
 - [ ] เปลี่ยน `version:` ใน frontmatter เป็นเวอร์ชั่นใหม่
 - [ ] ปฏิบัติตาม `RELEASE_NOTES_GUIDE.md` checklist ส่วน 10
 - [ ] Commit message: `release: vX.Y.Z`
+- [ ] หลัง deploy ตรวจว่า `releases/v{version}.md` และ `releases/index.json` ถูก commit ลง git
 
 ### C2.7 ทุกกรณี — ตรวจสอบก่อน deploy
 

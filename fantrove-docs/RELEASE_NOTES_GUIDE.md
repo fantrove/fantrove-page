@@ -445,7 +445,9 @@ FVL (Fullscreen Visual Loading) คือหน้าจอโหลดเต็
 
 เมื่อเขียน release note ใหม่เสร็จแล้ว ให้ทำตามขั้นตอนต่อไปนี้
 
-> ⚠️ **ห้าม copy `current.md` ไป `releases/` โฟลเดอร์** — build script อ่าน `current.md` จาก git history ของทุก commit โดยตรง การ copy ไป `releases/` เป็นการทำซ้ำที่ไม่จำเป็นและไม่มีผลต่อ `release-history.json` โฟลเดอร์ `releases/` เป็น fallback เท่านั้น และไม่ต้องเขียนเอง
+> ⚠️ **ห้าม copy `current.md` ไป `releases/` โฟลเดอร์เอง** — ตั้งแต่ v4.1 เป็นต้นไป build script สร้างไฟล์ `releases/v{version}.md` ให้อัตโนมัติเมื่อ bump version
+>
+> ⚠️ **ไม่ต้องเขียน `date:` ใน `current.md` เอง** — ตั้งแต่ v4 เป็นต้นไป ระบบจะใช้เวลา ณ ตอน build ครั้งแรกของแต่ละ version เป็น release date และ sync กลับเป็นค่าจาก registry เสมอ
 
 ### 11.1 เขียน release note ใหม่ใน current.md
 
@@ -455,27 +457,29 @@ FVL (Fullscreen Visual Loading) คือหน้าจอโหลดเต็
 
 ```bash
 git add assets/md/
-git commit -m "release v1.8.0"
+git commit -m "release v1.9.1"
 git push
 ```
 
 Build script จะทำสิ่งต่อไปนี้อัตโนมัติ:
 
 - โหลด `assets/json/release-dates.json` (registry ของ "วันที่ build ครั้งแรกของแต่ละ version")
-- ถ้าเป็น version ใหม่ → บันทึก release date ใหม่เข้า registry (priority: `date:` ใน `current.md` > `NOW`)
+- ถ้าเป็น version ใหม่ → บันทึก release date ใหม่เป็นเวลา ณ ตอน build (`NOW`) เข้า registry ถาวร
 - ถ้าเป็น version เดิม → คง release date เดิมจาก registry (ไม่เปลี่ยน แม้ `current.md` ถูกแก้)
-- อ่าน `en/current.md` และ `th/current.md` จาก **git history ของทุก commit** (ไม่ใช่จากไฟล์ใน `releases/`)
-- รวมทุกภาษาเป็น `release-history.json` (ใช้ date จาก registry)
+- sync `date:` ใน `current.md` ให้ตรงกับ registry เสมอ — ถ้าผู้ใช้เขียน `date:` มั่วๆ ระบบจะเขียนทับ
+- สร้าง `releases/v{version}.md` จาก `current.md` (เมื่อ version ใหม่) — commit ลง git
+- สร้าง `releases/index.json` (manifest สำหรับ client) — commit ลง git
 - อัปเดต `version.json` (พร้อม `date` จาก registry)
 - บังคับโหลด HTML เวอร์ชั่นใหม่ (cache-bust)
 
-> ดูรายละเอียดเพิ่มเติมใน [`11-Release-Notes-System.md`](./11-Release-Notes-System.md) section 2.3 (Stable Release Date) และ section 5.5 (อัปเดทเนื้อหาแต่ไม่เปลี่ยน version)
+> ดูรายละเอียดเพิ่มเติมใน [`11-Release-Notes-System.md`](./11-Release-Notes-System.md) section 2.3 (Stable Release Date) และ section 2.4 (Folder-Based History)
 
 ### 11.3 ตรวจสอบหลัง deploy
 
 - เปิดหน้า What's New บนเว็บ ดูว่าแสดงผลถูกต้อง
 - ถ้าตั้ง `notify: true` ให้ทดสอบในหน้าต่างใหม่ (incognito) ว่า popup แสดง
 - ตรวจสอบว่าภาษาทั้งสองแสดงเนื้อหาเดียวกัน
+- ตรวจสอบว่า `releases/v{version}.md` และ `releases/index.json` ถูก commit ลง git
 
 ---
 

@@ -8,9 +8,11 @@
 (function() {
   'use strict';
 
-  var CURRENT_MD_BASE  = '/assets/md/{lang}/current.md';   // per-language
+  var CURRENT_MD_BASE   = '/assets/md/{lang}/current.md';   // per-language
   var CURRENT_MD_LEGACY = '/assets/md/current.md';          // single-file (old v1.4.0 format)
-  var HISTORY_URL       = '/assets/json/release-history.json';
+  var RELEASES_INDEX_URL = '/assets/md/releases/index.json'; // v4.1+: manifest ของ releases/
+  var RELEASES_MD_BASE  = '/assets/md/{lang}/releases/v{version}.md'; // per-version markdown
+  var HISTORY_URL_LEGACY = '/assets/json/release-history.json'; // legacy fallback (v4.0 and earlier)
   var LEGACY_CURRENT    = '/assets/json/whats-new.json';
   var VERSION_URL       = '/assets/json/version.json';
   var POLL_INTERVAL_MS  = 60 * 1000;
@@ -236,8 +238,9 @@
   //  1. fetch /assets/md/{lang}/current.md → parse (per-language)
   //     fallback: /assets/md/current.md → parse (legacy single-file with i18n)
   //     fallback: /assets/json/whats-new.json (old JSON)
-  //  2. fetch release-history.json (build script สร้าง — combined i18n)
-  //     fallback: fetch MD files จาก releases/ directory
+  //  2. fetch /assets/md/releases/index.json (v4.1+ manifest)
+  //     สำหรับแต่ละ version ที่ hasDetails: true → fetch /assets/md/{lang}/releases/v{version}.md
+  //     fallback: /assets/json/release-history.json (legacy v4.0)
   //  3. render
 
   function loadContent() {
@@ -269,16 +272,19 @@
     }).then(function(json) {
       if (json && !currentRelease && json.version) currentRelease = json;
 
-      // Step 2: โหลดประวัติ
-      return fetchJSON(HISTORY_URL);
+      // Step 2: โหลดประวัติ — v4.1+ ใช้ releases/index.json
+      return loadHistoryFromIndex(lang);
     }).then(function(history) {
       if (history && history.releases && history.releases.length) {
         historyData = history;
-      } else {
-        return loadFallbackHistory(lang);
       }
-    }).then(function(fallback) {
-      if (fallback && fallback.releases && fallback.releases.length) historyData = fallback;
+      // Fallback: legacy release-history.json (สำหรับเว็บที่ยังไม่ได้ bump เป็น v4.1+)
+      if (!historyData.releases.length) return fetchJSON(HISTORY_URL_LEGACY);
+      return null;
+    }).then(function(legacyHistory) {
+      if (legacyHistory && legacyHistory.releases && legacyHistory.releases.length) {
+        historyData = legacyHistory;
+      }
 
       // Step 3: Render
       var pastReleases = historyData.releases.filter(function(r) {
@@ -290,28 +296,52 @@
     });
   }
 
-  // Fallback: โหลดจาก per-language releases/ หรือ legacy releases/
-  function loadFallbackHistory(lang) {
-    var candidates = ['v1.3.0', 'v1.2.0', 'v1.1.0', 'v1.0.9', 'v1.0.8', 'v1.0.7.1', 'v1.0.7'];
-    var promises = candidates.map(function(ver) {
-      // ลอง per-language ก่อน
-      var perLangUrl = '/assets/md/' + lang + '/releases/' + ver + '.md';
-      return fetchText(perLangUrl).then(function(text) {
-        if (text && text.trim()) {
-          return parseMD(text, lang);
-        }
-        // ลอง legacy path
-        return fetchText('/assets/md/releases/' + ver + '.md').then(function(legacyText) {
-          if (legacyText && legacyText.trim()) return parseMD(legacyText, null);
-          return null;
-        });
-      });
-    });
+  // v4.1+: โหลดประวัติจาก releases/index.json + ไฟล์ markdown แต่ละ version
+  //  1. fetch /assets/md/releases/index.json → ได้ list ของ versions + dates + hasDetails
+  //  2. สำหรับแต่ละ version ที่ hasDetails: true → fetch /assets/md/{lang}/releases/v{version}.md → parse
+  //  3. สำหรับ version ที่ hasDetails: false → ใช้แค่ version + date (basic record)
+  //  4. กรอง version ปัจจุบันออก (currentRelease แสดงแยก)
+  function loadHistoryFromIndex(lang) {
+    return fetchJSON(RELEASES_INDEX_URL).then(function(index) {
+      if (!index || !index.versions || !index.versions.length) return { releases: [] };
 
-    return Promise.all(promises).then(function(results) {
-      var releases = results.filter(Boolean);
-      releases.sort(function(a, b) { return compareVersions(b.version, a.version); });
-      return { releases: releases };
+      var promises = index.versions.map(function(entry) {
+        if (entry.hasDetails) {
+          // มีไฟล์ markdown → fetch + parse
+          var url = RELEASES_MD_BASE.replace('{lang}', lang).replace('{version}', entry.version);
+          return fetchText(url).then(function(text) {
+            if (text && text.trim()) {
+              var parsed = parseMD(text, lang);
+              // ใช้ date จาก index.json (source of truth) แทน date ใน markdown
+              if (entry.date) parsed.date = entry.date;
+              return parsed;
+            }
+            // ถ้า fetch ล้มเหลว → ใช้ basic record
+            return { version: entry.version, date: entry.date, title: null, subtitle: null, sections: [] };
+          }).catch(function() {
+            return { version: entry.version, date: entry.date, title: null, subtitle: null, sections: [] };
+          });
+        } else {
+          // ไม่มีไฟล์ markdown → ใช้ basic record (version + date เท่านั้น)
+          return Promise.resolve({
+            version: entry.version,
+            date: entry.date,
+            title: null,
+            subtitle: null,
+            sections: []
+          });
+        }
+      });
+
+      return Promise.all(promises).then(function(results) {
+        var releases = results.filter(Boolean);
+        // เรียงจากใหม่ → เก่า (index.json มาเรียงให้แล้ว แต่เผื่อไว้)
+        releases.sort(function(a, b) { return compareVersions(b.version, a.version); });
+        return { releases: releases };
+      });
+    }).catch(function() {
+      // index.json ไม่มี → return empty (fallback ไป legacy ใน caller)
+      return { releases: [] };
     });
   }
 

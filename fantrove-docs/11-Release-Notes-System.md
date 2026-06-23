@@ -32,26 +32,31 @@
 ### 1.1 แผนภาพการทำงาน
 
 ```
-ผู้พัฒนาเขียน current.md (en + th)
+ผู้พัฒนาเขียน current.md (en + th) — เขียนเฉพาะ version/title/subtitle/sections (ไม่ต้องเขียน date)
         │
         ▼
 Git commit & push
         │
         ▼
-CI/CD: scripts/update-version.js
-   - อัปเดต version.json
-   - สร้าง release-history.json จาก git log
+CI/CD: scripts/update-version.js (v4.1+)
+   - โหลด release-dates.json (registry)
+   - กำหนด release date ของ version ปัจจุบัน (registry > NOW)
+   - sync date: ใน current.md ให้ตรงกับ registry
+   - สร้าง releases/v{version}.md จาก current.md (เมื่อ version ใหม่)
+   - สร้าง releases/index.json (manifest สำหรับ client)
+   - อัปเดต version.json (พร้อม date จาก registry)
+   - บันทึก release-dates.json (registry ที่อัปเดตแล้ว)
         │
         ▼
 Build: scripts/build.js
-   - Copy MD files ไป dist/
+   - Copy MD + JSON files ไป dist/
    - Generate static HTML
         │
         ▼
 Deploy ขึ้น Cloudflare Pages
         │
         ├── ผู้ใช้เปิดหน้า What's New
-        │       └─ new.js อ่าน current.md ตามภาษา + release-history.json
+        │       └─ new.js อ่าน current.md ตามภาษา + releases/index.json + releases/v{version}.md
         │
         └── ผู้ใช้เข้าหน้าอื่น
                 └─ version-core.js เช็ค version.json
@@ -66,27 +71,29 @@ Deploy ขึ้น Cloudflare Pages
 ```
 assets/md/
   en/
-    current.md              ← อัปเดตปัจจุบัน (ภาษาอังกฤษ) — ไฟล์เดียวที่ต้องแก้
-    releases/               ← ⚠️ ไม่ต้องเขียนเอง — build script สร้างประวัติจาก git history ของ current.md
+    current.md              ← อัปเดตปัจจุบัน (ภาษาอังกฤษ) — ไฟล์เดียวที่ต้องแก้ (เขียนเฉพาะ version/title/subtitle/sections — ไม่ต้องเขียน date)
+    releases/               ← v4.1+: build script สร้างไฟล์ v{version}.md อัตโนมัติเมื่อ bump version ใหม่
   th/
     current.md              ← อัปเดตปัจจุบัน (ภาษาไทย) — ไฟล์เดียวที่ต้องแก้
-    releases/               ← ⚠️ ไม่ต้องเขียนเอง — build script สร้างประวัติจาก git history ของ current.md
+    releases/               ← v4.1+: build script สร้างไฟล์ v{version}.md อัตโนมัติ
+  releases/
+    index.json              ← v4.1+: manifest สำหรับ client — list ทุก version + date + hasDetails (commit ลง git)
 
 assets/json/
-  release-dates.json         ← สร้าง/อัปเดตโดย build script — registry ของ "วันที่ build ครั้งแรกของแต่ละ version" (commit ลง git เพื่อเป็น source of truth ข้าม CI/CD runs)
-  release-history.json       ← สร้างโดย build script (อัตโนมัติ ไม่ต้องแก้ ไม่ commit)
-  version.json               ← สร้างโดย build script (อัตโนมัติ ไม่ต้องแก้ ไม่ commit)
-  whats-new.json             ← เก่า — fallback เท่านั้น
+  release-dates.json       ← v4: registry ของ "วันที่ build ครั้งแรกของแต่ละ version" (commit ลง git)
+  version.json             ← สร้างโดย build script (ไม่ commit)
+  whats-new.json           ← เก่า — fallback เท่านั้น
+  ⚠️ release-history.json   ← ยกเลิกใน v4.1 — ใช้ releases/index.json + releases/v{version}.md แทน
 
 assets/js/
   lang-core.js              ← v5.0: Central Language API (FvLang)
-  new.js                    ← หน้า What's New — อ่าน MD ตามภาษา + history JSON
+  new.js                    ← หน้า What's New — v4.1+: อ่าน releases/index.json + releases/v{version}.md
   version-core.js           ← Popup แจ้งเตือน — อ่าน MD ตามภาษา, ใช้ PopupSystem.open()
 ```
 
-> ⚠️ **สำคัญ:** โฟลเดอร์ `releases/` เป็น **fallback เท่านั้น** — ไม่ต้อง copy `current.md` ไปไว้ในนั้นเอง Build script อ่าน `current.md` จากทุก git commit ในประวัติ ดังนั้นทุกเวอร์ชั่นที่เคยมีอยู่ใน `current.md` จะถูกเก็บไว้ใน `release-history.json` โดยอัตโนมัติ
+> ⚠️ **สำคัญ (v4.1+):** โฟลเดอร์ `releases/` ไม่ใช่ fallback อีกต่อไป — build script สร้างไฟล์ `v{version}.md` อัตโนมัติเมื่อ bump version ใหม่ และสร้าง `index.json` manifest สำหรับ client อ่าน
 >
-> ห้ามสร้างไฟล์ใน `releases/` เอง — ดู [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) ส่วน Release Notes
+> ผู้ใช้ไม่ต้องสร้างไฟล์ใน `releases/` เอง — ดู [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) section 9
 
 ### 2.1 หน้าเว็บที่เกี่ยวข้อง
 
@@ -99,23 +106,50 @@ assets/js/
 
 | ไฟล์ | ผู้สร้าง | ผู้ใช้ | เนื้อหา |
 |---|---|---|---|
-| `release-dates.json` | build script (commit ลง git) | `update-version.js` | `{ versions: { "1.8.0": "2026-06-20T00:00:00.000Z", ... } }` — registry ของ "วันที่ build ครั้งแรกของแต่ละ version" |
-| `version.json` | build script (ไม่ commit) | `version-core.js` | `{ version, date }` — date เป็น ISO string จาก registry (stable ถ้า version เดิม) |
-| `release-history.json` | build script (ไม่ commit) | `new.js` | ประวัติ release ทั้งหมด ใช้ date จาก registry |
-| `whats-new.json` | (deprecated) | `new.js` (fallback) | release notes แบบเก่า |
+| `assets/md/releases/index.json` | build script (commit ลง git) | `new.js` | `{ versions: [{ version, date, hasDetails }], updatedAt }` — manifest ของ releases/ |
+| `assets/md/{lang}/releases/v{version}.md` | build script (commit ลง git) | `new.js` | release notes แยกตาม version (per-language) |
+| `assets/json/release-dates.json` | build script (commit ลง git) | `update-version.js` | `{ versions: { "1.9.1": "2026-06-21T...", ... } }` — registry ของ "วันที่ build ครั้งแรกของแต่ละ version" |
+| `assets/json/version.json` | build script (ไม่ commit) | `version-core.js` | `{ version, date }` — date เป็น ISO string จาก registry (stable ถ้า version เดิม) |
+| `assets/json/whats-new.json` | (deprecated) | `new.js` (fallback) | release notes แบบเก่า |
+| ⚠️ `assets/json/release-history.json` | (ยกเลิกใน v4.1) | `new.js` (legacy fallback) | ประวัติ release แบบรวม — ใช้ releases/index.json แทน |
 
 ### 2.3 Stable Release Date (v4 — `update-version.js`)
 
 ตั้งแต่ `update-version.js` v4 เป็นต้นไป ระบบบันทึก **"วันที่ build ครั้งแรกของแต่ละ version"** เป็น source of truth ใน `assets/json/release-dates.json`:
 
-- ถ้าอัปเดทเนื้อหาใน `current.md` แต่ **ไม่เปลี่ยน `version:`** → date ใน `current.md`, `version.json`, `release-history.json` จะ **ไม่เปลี่ยน** (คง date แรกที่บันทึกไว้ใน registry)
-- ถ้าเปลี่ยน `version:` เป็นเลขใหม่ → build script จะบันทึก date ใหม่เข้า registry (priority: `date:` ใน `current.md` > `NOW`)
-- ถ้าผู้ใช้ manual edit `date:` ใน `current.md` ให้เป็นค่าที่ไม่ตรงกับ registry (และ version เดิม) → build script จะ sync date กลับเป็นค่าจาก registry
+- ถ้าอัปเดทเนื้อหาใน `current.md` แต่ **ไม่เปลี่ยน `version:`** → date ใน `current.md`, `version.json`, `releases/index.json` จะ **ไม่เปลี่ยน** (คง date แรกที่บันทึกไว้ใน registry)
+- ถ้าเปลี่ยน `version:` เป็นเลขใหม่ → build script จะใช้ **เวลา ณ ตอน build ครั้งแรกของ version นั้น** (`NOW`) เป็น release date และบันทึกลง registry ถาวร
+- ถ้าผู้ใช้ manual edit `date:` ใน `current.md` → build script จะ **sync กลับ** เป็นค่าจาก registry เสมอ (เพราะผู้ใช้อาจเขียน date มั่วๆ ที่ไม่ตรงกับเวลา build จริง)
 
 **กฎเหล็ก:**
-- 🥇 `release-dates.json` เป็น source of truth — ถ้า conflict กับ `date:` ใน `current.md`, registry ชนะเสมอ (ยกเว้นเมื่อ version เปลี่ยน)
+- 🥇 `release-dates.json` เป็น source of truth — ถ้า conflict กับ `date:` ใน `current.md`, registry ชนะเสมอ
+- ⚠️ **ผู้ใช้ไม่ต้องเขียน `date:` ใน `current.md` เอง** — ระบบจะเพิ่ม/อัปเดต date ให้อัตโนมัติจาก registry (หรือ NOW ถ้าเป็น version ใหม่)
 - ห้ามแก้ `release-dates.json` เอง — build script ดูแลไฟล์นี้เอง (ดู [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) section 9)
 - ไฟล์นี้ commit ลง git เพื่อให้ stable ข้าม CI/CD runs และ developer machines
+
+### 2.4 Folder-Based History (v4.1 — `update-version.js`)
+
+ตั้งแต่ `update-version.js` v4.1 เป็นต้นไป ระบบใช้ **โครงสร้างโฟลเดอร์** สำหรับเก็บประวัติ release แทน `release-history.json`:
+
+```
+assets/md/releases/
+  index.json              ← manifest สำหรับ client (list ทุก version + date + hasDetails)
+assets/md/{lang}/releases/
+  v1.9.1.md              ← release notes ของ version 1.9.1 (per-language)
+  v1.3.0.md              ← release notes ของ version 1.3.0 (เก่า — สร้างไว้ก่อน v4.1)
+  ...
+```
+
+**วิธีการทำงาน:**
+1. เมื่อ bump version ใหม่ → build script สร้าง `releases/v{version}.md` จาก `current.md` (ทั้ง en + th) — commit ลง git
+2. build script สร้าง `releases/index.json` ที่ list ทุก version + date + `hasDetails` (ว่ามีไฟล์ markdown หรือไม่)
+3. client (`new.js`) อ่าน `releases/index.json` แล้ว fetch `releases/v{version}.md` สำหรับแต่ละ version ที่ `hasDetails: true`
+4. สำหรับ version ที่ `hasDetails: false` (มีใน registry แต่ไม่มีไฟล์ markdown) → client แสดงแค่ version + date (basic record)
+
+**กฎเหล็ก:**
+- ผู้ใช้ไม่ต้องสร้างไฟล์ใน `releases/` เอง — build script สร้างให้อัตโนมัติเมื่อ bump version
+- ไฟล์ `releases/v{version}.md` และ `releases/index.json` commit ลง git เพื่อเป็น source of truth
+- `release-history.json` ยกเลิกใน v4.1 — `new.js` ยังรองรับเป็น legacy fallback สำหรับเว็บที่ยังไม่ได้ bump
 
 ---
 
@@ -220,20 +254,20 @@ notify: true
 - เขียน `title`, `subtitle`, sections ในแต่ละภาษา
 - ปฏิบัติตาม [`RELEASE_NOTES_GUIDE.md`](./RELEASE_NOTES_GUIDE.md)
 
-> ⚠️ **ห้าม copy `current.md` ไป `releases/`** — build script อ่าน `current.md` จาก git history โดยตรง การ copy ไป `releases/` เป็นการทำซ้ำที่ไม่จำเป็นและไม่มีผลต่อ release-history.json
+> ⚠️ **ห้าม copy `current.md` ไป `releases/` เอง** — build script สร้างไฟล์ `releases/v{version}.md` ให้อัตโนมัติเมื่อ bump version (v4.1+)
 
-> 💡 **`date:` field (optional):** ผู้ใช้อาจเขียน `date:` ใน `current.md` ไว้ล่วงหน้าได้ ถ้าเป็น version ใหม่ build script จะเคารพ date นี้ (priority: `date:` ใน `current.md` > `NOW`) ถ้าไม่เขียน `date:` ไว้ build script จะใช้เวลา ณ ตอน run
+> ⚠️ **ไม่ต้องเขียน `date:` เอง** — ระบบจะใช้เวลา ณ ตอน build ครั้งแรกของ version นั้นเป็น release date โดยอัตโนมัติ (ดู section 2.3) ถ้าเขียน `date:` เอง ระบบจะ sync กลับเป็นค่าจาก registry เสมอ
 
 ### 5.2 Commit & deploy
 
 ```bash
 git add assets/md/
-git commit -m "release: v1.5.0"
+git commit -m "release: v1.9.1"
 git push
 
 # CI/CD:
 git fetch --unshallow
-APP_VERSION=1.5.0 node scripts/update-version.js
+APP_VERSION=1.9.1 node scripts/update-version.js
 ```
 
 ### 5.3 Build script ทำอัตโนมัติ
@@ -241,19 +275,15 @@ APP_VERSION=1.5.0 node scripts/update-version.js
 1. **STEP 0** — โหลด `assets/json/release-dates.json` (registry ของ "วันที่ build ครั้งแรกของแต่ละ version")
 2. **กำหนด release date ของ version ปัจจุบัน**:
    - ถ้า version มีอยู่แล้วใน registry → ใช้ date เดิม (stable)
-   - ถ้า version ใหม่ และมี `date:` ใน `current.md` → ใช้ date นั้น
-   - ถ้า version ใหม่ และไม่มี `date:` ใน `current.md` → ใช้ `NOW`
-3. **STEP 1** — สร้าง `release-history.json` จาก git history ของ `current.md`:
-   - อ่านทุก commit ของ `current.md` จาก git log (เก่า → ใหม่)
-   - แต่ละ version ที่พบ → ใช้ date จาก registry (ถ้าไม่มี ใช้ commit timestamp แล้ว backfill registry)
-   - รวมทุกภาษาเป็น i18n combined
-4. **STEP 2** — อัปเดต `date:` ใน `current.md`:
-   - ถ้า version ใหม่ → เขียน date ใหม่
-   - ถ้า version เดิม และ date ใน `current.md` ไม่ตรง registry → sync กลับเป็นค่าจาก registry
-   - ถ้า version เดิม และ date ใน `current.md` ตรง registry แล้ว → skip (ไม่เขียน)
-5. **STEP 3** — สร้าง `version.json` พร้อม `date` จาก registry
-6. **STEP 3.5** — บันทึก `release-dates.json` (registry ที่อัปเดตแล้ว) — **commit ไฟล์นี้ลง git**
-7. **STEP 4** — HTML cache busting (เพิ่ม `?v={version}-{dateStr}` ให้ assets)
+   - ถ้า version ใหม่ → ใช้ **`NOW` (เวลา ณ ตอน build ครั้งแรกของ version นี้)** — บันทึกถาวรใน registry
+   - ⚠️ ไม่อ่าน `date:` จาก `current.md` เพราะผู้ใช้อาจเขียนมั่วๆ ที่ไม่ตรงกับเวลาจริง
+3. **STEP 1** — สร้าง history จาก git log (backfill registry สำหรับ version เก่าที่ยังไม่มี)
+4. **STEP 1.7** — สร้าง `releases/v{version}.md` จาก `current.md` (เมื่อ version ใหม่) — commit ลง git
+5. **STEP 1.8** — สร้าง `releases/index.json` (manifest สำหรับ client) — commit ลง git
+6. **STEP 2** — sync `date:` ใน `current.md` ให้ตรงกับ registry เสมอ (เขียนทับถ้าผู้ใช้เขียนมั่ว)
+7. **STEP 3** — สร้าง `version.json` พร้อม `date` จาก registry
+8. **STEP 3.5** — บันทึก `release-dates.json` (registry ที่อัปเดตแล้ว) — commit ลง git
+9. **STEP 4** — HTML cache busting (เพิ่ม `?v={version}-{dateStr}` ให้ assets)
 
 ### 5.4 ตรวจสอบหลัง deploy
 
@@ -261,27 +291,7 @@ APP_VERSION=1.5.0 node scripts/update-version.js
 - [ ] ทดสอบในหน้าต่าง incognito — ถ้า `notify: true` popup ควรเด้ง
 - [ ] ตรวจสอบภาษาทั้งสอง — แสดงเนื้อหาเดียวกัน
 - [ ] ตรวจสอบ `date` ใน popup และหน้า What's New — ควรเป็น date แรกที่บันทึก (ไม่ใช่ date ล่าสุด)
-
----
-
-## 5.5. อัปเดทเนื้อหาแต่ไม่เปลี่ยน version (เช่น typo fix, reword)
-
-บางครั้งต้องแก้ `current.md` โดยไม่ bump version (เช่น แก้ typo, ปรับ wording, เพิ่มรายละเอียด) — ตั้งแต่ `update-version.js` v4 เป็นต้นไป กรณีนี้จะ **ไม่เปลี่ยน release date**:
-
-### 5.5.1 ขั้นตอน
-
-1. แก้ `assets/md/en/current.md` และ `assets/md/th/current.md` ตามต้องการ (อย่าเปลี่ยน `version:`)
-2. Commit ด้วย message ที่ไม่ใช่ `release:` (เช่น `docs(release-notes): fix typo in v1.8.0`)
-3. Push → CI/CD รัน `update-version.js` → registry มีอยู่แล้ว → date ไม่เปลี่ยน
-4. `release-history.json` และ `version.json` จะถูกสร้างใหม่ด้วย date เดิมจาก registry
-
-### 5.5.2 ผลกระทบต่อผู้ใช้
-
-- Popup แจ้งเตือน: จะไม่เด้งซ้ำ (เพราะ version เดิม — `version-core.js` ใช้ `version` เป็น build ID)
-- หน้า What's New: จะแสดงเนื้อหาใหม่ แต่ date ยังเป็น date เดิมของ release
-- ไม่มี record ใหม่ใน `release-history.json` (version เดิม → 1 record เดิม)
-
-> กฎเหล็ก: ถ้าอยากให้ผู้ใช้เห็นเป็น "อัปเดทใหม่" ต้อง bump `version:` เสมอ — การแก้เนื้อหาอย่างเดียวไม่ทำให้ popup แจ้งเตือนเด้งใหม่
+- [ ] ตรวจสอบว่า `releases/v{version}.md` และ `releases/index.json` ถูก commit ลง git
 
 ---
 

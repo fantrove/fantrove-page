@@ -404,6 +404,9 @@ Cloudflare Pages ใช้ `_headers` สำหรับกำหนด HTTP hea
 /assets/json/release-history.json
   Cache-Control: no-store, no-cache, max-age=0, must-revalidate
 
+/assets/md/releases/index.json
+  Cache-Control: no-store, no-cache, max-age=0, must-revalidate
+
 /assets/json/current-stage.json
   Cache-Control: no-store, no-cache, max-age=0, must-revalidate
 
@@ -433,7 +436,7 @@ Cloudflare Pages ใช้ `_headers` สำหรับกำหนด HTTP hea
 
 | ประเภทไฟล์ | Cache | เหตุผล |
 |---|---|---|
-| `whats-new.json`, `release-history.json`, `current-stage.json` | ❌ no-cache | ต้องอัปเดตทันทีเมื่อมี release ใหม่ |
+| `whats-new.json`, `release-history.json`, `current-stage.json`, `releases/index.json` | ❌ no-cache | ต้องอัปเดตทันทีเมื่อมี release ใหม่ |
 | `/assets/*` (JS, CSS, images) | ✅ 1 วัน + SWR 1 วัน | ใช้ `?v=` query string สำหรับ cache busting |
 | `index.html` + HTML ทั้งหมด | ❌ no-cache | ต้องเห็น version ใหม่ทันทีหลัง deploy |
 
@@ -463,15 +466,19 @@ Script นี้ทำงานใน CI/CD pipeline หลังจาก git p
 2. โหลด `release-dates.json` (registry ของ "วันที่ build ครั้งแรกของแต่ละ version" — commit ลง git)
 3. กำหนด release date ของ version ปัจจุบัน:
    - ถ้า version มีอยู่แล้วใน registry → ใช้ date เดิม (stable)
-   - ถ้า version ใหม่ และมี `date:` ใน `current.md` → ใช้ date นั้น
-   - ถ้า version ใหม่ และไม่มี `date:` ใน `current.md` → ใช้ `NOW`
+   - ถ้า version ใหม่ → ใช้ `NOW` (เวลา ณ ตอน build ครั้งแรกของ version นี้)
+   - ⚠️ ไม่อ่าน `date:` จาก `current.md` เพราะผู้ใช้อาจเขียนมั่วๆ ที่ไม่ตรงกับเวลาจริง
 4. อัปเดต `version.json` (พร้อม `date` จาก registry)
-5. อ่าน git history ของ `current.md` สร้าง `release-history.json` (ใช้ date จาก registry)
-6. อัปเดต `date:` ใน `current.md` (เฉพาะเมื่อ version เปลี่ยน หรือ date ไม่ตรง registry)
-7. บันทึก `release-dates.json` ที่อัปเดตแล้วกลับลง disk (commit ไฟล์นี้ลง git)
-8. Cache-bust HTML (`?v={version}-{dateStr}`)
+5. อ่าน git history ของ `current.md` สร้าง history (backfill registry สำหรับ version เก่าที่ยังไม่มี)
+6. สร้าง `releases/v{version}.md` จาก `current.md` (เมื่อ version ใหม่) — commit ลง git
+7. สร้าง `releases/index.json` (manifest สำหรับ client) — commit ลง git
+8. sync `date:` ใน `current.md` ให้ตรงกับ registry เสมอ (เขียนทับถ้าผู้ใช้เขียนมั่ว)
+9. บันทึก `release-dates.json` ที่อัปเดตแล้วกลับลง disk (commit ไฟล์นี้ลง git)
+10. Cache-bust HTML (`?v={version}-{dateStr}`)
 
-> ⚠️ **ห้ามแก้ `release-dates.json` เอง** — ดู [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) section 9.2 และ [`11-Release-Notes-System.md`](./11-Release-Notes-System.md) section 2.3
+> ⚠️ **ห้ามแก้ `release-dates.json`, `releases/index.json`, `releases/v{version}.md` เอง** — ดู [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) section 9.2 และ [`11-Release-Notes-System.md`](./11-Release-Notes-System.md) section 2.3-2.4
+>
+> ⚠️ **ผู้ใช้ไม่ต้องเขียน `date:` ใน `current.md` เอง** — ระบบจะ sync ให้อัตโนมัติจาก registry
 
 ### 9.2 ขั้นตอน release เวอร์ชั่นใหม่
 

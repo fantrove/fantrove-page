@@ -5,8 +5,15 @@ Pragma: no-cache
 Expires: 0
 Surrogate-Control: no-store
 
-# release-history.json: ห้าม cache
+# release-history.json: ห้าม cache (legacy v4.0)
 /assets/json/release-history.json
+Cache-Control: no-store, no-cache, max-age=0, must-revalidate
+Pragma: no-cache
+Expires: 0
+Surrogate-Control: no-store
+
+# releases/index.json: ห้าม cache (v4.1+ manifest)
+/assets/md/releases/index.json
 Cache-Control: no-store, no-cache, max-age=0, must-revalidate
 Pragma: no-cache
 Expires: 0
