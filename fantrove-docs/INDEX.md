@@ -32,10 +32,11 @@
 | ⚡ **ปรับประสิทธิภาพ** | [`08-Performance-Architecture.md`](./08-Performance-Architecture.md) |
 | 🔍 **ทำ SEO / เพิ่ม ranking** | [`12-SEO-Guide.md`](./12-SEO-Guide.md) ⭐ |
 | 📝 **เขียน/แก้เอกสาร** | [`13-Documentation-Standard.md`](./13-Documentation-Standard.md) 🥇 (priority #1) |
+| 🎨 **ออกแบบหน้าเว็บ/UX** | [`14-System-Design-And-UX.md`](./14-System-Design-And-UX.md) 🎨 (training data for AI) |
 
 ---
 
-## 📖 เอกสารระบบ (00–13)
+## 📖 เอกสารระบบ (00–14)
 
 เอกสารหมายเลขนี้อธิบายระบบทั้งหมดของ Fantrove ตั้งแต่ภาพรวมไปจนถึงรายละเอียด module และ function เขียนเป็นภาษาไทย เน้นความลึกเพื่อให้ AI และนักพัฒนาเข้าใจระบบได้ครบถ้วนโดยไม่ต้องอ่านโค้ดโดยตรง
 
@@ -55,6 +56,7 @@
 | 11 | [Release Notes System](./11-Release-Notes-System.md) | ระบบหน้า "มีอะไรใหม่" — release notes ที่อ่านจาก markdown | `assets/md/`, `assets/js/new.js` |
 | 12 ⭐ | [SEO Guide](./12-SEO-Guide.md) | กลยุทธ์ SEO ระดับ platform — Technical SEO, structured data, Core Web Vitals, international SEO, E-E-A-T | cross-cutting (priority #2) |
 | 13 🥇 | [Documentation Standard](./13-Documentation-Standard.md) | มาตรฐานการเขียน/อัปเดตเอกสาร — โครงสร้าง, น้ำเสียง, cross-references, docs sync with code | cross-cutting (priority #1 สูงสุด) |
+| 14 🎨 | [System Design & UX](./14-System-Design-And-UX.md) | หลักการออกแบบระบบและ UX — design tokens, mobile-first, responsive, components, animation, a11y, performance-driven | cross-cutting (training data for AI) |
 
 ---
 
@@ -102,12 +104,13 @@
         ┌───────────────┼───────────────┐
         ▼               ▼               ▼
    📚 เอกสารระบบ    🤖 เอกสาร AI    📝 มาตรฐาน
-   (00-13)          (AI_*)           (RELEASE_NOTES_*)
+   (00-14)          (AI_*)           (RELEASE_NOTES_*)
         │               │
         ▼               │
    00-System-Arch ───────┐ (จุดเริ่มต้น)
         │               │
         ├──── 13-Documentation-Standard 🥇 (priority #1 สูงสุด)
+        ├──── 14-System-Design-And-UX 🎨 (training data)
         ├──── 12-SEO-Guide ⭐ (priority #2)
         │               │
         ▼               ▼
