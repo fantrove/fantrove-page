@@ -1,6 +1,15 @@
 #!/usr/bin/env node
 'use strict';
 
+// Path:    scripts/generate-sitemap.js
+// Purpose: Generate sitemap.xml with hreflang alternates for every discovered
+//          HTML file. URL path format MUST match _deriveCanonicalPath() in
+//          scripts/lib/html-transformer.js (no trailing slash) — otherwise
+//          sitemap <loc> entries contradict each page's own canonical tag,
+//          which Google Search Console flags as
+//          "Alternate page with proper canonical tag" (non-indexed).
+// Used by: npm run generate-sitemap ; npm run postbuild (after `npm run build`)
+
 /**
  * scripts/generate-sitemap.js
  * Generates sitemap.xml with hreflang alternates for every discovered HTML file.
@@ -19,6 +28,11 @@ const path = require('path');
 const { findHtmlFiles, loadDbJson } = require('./lib/file-utils');
 
 const ROOT = path.resolve(__dirname, '..');
+
+// Path that root index.html (/) maps to. Must match the home page's own
+// canonical path exactly — see _deriveCanonicalPath() in html-transformer.js.
+const ROOT_PAGE_PATH = '/home';
+
 const CONFIG = {
   srcDir: ROOT,
   dbJsonPath: path.join('assets', 'lang', 'options', 'db.json'),
@@ -52,8 +66,10 @@ function buildUrlEntries(htmlFiles, langs) {
     }
 
     if (!rel.startsWith('/')) rel = '/' + rel;
-    // Skip root index.html mapping here (we'll include /home/ etc.). include everything though.
-    const pathNoSlash = rel === '/' ? '/home/' : rel;
+    // ต้อง match กับ _deriveCanonicalPath() ใน html-transformer.js เป๊ะ
+    // (ตัด trailing slash ทิ้ง) ไม่งั้น sitemap ชี้ไปคนละ URL กับ canonical tag จริง
+    rel = rel === '/' ? ROOT_PAGE_PATH : rel.replace(/\/$/, '');
+    const pathNoSlash = rel || ROOT_PAGE_PATH;
 
     const alternates = langs.map(l => {
       // ensure double slash not created
@@ -67,7 +83,7 @@ function buildUrlEntries(htmlFiles, langs) {
       loc: `${CONFIG.baseUrl}/${langs[0]}${pathNoSlash}`, // default loc points to first lang
       lastmod: today,
       changefreq: 'weekly',
-      priority: pathNoSlash === '/home/' ? '1.0' : '0.6',
+      priority: pathNoSlash === ROOT_PAGE_PATH ? '1.0' : '0.6',
       alternates
     });
   }

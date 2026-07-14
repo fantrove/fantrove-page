@@ -360,6 +360,14 @@ async function build() {
  * โครงสร้างแยก root redirect ออกจาก lang page rewrites ชัดเจน
  * (เหมือนโครงสร้างของ _redirects dev ที่ใช้อยู่)
  *
+ * สำคัญ: redirect targets ทั้งหมดต้อง "ไม่มี" trailing slash (เช่น
+ * `/en/home` ไม่ใช่ `/en/home/`) เพราะต้องตรงกับ _deriveCanonicalPath()
+ * ใน html-transformer.js และ ROOT_PAGE_PATH ใน generate-sitemap.js เป๊ะ
+ * ถ้าไม่ตรงกัน หน้าเว็บจะ redirect ไป URL หนึ่ง แต่ canonical tag บนหน้านั้น
+ * ประกาศว่าตัวเองเป็นอีก URL หนึ่ง — Google จะมองว่าเป็นหน้าซ้ำ/สำรอง
+ * และไม่ index URL ที่ submit ไป (สาเหตุของ GSC error
+ * "Alternate page with proper canonical tag" ที่เจอปัญหานี้มาก่อน)
+ *
  * @param {string[]} langs
  * @param {string}   defaultLang
  * @returns {string}
@@ -379,15 +387,15 @@ function _generateRedirects(langs, defaultLang) {
   lines.push(
     '',
     '# ── Root → default language ──────────────────────────────────────────',
-    `/ /${defaultLang}/home/ 302`,
-    `/index.html /${defaultLang}/home/ 302`,
+    `/ /${defaultLang}/home 302`,
+    `/index.html /${defaultLang}/home 302`,
     '',
     '# ── Language root → home ────────────────────────────────────────────',
   );
 
   for (const lang of langs) {
-    lines.push(`/${lang}  /${lang}/home/ 302`);
-    lines.push(`/${lang}/ /${lang}/home/ 302`);
+    lines.push(`/${lang}  /${lang}/home 302`);
+    lines.push(`/${lang}/ /${lang}/home 302`);
   }
 
   lines.push(
@@ -408,7 +416,7 @@ function _generateRedirects(langs, defaultLang) {
     '/favicon.ico /assets/images/fantrove-hub360.ico 200',
     '',
     '# ── Fallback ─────────────────────────────────────────────────────────',
-    `/* /${defaultLang}/home/ 404`,
+    `/* /${defaultLang}/home 404`,
     '',
   );
 

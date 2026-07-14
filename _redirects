@@ -1,9 +1,11 @@
-# Fallback: any unknown path → serve index.html with 200 (rewrite, not redirect)
-/* /index.html 200
-
-# ── Explicitly route language pages ────────────────────────────────────────
-/en/* /:splat 200
-/th/* /:splat 200
+# Path:    _redirects (dev / repo-root — used only if deployed WITHOUT `npm run build`)
+# Purpose: Cloudflare Pages routing rules for local/dev preview of the static site.
+#          Rule order matters: Cloudflare Pages applies the FIRST matching rule,
+#          regardless of whether a real static file exists at that path. The
+#          catch-all `/*` MUST stay last, or it swallows every request
+#          (including /sitemap.xml, /robots.txt, /assets/*) and serves the
+#          404 page's HTML for everything — including to search engine bots.
+# Used by: Cloudflare Pages build system (only when build output = repo root)
 
 # ── Static files (passthrough) ─────────────────────────────────────────────
 /assets/* /assets/:splat 200
@@ -11,3 +13,11 @@
 /sitemap.xml /sitemap.xml 200
 /favicon.ico /assets/images/fantrove-verse360.ico 200
 /sw.js /sw.js 200
+
+# ── Explicitly route language pages ────────────────────────────────────────
+/en/* /:splat 200
+/th/* /:splat 200
+
+# Fallback: any unknown path → serve index.html with 200 (rewrite, not redirect)
+# Must be LAST — see Purpose note above.
+/* /index.html 200
