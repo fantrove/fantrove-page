@@ -367,6 +367,18 @@
           try {
             requestAnimationFrame(() => {
               this._setNavLoading(false);
+              // v3.1 DEFENSIVE: ensure body scroll-lock is released even if
+              // content.js or LoadingService.hideInstant() threw before
+              // reaching _removeOverlayNow(). This is a no-op when the lock
+              // was already properly restored — it only catches the edge case
+              // where an exception left body stuck at position:fixed.
+              try {
+                if (document.body.style.position === 'fixed') {
+                  document.body.style.position = '';
+                  document.body.style.top      = '';
+                  document.body.style.width    = '';
+                }
+              } catch (_) {}
             });
           } catch (_) {}
         }

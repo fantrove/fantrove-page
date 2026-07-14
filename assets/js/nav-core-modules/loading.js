@@ -361,9 +361,57 @@
     /**
      * v4: Internal — actually remove overlay DOM + FVL instance.
      * Split from hideInstant() so the rAF guard can call it deferred.
+     *
+     * v1.7.3 FIX (scroll-lock restore):
+     *   Previously this method removed the DOM element + FVL instance
+     *   from the registry but NEVER restored the body scroll-lock styles
+     *   that FVL applied when `lockScroll: true` (the default for
+     *   fullscreen mode). The result: after the first navigation on
+     *   pages that use ContentService (e.g. /data/verse/discover/),
+     *   `body.style.position` remained `fixed` forever, making the page
+     *   unscrollable. Other pages (home, etc.) don't use nav-core's
+     *   navigation flow, which is why only the discover page was affected.
+     *
+     *   Fix: mirror the cleanup that FVL._cleanup() and _forceReset()
+     *   already do — restore `position`/`top`/`width` on <body> and
+     *   scroll back to the saved offset BEFORE removing the instance.
+     *   Also add a defensive sweep in case the FVL instance was already
+     *   removed from the registry (e.g. by a prior _forceReset) while
+     *   the body styles were still locked.
      */
     _removeOverlayNow: function (fvl) {
       if (!fvl) fvl = _fvl();
+
+      // ── Restore body scroll-lock (primary fix) ───────────────────────────
+      // We MUST read the instance BEFORE removing it from the registry,
+      // because the instance holds `_lockedScrollY` (the saved scroll offset).
+      var inst = null;
+      if (fvl) {
+        try { inst = fvl.modules().State.getInstance(DEFAULT_ID); } catch (_) {}
+      }
+      if (inst && inst.mode === 'fullscreen' && inst._lockedScrollY != null) {
+        try {
+          document.body.style.position = '';
+          document.body.style.top      = '';
+          document.body.style.width    = '';
+          window.scrollTo(0, inst._lockedScrollY);
+          inst._lockedScrollY = null;
+        } catch (_) {}
+      } else {
+        // Defensive sweep: if no instance was found (e.g. already removed
+        // by an earlier _forceReset) but the body is still locked from a
+        // previous show(), unlock it so the page can scroll again.
+        // We only touch the three properties FVL ever sets; any other
+        // inline body styles are left untouched.
+        try {
+          if (document.body.style.position === 'fixed') {
+            document.body.style.position = '';
+            document.body.style.top      = '';
+            document.body.style.width    = '';
+          }
+        } catch (_) {}
+      }
+
       // ลบ DOM ทันที — ไม่ผ่าน FVL animation
       if (this._el) {
         try {
@@ -371,14 +419,10 @@
         } catch (_) {}
         this._el = null;
       }
-      if (fvl) {
+      if (fvl && inst) {
         try {
-          var modules = fvl.modules();
-          var inst = modules.State.getInstance(DEFAULT_ID);
-          if (inst) {
-            inst.state = 'destroyed';
-            modules.State.removeInstance(DEFAULT_ID);
-          }
+          inst.state = 'destroyed';
+          fvl.modules().State.removeInstance(DEFAULT_ID);
         } catch (_) {}
       }
     },
