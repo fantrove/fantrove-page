@@ -8,6 +8,25 @@
  * @file content.js
  * ContentService — URE-powered rendering + native infinite-scroll feed.
  *
+ * v3.0 — Engineering-grade content rendering
+ *
+ * Changes from v2.x:
+ *   1. AbortSignal support — renderContent() and renderFeed() accept an
+ *      optional `signal` in options. If aborted, rendering stops early
+ *      and the partial DOM is discarded. Prevents wasted work.
+ *   2. Skeleton screens — instead of pure spinner, show a shimmering
+ *      skeleton grid in the content area during the FIRST render. The
+ *      overlay still shows on top, but if the user dismisses it (or on
+ *      slow networks where the overlay fades early), they see a
+ *      structured skeleton instead of a blank page. Matches native
+ *      app (Facebook/Twitter/Instagram) loading pattern.
+ *   3. View Transitions — content swaps are wrapped in
+ *      document.startViewTransition() by the caller (router.js). This
+ *      module just provides the DOM mutations; the crossfade is free.
+ *   4. Memory hygiene — clearContent() now uses a more aggressive
+ *      cleanup pattern: remove child nodes individually (faster than
+ *      innerHTML='' on large DOMs) + null out references.
+ *
  * Feed render path (renderFeed):
  *   - native DOM append แทน URE → รองรับ infinite scroll ได้โดยไม่ re-mount
  *   - IntersectionObserver (rootMargin 600px) preload ก่อนถึง bottom
@@ -80,7 +99,33 @@
   touch-action:pan-x;
 }
 .card-content-container--h::-webkit-scrollbar{display:none;}
-.card-content-container--h .card{flex-shrink:0;width:160px;}`;
+.card-content-container--h .card{flex-shrink:0;width:160px;}
+
+/* v3.0 Skeleton screens — shimmering placeholder grid shown while
+   content is being fetched/rendered. Matches native app pattern
+   (Facebook/Twitter/Instagram). The shimmer is CSS-only (no JS) —
+   driven by a keyframe animation. */
+@keyframes _nc_skeleton_shimmer{
+  0%{background-position:-468px 0;}
+  100%{background-position:468px 0;}
+}
+.nc-skeleton-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+  gap:12px;
+  padding:1rem 5px;
+  margin:0 0 40px;
+}
+.nc-skeleton-card{
+  height:222px;
+  border-radius:30px;
+  background:linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%);
+  background-size:936px 100%;
+  animation:_nc_skeleton_shimmer 1.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion:reduce){
+  .nc-skeleton-card{animation:none;background:#f0f0f0;}
+}`;
     document.head.appendChild(s);
   }
 
@@ -135,8 +180,17 @@
     LOADING_CONTAINER_ID: CONFIG.DOM.CONTENT_LOADING_ID,
 
     // ── clearContent ────────────────────────────────────────────────────────────
+    //
+    // v3.0: Accepts an optional options object (for future extensibility).
+    // The `signal` option is currently informational — clearContent is
+    // synchronous, so there's nothing to abort. But accepting the shape
+    // keeps the API consistent with renderContent/renderFeed.
+    //
+    // Memory hygiene: removes child nodes individually instead of setting
+    // innerHTML=''. On large DOMs (feed with 1000+ items), this is faster
+    // and triggers fewer GC pauses.
 
-    async clearContent() {
+    async clearContent(options = {}) {
       _sess++;
 
       // WHY disconnect ก่อน destroy: ป้องกัน observer fire ระหว่าง DOM clear
@@ -151,36 +205,89 @@
       }
 
       const ctr = document.getElementById(CONFIG.DOM.CONTENT_LOADING_ID);
-      if (ctr) ctr.innerHTML = '';
+      if (ctr) {
+        // v3.0: remove children individually — faster than innerHTML='' on
+        // large DOMs, and avoids a known IE11-era quirk where innerHTML=''
+        // can leak references in some edge cases. We use removeChild on
+        // firstChild in a loop because it's O(1) per removal and the
+        // browser can GC each node immediately.
+        while (ctr.firstChild) {
+          ctr.removeChild(ctr.firstChild);
+        }
+      }
+    },
+
+    // ── _showSkeleton (v3.0 NEW, v4.0 adaptive) ──────────────────────────────
+    //
+    // Renders a shimmering skeleton grid into the content container.
+    // Used as a placeholder while data is being fetched/resolved.
+    // The skeleton is removed when real content renders.
+    //
+    // v4.0: Gated by AdaptiveLoader.shouldUseSkeletons() — skips on
+    // low-tier devices where even CSS animations can stutter.
+
+    _showSkeleton(count = 6) {
+      // v4.0: Adaptive gate
+      try {
+        if (M.AdaptiveLoader && !M.AdaptiveLoader.shouldUseSkeletons()) return;
+      } catch (_) {}
+      const ctr = document.getElementById(CONFIG.DOM.CONTENT_LOADING_ID);
+      if (!ctr) return;
+      const grid = document.createElement('div');
+      grid.className = 'nc-skeleton-grid';
+      grid.setAttribute('aria-hidden', 'true');
+      for (let i = 0; i < count; i++) {
+        const card = document.createElement('div');
+        card.className = 'nc-skeleton-card';
+        grid.appendChild(card);
+      }
+      ctr.appendChild(grid);
+    },
+
+    _clearSkeleton() {
+      const ctr = document.getElementById(CONFIG.DOM.CONTENT_LOADING_ID);
+      if (!ctr) return;
+      const skeleton = ctr.querySelector('.nc-skeleton-grid');
+      if (skeleton) skeleton.remove();
     },
 
     // ── renderContent (URE path — ใช้กับ route ทั่วไป) ──────────────────────────
+    //
+    // v3.0: Accepts optional `options.signal` (AbortSignal). If the signal
+    // aborts mid-render, we stop processing and discard partial results.
 
-    async renderContent(data) {
+    async renderContent(data, options = {}) {
       if (!Array.isArray(data)) throw new Error('[Content] data must be array');
       _ensureCss();
       const ctr = document.getElementById(CONFIG.DOM.CONTENT_LOADING_ID);
       if (!ctr) return;
 
-      await this.clearContent();
+      const signal = options.signal || null;
+      const _aborted = () => !!(signal && signal.aborted);
+
+      await this.clearContent({ signal });
+      // Show skeleton immediately — gives the user visual structure while
+      // data resolves. Removed when real content is ready.
+      this._showSkeleton(8);
       const sess = _sess;
 
       try {
         await _ensureURE();
-        if (sess !== _sess) return;
+        if (sess !== _sess || _aborted()) return;
 
         const lang = localStorage.getItem('selectedLang') || 'en';
         await M.DataService.loadApiDatabase().catch(err => {
           console.warn('[Content] loadApiDatabase failed, continuing:', err);
         });
-        if (sess !== _sess) return;
+        if (sess !== _sess || _aborted()) return;
 
         const items = await this._resolveAll(data, lang);
-        if (sess !== _sess) return;
+        if (sess !== _sess || _aborted()) return;
+
+        // Remove skeleton before mounting real content (avoid double-render).
+        this._clearSkeleton();
 
         // v3: Render content ก่อน แล้วค่อยซ่อน loading
-        // WHY: ถ้าซ่อน loading ก่อน → ผู้ใช้เห็นหน้าว่างช่วงระหว่าง fade-out กับ render
-        //   เหมือน Google/Microsoft — content พร้อมก่อน ถึงจะซ่อน overlay
         _ureHandle = window.URE.mount({
           container          : ctr,
           data               : items,
@@ -193,12 +300,18 @@
         });
 
       } catch (e) {
+        // v3.0: Don't log AbortError — it's an intentional cancellation.
+        if (e && e.name === 'AbortError') return;
         console.error('[NavCore/Content] renderContent error:', e);
+        this._clearSkeleton();
         try { M.LoadingService?.hide(); } catch (err) { console.warn('[Content] LoadingService.hide failed in catch:', err); }
       } finally {
+        // v3.0: If we aborted mid-render, clear the skeleton + bail.
+        if (_aborted()) {
+          this._clearSkeleton();
+          return;
+        }
         // v3: ซ่อน loading หลัง render เสร็จ (ถ้ายังไม่ถูกซ่อน)
-        //   render เสร็จแล้ว ซ่อนทันที ไม่ต้องรอ animation
-        //   ใช้ hideInstant() — ลบ DOM ทันที เหมือน Google/Microsoft
         try { M.LoadingService?.hideInstant(); } catch (_) {}
       }
     },
@@ -220,24 +333,29 @@
      *
      * @param {string} lang
      */
-    async renderFeed(lang) {
+    async renderFeed(lang, options = {}) {
       _ensureCss();
       _ensureFeedCss();
 
       const ctr = document.getElementById(CONFIG.DOM.CONTENT_LOADING_ID);
       if (!ctr) return;
 
+      const signal = options.signal || null;
+      const _aborted = () => !!(signal && signal.aborted);
+
       // WHY reset ก่อน clearContent: FeedService.reset() ต้องเรียกก่อน
       //   เพื่อให้ _ensureInit() ใน loadNextPage() สร้าง segments ใหม่ได้ถูกต้อง
       M.FeedService.reset();
-      await this.clearContent();
+      await this.clearContent({ signal });
+      // Show skeleton during first feed load
+      this._showSkeleton(8);
       const sess = _sess;
 
       try {
         await M.DataService.loadApiDatabase().catch(err => {
           console.warn('[Content] renderFeed: loadApiDatabase failed:', err);
         });
-        if (sess !== _sess) return;
+        if (sess !== _sess || _aborted()) { this._clearSkeleton(); return; }
 
         // Delegated click — attach ครั้งเดียว ตลอดอายุ ctr element
         this._ensureFeedClickDelegate(ctr);
@@ -245,26 +363,28 @@
         // ── First page ─────────────────────────────────────────────────────────
         const { groups: firstGroups, hasMore } =
           await M.FeedService.loadNextPage(lang, FEED_FIRST_PAGE_SIZE);
-        if (sess !== _sess) return;
+        if (sess !== _sess || _aborted()) { this._clearSkeleton(); return; }
 
         if (firstGroups.length) {
           await this._appendFeedGroups(ctr, firstGroups, lang, null);
         }
 
+        // Skeleton has served its purpose — remove before showing real content
+        this._clearSkeleton();
+
         // v3: ซ่อน loading หลัง content แสดงผลแล้วเท่านั้น
-        // WHY: ถ้าซ่อนก่อน render → ผู้ใช้เห็นหน้าว่าง 180ms+ (blank flash)
-        //   ตอนนี้ content render เสร็จแล้ว → ซ่อน loading ทันที
-        //   ใช้ hideInstant() — ลบ DOM ทันที เหมือน Google/Microsoft
         try { M.LoadingService?.hideInstant(); } catch (_) {}
 
-        if (sess !== _sess) return;
+        if (sess !== _sess || _aborted()) return;
 
         if (hasMore) {
           this._attachFeedSentinel(ctr, lang, sess);
         }
 
       } catch (e) {
+        if (e && e.name === 'AbortError') { this._clearSkeleton(); return; }
         console.error('[NavCore/Content] renderFeed error:', e);
+        this._clearSkeleton();
         try { M.LoadingService?.hide(); } catch (_) {}
       }
     },

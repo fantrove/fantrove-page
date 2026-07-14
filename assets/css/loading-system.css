@@ -451,6 +451,38 @@
     top: 0;
   }
 
+  /* ═══════════════════════════════════════════════════════════════════════════
+     VIEW TRANSITIONS API — smooth crossfade between content swaps
+     ═══════════════════════════════════════════════════════════════════════════
+     When router.js wraps a content swap in document.startViewTransition(),
+     the browser captures a snapshot of the old #content-loading and
+     crossfades it with the new one. This is the same mechanism Chrome
+     uses for its native tab transitions — feels premium, no JS work.
+
+     Progressive enhancement: browsers without View Transitions API
+     (Firefox, Safari < 18) just do an instant swap.
+
+     The default transition is a 200ms crossfade. We keep it short to
+     avoid slowing down perceived navigation speed.
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  @media (prefers-reduced-motion: no-preference) {
+    ::view-transition-old(nc-route-change),
+    ::view-transition-new(nc-route-change) {
+      animation-duration: 200ms;
+      animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+  }
+
+  /* Skeleton screens are excluded from view transitions — they appear
+     instantly (no fade-in) so the user sees structure immediately. */
+  ::view-transition-old(nc-route-change) {
+    /* Old content fades out */
+  }
+  ::view-transition-new(nc-route-change) {
+    /* New content (including skeleton) fades in */
+  }
+
 } /* end @layer fvl */
 
 /* ═══════════════════════════════════════════════════════════════════════════

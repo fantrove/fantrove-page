@@ -31,6 +31,10 @@
     SubNavService, ButtonService,
     RouterService, NavigationService,
     CopyService, FeedService,
+    PerformanceMonitorService,
+    // v4.0 new modules
+    ReactiveStore, TracingService, CircuitBreakerService,
+    AdaptiveLoader, PrefetchService, A11yService,
   } = M;
 
   // ── InitService ───────────────────────────────────────────────────────────────
@@ -65,6 +69,39 @@
         PerformanceService.setupErrorBoundary();
         ScrollService.init();
         PerformanceService.init();
+
+        // v4.0: Initialize new foundation services
+        // AdaptiveLoader: detect device capability + install network listener
+        try { AdaptiveLoader && AdaptiveLoader.detect(); } catch (_) {}
+        try { AdaptiveLoader && AdaptiveLoader._installNetworkListener(); } catch (_) {}
+
+        // A11yService: install skip link + live region + focus-visible polyfill
+        try { A11yService && A11yService.init(); } catch (_) {}
+
+        // ReactiveStore: initialize with the current State object so
+        // modules can subscribe to changes
+        try {
+          if (ReactiveStore && !ReactiveStore.isInitialized) {
+            ReactiveStore.init({
+              navigation: State.navigation,
+              buttons: State.buttons,
+              isBootstrapping: State.isBootstrapping,
+            });
+          }
+        } catch (_) {}
+
+        // v3.0: Start the performance monitor — installs LoAF/INP/CLS/LCP
+        // observers + the self-healing watchdog. Must run after
+        // LoadingService + RouterService are loaded (Phase 3) so the
+        // watchdog can inspect their state.
+        // v4.0: Gate by AdaptiveLoader — skip on low-tier devices to
+        // save the ~1ms/long-task observer overhead.
+        try {
+          if (PerformanceMonitorService && AdaptiveLoader &&
+              AdaptiveLoader.shouldObservePerformance()) {
+            PerformanceMonitorService.start();
+          }
+        } catch (_) {}
 
         window.addEventListener('online', () => {
           Utils.showNotification('การเชื่อมต่อกลับมาแล้ว', 'success');
@@ -190,12 +227,20 @@
       window._navCore_contentManager       = ContentService;
       window._navCore_scrollManager        = ScrollService;
       window._navCore_performanceOptimizer = PerformanceService;
+      window._navCore_performanceMonitor   = PerformanceMonitorService;
       window._navCore_navigationManager    = RouterService;
       window._navCore_buttonManager        = ButtonService;
       window._navCore_subNavManager        = SubNavService;
       window._navCore_router               = RouterService;
       window._navCore_feedService          = FeedService;
       window._navCore_elements             = State.elements;
+      // v4.0 new services
+      window._navCore_reactiveStore        = ReactiveStore;
+      window._navCore_tracing              = TracingService;
+      window._navCore_circuitBreaker       = CircuitBreakerService;
+      window._navCore_adaptiveLoader       = AdaptiveLoader;
+      window._navCore_prefetchService      = PrefetchService;
+      window._navCore_a11y                 = A11yService;
 
       // ── Backward-compat aliases (_headerV2_*) ──────────────────────────────
       window._headerV2_utils                = Utils;
