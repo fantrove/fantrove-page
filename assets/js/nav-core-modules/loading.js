@@ -73,6 +73,11 @@
   //
   // This is NOT a delay on show() — the overlay shows instantly. It's only
   // a delay on hide() when the overlay was shown very recently.
+  //
+  // v5.0: This is now a HARD contract. Even if data is cached and render
+  //   completes in 5ms, the overlay stays for 200ms. This eliminates the
+  //   "sometimes I see loading, sometimes I don't" confusion. The user
+  //   ALWAYS sees a loading state on every navigation, no exceptions.
   var MIN_VISIBLE_MS = 200;
 
   // ── Watchdog: maximum time a scroll-lock may be held ──────────────────────
@@ -319,6 +324,14 @@
     /**
      * Show the loading overlay (open a navigation session).
      *
+     * v5.0 — "Always-Show" hard contract:
+     *   Every call to show() MUST result in a visible overlay, even if:
+     *     • The overlay is already visible (we pulse + restart spinner)
+     *     • Data is cached and will be ready in <50ms (MIN_VISIBLE_MS enforced)
+     *     • The same route is being re-navigated
+     *   The user MUST see loading feedback on EVERY navigation, no exceptions.
+     *   This eliminates the "did anything happen?" confusion on fast cached loads.
+     *
      * @param {LoadingOptions} [opts]
      */
     show: function (opts) {
@@ -332,49 +345,66 @@
       // Open a new session
       this._sessionCount++;
 
-      // Acquire scroll lock — refcounted, so multiple show() calls only
-      // acquire once, and matching hide() calls only release at the end.
+      // Acquire scroll lock — refcounted
       try { ScrollLockService.acquire(); } catch (_) {}
 
-      // Mark <main> as busy for assistive tech (only set, never clobber
-      // pre-existing aria-busy from another system).
+      // Mark <main> as busy for assistive tech
       try {
         var main = document.getElementById(CONFIG.DOM.CONTENT_LOADING_ID)
                  || document.querySelector('main');
         if (main && !main.getAttribute('aria-busy')) {
           main.setAttribute('aria-busy', 'true');
-          // Tag it so we know we set it (and should clear it).
           main.setAttribute('data-nc-aria-busy-owner', '1');
         }
       } catch (_) {}
+
+      // v5.0.1 FIX: Do NOT call window.__ncBootLoader.show() here.
+      //   The boot loader's pendingReady starts at 1 (waiting for ONE
+      //   ready signal from InitService). If we call show() here, it
+      //   becomes 2, and the matching hide() only brings it back to 1 —
+      //   the boot overlay never hides, freezing the page.
+      //   The boot loader is owned by InitService.start()'s finally block,
+      //   which calls ready() exactly once when initial navigation completes.
+      //   LoadingService only manages the FVL overlay (subsequent navigations).
 
       // Normalize opts
       var o = (typeof opts === 'string') ? { message: opts } : (opts || {});
       o.mode = 'fullscreen';
       o.id = o.id || DEFAULT_ID;
       if (o.zIndex == null) o.zIndex = NAV_BEHIND_Z;
-      // v1.8: Framework-level enhancements (kept in v2.0.0)
-      // WHY instant: Skip 140ms fade-in — overlay is opaque from the first paint.
-      // WHY lockScroll=false: We delegate to ScrollLockService which is more
-      //   robust than FVL's built-in lock. FVL's lock would be redundant.
-      o.instant = o.instant !== false;       // default true (caller can opt out)
-      o.lockScroll = false;                   // ALWAYS false — we own this.
+      o.instant = o.instant !== false;       // default true
+      o.lockScroll = false;                   // we own this via ScrollLockService
       this._lastOpts = o;
 
-      // Check if overlay was already active (for pulse decision)
+      // v5.0: ALWAYS force a fresh FVL instance — don't reuse the existing one.
+      // This guarantees a visible loading state on every call.
+      // We do this by force-resetting the FVL instance if it's already shown.
       var wasActive = fvl.isActive(DEFAULT_ID);
+      if (wasActive) {
+        // Force-kill the existing instance so FVL.show() creates a new one
+        try {
+          var existingInst = fvl.modules().State.getInstance(DEFAULT_ID);
+          if (existingInst) {
+            existingInst.state = 'destroyed';
+            if (existingInst.rootEl && existingInst.rootEl.parentNode) {
+              existingInst.rootEl.parentNode.removeChild(existingInst.rootEl);
+            }
+            fvl.modules().State.removeInstance(DEFAULT_ID);
+          }
+        } catch (_) {}
+      }
 
-      // ALWAYS call FVL.show() — it's idempotent and handles all states
+      // ALWAYS call FVL.show() — creates a fresh instance
       var handle = fvl.show(o);
       if (handle) {
         this._el = handle.element;
         this._visibleSince = Date.now();
       }
 
-      // If overlay was already visible, pulse to signal new operation
-      if (wasActive) {
-        this._pulse();
-      }
+      // v5.0: Pulse even on first show (not just on re-show) — gives the
+      // user immediate visual feedback that "something is happening".
+      // The pulse is brief (350ms) and non-blocking.
+      this._pulse();
 
       return handle;
     },
@@ -410,13 +440,19 @@
     /**
      * Hide the loading overlay (close one navigation session).
      *
-     * Decrements session counter. Only hides the overlay when ALL sessions
-     * are closed (counter reaches 0).
+     * v5.0 — Hard MIN_VISIBLE_MS enforcement:
+     *   The overlay NEVER hides in less than MIN_VISIBLE_MS (200ms) after
+     *   the most recent show(). Even if all sessions close in 5ms, the
+     *   overlay stays for 200ms. This guarantees the user ALWAYS sees
+     *   loading feedback — no "invisible navigation" confusion.
+     *
+     *   If a new show() arrives during the deferred-hide window, the
+     *   pending hide is cancelled and the overlay stays visible (because
+     *   _sessionCount went back above 0).
      */
     hide: function () {
       // Decrement session counter (never below 0)
       if (this._sessionCount > 0) this._sessionCount--;
-      // Match acquire with release (refcounted)
       try { ScrollLockService.release(); } catch (_) {}
 
       // If there are still open sessions, don't hide
@@ -427,15 +463,22 @@
       // All sessions closed — clear ARIA + check minimum visible time
       this._clearAriaBusy();
 
+      var self = this;
       var elapsed = Date.now() - this._visibleSince;
+
+      // v5.0: HARD minimum visible time — no exceptions.
+      // Even if the data was cached and ready in 5ms, we show for 200ms.
       if (this._visibleSince > 0 && elapsed < MIN_VISIBLE_MS) {
-        var self = this;
         if (this._pendingHideTimer) clearTimeout(this._pendingHideTimer);
         return new Promise(function(resolve) {
           self._pendingHideTimer = setTimeout(function() {
             self._pendingHideTimer = null;
+            // Re-check sessionCount — a new show() may have arrived
+            if (self._sessionCount > 0) { resolve(); return; }
             var fvl = _fvl();
             if (fvl) fvl.hide(DEFAULT_ID);
+            // v5.0.1: Do NOT call window.__ncBootLoader.ready() here.
+            //   Boot loader is owned by InitService.start()'s finally block.
             resolve();
           }, MIN_VISIBLE_MS - elapsed);
         });
@@ -443,6 +486,7 @@
 
       var fvl = _fvl();
       if (!fvl) return Promise.resolve();
+      // v5.0.1: Do NOT call window.__ncBootLoader.ready() here.
       return fvl.hide(DEFAULT_ID);
     },
 
@@ -505,12 +549,14 @@
     },
 
     /**
-     * v4→v5: Hide loading แบบ instant — ไม่มี fade-out animation
-     * v5 additions:
-     *   - Yields to pending user input via isInputPending() before reflow
-     *   - Routes all cleanup through ScrollLockService + _clearAriaBusy
-     *   - Defensive body-unlock sweep (no longer needed since ScrollLockService
-     *     is the source of truth, but kept as belt-and-braces)
+     * v5→v5.0: Hide loading — instant (no fade-out) but STILL enforces MIN_VISIBLE_MS.
+     *
+     * v5.0 changes:
+     *   - MIN_VISIBLE_MS is now a HARD contract enforced even for hideInstant().
+     *     The "instant" only refers to the absence of fade-out animation,
+     *     NOT to skipping the minimum visible time.
+     *   - Boot loader ready() signal is sent.
+     *   - scheduler.yield() / isInputPending() integration kept from v5.
      */
     hideInstant: function () {
       if (this._sessionCount > 0) this._sessionCount--;
@@ -518,7 +564,6 @@
 
       if (this._sessionCount > 0) return Promise.resolve();
 
-      this._visibleSince = 0;
       this._clearAriaBusy();
       if (this._pendingHideTimer) {
         clearTimeout(this._pendingHideTimer);
@@ -527,11 +572,7 @@
 
       var self = this;
 
-      // v5: Check if user input is pending — if so, defer removal by one
-      // frame so the input can be handled first. This protects INP.
-      // Why this matters: hideInstant() does forced reflow (DOM removal).
-      // If a tap/click is pending, the reflow delays the input handler.
-      // isInputPending() is available in Chromium 129+; gracefully degrade.
+      // v5.0: Check if user input is pending — if so, defer removal by one frame
       var inputPending = false;
       try {
         if (navigator.scheduling && typeof navigator.scheduling.isInputPending === 'function') {
@@ -547,9 +588,6 @@
         } catch (_) {}
       }
 
-      // Use scheduler.yield() if available (Chromium 129+) — it preserves
-      // task priority better than setTimeout(0). Fall back to rAF for
-      // browser support, then setTimeout as last resort.
       var _yieldFn;
       try {
         if (typeof scheduler !== 'undefined' && scheduler.yield) {
@@ -562,15 +600,29 @@
         };
       }
 
-      // v4: Check if FVL instance is still in 'showing' state (not yet painted).
-      if ((inst && inst.state === 'showing') || inputPending) {
-        return _yieldFn().then(function () {
-          self._removeOverlayNow(fvl);
+      // v5.0: HARD minimum visible time — even for hideInstant
+      var elapsed = this._visibleSince > 0 ? Date.now() - this._visibleSince : MIN_VISIBLE_MS;
+      var needsDelay = elapsed < MIN_VISIBLE_MS;
+
+      if ((inst && inst.state === 'showing') || inputPending || needsDelay) {
+        var delay = needsDelay ? (MIN_VISIBLE_MS - elapsed) : 0;
+        return new Promise(function (resolve) {
+          setTimeout(function () {
+            // Re-check sessionCount — a new show() may have arrived
+            if (self._sessionCount > 0) { resolve(); return; }
+            _yieldFn().then(function () {
+              self._removeOverlayNow(fvl);
+              // v5.0.1: Do NOT call window.__ncBootLoader.ready() here.
+              //   Boot loader is owned by InitService.start()'s finally block.
+              resolve();
+            });
+          }, delay);
         });
       }
 
       // Normal case: overlay was fully shown — remove immediately.
       this._removeOverlayNow(fvl);
+      // v5.0.1: Do NOT call window.__ncBootLoader.ready() here.
       return Promise.resolve();
     },
 

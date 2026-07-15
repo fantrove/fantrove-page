@@ -148,6 +148,10 @@
         } catch (_) {}
 
         // ── Phase 8: Initial navigation ────────────────────────────────────
+        // v5.0: This is where the boot loader's ready() signal will be sent.
+        //   navigateTo() shows the loading overlay (matching the boot loader's
+        //   pending count), and content.js's hideInstant() sends ready() when
+        //   content is rendered. The boot overlay persists until that moment.
         try {
           const url = window.location.search;
           if (!url || url === '?') {
@@ -168,12 +172,31 @@
           State.isBootstrapping         = false;
           window._navCore_bootstrapping = false;
           window._headerV2_bootstrapping = false;
+          // v5.0.1: ready() is called in finally block — no need here.
         }
 
       } catch (error) {
         console.error('[NavCore/Init] bootstrap error:', error);
         try { Utils.showErrorFullscreen(error, { label: 'App Bootstrap', title: 'เกิดข้อผิดพลาดในการโหลดแอพพลิเคชัน กรุณารีเฟรชหน้า' }); } catch (_) {}
+        // v5.0.1: ready() is called in finally block — no need here.
       } finally {
+        // v5.0.1 FIX: This is the SINGLE point where the boot loader's
+        //   ready() signal is sent. The boot loader starts with
+        //   pendingReady=1 (waiting for this exact call). Whether initial
+        //   navigation succeeded, failed, or threw at any phase — this
+        //   finally block runs and decrements pendingReady to 0, which
+        //   hides the boot overlay (after MIN_VISIBLE_MS).
+        //
+        //   Why NOT in LoadingService.show()/hide():
+        //     The boot loader is the INITIAL PAGE LOAD overlay, not a
+        //     per-navigation overlay. LoadingService manages the FVL
+        //     overlay (for subsequent navigations). Mixing the two caused
+        //     the v5.0 bug where pendingReady went 1 → 2 (show) → 1 (hide)
+        //     and never reached 0, freezing the page.
+        try {
+          if (window.__ncBootLoader) window.__ncBootLoader.ready();
+        } catch (_) {}
+
         try {
           if (typeof window.__removeInstantLoadingOverlay === 'function'
             && window.__instantLoadingOverlayShown) {

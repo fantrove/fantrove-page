@@ -421,7 +421,20 @@
         }
       } catch (_) {}
 
+      // v5.0: ALWAYS show loading — no exceptions, no "if cached" branch.
+      // This is the hard contract: every navigation (button click, popstate,
+      // initial load, same-route re-navigation) shows the loading overlay
+      // for at least MIN_VISIBLE_MS (200ms), even if data is cached.
+      // The user MUST see loading feedback on EVERY interaction.
+      //
+      // We also announce to A11y so screen reader users know a navigation
+      // started (they can't see the visual overlay).
+      try { A11y && A11y.announce('Loading...'); } catch (_) {}
+
       // ── Phase 0: reset any stuck state ──────────────────────────────────
+      // NOTE: _forceReset() clears the session counter, so the show() below
+      // starts fresh. This is important — if we didn't reset, rapid clicks
+      // would accumulate sessions and the overlay would never hide.
       try { M.LoadingService?._forceReset(); } catch (_) {}
 
       // ── Phase 1: abort previous navigation ──────────────────────────────
@@ -438,6 +451,9 @@
       const myGen = this._navGen;
       this._transition(NAV_STATE.VALIDATING);
 
+      // v5.0: ALWAYS show loading overlay — this is the contract.
+      // Show happens BEFORE _setNavLoading so the overlay is the FIRST
+      // thing the user sees on a new navigation.
       this._setNavLoading(true);
       try { M.LoadingService?.show(); } catch (_) {}
 

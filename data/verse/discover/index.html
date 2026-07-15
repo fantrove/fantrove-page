@@ -15,6 +15,153 @@
   <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
   <link rel="icon" type="image/x-icon" href="/assets/images/fantrove-verse360.ico" />
 
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       v5.0 INLINE BOOT LOADER — shows loading overlay IMMEDIATELY at parser time.
+       This runs BEFORE any other script or stylesheet loads, so the user sees
+       "Loading..." in the very first paint — no white flash.
+       The overlay persists until nav-core's content.js signals "ready" via
+       LoadingService.hideInstant() → window.__ncBootLoader.ready().
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <style>
+    /* Boot loader CSS — inlined so it doesn't depend on any external request */
+    #nc-boot-overlay{position:fixed;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;background:#ffffff;z-index:999999;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#3c4043;contain:layout style;transition:opacity 180ms cubic-bezier(0.4,0,0.2,1);}
+    #nc-boot-overlay[aria-hidden="true"]{opacity:0;pointer-events:none;}
+    @media (prefers-reduced-motion:reduce){#nc-boot-overlay{transition:none;}}
+    /* Hide body content until boot loader is done — prevents flash of unstyled content */
+    html.nc-booting body{visibility:hidden;}
+    html.nc-booting #nc-boot-overlay{visibility:visible;}
+  </style>
+  <script>
+    // v5.0 Inline Boot Loader — runs at parser time, before any other script
+    (function () {
+      'use strict';
+      if (window.__ncBootLoader) return; // guard
+
+      var OVERLAY_ID = 'nc-boot-overlay';
+      var MIN_VISIBLE_MS = 200;
+      var MAX_VISIBLE_MS = 30000;
+      var _overlay = null;
+      var _shownAt = 0;
+      var _pendingReady = 1;
+      var _hideTimer = null;
+      var _safetyTimer = null;
+      var _forceHidden = false;
+
+      function _createOverlay() {
+        if (_overlay) return _overlay;
+        if (_forceHidden) return null;
+        _overlay = document.createElement('div');
+        _overlay.id = OVERLAY_ID;
+        _overlay.setAttribute('role', 'status');
+        _overlay.setAttribute('aria-live', 'polite');
+        _overlay.setAttribute('aria-busy', 'true');
+        var svg = '<svg width="68" height="68" viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+          '<circle cx="26" cy="26" r="22" stroke="#e8f5ef" stroke-width="3.5" fill="none"/>' +
+          '<circle cx="26" cy="26" r="22" stroke="#13b47f" stroke-width="3.5" stroke-linecap="round" ' +
+                  'stroke-dasharray="88 132" fill="none" transform="rotate(-90 26 26)">' +
+            '<animateTransform attributeName="transform" type="rotate" from="0 26 26" to="360 26 26" dur="0.7s" repeatCount="indefinite"/>' +
+          '</circle></svg>';
+        var text = document.createElement('div');
+        text.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:6px;';
+        var msg = document.createElement('div');
+        msg.id = 'nc-boot-msg';
+        msg.style.cssText = 'font-size:16px;font-weight:600;text-align:center;line-height:1.4;';
+        msg.textContent = 'Loading...';
+        text.appendChild(msg);
+        _overlay.innerHTML = svg;
+        _overlay.appendChild(text);
+        document.documentElement.appendChild(_overlay);
+        _shownAt = Date.now();
+        // Mark <html> as booting so body content is hidden
+        document.documentElement.classList.add('nc-booting');
+        _safetyTimer = setTimeout(function () {
+          if (_overlay && _overlay.parentNode) {
+            console.warn('[BootLoader] Auto-hide after ' + MAX_VISIBLE_MS + 'ms');
+            _forceHide();
+          }
+        }, MAX_VISIBLE_MS);
+        return _overlay;
+      }
+
+      function _show() {
+        if (_forceHidden) return;
+        _pendingReady++;
+        if (_overlay) {
+          _overlay.style.display = 'flex';
+          _overlay.style.opacity = '1';
+        } else {
+          _createOverlay();
+        }
+      }
+
+      function _ready() {
+        if (_pendingReady > 0) _pendingReady--;
+        if (_pendingReady > 0) return;
+        var elapsed = Date.now() - _shownAt;
+        if (elapsed < MIN_VISIBLE_MS) {
+          if (_hideTimer) clearTimeout(_hideTimer);
+          _hideTimer = setTimeout(_doHide, MIN_VISIBLE_MS - elapsed);
+        } else {
+          _doHide();
+        }
+      }
+
+      function _doHide() {
+        if (!_overlay) return;
+        _overlay.style.opacity = '0';
+        // Remove the "booting" class so body content becomes visible
+        document.documentElement.classList.remove('nc-booting');
+        setTimeout(function () {
+          if (_overlay && _overlay.parentNode) {
+            _overlay.parentNode.removeChild(_overlay);
+          }
+          _overlay = null;
+          if (_safetyTimer) { clearTimeout(_safetyTimer); _safetyTimer = null; }
+        }, 180);
+      }
+
+      function _forceHide() {
+        _forceHidden = true;
+        if (_overlay && _overlay.parentNode) {
+          _overlay.parentNode.removeChild(_overlay);
+        }
+        _overlay = null;
+        document.documentElement.classList.remove('nc-booting');
+        if (_safetyTimer) { clearTimeout(_safetyTimer); _safetyTimer = null; }
+        if (_hideTimer) { clearTimeout(_hideTimer); _hideTimer = null; }
+      }
+
+      function _setMessage(msg, sub) {
+        var m = document.getElementById('nc-boot-msg');
+        if (m && msg) m.textContent = msg;
+      }
+
+      try { window.addEventListener('pagehide', _forceHide, { passive: true }); } catch (_) {}
+      try { window.addEventListener('beforeunload', _forceHide, { passive: true }); } catch (_) {}
+      try {
+        window.addEventListener('pageshow', function (ev) {
+          if (ev.persisted) {
+            _forceHidden = false;
+            _pendingReady = 1;
+            _createOverlay();
+          }
+        }, { passive: true });
+      } catch (_) {}
+
+      // Create overlay IMMEDIATELY (during <head> parse)
+      _createOverlay();
+
+      window.__ncBootLoader = Object.freeze({
+        show: _show,
+        ready: _ready,
+        setMessage: _setMessage,
+        forceHide: _forceHide,
+        get isVisible() { return !!(_overlay && _overlay.parentNode); },
+        get pendingReady() { return _pendingReady; },
+      });
+    })();
+  </script>
+
   <!-- 1. Tokens ก่อนสุด -->
   <link rel="preload" href="/assets/css/tokens.css" as="style">
   <link rel="stylesheet" href="/assets/css/tokens.css">
