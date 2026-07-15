@@ -7,29 +7,12 @@
  * @file data.js
  * DataService — data fetching, caching, and shared index management.
  *
- * v3.0 — Engineering-grade data layer
- *
- * Changes from v2.x:
- *   1. AbortSignal propagation — pass `signal` in options to abort in-flight
- *      fetches. Caller (router.js) aborts on navigation supersede.
- *   2. Stale-while-revalidate — getCached() returns stale data immediately,
- *      a background refetch refreshes the cache. Matches SWR pattern from
- *      Vercel's swr library.
- *   3. LRU cache eviction — Map is bounded to MAX_CACHE_ENTRIES (200).
- *      Oldest entries evicted first (Map preserves insertion order).
- *   4. Better dedup — in-flight requests share the SAME Promise (not just
- *      a flag). Concurrent callers await the same promise → 1 network
- *      round-trip per URL, not N.
- *   5. Exponential backoff with jitter — retry delays are now
- *      `base * 2^attempt + random(0, base)` instead of fixed [400,1200,2400].
- *      Prevents thundering-herd on server recovery.
- *   6. AbortError handling — if a fetch is aborted, we DON'T show the error
- *      fullscreen (it's an intentional cancellation, not a failure).
- *
  * v2.1 — เพิ่ม getTypeCategories(typeId)
  *   Public method สำหรับ ContentService._resolveSource() —
  *   ดึงรายการ [{id, name}] ของ categories ทั้งหมดใน type นั้น
  *   โดยใช้ cache จาก _loadCategoryIndex ที่มีอยู่แล้ว (ไม่ fetch ซ้ำ)
+ *
+ * (patched: _performFetch has real retry, _buildSharedIndex clears rejected promise)
  *
  * @module data
  * @depends {config.js, state.js, utils.js}
@@ -62,12 +45,6 @@
     });
   }
 
-  // Maximum number of entries in `cache`. When this is exceeded, oldest
-  // entries are evicted (Map preserves insertion order in JS).
-  // WHY 200: each entry is small (a JSON object). 200 entries × ~5KB avg
-  //   = ~1MB memory ceiling. Generous for typical navigation patterns.
-  const MAX_CACHE_ENTRIES = 200;
-
   const DataService = {
 
     cache: new Map(),
@@ -80,8 +57,6 @@
     _sharedIndex:        null,
     _sharedIndexPromise: null,
     _fetchQueue:      [],
-    // v3.0: in-flight promise dedup — key → Promise. Concurrent callers
-    //   for the same URL await the same promise → 1 network round-trip.
     _fetchInProgress: new Map(),
     _queueProcessing: false,
     _queueDirty:      false,
@@ -126,45 +101,15 @@
     },
 
     // ── Cache helpers ───────────────────────────────────────────────────────────
-    //
-    // v3.0 changes:
-    //   • LRU eviction — when cache exceeds MAX_CACHE_ENTRIES, the oldest
-    //     entry is deleted before a new one is added.
-    //   • SWR — getCached() returns stale data even after expiry, but tags
-    //     it as stale so the caller can refetch in the background.
-    //   • Refresh-on-access — if data is returned as stale, kick off a
-    //     background refetch (non-blocking).
 
     getCached(key) {
       const cached = this.cache.get(key);
       if (!cached) return null;
-      if (Date.now() > cached.expiry) {
-        // v3.0 SWR: stale data is still usable. Tag it and return.
-        // The caller (e.g. renderContent) will use it immediately; the
-        // background refetch will update the cache for next time.
-        return { data: cached.data, stale: true };
-      }
+      if (Date.now() > cached.expiry) { this.cache.delete(key); return null; }
       return cached.data;
     },
 
-    /**
-     * v3.0: Get cached data as-is, ignoring expiry. Used by SWR refetch
-     * decisioning.
-     */
-    _peekCached(key) {
-      const cached = this.cache.get(key);
-      return cached ? cached.data : null;
-    },
-
     setCache(key, data, ttl = CONFIG.FETCH.CACHE_DURATION) {
-      // LRU eviction: if cache is at capacity, evict the oldest entry.
-      // Map iteration is in insertion order, so keys().next().value is
-      // the oldest. We delete BEFORE setting the new key so the new key
-      // becomes the most-recently-inserted.
-      if (this.cache.size >= MAX_CACHE_ENTRIES && !this.cache.has(key)) {
-        const oldestKey = this.cache.keys().next().value;
-        this.cache.delete(oldestKey);
-      }
       this.cache.set(key, { data, expiry: Date.now() + ttl });
     },
 
@@ -181,147 +126,51 @@
       try { _getConDataService()?.invalidateCache?.(); } catch (_) {}
     },
 
-    // ── _performFetch: retry 3 ครั้ง + AbortSignal + exponential backoff ───────
-    //
-    // v3.0 changes:
-    //   • Accepts external AbortSignal (options.signal) and composes it
-    //     with the internal timeout controller. Either aborts → fetch aborts.
-    //   • Retry delays are now exponential with jitter: base * 2^attempt + rand.
-    //     Prevents thundering-herd when multiple clients retry simultaneously.
-    //   • AbortError is NOT retried (intentional cancellation).
-    //   • AbortError does NOT trigger showErrorFullscreen (not a real error).
-    //   • Dedup: if a fetch for this URL is already in-flight, await that
-    //     promise instead of starting a new request.
-    //
-    // v4.0 changes:
-    //   • Routes through CircuitBreakerService — if the server is failing
-    //     repeatedly, fail fast (return stale cache) instead of retrying.
-    //   • CircuitBreaker uses AWS decorrelated jitter for backoff timing.
-    //   • Fallback returns stale cache (if available) when circuit is open.
+    // ── _performFetch: ใส่ retry จริง 3 ครั้ง ────────────────────────────────────
+    // BUG FIX: เดิมลองแค่ครั้งเดียว — network blip ครั้งเดียวทำระบบพัง
+    // FIXED:   retry 3 ครั้ง ด้วย delay 400ms → 1200ms → 2400ms
 
     async _performFetch(url, options = {}) {
-      // v3.0 dedup: if a fetch for this URL is already in-flight, await it.
-      if (!options.signal && this._fetchInProgress.has(url)) {
-        return this._fetchInProgress.get(url);
-      }
-
       const cached = this.getCached(url);
-      if (cached && !cached.stale) return cached.data;
-      const staleFallback = cached && cached.stale ? cached.data : null;
+      if (cached) return cached;
 
-      // v4.0: Get or create a circuit breaker for this URL's host
-      var breaker = null;
-      try {
-        if (M.CircuitBreakerService) {
-          // Use host as breaker name so all calls to same host share state
-          var host = 'default';
-          try { host = new URL(url, window.location.href).host || 'default'; } catch (_) {}
-          breaker = M.CircuitBreakerService.getOrCreate('fetch:' + host, {
-            fallback: function () {
-              if (staleFallback != null) return staleFallback;
-              throw new Error('CircuitOpen: no fallback available');
-            },
-          });
-        }
-      } catch (_) {}
-
-      var fetchPromise;
-      if (breaker) {
-        // Route through circuit breaker
-        fetchPromise = breaker.execute(() =>
-          this._performFetchInner(url, options, staleFallback)
-        );
-      } else {
-        // No breaker — call directly
-        fetchPromise = this._performFetchInner(url, options, staleFallback);
-      }
-
-      if (!options.signal) {
-        this._fetchInProgress.set(url, fetchPromise);
-        fetchPromise.finally(() => this._fetchInProgress.delete(url));
-      }
-      return fetchPromise;
-    },
-
-    async _performFetchInner(url, options, staleFallback) {
-      // v3.0 exponential backoff with jitter.
-      // Base = 400ms, max retries = 3, jitter = ±100ms.
-      //   attempt 0: immediate
-      //   attempt 1: 400ms ± 100ms
-      //   attempt 2: 800ms ± 100ms
-      //   attempt 3: 1600ms ± 100ms
-      const BASE_DELAY = 400;
-      const MAX_ATTEMPTS = 3;
-      const JITTER = 100;
+      const DELAYS = [400, 1200, 2400];
       let lastErr;
 
-      for (let attempt = 0; attempt <= MAX_ATTEMPTS; attempt++) {
+      for (let attempt = 0; attempt <= DELAYS.length; attempt++) {
         try {
           if (!Utils.isOnline()) throw new Error('Offline');
 
-          // Compose external signal (if any) with internal timeout controller.
-          // If EITHER aborts, the fetch aborts.
-          const timeoutController = new AbortController();
-          const timeoutId = setTimeout(
-            () => timeoutController.abort(),
-            CONFIG.FETCH.TIMEOUT
-          );
+          const controller = new AbortController();
+          const timeoutId  = setTimeout(() => controller.abort(), CONFIG.FETCH.TIMEOUT);
 
-          // Compose signals: if external signal aborts, abort timeoutController.
-          let externalSignal = options.signal || null;
-          if (externalSignal) {
-            if (externalSignal.aborted) timeoutController.abort();
-            else externalSignal.addEventListener('abort',
-              () => timeoutController.abort(), { once: true });
-          }
+          const response = await fetch(url, {
+            ...options,
+            headers: { 'Content-Type': 'application/json', ...options.headers },
+            signal:  controller.signal,
+            cache:   options.cache === 'reload' ? 'reload' : 'no-store',
+          });
+          clearTimeout(timeoutId);
 
-          try {
-            const response = await fetch(url, {
-              ...options,
-              headers: { 'Content-Type': 'application/json', ...options.headers },
-              signal:  timeoutController.signal,
-              cache:   options.cache === 'reload' ? 'reload' : 'no-store',
-            });
+          const respText = await response.text().catch(() => null);
+          if (!response.ok) throw new Error(`Fetch error: ${response.status} ${response.statusText}`);
 
-            const respText = await response.text().catch(() => null);
-            if (!response.ok) throw new Error(`Fetch error: ${response.status} ${response.statusText}`);
+          let data;
+          try { data = respText ? JSON.parse(respText) : null; }
+          catch (_) { throw new Error(`Invalid JSON response from ${url}`); }
 
-            let data;
-            try { data = respText ? JSON.parse(respText) : null; }
-            catch (_) { throw new Error(`Invalid JSON response from ${url}`); }
-
-            if (options.cache !== false) this.setCache(url, data);
-            return data;
-          } finally {
-            clearTimeout(timeoutId);
-          }
+          if (options.cache !== false) this.setCache(url, data);
+          return data;
 
         } catch (err) {
-          // v3.0: Don't retry AbortError — it's an intentional cancellation.
-          // Don't showErrorFullscreen either — it's not a real failure.
-          if (err && (err.name === 'AbortError' ||
-                      (options.signal && options.signal.aborted))) {
-            // Return stale fallback if available, else rethrow.
-            if (staleFallback != null) return staleFallback;
-            throw err;
-          }
-
           lastErr = err;
-          if (attempt < MAX_ATTEMPTS) {
-            const delay = BASE_DELAY * Math.pow(2, attempt) +
-                          (Math.random() * 2 - 1) * JITTER;
-            await new Promise(r => setTimeout(r, Math.max(0, delay)));
+          if (attempt < DELAYS.length) {
+            await new Promise(r => setTimeout(r, DELAYS[attempt]));
           }
         }
       }
 
-      // All retries failed — return stale fallback if we have one (SWR).
-      // Otherwise show error and throw.
-      if (staleFallback != null) {
-        console.warn('[NavCore/Data] fetch failed, returning stale fallback:', url, lastErr);
-        return staleFallback;
-      }
-
+      // ทุก retry ล้มเหลว — แสดง fullscreen error detail แล้ว throw
       try {
         Utils.showErrorFullscreen(lastErr, { label: 'Data Fetch: ' + url });
       } catch (_) {}
@@ -329,59 +178,33 @@
     },
 
     // ── fetchWithRetry ──────────────────────────────────────────────────────────
-    //
-    // v3.0: Now accepts AbortSignal via options.signal. The signal is
-    // propagated to _performFetch (and through to fetch()). Cancellation
-    // is therefore network-level, not just promise-level.
 
     async fetchWithRetry(url, options = {}, priority = 5) {
       if (url && url.includes('/con-data/'))
-        return this._fetchViaService(url, options);
+        return this._fetchViaService(url);
       return this._enqueueFetch(url, options, priority);
     },
 
     // ── ConDataService bridge ───────────────────────────────────────────────────
-    //
-    // v3.0: options.signal is currently not propagated to ConDataService
-    //   (its API doesn't accept signals yet). When a signal aborts, we
-    //   reject the wrapping promise; the underlying fetch may still
-    //   complete but its result is discarded.
 
-    async _fetchViaService(url, options = {}) {
+    async _fetchViaService(url) {
       const svc = await _requireConDataService();
-
-      // Helper: wrap a promise with an abort signal. If signal aborts,
-      // reject with AbortError (the underlying operation continues but
-      // its result is ignored).
-      const withSignal = (p) => {
-        if (!options.signal) return p;
-        return new Promise((resolve, reject) => {
-          if (options.signal.aborted) {
-            reject(new DOMException('Aborted', 'AbortError'));
-            return;
-          }
-          options.signal.addEventListener('abort', () => {
-            reject(new DOMException('Aborted', 'AbortError'));
-          }, { once: true });
-          p.then(resolve, reject);
-        });
-      };
 
       const twoSeg = url.match(/\/con-data\/([^/?#]+)\/([^/?#]+?)(?:\.min)?\.json(?:[?#].*)?$/);
       if (twoSeg) {
         const [, typeId, catId] = twoSeg;
-        const items = await withSignal(svc.getItems(typeId, catId).catch(() => null));
+        const items = await svc.getItems(typeId, catId).catch(() => null);
         if (items != null) return items;
       }
 
       const oneSeg = url.match(/\/con-data\/([^/?#/]+?)(?:\.min)?\.json(?:[?#].*)?$/);
       if (oneSeg && oneSeg[1] !== 'index') {
         const typeId  = oneSeg[1];
-        const typeObj = await withSignal(svc.getTypeById(typeId).catch(() => null));
+        const typeObj = await svc.getTypeById(typeId).catch(() => null);
         if (typeObj) return typeObj;
       }
 
-      return withSignal(svc.getAssembled());
+      return svc.getAssembled();
     },
 
     // ── Warmup ──────────────────────────────────────────────────────────────────

@@ -31,10 +31,6 @@
     SubNavService, ButtonService,
     RouterService, NavigationService,
     CopyService, FeedService,
-    PerformanceMonitorService,
-    // v4.0 new modules
-    ReactiveStore, TracingService, CircuitBreakerService,
-    AdaptiveLoader, PrefetchService, A11yService,
   } = M;
 
   // ── InitService ───────────────────────────────────────────────────────────────
@@ -69,39 +65,6 @@
         PerformanceService.setupErrorBoundary();
         ScrollService.init();
         PerformanceService.init();
-
-        // v4.0: Initialize new foundation services
-        // AdaptiveLoader: detect device capability + install network listener
-        try { AdaptiveLoader && AdaptiveLoader.detect(); } catch (_) {}
-        try { AdaptiveLoader && AdaptiveLoader._installNetworkListener(); } catch (_) {}
-
-        // A11yService: install skip link + live region + focus-visible polyfill
-        try { A11yService && A11yService.init(); } catch (_) {}
-
-        // ReactiveStore: initialize with the current State object so
-        // modules can subscribe to changes
-        try {
-          if (ReactiveStore && !ReactiveStore.isInitialized) {
-            ReactiveStore.init({
-              navigation: State.navigation,
-              buttons: State.buttons,
-              isBootstrapping: State.isBootstrapping,
-            });
-          }
-        } catch (_) {}
-
-        // v3.0: Start the performance monitor — installs LoAF/INP/CLS/LCP
-        // observers + the self-healing watchdog. Must run after
-        // LoadingService + RouterService are loaded (Phase 3) so the
-        // watchdog can inspect their state.
-        // v4.0: Gate by AdaptiveLoader — skip on low-tier devices to
-        // save the ~1ms/long-task observer overhead.
-        try {
-          if (PerformanceMonitorService && AdaptiveLoader &&
-              AdaptiveLoader.shouldObservePerformance()) {
-            PerformanceMonitorService.start();
-          }
-        } catch (_) {}
 
         window.addEventListener('online', () => {
           Utils.showNotification('การเชื่อมต่อกลับมาแล้ว', 'success');
@@ -148,10 +111,6 @@
         } catch (_) {}
 
         // ── Phase 8: Initial navigation ────────────────────────────────────
-        // v5.0: This is where the boot loader's ready() signal will be sent.
-        //   navigateTo() shows the loading overlay (matching the boot loader's
-        //   pending count), and content.js's hideInstant() sends ready() when
-        //   content is rendered. The boot overlay persists until that moment.
         try {
           const url = window.location.search;
           if (!url || url === '?') {
@@ -172,31 +131,12 @@
           State.isBootstrapping         = false;
           window._navCore_bootstrapping = false;
           window._headerV2_bootstrapping = false;
-          // v5.0.1: ready() is called in finally block — no need here.
         }
 
       } catch (error) {
         console.error('[NavCore/Init] bootstrap error:', error);
         try { Utils.showErrorFullscreen(error, { label: 'App Bootstrap', title: 'เกิดข้อผิดพลาดในการโหลดแอพพลิเคชัน กรุณารีเฟรชหน้า' }); } catch (_) {}
-        // v5.0.1: ready() is called in finally block — no need here.
       } finally {
-        // v5.0.1 FIX: This is the SINGLE point where the boot loader's
-        //   ready() signal is sent. The boot loader starts with
-        //   pendingReady=1 (waiting for this exact call). Whether initial
-        //   navigation succeeded, failed, or threw at any phase — this
-        //   finally block runs and decrements pendingReady to 0, which
-        //   hides the boot overlay (after MIN_VISIBLE_MS).
-        //
-        //   Why NOT in LoadingService.show()/hide():
-        //     The boot loader is the INITIAL PAGE LOAD overlay, not a
-        //     per-navigation overlay. LoadingService manages the FVL
-        //     overlay (for subsequent navigations). Mixing the two caused
-        //     the v5.0 bug where pendingReady went 1 → 2 (show) → 1 (hide)
-        //     and never reached 0, freezing the page.
-        try {
-          if (window.__ncBootLoader) window.__ncBootLoader.ready();
-        } catch (_) {}
-
         try {
           if (typeof window.__removeInstantLoadingOverlay === 'function'
             && window.__instantLoadingOverlayShown) {
@@ -250,20 +190,12 @@
       window._navCore_contentManager       = ContentService;
       window._navCore_scrollManager        = ScrollService;
       window._navCore_performanceOptimizer = PerformanceService;
-      window._navCore_performanceMonitor   = PerformanceMonitorService;
       window._navCore_navigationManager    = RouterService;
       window._navCore_buttonManager        = ButtonService;
       window._navCore_subNavManager        = SubNavService;
       window._navCore_router               = RouterService;
       window._navCore_feedService          = FeedService;
       window._navCore_elements             = State.elements;
-      // v4.0 new services
-      window._navCore_reactiveStore        = ReactiveStore;
-      window._navCore_tracing              = TracingService;
-      window._navCore_circuitBreaker       = CircuitBreakerService;
-      window._navCore_adaptiveLoader       = AdaptiveLoader;
-      window._navCore_prefetchService      = PrefetchService;
-      window._navCore_a11y                 = A11yService;
 
       // ── Backward-compat aliases (_headerV2_*) ──────────────────────────────
       window._headerV2_utils                = Utils;
