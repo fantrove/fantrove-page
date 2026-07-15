@@ -14,7 +14,7 @@
     ['store.js', 'circuit-breaker.js', 'adaptive-loader.js', 'tracing.js'], // v4.0 foundation modules
     ['utils.js', 'data.js'],
     ['loading.js', 'content.js', 'performance.js', 'feed.js'], // feed.js ต้องอยู่หลัง data.js (Phase 2)
-    ['buttons.js', 'router.js', 'copy.js', 'a11y.js', 'prefetch-service.js', 'performance-monitor.js'],
+    ['navigation-guard.js', 'buttons.js', 'router.js', 'copy.js', 'a11y.js', 'prefetch-service.js', 'performance-monitor.js'],
     ['init.js'],
   ];
   

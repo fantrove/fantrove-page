@@ -265,29 +265,73 @@
       const signal = options.signal || null;
       const _aborted = () => !!(signal && signal.aborted);
 
-      await this.clearContent({ signal });
-      // Show skeleton immediately — gives the user visual structure while
-      // data resolves. Removed when real content is ready.
+      // v6.0: DON'T call clearContent() here! This was the #1 cause of
+      //   "page goes blank during navigation". The old flow was:
+      //     1. clearContent() — empties #content-loading
+      //     2. fetch data (async, may fail)
+      //     3. render — only happens if fetch succeeded
+      //   If step 2 failed, the page was left blank.
+      //
+      //   New flow (v6.0):
+      //     1. Show skeleton OVERLAY (on top of old content, not replacing)
+      //     2. Fetch data (async)
+      //     3. If success: clear old content + render new (atomic swap)
+      //     4. If fail: NavigationGuard.withNeverEmpty restores old content
+      //
+      //   The "atomic swap" is done by clearing + rendering in the same
+      //   synchronous block (after fetch succeeds). If render throws,
+      //   withNeverEmpty (which wraps this whole function) will restore.
+      //
+      //   We DO still call _sess++ + disconnect observers (cleanup-only,
+      //   no DOM clearing). The actual DOM clearing happens right before
+      //   URE.mount() below.
+      _sess++;
+      if (_feedObserver) {
+        _feedObserver.disconnect();
+        _feedObserver = null;
+      }
+      if (_ureHandle) {
+        try { _ureHandle.destroy(); } catch (err) { console.warn('[Content] URE destroy failed:', err); }
+        _ureHandle = null;
+      }
+
+      // Show skeleton OVERLAY (on top of old content, not replacing it)
       this._showSkeleton(8);
       const sess = _sess;
 
       try {
         await _ensureURE();
-        if (sess !== _sess || _aborted()) return;
+        if (sess !== _sess || _aborted()) {
+          this._clearSkeleton();
+          return;
+        }
 
         const lang = localStorage.getItem('selectedLang') || 'en';
         await M.DataService.loadApiDatabase().catch(err => {
           console.warn('[Content] loadApiDatabase failed, continuing:', err);
         });
-        if (sess !== _sess || _aborted()) return;
+        if (sess !== _sess || _aborted()) {
+          this._clearSkeleton();
+          return;
+        }
 
         const items = await this._resolveAll(data, lang);
-        if (sess !== _sess || _aborted()) return;
+        if (sess !== _sess || _aborted()) {
+          this._clearSkeleton();
+          return;
+        }
 
-        // Remove skeleton before mounting real content (avoid double-render).
+        // Remove skeleton before mounting real content
         this._clearSkeleton();
 
-        // v3: Render content ก่อน แล้วค่อยซ่อน loading
+        // v6.0: ATOMIC SWAP — clear old content + mount new content
+        //   in the same synchronous block. If URE.mount() throws,
+        //   NavigationGuard.withNeverEmpty (which wraps this call in
+        //   router.js) will restore the old content from its snapshot.
+        while (ctr.firstChild) {
+          ctr.removeChild(ctr.firstChild);
+        }
+
         _ureHandle = window.URE.mount({
           container          : ctr,
           data               : items,
@@ -301,10 +345,17 @@
 
       } catch (e) {
         // v3.0: Don't log AbortError — it's an intentional cancellation.
-        if (e && e.name === 'AbortError') return;
+        if (e && e.name === 'AbortError') {
+          this._clearSkeleton();
+          return;
+        }
         console.error('[NavCore/Content] renderContent error:', e);
         this._clearSkeleton();
+        // v6.0: Don't call hide() here — let NavigationGuard.withNeverEmpty
+        //   handle restoring content. The router's catch block will
+        //   show error UI if needed.
         try { M.LoadingService?.hide(); } catch (err) { console.warn('[Content] LoadingService.hide failed in catch:', err); }
+        throw e;  // re-throw so withNeverEmpty can restore
       } finally {
         // v3.0: If we aborted mid-render, clear the skeleton + bail.
         if (_aborted()) {

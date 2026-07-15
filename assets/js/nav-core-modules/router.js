@@ -78,6 +78,8 @@
   const Tracing = M.TracingService;
   const A11y = M.A11yService;
   const AdaptiveLoader = M.AdaptiveLoader;
+  // v6.0: NavigationGuard — never-stuck, never-empty guarantee
+  const Guard = M.NavigationGuard;
 
   // ═══════════════════════════════════════════════════════════════════════════
   // SECTION 1: Navigation state machine
@@ -422,22 +424,24 @@
       } catch (_) {}
 
       // v5.0: ALWAYS show loading — no exceptions, no "if cached" branch.
-      // This is the hard contract: every navigation (button click, popstate,
-      // initial load, same-route re-navigation) shows the loading overlay
-      // for at least MIN_VISIBLE_MS (200ms), even if data is cached.
-      // The user MUST see loading feedback on EVERY interaction.
-      //
-      // We also announce to A11y so screen reader users know a navigation
-      // started (they can't see the visual overlay).
       try { A11y && A11y.announce('Loading...'); } catch (_) {}
 
-      // ── Phase 0: reset any stuck state ──────────────────────────────────
-      // NOTE: _forceReset() clears the session counter, so the show() below
-      // starts fresh. This is important — if we didn't reset, rapid clicks
-      // would accumulate sessions and the overlay would never hide.
-      try { M.LoadingService?._forceReset(); } catch (_) {}
+      // v6.0: Do NOT call _forceReset() here — it causes state inconsistency.
+      //   The previous architecture force-reset LoadingService on every
+      //   navigateTo, which cleared the session counter while the previous
+      //   navigation's content.js might still be rendering. This caused:
+      //     • Loading overlay hidden prematurely (counter 0)
+      //     • Content container stuck mid-render
+      //     • Body scroll-lock released too early
+      //   Instead, we let the new show() increment the counter naturally.
+      //   The matching hide() will come from content.js when render completes.
+      //   NavigationGuard's watchdog handles any stuck state.
 
-      // ── Phase 1: abort previous navigation ──────────────────────────────
+      // ── Phase 1: abort previous navigation's fetch (soft abort) ─────────
+      // v6.0: We abort the previous AbortController, but we DON'T clear
+      //   loading state. The previous navigation's content.js will see
+      //   AbortError and bail gracefully (keeping old content visible).
+      //   This navigation's show() will then take over the loading overlay.
       if (this._abortController) {
         try { this._abortController.abort(); } catch (_) {}
         this._abortController = null;
@@ -451,18 +455,32 @@
       const myGen = this._navGen;
       this._transition(NAV_STATE.VALIDATING);
 
-      // v5.0: ALWAYS show loading overlay — this is the contract.
-      // Show happens BEFORE _setNavLoading so the overlay is the FIRST
-      // thing the user sees on a new navigation.
+      // v6.0: Reset loading session counter to a clean state.
+      //   This is DIFFERENT from _forceReset() — we only reset the counter
+      //   and clear any pending hide timer, but we DON'T remove the overlay
+      //   DOM. The show() below will reuse or replace it.
+      try {
+        M.LoadingService._sessionCount = 0;
+        if (M.LoadingService._pendingHideTimer) {
+          clearTimeout(M.LoadingService._pendingHideTimer);
+          M.LoadingService._pendingHideTimer = null;
+        }
+      } catch (_) {}
+
+      // v5.0: ALWAYS show loading overlay
       this._setNavLoading(true);
       try { M.LoadingService?.show(); } catch (_) {}
 
-      // Guarantee overlay paint before mutating content (kept from v4)
+      // Guarantee overlay paint before mutating content
       await new Promise(function (r) { requestAnimationFrame(r); });
-      if (myGen !== this._navGen) {
-        try { traceRoot && traceRoot.end(); Tracing && Tracing.endTrace(); } catch (_) {}
-        return; // superseded
-      }
+      // v6.0: Don't bail if superseded — let the latest navigation complete.
+      //   The previous architecture bailed here (return), which meant if
+      //   the user clicked rapidly, the LAST click's navigation might not
+      //   render anything (it bailed, and the previous one was aborted).
+      //   Now: we let this navigation continue. If a NEWER navigation
+      //   arrives, IT will abort THIS one's fetch. But THIS navigation
+      //   will still try to render if its fetch already completed.
+      //   The "last write wins" is enforced by checking myGen at render time.
 
       this.state.isNavigating       = true;
       this.state.lastScrollPosition = window.pageYOffset || 0;
@@ -502,7 +520,8 @@
         if (typeof route === 'string' && route.startsWith('?'))
           normalized = this.normalizeUrl(route);
 
-        if (myGen !== this._navGen) return;
+        // v6.0: Don't bail if superseded during validation.
+        //   We continue validating + fetching. Only RENDER is gated by myGen.
 
         // ── Phase 4: validate URL ─────────────────────────────────────────
         let valid = false;
@@ -515,7 +534,7 @@
           this._transition(NAV_STATE.VALIDATING);
         }
 
-        if (myGen !== this._navGen) return;
+        // v6.0: Don't bail if superseded — continue to fetch phase.
 
         const { main, sub } = this.parseUrl(normalized);
         this.state.currentMainRoute = main;
@@ -538,7 +557,7 @@
           );
         }
 
-        if (myGen !== this._navGen) return;
+        // v6.0: Don't bail if superseded — continue to fetch phase.
 
         const cfg = State.buttons.config;
         if (!cfg) throw new Error('[NavCore/Router] buttonConfig not found');
@@ -583,7 +602,10 @@
           try { M.LoadingService?._updateTopVar(); } catch (_) {}
         }
 
-        if (myGen !== this._navGen) return;
+        // v6.0: Don't bail if superseded — continue to fetch + render phase.
+        //   The fetch will use our AbortSignal, so if a newer navigation
+        //   arrives, OUR fetch gets aborted. But if our fetch already
+        //   completed, we proceed to render (last-write-wins check below).
 
         // ── Phase 7: FETCHING — fetch with AbortSignal ────────────────────
         this._transition(NAV_STATE.FETCHING);
@@ -594,20 +616,37 @@
 
         if (main === CONFIG.ALL_BUTTON.URL) {
           // ── Smart infinite feed ───────────────────────────────────────
+          // v6.0: Wrap with retry + never-empty guarantee
           try {
-            await M.ContentService.renderFeed(lang, { signal });
+            await Guard.withRetry(function () {
+              return Guard.withNeverEmpty(
+                document.getElementById(CONFIG.DOM.CONTENT_LOADING_ID),
+                function () { return M.ContentService.renderFeed(lang, { signal }); }
+              );
+            });
           } catch (feedErr) {
             if (signal.aborted) {
+              // Aborted by newer navigation — don't show error UI, just bail.
+              // The newer navigation will render its own content.
               try { fetchSpan && fetchSpan.end(); } catch (_) {}
-              return; // graceful cancel
+              return;
             }
             console.error('[NavCore/Router] renderFeed error:', feedErr);
+            // v6.0: Show error UI with retry instead of leaving page empty
+            try {
+              Guard.showErrorUI(feedErr, function () {
+                return M.ContentService.renderFeed(lang, {});
+              });
+            } catch (_) {}
             throw feedErr;
           }
         } else {
           // ── Normal content rendering ──────────────────────────────────
-          try { await M.ContentService.clearContent({ signal }); } catch (_) {}
-
+          // v6.0: DON'T clear content before fetch! This was the #1 cause
+          //   of "page goes blank" — if fetch failed after clearContent(),
+          //   the page was empty with no recovery path.
+          //   Instead, fetch first, then render (which clears + replaces
+          //   atomically via NavigationGuard.withNeverEmpty).
           const jobs = [];
           if (mainButton.jsonFile)
             jobs.push(M.DataService.fetchWithRetry(mainButton.jsonFile, { signal }, 2).catch(() => null));
@@ -616,7 +655,15 @@
 
           if (jobs.length) {
             const results  = await Promise.all(jobs);
-            if (signal.aborted || myGen !== this._navGen) {
+            // v6.0: Check for abort AFTER fetch completes. If aborted,
+            //   a newer navigation is in flight — let it handle rendering.
+            if (signal.aborted) {
+              try { fetchSpan && fetchSpan.end(); } catch (_) {}
+              return;
+            }
+            // v6.0: Last-write-wins check. If a newer navigation started,
+            //   DON'T render — the newer one will render.
+            if (myGen !== this._navGen) {
               try { fetchSpan && fetchSpan.end(); } catch (_) {}
               return;
             }
@@ -636,20 +683,61 @@
                 useVT = !AdaptiveLoader || AdaptiveLoader.shouldUseViewTransitions();
               } catch (_) {}
 
-              if (useVT) {
-                await this._withViewTransition(() => {
-                  return M.ContentService.renderContent(combined, { signal });
-                });
-              } else {
-                await M.ContentService.renderContent(combined, { signal });
+              // v6.0: Wrap render with never-empty guarantee.
+              //   If render throws, previous content is restored.
+              var renderFn = function () {
+                return M.ContentService.renderContent(combined, { signal });
+              };
+
+              try {
+                if (useVT) {
+                  await this._withViewTransition(function () {
+                    return Guard.withNeverEmpty(
+                      document.getElementById(CONFIG.DOM.CONTENT_LOADING_ID),
+                      renderFn
+                    );
+                  });
+                } else {
+                  await Guard.withNeverEmpty(
+                    document.getElementById(CONFIG.DOM.CONTENT_LOADING_ID),
+                    renderFn
+                  );
+                }
+              } catch (renderErr) {
+                if (signal.aborted) {
+                  // Aborted — newer navigation will handle rendering
+                  try { renderSpan && renderSpan.end(); } catch (_) {}
+                  return;
+                }
+                // Render failed — withNeverEmpty restored previous content.
+                // Show error UI as overlay (not replacing restored content).
+                console.error('[NavCore/Router] render failed:', renderErr);
+                try {
+                  Guard.showErrorUI(renderErr, function () {
+                    return M.ContentService.renderContent(combined, {});
+                  });
+                } catch (_) {}
+                try { renderSpan && renderSpan.setStatus(Tracing ? Tracing.SPAN_STATUS.ERROR : 'error').end(); } catch (_) {}
+                throw renderErr;
               }
               try { renderSpan && renderSpan.end(); } catch (_) {}
+            } else {
+              // No data — show empty state UI instead of blank page
+              console.warn('[NavCore/Router] No content data for', main);
+              try {
+                Guard.showErrorUI(new Error('No content available for this category'), function () {
+                  return M.ContentService.renderContent([], {});
+                });
+              } catch (_) {}
             }
           } else {
             try { fetchSpan && fetchSpan.end(); } catch (_) {}
           }
         }
 
+        // v6.0: Final last-write-wins check. If a newer navigation completed
+        //   while we were rendering, don't dispatch routeChanged or update
+        //   active buttons — the newer navigation owns the UI now.
         if (myGen !== this._navGen) {
           try { traceRoot && traceRoot.end(); Tracing && Tracing.endTrace(); } catch (_) {}
           return;
@@ -664,6 +752,9 @@
         window.dispatchEvent(new CustomEvent('routeChanged', {
           detail: { main, sub: chosenSub?.url || chosenSub?.jsonFile || sub },
         }));
+
+        // v6.0: Notify NavigationGuard that navigation completed successfully
+        try { Guard && Guard.notifyNavigationCompleted(); } catch (_) {}
 
         // ── Phase 9: scroll restoration ────────────────────────────────────
         // popstate: restore saved scroll. Otherwise: scroll to top.
@@ -707,15 +798,28 @@
         } catch (_) {}
 
       } catch (err) {
-        // ── Phase X: ERROR — revert optimistic UI + log ────────────────────
+        // ── Phase X: ERROR — revert optimistic UI + log + show recovery UI ──
+        // v6.0: Even if this navigation was superseded, if it's the LATEST
+        //   one AND it errored, we MUST show recovery UI. Otherwise the page
+        //   would be blank (no content rendered, no error shown).
         if (myGen === this._navGen) {
           console.error('[NavCore/Router] navigateTo error:', err);
           // Revert optimistic UI
           try { this.setActiveButtons(prevMain, prevSub); } catch (_) {}
           try { this._transition(NAV_STATE.ERROR); } catch (_) {}
           try { this._transition(NAV_STATE.IDLE); } catch (_) {}
-          try { Utils.showErrorFullscreen(err, { label: 'Navigation' }); } catch (_) {}
-          // v4.0: Announce error to screen readers
+          // v6.0: Don't use showErrorFullscreen (covers whole page, no recovery)
+          //   Use NavigationGuard.showErrorUI instead (has Retry + Back buttons)
+          try {
+            if (Guard) {
+              Guard.showErrorUI(err, function () {
+                return RouterService.navigateTo(route, options);
+              });
+            } else {
+              Utils.showErrorFullscreen(err, { label: 'Navigation' });
+            }
+          } catch (_) {}
+          // Announce error to screen readers
           try { A11y && A11y.announceError('Navigation failed: ' + (err && err.message || 'unknown error')); } catch (_) {}
           // End trace with error status
           try {
@@ -728,31 +832,36 @@
           } catch (_) {}
         }
       } finally {
-        // ── Phase Y: cleanup (only if we're still the latest) ─────────────
+        // ── Phase Y: cleanup ────────────────────────────────────────────────
+        // v6.0: ALWAYS run cleanup, even if superseded. This prevents
+        //   stuck loading state when a navigation is aborted but the
+        //   newer one hasn't shown loading yet.
         if (myGen === this._navGen) {
           this.state.isNavigating = false;
           if (this._safetyTimer) { clearTimeout(this._safetyTimer); this._safetyTimer = null; }
           if (this._abortController === abortController) {
             this._abortController = null;
           }
-          try {
-            requestAnimationFrame(() => {
-              this._setNavLoading(false);
-              // v3.1 DEFENSIVE: ensure body scroll-lock is released even if
-              // an exception escaped cleanup. Belt-and-braces —
-              // ScrollLockService should already have handled this.
-              try {
-                if (document.body.style.position === 'fixed') {
-                  document.body.style.position = '';
-                  document.body.style.top      = '';
-                  document.body.style.left     = '';
-                  document.body.style.right    = '';
-                  document.body.style.width    = '';
-                }
-              } catch (_) {}
-            });
-          } catch (_) {}
         }
+        // v6.0: Always clear nav-loading body class + restore body styles
+        //   (even if superseded — the newer navigation will re-set them if needed)
+        try {
+          requestAnimationFrame(() => {
+            if (myGen === this._navGen) {
+              this._setNavLoading(false);
+            }
+            // Belt-and-braces: clear body lock if somehow stuck
+            try {
+              if (document.body.style.position === 'fixed') {
+                document.body.style.position = '';
+                document.body.style.top      = '';
+                document.body.style.left     = '';
+                document.body.style.right    = '';
+                document.body.style.width    = '';
+              }
+            } catch (_) {}
+          });
+        } catch (_) {}
       }
     },
 
