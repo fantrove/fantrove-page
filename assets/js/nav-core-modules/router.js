@@ -455,12 +455,31 @@
       const myGen = this._navGen;
       this._transition(NAV_STATE.VALIDATING);
 
-      // v6.0: Reset loading session counter to a clean state.
-      //   This is DIFFERENT from _forceReset() — we only reset the counter
-      //   and clear any pending hide timer, but we DON'T remove the overlay
-      //   DOM. The show() below will reuse or replace it.
+      // v6.1 ROOT CAUSE FIX: Do NOT reset LoadingService._sessionCount here.
+      //
+      //   The v6.0 code did `M.LoadingService._sessionCount = 0` here,
+      //   thinking it would "clean up" stale sessions from rapid clicks.
+      //   But this DESTROYED the refcount invariant:
+      //
+      //     show() does:  sessionCount++ AND scrollLock.acquire() (refcount++)
+      //     hide() does:  sessionCount-- AND scrollLock.release() (refcount--)
+      //
+      //   If we reset sessionCount=0 without calling hide(), the scrollLock
+      //   refcount stays elevated. After 3 rapid clicks:
+      //     - scrollLock refcount = 3 (from 3 show() calls)
+      //     - sessionCount = 1 (reset 3 times, incremented 3 times = net 1)
+      //     - Only 1 hide() happens (from content.js of the last navigation)
+      //     - Result: scrollLock refcount = 2 → body stuck at position:fixed
+      //     - User sees: "page frozen, content didn't load"
+      //
+      //   The CORRECT fix: let show()/hide() balance naturally. Each
+      //   navigateTo calls show() at the start and hideInstant() in its
+      //   finally block. 3 shows → 3 hides = balanced refcount.
+      //
+      //   We DO clear the pending hide timer (if any) so a deferred hide
+      //   from a previous navigation doesn't fire and hide the overlay
+      //   while THIS navigation is trying to show it.
       try {
-        M.LoadingService._sessionCount = 0;
         if (M.LoadingService._pendingHideTimer) {
           clearTimeout(M.LoadingService._pendingHideTimer);
           M.LoadingService._pendingHideTimer = null;
@@ -473,14 +492,6 @@
 
       // Guarantee overlay paint before mutating content
       await new Promise(function (r) { requestAnimationFrame(r); });
-      // v6.0: Don't bail if superseded — let the latest navigation complete.
-      //   The previous architecture bailed here (return), which meant if
-      //   the user clicked rapidly, the LAST click's navigation might not
-      //   render anything (it bailed, and the previous one was aborted).
-      //   Now: we let this navigation continue. If a NEWER navigation
-      //   arrives, IT will abort THIS one's fetch. But THIS navigation
-      //   will still try to render if its fetch already completed.
-      //   The "last write wins" is enforced by checking myGen at render time.
 
       this.state.isNavigating       = true;
       this.state.lastScrollPosition = window.pageYOffset || 0;
@@ -832,10 +843,39 @@
           } catch (_) {}
         }
       } finally {
-        // ── Phase Y: cleanup ────────────────────────────────────────────────
-        // v6.0: ALWAYS run cleanup, even if superseded. This prevents
-        //   stuck loading state when a navigation is aborted but the
-        //   newer one hasn't shown loading yet.
+        // v6.1 ROOT CAUSE FIX: ALWAYS call hideInstant() here, regardless
+        //   of whether this navigation was superseded.
+        //
+        //   Every navigateTo calls show() at the start, which:
+        //     - increments sessionCount
+        //     - acquires scroll lock (refcount++)
+        //
+        //   If we DON'T call hide() here, those increments are never
+        //   balanced. After rapid clicks:
+        //     - 3 show() calls → sessionCount=3, scrollLock refcount=3
+        //     - Only 1 hide() (from content.js of last nav) → sessionCount=2
+        //     - scrollLock refcount=2 → body stuck at position:fixed
+        //     - User sees: frozen page, "content didn't load"
+        //
+        //   By calling hideInstant() here for EVERY navigation:
+        //     - 3 show() → sessionCount=3, scrollLock=3
+        //     - 3 hideInstant() (from finally) → sessionCount=0, scrollLock=0
+        //     - content.js also calls hideInstant() → sessionCount=0 (guarded)
+        //     - Balanced! Loading hides, scroll unlocks.
+        //
+        //   hideInstant() is safe to call multiple times — sessionCount
+        //   never goes below 0 (guarded with `if > 0`).
+        try { M.LoadingService?.hideInstant(); } catch (_) {}
+
+        // v6.1: Also explicitly release scroll lock as belt-and-braces.
+        //   hideInstant() already does this, but if hideInstant() threw
+        //   or was interrupted, we want to be sure.
+        try {
+          if (M.ScrollLockService && M.ScrollLockService.isLocked) {
+            M.ScrollLockService.forceRelease();
+          }
+        } catch (_) {}
+
         if (myGen === this._navGen) {
           this.state.isNavigating = false;
           if (this._safetyTimer) { clearTimeout(this._safetyTimer); this._safetyTimer = null; }
@@ -843,14 +883,13 @@
             this._abortController = null;
           }
         }
-        // v6.0: Always clear nav-loading body class + restore body styles
-        //   (even if superseded — the newer navigation will re-set them if needed)
+        // v6.1: Always clear nav-loading body class + restore body styles
         try {
           requestAnimationFrame(() => {
             if (myGen === this._navGen) {
               this._setNavLoading(false);
             }
-            // Belt-and-braces: clear body lock if somehow stuck
+            // Belt-and-braces: clear body lock if somehow still stuck
             try {
               if (document.body.style.position === 'fixed') {
                 document.body.style.position = '';
