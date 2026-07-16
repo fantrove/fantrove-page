@@ -1,20 +1,29 @@
 #!/usr/bin/env node
 // scripts/update-version.js — Fantrove Verse Release Tool
-// v4.1: Per-language Markdown — อ่าน {lang}/current.md จาก git history
-//     รวมทุกภาษาเป็น releases/index.json + releases/v{version}.md (i18n combined)
-//     รองรับ legacy: current.md เดียว, whats-new.json
+// v5.0: CLOSED SYSTEM — ระบบ release notes แบบปิด
+//     นักพัฒนาเขียน/แก้ได้แค่ assets/md/{en,th}/current.md เท่านั้น
+//     ไฟล์อื่นทุกไฟล์ในระบบ release notes เป็น generated artifacts ที่
+//     script นี้สร้างใน CI/CD เท่านั้น — ไม่มี legacy fallback แล้ว
 //
-//     v4 ใหม่: บันทึก release date ครั้งแรกของแต่ละ version เท่านั้น
-//     - ใช้ assets/json/release-dates.json เป็น registry ของ "วันที่ build ครั้งแรก"
-//     - ถ้าอัปเดทเนื้อหาแต่ version เดิม → ไม่เปลี่ยน date, ไม่สร้าง record ใหม่
-//     - ถ้าเปลี่ยน version → บันทึก date ปัจจุบันเป็น release date ถาวร
+//     สิ่งที่ script นี้ทำ (ทุกขั้นตอนอัตโนมัติ ไม่ต้อง intervention):
+//     1. อ่าน assets/md/{en,th}/current.md (version, title, subtitle, sections)
+//     2. ตรวจ version ใน release-dates.json registry:
+//        - version ใหม่ → บันทึก NOW เป็น release date ถาวร
+//        - version เดิม → คง date เดิม (date ไม่เปลี่ยนแม้แก้เนื้อหา)
+//     3. sync date: ใน current.md ให้ตรง registry เสมอ (เขียนทับถ้านักพัฒนาใส่เอง)
+//     4. สร้าง assets/md/{en,th}/releases/v{version}.md (เมื่อ version ใหม่)
+//     5. สร้าง assets/md/releases/index.json (manifest สำหรับ client)
+//     6. สร้าง assets/json/version.json (runtime metadata)
+//     7. บันทึก release-dates.json (registry ที่อัปเดตแล้ว)
+//     8. HTML cache busting (?v={version}-{dateStr})
 //
-//     v4.1 ใหม่: ยกเลิก release-history.json ใช้ releases/ folder + index.json แทน
-//     - สร้าง releases/v{version}.md จาก current.md (เมื่อ version ใหม่)
-//     - สร้าง releases/index.json (manifest สำหรับ client อ่าน)
-//     - ผู้ใช้ไม่ต้องเขียน date: ใน current.md เอง — ระบบ sync ให้อัตโนมัติ
+// v5.0 changes จาก v4.1:
+//     - ลบ legacy fallback: whats-new.json, release-history.json, single-file current.md
+//     - ลบ useLegacyMd / useLegacyJson flags (ใช้ usePerLang เท่านั้น)
+//     - เพิ่ม validation: ถ้าหา current.md ไม่ได้ → fail ทันที (ไม่ fallback)
+//     - เพิ่ม warning เมื่อนักพัฒนาใส่ date: เอง (ระบบจะ sync ทับ)
 //
-// Build: git fetch --unshallow && APP_VERSION=1.5.0 node scripts/update-version.js
+// Build: git fetch --unshallow && APP_VERSION=2.0.0 node scripts/update-version.js
 'use strict';
 
 const fs   = require('fs');
@@ -249,44 +258,44 @@ function compareSemver(a, b) {
   return 0;
 }
 
-// ตรวจสอบว่าใช้ระบบไหน
+// ── v5.0: CLOSED SYSTEM — ตรวจ source files ─────────────────────────────────
+// นักพัฒนาเขียน/แก้ได้แค่ assets/md/{en,th}/current.md เท่านั้น
+// ถ้าหาไม่ได้ → fail ทันที (ไม่มี legacy fallback แล้ว)
+
 let usePerLang = false;
-let useLegacyMd = false;
-let useLegacyJson = false;
 let newVersion = APP_VERSION;
 
-// ลอง per-language files
 for (const lang of LANGS) {
   const p = path.join(ROOT, CONFIG.perLangCurrent.replace('{lang}', lang));
   if (fs.existsSync(p)) { usePerLang = true; break; }
 }
 
-// Fallback: legacy single-file MD
 if (!usePerLang) {
-  const lp = path.join(ROOT, CONFIG.legacyMdFile);
-  if (fs.existsSync(lp)) useLegacyMd = true;
+  console.error('\n  ❌  CLOSED SYSTEM: ไม่พบ assets/md/{en,th}/current.md');
+  console.error('      ระบบ release notes ต้องการไฟล์ current.md อย่างน้อย 1 ภาษา');
+  console.error('      นักพัฒนาเขียน/แก้ได้เฉพาะไฟล์นี้เท่านั้น — ไม่มี legacy fallback\n');
+  process.exit(1);
 }
 
-// Fallback: JSON
-if (!usePerLang && !useLegacyMd) {
-  const jp = path.join(ROOT, CONFIG.legacyJsonFile);
-  if (fs.existsSync(jp)) {
-    useLegacyJson = true;
-    try {
-      const json = JSON.parse(fs.readFileSync(jp, 'utf8'));
-      if (json.version) newVersion = json.version;
-    } catch(_) {}
+// ตรวจว่ามี legacy ไฟล์ค้างอยู่ไหม — เตือนให้ลบ
+const legacyFiles = [
+  CONFIG.legacyMdFile,        // assets/md/current.md (single-file legacy)
+  CONFIG.legacyJsonFile,      // assets/json/whats-new.json
+  'assets/json/release-history.json',  // deprecated
+];
+for (const lf of legacyFiles) {
+  const lp = path.join(ROOT, lf);
+  if (fs.existsSync(lp)) {
+    console.warn('  ⚠️  พบ legacy file: ' + lf + ' — ควรลบออก (ระบบปิดไม่ใช้แล้ว)');
   }
 }
 
 // อ่าน version จาก per-language file
-if (usePerLang) {
-  for (const lang of LANGS) {
-    const p = path.join(ROOT, CONFIG.perLangCurrent.replace('{lang}', lang));
-    if (fs.existsSync(p)) {
-      const parsed = parseMD(fs.readFileSync(p, 'utf8'), lang);
-      if (parsed.version) { newVersion = parsed.version; break; }
-    }
+for (const lang of LANGS) {
+  const p = path.join(ROOT, CONFIG.perLangCurrent.replace('{lang}', lang));
+  if (fs.existsSync(p)) {
+    const parsed = parseMD(fs.readFileSync(p, 'utf8'), lang);
+    if (parsed.version) { newVersion = parsed.version; break; }
   }
 }
 
@@ -295,11 +304,11 @@ const dateStr = NOW.toISOString().slice(0,10).replace(/-/g,'');
 const timeStr = pad2(NOW.getUTCHours()) + pad2(NOW.getUTCMinutes());
 const buildId = `${newVersion}-${dateStr}${timeStr}`;
 
-console.log(`\n📦  Fantrove Release Tool v4.1 (Per-Language MD + Stable Release Dates + Folder-Based History)`);
+console.log(`\n📦  Fantrove Release Tool v5.0 (CLOSED SYSTEM — Per-Language MD + Stable Release Dates)`);
 console.log(`    Version:  ${newVersion}`);
 console.log(`    Build ID: ${buildId}`);
 console.log(`    Date:     ${dateObj.en}`);
-console.log(`    Source:   ${usePerLang ? 'Per-language MD' : useLegacyMd ? 'Legacy MD' : 'Legacy JSON'}\n`);
+console.log(`    Source:   Per-language MD (assets/md/{en,th}/current.md)\n`);
 
 // ── STEP 0: โหลด release-dates registry (source of truth ของ release date) ────────
 //  จะใช้ registry นี้เป็น source of truth สำหรับ "วันที่ build ครั้งแรกของแต่ละ version"
@@ -335,22 +344,16 @@ var currentReleaseDate = new Date(currentReleaseDateISO);
 
 console.log('📚  Building history from git log...');
 
-// รวบรวมไฟล์ที่ต้อง track
+// รวบรวมไฟล์ที่ต้อง track — v5.0: เฉพาะ per-language MD เท่านั้น
 var trackFiles = [];
-if (usePerLang) {
-  for (const lang of LANGS) {
-    trackFiles.push(CONFIG.perLangCurrent.replace('{lang}', lang));
-    const relDir = path.join(ROOT, CONFIG.perLangReleases.replace('{lang}', lang));
-    if (fs.existsSync(relDir)) {
-      fs.readdirSync(relDir).filter(f => f.endsWith('.md')).forEach(f => {
-        trackFiles.push(CONFIG.perLangReleases.replace('{lang}', lang) + '/' + f);
-      });
-    }
+for (const lang of LANGS) {
+  trackFiles.push(CONFIG.perLangCurrent.replace('{lang}', lang));
+  const relDir = path.join(ROOT, CONFIG.perLangReleases.replace('{lang}', lang));
+  if (fs.existsSync(relDir)) {
+    fs.readdirSync(relDir).filter(f => f.endsWith('.md')).forEach(f => {
+      trackFiles.push(CONFIG.perLangReleases.replace('{lang}', lang) + '/' + f);
+    });
   }
-} else if (useLegacyMd) {
-  trackFiles.push(CONFIG.legacyMdFile);
-} else {
-  trackFiles.push(CONFIG.legacyJsonFile);
 }
 
 // git log
@@ -377,59 +380,36 @@ for (var i = 0; i < commits.length; i++) {
   var versionFound = null;
   var combinedData = null;
 
-  if (usePerLang) {
-    // อ่านทุกภาษาจาก commit นี้ แล้ว merge
-    var langReleases = {};
-    var hasAny = false;
-    for (var li = 0; li < LANGS.length; li++) {
-      var lang = LANGS[li];
-      // ลอง current.md
-      var content = git(['show', commit.hash + ':' + CONFIG.perLangCurrent.replace('{lang}', lang)]);
-      if (!content) {
-        // ลอง releases/*.md
-        commit.files.forEach(function(fp) {
-          if (fp.indexOf(CONFIG.perLangReleases.replace('{lang}', lang) + '/') === 0 && fp.endsWith('.md')) {
-            if (!content) content = git(['show', commit.hash + ':' + fp]);
-          }
-        });
-      }
-      if (content) {
-        langReleases[lang] = parseMD(content, lang);
-        if (langReleases[lang].version) hasAny = true;
-      }
-    }
-    if (hasAny) {
-      var merged = mergeReleases(langReleases);
-      var versions = Object.keys(merged);
-      for (var vi = 0; vi < versions.length; vi++) {
-        var ver = versions[vi];
-        if (!seenVersions.has(ver)) {
-          versionFound = ver;
-          combinedData = merged[ver];
-          break;
+  // v5.0: อ่านทุกภาษาจาก commit นี้ แล้ว merge — ไม่มี legacy fallback แล้ว
+  var langReleases = {};
+  var hasAny = false;
+  for (var li = 0; li < LANGS.length; li++) {
+    var lang = LANGS[li];
+    // ลอง current.md
+    var content = git(['show', commit.hash + ':' + CONFIG.perLangCurrent.replace('{lang}', lang)]);
+    if (!content) {
+      // ลอง releases/*.md
+      commit.files.forEach(function(fp) {
+        if (fp.indexOf(CONFIG.perLangReleases.replace('{lang}', lang) + '/') === 0 && fp.endsWith('.md')) {
+          if (!content) content = git(['show', commit.hash + ':' + fp]);
         }
-      }
+      });
     }
-  } else if (useLegacyMd) {
-    var mdContent = git(['show', commit.hash + ':' + CONFIG.legacyMdFile]);
-    if (mdContent) {
-      var parsed = parseMD(mdContent, 'en'); // legacy เป็น i18n อยู่แล้ว
-      // แปลง title/subtitle จาก string → object (สำหรับ legacy single-file format)
-      if (parsed.version && !seenVersions.has(parsed.version)) {
-        versionFound = parsed.version;
-        combinedData = parsed;
-      }
+    if (content) {
+      langReleases[lang] = parseMD(content, lang);
+      if (langReleases[lang].version) hasAny = true;
     }
-  } else {
-    var jsonContent = git(['show', commit.hash + ':' + CONFIG.legacyJsonFile]);
-    if (jsonContent) {
-      try {
-        var jp = JSON.parse(jsonContent);
-        if (jp.version && !seenVersions.has(jp.version)) {
-          versionFound = jp.version;
-          combinedData = jp;
-        }
-      } catch(_) {}
+  }
+  if (hasAny) {
+    var merged = mergeReleases(langReleases);
+    var versions = Object.keys(merged);
+    for (var vi = 0; vi < versions.length; vi++) {
+      var ver = versions[vi];
+      if (!seenVersions.has(ver)) {
+        versionFound = ver;
+        combinedData = merged[ver];
+        break;
+      }
     }
   }
 
@@ -467,26 +447,17 @@ for (var i = 0; i < commits.length; i++) {
 var hasCurrentVersion = releases.some(function (r) { return r.version === newVersion; });
 if (!hasCurrentVersion) {
   var currentData = null;
-  if (usePerLang) {
-    var langReleasesCur = {};
-    for (var li2 = 0; li2 < LANGS.length; li2++) {
-      var lang2 = LANGS[li2];
-      var fp2 = path.join(ROOT, CONFIG.perLangCurrent.replace('{lang}', lang2));
-      if (fs.existsSync(fp2)) {
-        langReleasesCur[lang2] = parseMD(fs.readFileSync(fp2, 'utf8'), lang2);
-      }
-    }
-    var mergedCur = mergeReleases(langReleasesCur);
-    if (mergedCur[newVersion]) currentData = mergedCur[newVersion];
-  } else if (useLegacyMd) {
-    var lp2 = path.join(ROOT, CONFIG.legacyMdFile);
-    if (fs.existsSync(lp2)) currentData = parseMD(fs.readFileSync(lp2, 'utf8'), 'en');
-  } else {
-    var jp2 = path.join(ROOT, CONFIG.legacyJsonFile);
-    if (fs.existsSync(jp2)) {
-      try { currentData = JSON.parse(fs.readFileSync(jp2, 'utf8')); } catch (_) {}
+  // v5.0: ใช้ per-language MD เท่านั้น — ไม่มี legacy fallback
+  var langReleasesCur = {};
+  for (var li2 = 0; li2 < LANGS.length; li2++) {
+    var lang2 = LANGS[li2];
+    var fp2 = path.join(ROOT, CONFIG.perLangCurrent.replace('{lang}', lang2));
+    if (fs.existsSync(fp2)) {
+      langReleasesCur[lang2] = parseMD(fs.readFileSync(fp2, 'utf8'), lang2);
     }
   }
+  var mergedCur = mergeReleases(langReleasesCur);
+  if (mergedCur[newVersion]) currentData = mergedCur[newVersion];
   if (currentData) {
     releases.push({
       version: newVersion,
@@ -515,7 +486,8 @@ if (releases.length > MAX_HISTORY) releases = releases.slice(0, MAX_HISTORY);
 //  - ไฟล์ releases/v{version}.md เป็น source ของรายละเอียด release notes สำหรับ version นั้น
 //  - client (new.js) อ่าน releases/index.json เพื่อรู้ว่ามีกี่ version แล้ว fetch ไฟล์ markdown แต่ละ version
 
-if (usePerLang && isNewVersion) {
+// v5.0: usePerLang เป็น always true แล้ว — ไม่ต้องเช็ค
+if (isNewVersion) {
   for (const lang of LANGS) {
     var srcPath = path.join(ROOT, CONFIG.perLangCurrent.replace('{lang}', lang));
     var relDir = path.join(ROOT, CONFIG.perLangReleases.replace('{lang}', lang));
@@ -543,29 +515,28 @@ if (usePerLang && isNewVersion) {
 //  แต่ไม่ได้อยู่ใน registry (เช่น v1.0.8, v1.3.0 ที่สร้างไว้ก่อน) แล้ว backfill registry ด้วย
 //  date จากไฟล์ markdown เอง (ถ้ามี) หรือใช้ NOW
 
-if (usePerLang) {
-  for (var li3 = 0; li3 < LANGS.length; li3++) {
-    var lang3 = LANGS[li3];
-    var scanDir = path.join(ROOT, CONFIG.perLangReleases.replace('{lang}', lang3));
-    if (fs.existsSync(scanDir)) {
-      var mdFiles = fs.readdirSync(scanDir).filter(function (f) { return f.endsWith('.md'); });
-      for (var mi = 0; mi < mdFiles.length; mi++) {
-        // ดึง version จากชื่อไฟล์ (เช่น "v1.3.0.md" → "1.3.0", "v.1.0.8.md" → "1.0.8")
-        var verFromFile = mdFiles[mi].replace(/^v?\.?/, '').replace(/\.md$/, '');
-        if (!releaseDatesRegistry.versions[verFromFile]) {
-          // ไม่มีใน registry → อ่าน date จากไฟล์ markdown
-          var mdPath = path.join(scanDir, mdFiles[mi]);
-          try {
-            var mdContent3 = fs.readFileSync(mdPath, 'utf8');
-            var dM3 = mdContent3.match(/^date:\s*(.+)$/m);
-            var parsedDate3 = dM3 ? Date.parse(dM3[1].trim()) : NaN;
-            var iso3 = !isNaN(parsedDate3) ? new Date(parsedDate3).toISOString() : NOW.toISOString();
-            releaseDatesRegistry.versions[verFromFile] = iso3;
-            console.log(`    📌  Backfill registry จากไฟล์: "${verFromFile}" → ${iso3} (from ${mdFiles[mi]})`);
-          } catch (_) {
-            releaseDatesRegistry.versions[verFromFile] = NOW.toISOString();
-            console.log(`    📌  Backfill registry จากไฟล์: "${verFromFile}" → ${NOW.toISOString()} (NOW, อ่าน date ไม่ได้)`);
-          }
+// v5.0: usePerLang เป็น always true แล้ว — ไม่ต้องเช็ค
+for (var li3 = 0; li3 < LANGS.length; li3++) {
+  var lang3 = LANGS[li3];
+  var scanDir = path.join(ROOT, CONFIG.perLangReleases.replace('{lang}', lang3));
+  if (fs.existsSync(scanDir)) {
+    var mdFiles = fs.readdirSync(scanDir).filter(function (f) { return f.endsWith('.md'); });
+    for (var mi = 0; mi < mdFiles.length; mi++) {
+      // ดึง version จากชื่อไฟล์ (เช่น "v1.3.0.md" → "1.3.0", "v.1.0.8.md" → "1.0.8")
+      var verFromFile = mdFiles[mi].replace(/^v?\.?/, '').replace(/\.md$/, '');
+      if (!releaseDatesRegistry.versions[verFromFile]) {
+        // ไม่มีใน registry → อ่าน date จากไฟล์ markdown
+        var mdPath = path.join(scanDir, mdFiles[mi]);
+        try {
+          var mdContent3 = fs.readFileSync(mdPath, 'utf8');
+          var dM3 = mdContent3.match(/^date:\s*(.+)$/m);
+          var parsedDate3 = dM3 ? Date.parse(dM3[1].trim()) : NaN;
+          var iso3 = !isNaN(parsedDate3) ? new Date(parsedDate3).toISOString() : NOW.toISOString();
+          releaseDatesRegistry.versions[verFromFile] = iso3;
+          console.log(`    📌  Backfill registry จากไฟล์: "${verFromFile}" → ${iso3} (from ${mdFiles[mi]})`);
+        } catch (_) {
+          releaseDatesRegistry.versions[verFromFile] = NOW.toISOString();
+          console.log(`    📌  Backfill registry จากไฟล์: "${verFromFile}" → ${NOW.toISOString()} (NOW, อ่าน date ไม่ได้)`);
         }
       }
     }
@@ -582,15 +553,14 @@ var allVersions = Object.keys(releaseDatesRegistry.versions).sort(function (a, b
 });
 
 // สร้าง index entries พร้อมตรวจสอบ hasDetails
+// v5.0: ใช้ per-lang MD เท่านั้น — ตรวจไฟล์ใน releases/{lang}/v{version}.md ทุกภาษา
 for (var ai = 0; ai < allVersions.length; ai++) {
   var v = allVersions[ai];
   var vDate = releaseDatesRegistry.versions[v];
   var hasDetails = true;
-  if (usePerLang) {
-    for (var hi = 0; hi < LANGS.length; hi++) {
-      var checkPath = path.join(ROOT, CONFIG.perLangReleases.replace('{lang}', LANGS[hi]), 'v' + v + '.md');
-      if (!fs.existsSync(checkPath)) { hasDetails = false; break; }
-    }
+  for (var hi = 0; hi < LANGS.length; hi++) {
+    var checkPath = path.join(ROOT, CONFIG.perLangReleases.replace('{lang}', LANGS[hi]), 'v' + v + '.md');
+    if (!fs.existsSync(checkPath)) { hasDetails = false; break; }
   }
   indexEntries.push({ version: v, date: vDate, hasDetails: hasDetails });
 }
@@ -627,56 +597,34 @@ fs.writeFileSync(releasesIndexPath, JSON.stringify({
 console.log(`✅  releases/index.json: ${indexEntries.length}/${MAX_HISTORY} versions [${indexEntries.map(function(e){return e.version + (e.hasDetails ? '' : ' (no-file)');}).join(', ')}]`);
 
 // ── STEP 2: อัพเดท source files ────────────────────────────────────────────
-//  v4: เขียน date ใน current.md ให้ตรงกับ registry เสมอ
-//  - ผู้ใช้ไม่ควรเขียน date: ใน current.md เอง — ระบบจะเขียนทับด้วยค่าจาก registry
+//  v5.0 CLOSED SYSTEM: sync date ใน current.md ให้ตรง registry เสมอ
+//  - นักพัฒนาไม่ควรเขียน date: ใน current.md เอง — ระบบเขียนทับด้วยค่าจาก registry
 //  - ถ้า version ใหม่ → เขียน date = NOW (ที่บันทึกใน registry ใน STEP 0)
 //  - ถ้า version เดิม → เขียน date = registry date (คงเดิม)
 //  - ถ้า date ใน current.md ตรง registry แล้ว → skip ไม่เขียน (ประหยัด I/O)
 //
-//  เหตุผล: ผู้ใช้อาจเขียน date: มั่วๆ ใน current.md ซึ่งไม่ตรงกับเวลาที่ build จริง
+//  เหตุผล: นักพัฒนาอาจเขียน date: มั่วๆ ใน current.md ซึ่งไม่ตรงกับเวลาที่ build จริง
 //         ระบบจะ sync กลับเป็นค่าจาก registry ทุกครั้ง เพื่อให้ date สะท้อนเวลาจริง
 
-if (usePerLang) {
-  for (const lang of LANGS) {
-    var fp = path.join(ROOT, CONFIG.perLangCurrent.replace('{lang}', lang));
-    if (fs.existsSync(fp)) {
-      var content = fs.readFileSync(fp, 'utf8');
-      var existingDateMatch = content.match(/^date:\s*(.+)$/m);
-      var existingDate = existingDateMatch ? existingDateMatch[1].trim() : null;
-      if (existingDate !== currentReleaseDateISO) {
-        // date ไม่ตรง registry → เขียนทับ (หรือเพิ่มใหม่ถ้ายังไม่มี)
-        if (/^date:\s*.+$/m.test(content)) {
-          content = content.replace(/^date:\s*.+$/m, 'date: ' + currentReleaseDateISO);
-        } else {
-          content = content.replace(/^(version:\s*.+)$/m, '$1\ndate: ' + currentReleaseDateISO);
-        }
-        fs.writeFileSync(fp, content, 'utf8');
-        console.log(`✅  ${CONFIG.perLangCurrent.replace('{lang}', lang)} → date = ${currentReleaseDateISO}` + (isNewVersion ? ' (version ใหม่)' : ' (sync กับ registry)'));
+for (const lang of LANGS) {
+  var fp = path.join(ROOT, CONFIG.perLangCurrent.replace('{lang}', lang));
+  if (fs.existsSync(fp)) {
+    var content = fs.readFileSync(fp, 'utf8');
+    var existingDateMatch = content.match(/^date:\s*(.+)$/m);
+    var existingDate = existingDateMatch ? existingDateMatch[1].trim() : null;
+    if (existingDate !== currentReleaseDateISO) {
+      // date ไม่ตรง registry → เขียนทับ (หรือเพิ่มใหม่ถ้ายังไม่มี)
+      if (/^date:\s*.+$/m.test(content)) {
+        content = content.replace(/^date:\s*.+$/m, 'date: ' + currentReleaseDateISO);
       } else {
-        console.log(`⏭️   ${CONFIG.perLangCurrent.replace('{lang}', lang)} → date ถูกต้องแล้ว (${currentReleaseDateISO})`);
+        content = content.replace(/^(version:\s*.+)$/m, '$1\ndate: ' + currentReleaseDateISO);
       }
+      fs.writeFileSync(fp, content, 'utf8');
+      console.log(`✅  ${CONFIG.perLangCurrent.replace('{lang}', lang)} → date = ${currentReleaseDateISO}` + (isNewVersion ? ' (version ใหม่)' : ' (sync กับ registry)'));
+    } else {
+      console.log(`⏭️   ${CONFIG.perLangCurrent.replace('{lang}', lang)} → date ถูกต้องแล้ว (${currentReleaseDateISO})`);
     }
   }
-} else if (useLegacyMd) {
-  var lp = path.join(ROOT, CONFIG.legacyMdFile);
-  var lc = fs.readFileSync(lp, 'utf8');
-  var legacyDateMatch = lc.match(/^date:\s*(.+)$/m);
-  var legacyExisting = legacyDateMatch ? legacyDateMatch[1].trim() : null;
-  if (legacyExisting !== currentReleaseDateISO) {
-    if (/^date:\s*.+$/m.test(lc)) lc = lc.replace(/^date:\s*.+$/m, 'date: ' + currentReleaseDateISO);
-    else lc = lc.replace(/^(version:\s*.+)$/m, '$1\ndate: ' + currentReleaseDateISO);
-    fs.writeFileSync(lp, lc, 'utf8');
-    console.log(`✅  current.md → date = ${currentReleaseDateISO}` + (isNewVersion ? ' (version ใหม่)' : ' (sync กับ registry)'));
-  } else {
-    console.log('⏭️   current.md → date ถูกต้องแล้ว (' + currentReleaseDateISO + ')');
-  }
-} else {
-  var jp = path.join(ROOT, CONFIG.legacyJsonFile);
-  var jd = JSON.parse(fs.readFileSync(jp, 'utf8'));
-  jd.version = newVersion;
-  jd.date = makeDateObj(currentReleaseDate);
-  fs.writeFileSync(jp, JSON.stringify(jd, null, 2) + '\n');
-  console.log('✅  whats-new.json → v' + newVersion);
 }
 
 // ── STEP 3: version.json ─────────────────────────────────────────────────────
@@ -719,7 +667,7 @@ console.log('\n' + '─'.repeat(56));
 console.log('  Version:  ' + newVersion + (isNewVersion ? ' (NEW)' : ' (same)'));
 console.log('  Build ID: ' + buildId);
 console.log('  Release:  ' + currentReleaseDateISO + (isNewVersion ? ' — บันทึกใหม่' : ' — คงเดิมจาก registry'));
-console.log('  Source:   ' + (usePerLang ? 'Per-language MD' : useLegacyMd ? 'Legacy MD' : 'Legacy JSON'));
+console.log('  Source:   Per-language MD (closed system v5.0)');
 console.log('  History:  ' + releases.length + '/' + MAX_HISTORY);
 console.log('  HTML:     ' + updated + '/' + scanned + ' updated');
 console.log('─'.repeat(56) + '\n🚀  Ready!\n');

@@ -319,15 +319,21 @@
 
         if (main === CONFIG.ALL_BUTTON.URL) {
           // ── Smart infinite feed ───────────────────────────────────────────
-          // v4: renderFeed จะเรียก hideInstant() เมื่อ first page พร้อม
-          //   (content mount ใต้ overlay ก่อน → 1 rAF → ลบ overlay)
+          // v5: state preservation — save current route ก่อน navigate ออก
+          //   renderFeed จะ restore จาก RouteCache ถ้ามี cache ที่ valid
+          //   ถ้าไม่มี cache → render ใหม่จากศูนย์ (เหมือน v4)
+          try { M.ContentService.saveActiveRoute(); } catch (_) {}
           try {
-            await M.ContentService.renderFeed(lang);
+            await M.ContentService.renderFeed(lang, CONFIG.ALL_BUTTON.URL);
           } catch (feedErr) {
             console.error('[NavCore/Router] renderFeed error:', feedErr);
           }
         } else {
           // ── Normal content rendering ──────────────────────────────────────
+          // v5: save active route ก่อน clearContent — เก็บ DOM + state ลง RouteCache
+          //   ถ้าข้อมูลเป็น source-based → ใช้ renderContentLazy (lazy paginate)
+          //   ถ้าไม่ใช่ → ใช้ renderContent แบบเดิม (URE virtual scroll)
+          try { M.ContentService.saveActiveRoute(); } catch (_) {}
           try { await M.ContentService.clearContent(); } catch (_) {}
 
           const jobs = [];
@@ -340,9 +346,31 @@
             const results  = await Promise.all(jobs);
             if (myGen !== this._navGen) return;
             const combined = results.flatMap(r => Array.isArray(r) ? r : (r ? [r] : []));
-            // v4: renderContent จะเรียก hideInstant() ใน finally
-            //   (content mount ใต้ overlay ก่อน → 1 rAF → ลบ overlay)
-            if (combined.length) await M.ContentService.renderContent(combined);
+            if (combined.length) {
+              // ── v5: เลือก render path ตาม data shape ──────────────────────
+              //   ถ้า data = [{ source: 'xxx' }] (source descriptors ล้วน) → renderContentLazy
+              //   ถ้ามี item อื่นปน (เช่น {category}, {jsonFile}) → renderContent (URE)
+              //   WHY: lazy paginate ทยอยโหลด categories แบบ infinite scroll
+              //        เหมือน feed → ไม่ดึงทั้งไฟล์ขึ้นมา render ทีเดียว
+              const routeKey = chosenSub?.url || chosenSub?.jsonFile || main;
+              const sourceCount = combined
+                .filter(d => d && typeof d === 'object' && d.source)
+                .length;
+              const useLazy = sourceCount > 0 && sourceCount === combined.length;
+              if (useLazy) {
+                try {
+                  await M.ContentService.renderContentLazy(combined, lang, routeKey);
+                } catch (lazyErr) {
+                  console.error('[NavCore/Router] renderContentLazy error:', lazyErr);
+                  // fallback ไป renderContent แบบเดิม
+                  await M.ContentService.renderContent(combined);
+                }
+              } else {
+                // v4: renderContent จะเรียก hideInstant() ใน finally
+                //   (content mount ใต้ overlay ก่อน → 1 rAF → ลบ overlay)
+                await M.ContentService.renderContent(combined);
+              }
+            }
           } else {
             // v4: ไม่มี fetch job — hideInstant ทันที
             try { await M.LoadingService?.hideInstant(); } catch (_) {}

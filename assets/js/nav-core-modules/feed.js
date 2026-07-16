@@ -402,6 +402,84 @@
 
     /** Called on language change — headers must re-resolve with new lang */
     invalidate() { this.reset(); },
+
+    // ── State save/restore (for RouteCache — X-style preservation) ────────────
+    //
+    // snapshot() / restore(snap) ช่วยให้ feed route สามารถ "จดจำ" สถานะได้
+    // เมื่อ user ไปหน้าอื่นแล้วกลับมา — content และ scroll position ยังเหมือนเดิม
+    //
+    // ข้อควรระวัง:
+    //   - _rng (function) ไม่ serialize ได้ → สร้างใหม่จาก _seed ตอน restore
+    //   - _catShowCounts (Map) → แปลงเป็น Array ตอน snapshot และกลับ
+    //   - _copyableIds, _dbRef เป็น persistent state — ไม่อยู่ใน snapshot
+    //     (restore จะ re-resolve ผ่าน _ensureInit ถ้ายังไม่ initialized)
+
+    /**
+     * Snapshot state ปัจจุบัน — ใช้บันทึกลง RouteCache
+     * @returns {object|null}
+     */
+    snapshot() {
+      if (!this._isInitialized) return null;
+      return {
+        buttonSegs:    this._buttonSegs.slice(),
+        cardSegs:      this._cardSegs.slice(),
+        masterPool:    this._masterPool.slice(),
+        unseenPool:    this._unseenPool.slice(),
+        softResets:    this._softResets,
+        isExhausted:   this._isExhausted,
+        isInitialized: this._isInitialized,
+        slotIndex:     this._slotIndex,
+        // Map → Array of [key, value] for JSON serialization
+        catShowCounts: this._catShowCounts ? Array.from(this._catShowCounts.entries()) : [],
+        recentCats:    this._recentCats ? this._recentCats.slice() : [],
+        recentTypes:   this._recentTypes ? this._recentTypes.slice() : [],
+        seed:          this._seed,
+      };
+    },
+
+    /**
+     * Restore state จาก snapshot — ใช้ตอนกลับมาหน้า feed จาก RouteCache
+     * @param {object} snap
+     */
+    restore(snap) {
+      if (!snap || !snap.isInitialized) {
+        // snapshot ไม่ valid → reset เพื่อเริ่มใหม่
+        this.reset();
+        return;
+      }
+
+      this._buttonSegs    = Array.isArray(snap.buttonSegs) ? snap.buttonSegs.slice() : [];
+      this._cardSegs      = Array.isArray(snap.cardSegs) ? snap.cardSegs.slice() : [];
+      this._masterPool    = Array.isArray(snap.masterPool) ? snap.masterPool.slice() : [];
+      this._unseenPool    = Array.isArray(snap.unseenPool) ? snap.unseenPool.slice() : [];
+      this._softResets    = snap.softResets || 0;
+      this._isExhausted   = !!snap.isExhausted;
+      this._isInitialized = true; // assume persistent state (_copyableIds, _dbRef) still valid
+      this._slotIndex     = snap.slotIndex || 0;
+
+      // Array → Map
+      this._catShowCounts = new Map(Array.isArray(snap.catShowCounts) ? snap.catShowCounts : []);
+      this._recentCats    = Array.isArray(snap.recentCats) ? snap.recentCats.slice() : [];
+      this._recentTypes   = Array.isArray(snap.recentTypes) ? snap.recentTypes.slice() : [];
+
+      // Recreate _rng from saved seed (function ไม่ serialize ได้)
+      this._seed = snap.seed || ((Date.now() ^ (Math.random() * 0x100000000 | 0)) >>> 0);
+      this._rng  = _mulberry32(this._seed);
+
+      // ตรวจว่า persistent state ยัง valid ไหม — ถ้าไม่ ให้ re-resolve
+      if (!this._copyableIds) {
+        // _resolveCopyableIds และ _dbRef จะถูก set ใน _ensureInit ครั้งถัดไป
+        // _isInitialized = true จะทำให้ _ensureInit return ทันที → ต้อง force re-init
+        this._isInitialized = false;
+      }
+    },
+
+    /**
+     * ตรวจสถานะ — ใช้ใน RouteCache เพื่อตัดสินใจว่า snapshot valid ไหม
+     */
+    canResume() {
+      return this._isInitialized && this._masterPool.length > 0;
+    },
   };
 
   // ── Export ──────────────────────────────────────────────────────────────────

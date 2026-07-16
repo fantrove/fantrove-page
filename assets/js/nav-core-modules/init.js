@@ -31,6 +31,7 @@
     SubNavService, ButtonService,
     RouterService, NavigationService,
     CopyService, FeedService,
+    SourcePaginator, RouteCache,
   } = M;
 
   // ── InitService ───────────────────────────────────────────────────────────────
@@ -83,6 +84,11 @@
           // WHY: feed cache เก็บชื่อ category ตามภาษา — ต้อง invalidate เมื่อเปลี่ยนภาษา
           //      ไม่เช่นนั้น ฟีดจะแสดงชื่อภาษาเก่าจนกว่า seed window จะหมดอายุ (30 min)
           try { FeedService?.invalidate?.(); }                      catch (_) {}
+          // v5: invalidate RouteCache + SourcePaginator เมื่อเปลี่ยนภาษา
+          //   ไม่เช่นนั้น DOM snapshot ที่เก็บไว้จะมี header ภาษาเก่า
+          try { ContentService?.invalidateRouteCache?.(); }         catch (_) {}
+          try { ContentService?.clearActiveRoute?.(); }             catch (_) {}
+          try { SourcePaginator?.invalidate?.(); }                  catch (_) {}
         }, { passive: true });
 
         let _resizeTimer;
@@ -218,6 +224,8 @@
       window._navCore_subNavManager        = SubNavService;
       window._navCore_router               = RouterService;
       window._navCore_feedService          = FeedService;
+      window._navCore_sourcePaginator      = SourcePaginator;
+      window._navCore_routeCache           = RouteCache;
       window._navCore_elements             = State.elements;
 
       // ── Backward-compat aliases (_headerV2_*) ──────────────────────────────

@@ -11,8 +11,11 @@
   
   const PHASES = [
     ['types.js', 'config.js', 'state.js'],
-    ['utils.js', 'data.js'],
-    ['loading.js', 'content.js', 'performance.js', 'feed.js'], // feed.js ต้องอยู่หลัง data.js (Phase 2)
+    ['utils.js', 'data.js', 'route-cache.js'], // route-cache.js ไม่มี dependency อื่น
+    ['loading.js', 'feed.js', 'paginator.js', 'content.js', 'performance.js'],
+    // feed.js ต้องอยู่หลัง data.js (Phase 2)
+    // paginator.js ต้องอยู่หลัง data.js (Phase 2) — ใช้ DataService.getTypeCategories
+    // content.js ต้องอยู่หลัง feed.js + paginator.js + route-cache.js (Phase 2) — ใช้ทั้ง 3
     ['buttons.js', 'router.js', 'copy.js'],
     ['init.js'],
   ];

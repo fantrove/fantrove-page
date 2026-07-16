@@ -6,7 +6,8 @@
 // @ts-check
 /**
  * @file content.js
- * ContentService — URE-powered rendering + native infinite-scroll feed.
+ * ContentService — URE-powered rendering + native infinite-scroll feed
+ *                        + lazy paginated rendering สำหรับ source-based routes.
  *
  * Feed render path (renderFeed):
  *   - native DOM append แทน URE → รองรับ infinite scroll ได้โดยไม่ re-mount
@@ -14,13 +15,21 @@
  *   - content-visibility:auto บน .feed-page → browser discard off-screen rendering
  *   - delegated click บน #content-loading → copy + card open ทำงานเหมือนกัน
  *   - clearContent() disconnect observer → ไม่มี memory leak
+ *   - state preservation: snapshot/restore ผ่าน RouteCache (X-style)
+ *
+ * Lazy render path (renderContentLazy):
+ *   - ใช้สำหรับ route ที่ระบุ source (Symbols/Emojis/Fancy ฯลฯ)
+ *   - ทยอย fetch categories ทีละหน้าผ่าน SourcePaginator
+ *   - ใช้ IntersectionObserver เหมือน feed → scroll กดเพิ่ม category ถัดไป
+ *   - แทนที่ renderContent() แบบเดิมที่ Promise.all fetch ทุก category ทีเดียว
+ *   - state preservation: เก็บ DOM + paginator state + scroll ผ่าน RouteCache
  *
  * Feed page sizes:
  *   FEED_FIRST_PAGE_SIZE = 10 segments × 20 items = 200 items on first paint
  *   FEED_PAGE_SIZE       = 12 segments × 20 items = 240 items per scroll load
  *
  * @module content
- * @depends {config.js, state.js, data.js, loading.js, feed.js}
+ * @depends {config.js, state.js, data.js, loading.js, feed.js, paginator.js, route-cache.js}
  */
 (function (M) {
   'use strict';
@@ -128,6 +137,12 @@
   let _feedObserver = null;
   let _sess         = 0;
 
+  // ── Active route tracking (for state preservation) ────────────────────────────
+  // WHY: เก็บ routeKey ปัจจุบันเพื่อให้ router.js สามารถ trigger save ก่อน navigate-away
+  //   และเรียก restore เมื่อกลับมา route เดิม
+  let _activeRouteKey   = null;
+  let _activeRouteKind  = null; // 'feed' | 'lazy' | 'ure'
+
   // ── ContentService ─────────────────────────────────────────────────────────────
 
   const ContentService = {
@@ -211,6 +226,12 @@
     /**
      * Render smart infinite feed สำหรับ "All" button.
      *
+     * v2 — state preservation (X-style):
+     *   • ถ้ามี cache ของ route นี้ใน RouteCache → restore DOM + FeedService state
+     *     + scroll position + re-attach observer (skip first page fetch)
+     *   • ถ้าไม่มี cache → render ใหม่จากศูนย์ (เหมือน v1)
+     *   • router.js จะเรียก saveActiveRoute() ก่อน navigate ออก → state ถูกเก็บใน RouteCache
+     *
      * ทำไมไม่ใช้ URE:
      *   URE mount ครั้งเดียว ถ้าจะ append ต้องรู้ internal API
      *   feed ใช้ IntersectionObserver + DOM append แทน
@@ -222,14 +243,50 @@
      *   clearContent() disconnect observer ก่อน clear DOM เสมอ
      *
      * @param {string} lang
+     * @param {string} [routeKey]  key สำหรับ RouteCache (default '_all')
      */
-    async renderFeed(lang) {
+    async renderFeed(lang, routeKey = '_all') {
       _ensureCss();
       _ensureFeedCss();
 
       const ctr = document.getElementById(CONFIG.DOM.CONTENT_LOADING_ID);
       if (!ctr) return;
 
+      _activeRouteKey  = routeKey;
+      _activeRouteKind = 'feed';
+
+      // ── v2: ลอง restore จาก RouteCache ก่อน ────────────────────────────────
+      const cached = M.RouteCache?.get?.(routeKey);
+      if (cached && cached.routeKind === 'feed'
+          && cached.domSnapshot
+          && M.FeedService.canResume?.()) {
+
+        // restore DOM (clone snapshot ลง container)
+        M.RouteCache.restoreDom(ctr, cached.domSnapshot);
+        // restore FeedService state
+        M.FeedService.restore?.(cached.feedState);
+
+        // re-attach delegated click + observer
+        this._ensureFeedClickDelegate(ctr);
+
+        // รอ 1 rAF ให้ browser paint ก่อน hide overlay (render-behind-overlay pattern)
+        try { M.LoadingService?.hideInstant(); } catch (_) {}
+
+        // restore scroll position (ใน frame ถัดไปเพื่อให้ DOM paint เสร็จ)
+        const savedScroll = cached.scrollPosition || 0;
+        requestAnimationFrame(() => {
+          try { window.scrollTo({ top: savedScroll, behavior: 'instant' }); }
+          catch (_) { window.scrollTo(0, savedScroll); }
+        });
+
+        // re-attach observer ถ้ายังมี content ให้โหลดต่อ
+        if (cached.hasMore) {
+          this._attachFeedSentinel(ctr, lang, _sess);
+        }
+        return;
+      }
+
+      // ── v1 path: ไม่มี cache → render ใหม่จากศูนย์ ─────────────────────────
       // WHY reset ก่อน clearContent: FeedService.reset() ต้องเรียกก่อน
       //   เพื่อให้ _ensureInit() ใน loadNextPage() สร้าง segments ใหม่ได้ถูกต้อง
       M.FeedService.reset();
@@ -272,6 +329,168 @@
         console.error('[NavCore/Content] renderFeed error:', e);
         try { M.LoadingService?.hide(); } catch (_) {}
       }
+    },
+
+    // ── renderContentLazy (source-based routes — lazy paginated) ───────────────
+    //
+    // ใช้สำหรับ route ที่ระบุ source เช่น Symbols/Emojis/Fancy
+    //   แทนที่ renderContent() สำหรับกรณี data = [{ source: 'symbol' }, ...]
+    //   ทำงานเหมือน renderFeed แต่ใช้ SourcePaginator แทน FeedService
+    //
+    // WHY แยกจาก renderContent:
+    //   renderContent ต้อง resolve ทุก categories ทีเดียวก่อน mount URE → ไม่ lazy
+    //   renderContentLazy ทยอย fetch category ทีละหน้าผ่าน paginator
+    //   ใช้ IntersectionObserver เหมือน feed → scroll เพิ่ม → load category ถัดไป
+    //
+    // @param {Array}  data      array of source descriptors: [{ source, as, only }]
+    // @param {string} lang
+    // @param {string} routeKey  key สำหรับ RouteCache
+    async renderContentLazy(data, lang, routeKey) {
+      _ensureCss();
+      _ensureFeedCss();
+
+      const ctr = document.getElementById(CONFIG.DOM.CONTENT_LOADING_ID);
+      if (!ctr) return;
+
+      _activeRouteKey  = routeKey;
+      _activeRouteKind = 'lazy';
+
+      // ── ลอง restore จาก RouteCache ก่อน ───────────────────────────────────
+      const cached = M.RouteCache?.get?.(routeKey);
+      if (cached && cached.routeKind === 'lazy'
+          && cached.domSnapshot
+          && cached.paginatorState) {
+
+        // restore DOM
+        M.RouteCache.restoreDom(ctr, cached.domSnapshot);
+        // restore paginator state
+        M.SourcePaginator?.restore?.(cached.paginatorState);
+
+        // re-attach delegated click + observer
+        this._ensureFeedClickDelegate(ctr);
+
+        try { M.LoadingService?.hideInstant(); } catch (_) {}
+
+        // restore scroll position
+        const savedScroll = cached.scrollPosition || 0;
+        requestAnimationFrame(() => {
+          try { window.scrollTo({ top: savedScroll, behavior: 'instant' }); }
+          catch (_) { window.scrollTo(0, savedScroll); }
+        });
+
+        // re-attach observer ถ้ายังมี content ให้โหลดต่อ
+        if (cached.hasMore) {
+          this._attachLazySentinel(ctr, lang, _sess);
+        }
+        return;
+      }
+
+      // ── ไม่มี cache → render ใหม่ ───────────────────────────────────────────
+      await this.clearContent();
+      const sess = _sess;
+
+      try {
+        await M.DataService.loadApiDatabase().catch(err => {
+          console.warn('[Content] renderContentLazy: loadApiDatabase failed:', err);
+        });
+        if (sess !== _sess) return;
+
+        // Delegated click — attach ครั้งเดียว
+        this._ensureFeedClickDelegate(ctr);
+
+        // ── Initialize paginator สำหรับ source descriptor ตัวแรกที่เจอ ──────
+        // WHY ใช้แค่ตัวแรก: ปัจจุบัน source descriptors มักมีแค่ตัวเดียว
+        //   เช่น symbols.json = [{ source: 'symbol' }]
+        //   ถ้ามีหลาย source ในอนาคต ต้องปรับให้ paginator รองรับหลาย source
+        const sourceDesc = data.find(d => d && d.source);
+        if (!sourceDesc) {
+          // ไม่ใช่ source-based → fallback ไป renderContent แบบเดิม
+          await this.renderContent(data);
+          return;
+        }
+
+        const layout = sourceDesc.as === 'cards' || sourceDesc.as === 'card'
+          ? 'card' : 'button';
+        const filter = Array.isArray(sourceDesc.only) ? sourceDesc.only : null;
+
+        // reset paginator ก่อน init (clear state เดิม)
+        M.SourcePaginator?.reset?.();
+        await M.SourcePaginator.init(sourceDesc.source, layout, filter);
+        if (sess !== _sess) return;
+
+        // ── First page ─────────────────────────────────────────────────────────
+        const { groups: firstGroups, hasMore } =
+          await M.SourcePaginator.loadNextPage(lang, M.SourcePaginator.FIRST_PAGE_SIZE);
+        if (sess !== _sess) return;
+
+        if (firstGroups.length) {
+          await this._appendFeedGroups(ctr, firstGroups, lang, null);
+        }
+
+        try { M.LoadingService?.hideInstant(); } catch (_) {}
+
+        if (sess !== _sess) return;
+
+        if (hasMore) {
+          this._attachLazySentinel(ctr, lang, sess);
+        }
+
+      } catch (e) {
+        console.error('[NavCore/Content] renderContentLazy error:', e);
+        try { M.LoadingService?.hide(); } catch (_) {}
+      }
+    },
+
+    /**
+     * Sentinel สำหรับ lazy paginator — คล้าย _attachFeedSentinel แต่เรียก
+     * SourcePaginator.loadNextPage แทน FeedService.loadNextPage
+     */
+    _attachLazySentinel(ctr, lang, sess) {
+      if (_feedObserver) { _feedObserver.disconnect(); _feedObserver = null; }
+
+      const sentinel = document.createElement('div');
+      sentinel.id    = FEED_SENTINEL_ID;
+      sentinel.setAttribute('aria-hidden', 'true');
+      ctr.appendChild(sentinel);
+
+      let _loading = false;
+
+      _feedObserver = new IntersectionObserver(async entries => {
+        if (!entries[0].isIntersecting || _loading) return;
+
+        if (sess !== _sess) {
+          _feedObserver?.disconnect();
+          _feedObserver = null;
+          return;
+        }
+
+        _loading = true;
+        try {
+          const { groups, hasMore } =
+            await M.SourcePaginator.loadNextPage(lang, M.SourcePaginator.PAGE_SIZE);
+
+          if (sess !== _sess) return;
+
+          if (groups.length) {
+            await this._appendFeedGroups(ctr, groups, lang, sentinel);
+          }
+
+          if (!hasMore) {
+            _feedObserver?.disconnect();
+            _feedObserver = null;
+            sentinel.remove();
+          }
+        } catch (e) {
+          console.error('[NavCore/Content] lazy loadMore error:', e);
+        } finally {
+          _loading = false;
+        }
+      }, {
+        rootMargin: '600px',
+        threshold:  0,
+      });
+
+      _feedObserver.observe(sentinel);
     },
 
     /**
@@ -636,6 +855,64 @@
 
     updateCardsLanguage(lang) {
       if (_ureHandle) try { _ureHandle.setLang(lang); } catch (err) { console.warn('[Content] setLang failed:', err); }
+    },
+
+    // ── State preservation (called by router.js before navigate-away) ──────────
+    //
+    // saveActiveRoute: snapshot DOM + scroll + service state ลง RouteCache
+    //   ต้องเรียกก่อน clearContent() — ไม่งั้น DOM หาย
+    //
+    // @returns {boolean} true ถ้า save สำเร็จ
+    saveActiveRoute() {
+      if (!_activeRouteKey || !M.RouteCache) return false;
+
+      const ctr = document.getElementById(CONFIG.DOM.CONTENT_LOADING_ID);
+      if (!ctr || !ctr.childNodes.length) return false;
+
+      const domSnapshot = M.RouteCache.snapshotDom(ctr);
+      if (!domSnapshot) return false;
+
+      const scrollPosition = window.pageYOffset || 0;
+
+      /** @type {any} */
+      const partial = {
+        domSnapshot,
+        scrollPosition,
+        routeKind: _activeRouteKind || 'ure',
+        hasMore:   false,
+      };
+
+      // ดึง state จาก service ที่เกี่ยวข้อง
+      if (_activeRouteKind === 'feed') {
+        partial.feedState = M.FeedService?.snapshot?.() || null;
+        // hasMore: ถ้า FeedService ยังไม่ exhausted → ยังโหลดได้
+        partial.hasMore = !!(M.FeedService?._isExhausted === false
+                             && M.FeedService?._unseenPool?.length > 0);
+      } else if (_activeRouteKind === 'lazy') {
+        partial.paginatorState = M.SourcePaginator?.snapshot?.() || null;
+        partial.hasMore = !!(partial.paginatorState?.hasMore);
+      }
+
+      M.RouteCache.save(_activeRouteKey, partial);
+      return true;
+    },
+
+    /**
+     * Clear active route tracking — เรียกเมื่อต้องการ reset (เช่น language change)
+     */
+    clearActiveRoute() {
+      _activeRouteKey  = null;
+      _activeRouteKind = null;
+    },
+
+    /**
+     * Invalidate route cache — เรียกเมื่อ language change หรือ cache reset
+     * @param {string} [routeKey]  เฉพาะ route นี้ ถ้าไม่ระบุ = ทั้งหมด
+     */
+    invalidateRouteCache(routeKey) {
+      if (!M.RouteCache) return;
+      if (routeKey) M.RouteCache.invalidate(routeKey);
+      else M.RouteCache.invalidate();
     },
 
     createContainer()        { return document.createElement('div'); },

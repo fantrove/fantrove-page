@@ -451,54 +451,73 @@ document.getElementById('title').textContent = 'Page Title';
 
 ---
 
-## 9. กฎเกี่ยวกับ Release Notes
+## 9. กฎเกี่ยวกับ Release Notes (v5.0 — Closed System)
 
-### 9.1 ห้ามสร้างไฟล์ใน `assets/md/{en,th}/releases/` ด้วยตนเอง
+> ⚠️ **v5.0:** ระบบ release notes เป็น **closed system** — นักพัฒนาเขียน/แก้ได้แค่ `assets/md/{en,th}/current.md` เท่านั้น ไฟล์อื่นทุกไฟล์เป็น generated artifacts ที่ build script สร้างใน CI/CD
 
-ตั้งแต่ v4.1 เป็นต้นไป build script สร้างไฟล์ `releases/v{version}.md` อัตโนมัติเมื่อ bump version ใหม่ — ผู้ใช้ไม่ต้องสร้างเอง
+### 9.1 ห้ามแตะ generated artifacts (Closed System)
+
+นักพัฒนาเขียน/แก้ได้แค่ 2 ไฟล์:
+
+- `assets/md/en/current.md` — release notes ภาษาอังกฤษของ version ปัจจุบัน
+- `assets/md/th/current.md` — release notes ภาษาไทยของ version ปัจจุบัน
+
+ไฟล์อื่นทุกไฟล์ในระบบ release notes เป็น generated artifacts — ห้ามแก้/ห้ามสร้าง/ห้ามลบ:
+
+```bash
+# ❌ ห้าม — ทั้งหมดเป็น generated artifacts
+assets/md/en/releases/v*.md           # snapshot ของแต่ละ version
+assets/md/th/releases/v*.md
+assets/md/releases/index.json         # manifest สำหรับ client
+assets/json/release-dates.json        # registry ของ release dates
+assets/json/version.json              # runtime metadata
+assets/json/whats-new.json            # legacy — ควรลบถ้ามี
+assets/json/release-history.json      # legacy — ควรลบถ้ามี
+assets/md/current.md                  # legacy single-file — ควรลบถ้ามี
+
+# ✅ ถูก — แก้เฉพาะ current.md (en + th) เท่านั้น
+# แล้ว commit + push → CI/CD รัน validate-release.js + update-version.js
+```
+
+ใช้ `scripts/validate-release.js` เพื่อตรวจสอบก่อน commit:
+
+```bash
+node scripts/validate-release.js --staged
+```
+
+แนะนำให้ติดตั้งเป็น git pre-commit hook — ดู [`11-Release-Notes-System.md`](./11-Release-Notes-System.md) section 7.3
+
+### 9.2 ห้ามสร้างไฟล์ใน `assets/md/{en,th}/releases/` ด้วยตนเอง
+
+build script สร้างไฟล์ `releases/v{version}.md` อัตโนมัติเมื่อ bump version ใหม่ — นักพัฒนาไม่ต้องสร้างเอง
 
 ```bash
 # ❌ ห้าม — build script สร้างให้อัตโนมัติเมื่อ bump version
-cp assets/md/en/current.md assets/md/en/releases/v1.9.1.md
-cp assets/md/th/current.md assets/md/th/releases/v1.9.1.md
+cp assets/md/en/current.md assets/md/en/releases/v2.0.0.md
+cp assets/md/th/current.md assets/md/th/releases/v2.0.0.md
 
 # ❌ ห้าม — สร้างไฟล์ release note ใหม่ใน releases/ เอง
-echo "..." > assets/md/en/releases/v1.9.1.md
+echo "..." > assets/md/en/releases/v2.0.0.md
 
 # ✅ ถูก — แก้ current.md อย่างเดียว (เขียนเฉพาะ version/title/subtitle/sections — ไม่ต้องเขียน date)
 # แล้ว commit + push → CI/CD รัน update-version.js → script สร้าง releases/v{version}.md ให้อัตโนมัติ
 ```
 
-> 💡 ไฟล์เก่าที่สร้างไว้ก่อน v4.1 (เช่น `v1.3.0.md`, `v1.0.8.md`) ยังคงใช้ได้ — build script จะอ่าน date จากไฟล์เหล่านั้นแล้ว backfill registry
-
-### 9.2 ห้ามแก้ไฟล์ใน `assets/json/` และ `assets/md/releases/`
-
-ไฟล์ต่อไปนี้ถูกสร้างหรืออัปเดตโดย build script โดยอัตโนมัติ — ห้ามแก้เด็ดขาด:
-
-- `assets/json/release-dates.json` — registry ของ "วันที่ build ครั้งแรกของแต่ละ version" — **commit ลง git** แต่ build script ดูแลไฟล์นี้เอง (สร้าง/อัปเดตใน `scripts/update-version.js` v4+)
-- `assets/md/releases/index.json` — manifest สำหรับ client — **commit ลง git** แต่ build script ดูแลไฟล์นี้เอง (v4.1+)
-- `assets/md/{lang}/releases/v{version}.md` — release notes แยกตาม version — **commit ลง git** แต่ build script สร้างให้อัตโนมัติเมื่อ bump version (v4.1+)
-- `assets/json/version.json` — สร้างโดย `scripts/update-version.js` (ไม่ commit)
-- `assets/json/whats-new.json` — (deprecated) fallback เท่านั้น
-- ⚠️ `assets/json/release-history.json` — **ยกเลิกใน v4.1** — ใช้ `releases/index.json` + `releases/v{version}.md` แทน
-
-> ⚠️ `release-dates.json` เป็น **source of truth** ของ release date — ถ้า conflict กับ `date:` ใน `current.md`, registry ชนะเสมอ ดู [`11-Release-Notes-System.md`](./11-Release-Notes-System.md) section 2.3
-
 ### 9.3 ห้ามเขียน `date:` ใน `current.md` เอง
 
-ตั้งแต่ v4 เป็นต้นไป ระบบจะ sync `date:` ใน `current.md` ให้ตรงกับ registry เสมอ — ผู้ใช้ไม่ต้องเขียนเอง
+ระบบจะ sync `date:` ใน `current.md` ให้ตรงกับ registry เสมอ — นักพัฒนาไม่ต้องเขียนเอง
 
 ```markdown
 # ❌ ห้าม — ระบบจะเขียนทับด้วยค่าจาก registry
 ---
-version: 1.9.1
-date: 2026-06-21T00:00:00.000Z
+version: 2.0.0
+date: 2026-07-16T00:00:00.000Z
 title: ...
 ---
 
 # ✅ ถูก — เขียนเฉพาะ version/title/subtitle/sections
 ---
-version: 1.9.1
+version: 2.0.0
 title: ...
 ---
 ```
@@ -508,6 +527,23 @@ title: ...
 ### 9.4 ห้ามเขียน release note เป็นภาษาเดียว
 
 ต้องเขียนทั้ง `assets/md/en/current.md` และ `assets/md/th/current.md` พร้อมกัน — ถ้าเขียนภาษาเดียว อีกภาษาจะ fallback ไปใช้ของเดิม
+
+### 9.5 ห้ามใช้ legacy fallback paths
+
+ตั้งแต่ v5.0 เป็นต้นไป ระบบไม่รองรับ legacy fallback paths แล้ว — ถ้าหา `current.md` ไม่ได้ ระบบจะ fail ทันที (ไม่ fallback ไป `whats-new.json` หรือ `release-history.json`)
+
+```javascript
+// ❌ ห้าม — legacy paths ที่ยกเลิกแล้ว
+fetch('/assets/md/current.md')              // single-file legacy
+fetch('/assets/json/whats-new.json')        // legacy JSON
+fetch('/assets/json/release-history.json')  // legacy combined history
+
+// ✅ ถูก — closed system paths
+fetch('/assets/md/{lang}/current.md')
+fetch('/assets/md/releases/index.json')
+fetch('/assets/md/{lang}/releases/v{version}.md')
+fetch('/assets/json/version.json')
+```
 
 > ดูรายละเอียดใน [`11-Release-Notes-System.md`](./11-Release-Notes-System.md) และ [`RELEASE_NOTES_GUIDE.md`](./RELEASE_NOTES_GUIDE.md)
 
