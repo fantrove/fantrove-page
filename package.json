@@ -1,6 +1,6 @@
 {
-  "name": "fantrove-hub360",
-  "version": "2.2.2",
+  "name": "fantrove-verse",
+  "version": "2.2.3",
   "private": true,
   "description": "Fantrove Emoji & Symbols Hub — static build system",
   "scripts": {

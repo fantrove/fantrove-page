@@ -51,10 +51,12 @@ jobs:
       - name: Layer 3.3 — Verify build artifacts
         run: |
           echo "🔎  Layer 3.3: Verifying build artifacts..."
-          # ตรวว่า generated artifacts ถูกสร้างครบ
-          test -f assets/md/releases/index.json || { echo "❌  ไม่พบ releases/index.json"; exit 1; }
+          # v6.2: ตรวจ path ให้ตรงกับโครงสร้าง per-language releases/ ของ update-version.js v6.1+
+          # (เดิมเช็ค path เก่า assets/md/releases/ และ release-dates.json ที่ไม่ถูกสร้างแล้ว
+          #  ทำให้ step นี้ fail เสมอ และ history ไม่เคยถูก commit/deploy)
+          test -f assets/md/en/releases/index.json || { echo "❌  ไม่พบ assets/md/en/releases/index.json"; exit 1; }
+          test -f assets/md/th/releases/index.json || { echo "❌  ไม่พบ assets/md/th/releases/index.json"; exit 1; }
           test -f assets/json/version.json || { echo "❌  ไม่พบ version.json"; exit 1; }
-          test -f assets/json/release-dates.json || { echo "❌  ไม่พบ release-dates.json"; exit 1; }
           # ตรวว่า version.json มี version ที่ถูกต้อง
           VERSION=$(node -e "console.log(require('./assets/json/version.json').version)")
           if [ -z "$VERSION" ]; then
@@ -70,7 +72,8 @@ jobs:
           echo "📝  Layer 3.4: Committing build artifacts..."
           git config user.name "Fantrove CI"
           git config user.email "ci@fantrove.local"
-          git add assets/md/releases/ assets/json/release-dates.json assets/json/version.json assets/md/en/current.md assets/md/th/current.md
+          # v6.2: commit path ให้ตรงกับโครงสร้าง per-language releases/ (แทน path เก่าที่ไม่มีแล้ว)
+          git add assets/md/en/releases/ assets/md/th/releases/ assets/json/version.json assets/md/en/current.md assets/md/th/current.md
           if git diff --staged --quiet; then
             echo "   ไม่มี artifacts ใหม่ต้อง commit"
           else

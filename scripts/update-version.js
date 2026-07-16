@@ -1,6 +1,20 @@
 #!/usr/bin/env node
 // scripts/update-version.js — Fantrove Verse Release Tool
-// v6.1: PER-LANG releases/ FOLDER — แยก current.md ออกจาก history ชัดเจน
+// v6.2: FIX — ประวัติไม่ถูกบันทึก (AUTO-SNAPSHOT อ้างอิง HEAD ผิดจังหวะ)
+//
+// v6.2 bug fix (จาก v6.1):
+//     ปัญหา: เดิมระบบหา "เวอร์ชั่นก่อนหน้า" ด้วย `git show HEAD:current.md`
+//     ตรงๆ โดยสมมติว่า HEAD ยังเป็น commit เก่าเสมอ แต่ใน CI จริง ลำดับคือ
+//     dev แก้ current.md เป็นเวอร์ชั่นใหม่ → commit → push → CI ค่อยรัน
+//     สคริปต์นี้ ดังนั้นตอนที่สคริปต์รัน HEAD **คือ** commit เวอร์ชั่นใหม่ไปแล้ว
+//     → HEAD:current.md ให้เนื้อหาเวอร์ชั่นใหม่ ไม่ใช่เวอร์ชั่นก่อนหน้า
+//     → prevVersion ทายผิดว่าเท่ากับ newVersion → ระบบคิดว่า "ไม่ใช่เวอร์ชั่น
+//     ใหม่" → ข้าม AUTO-SNAPSHOT และการสร้างไฟล์ประวัติไปทั้งหมด (ประวัติหาย)
+//
+//     แก้ไข: เพิ่ม getPreviousCurrentMdContent() — ตรวจก่อนว่าเนื้อหาที่ HEAD
+//     ตรงกับเวอร์ชั่นใหม่หรือไม่ ถ้าตรง (กรณี CI หลัง push) ให้ย้อนหา commit
+//     ล่าสุด "ก่อนหน้า HEAD" ที่เคยแก้ไฟล์นี้จริงๆ แทน ใช้ได้ถูกต้องทั้งตอนรัน
+//     ก่อน commit (local/pre-commit) และตอนรันหลัง push (CI)
 //
 // v6.1 changes จาก v6.0:
 //     - ประวัติกลับไปอยู่ใน releases/ folder ของแต่ละภาษา (ตามที่ผู้ใช้ต้องการ)
@@ -166,6 +180,34 @@ function scanHistoryFiles(lang) {
   return entries;
 }
 
+// ── v6.2: หาเนื้อหา current.md "เวอร์ชั่นก่อนหน้า" จริงๆ (ไม่ใช่แค่ HEAD ตรงๆ) ──
+//  ปัญหาเดิม: `git show HEAD:file` สมมติว่า HEAD ยังเป็น commit เก่าเสมอ แต่ใน
+//  CI จริง (รันหลัง push) HEAD คือ commit ที่ bump เวอร์ชั่นไปแล้ว
+//  วิธีแก้: เช็คก่อนว่า version ใน HEAD ตรงกับ newVersion หรือไม่
+//    - ไม่ตรง (ปกติ, รันตอน local/pre-commit) → HEAD คือของเก่าจริง ใช้ได้เลย
+//    - ตรงกัน (CI หลัง push) → HEAD คือ commit ใหม่ ต้องย้อนไปหา commit ก่อนหน้า
+//      ที่แก้ไฟล์นี้จริงๆ ด้วย `git log` แทน
+function getPreviousCurrentMdContent(lang, newVersion) {
+  var relPath = CONFIG.perLangCurrent.replace('{lang}', lang);
+  var headContent = git(['show', 'HEAD:' + relPath]);
+  if (!headContent) return null;
+
+  var headVersionMatch = headContent.match(/^version:\s*(.+)$/m);
+  var headVersion = headVersionMatch ? headVersionMatch[1].trim() : null;
+
+  if (headVersion !== newVersion) {
+    // HEAD ยังไม่ใช่ commit ที่ bump — เป็นของเก่าจริง ใช้ได้ตรงๆ
+    return headContent;
+  }
+
+  // HEAD คือ commit ที่ bump ไปแล้ว (เช่น CI หลัง push) — ย้อนหา commit ก่อนหน้า
+  // ที่แก้ไขไฟล์นี้จริงๆ (ข้าม HEAD เอง)
+  var log = git(['log', '--format=%H', '-n', '2', '--', relPath]);
+  var hashes = log ? log.split('\n').filter(Boolean) : [];
+  if (hashes.length < 2) return null; // ไม่มีประวัติก่อนหน้า (เป็น release แรก)
+  return git(['show', hashes[1] + ':' + relPath]);
+}
+
 // ── v6.0: AUTO-SNAPSHOT previous version ─────────────────────────────────────
 //  ก่อน bump version ใหม่ ระบบอ่าน current.md เก่าจาก git HEAD
 //  แล้ว snapshot เป็น v{prevVersion}.md อัตโนมัติ
@@ -175,7 +217,7 @@ function autoSnapshotPrevious(newVersion) {
 
   for (var i = 0; i < LANGS.length; i++) {
     var lang = LANGS[i];
-    var content = git(['show', 'HEAD:' + CONFIG.perLangCurrent.replace('{lang}', lang)]);
+    var content = getPreviousCurrentMdContent(lang, newVersion);
     if (content) {
       prevContents[lang] = content;
       var match = content.match(/^version:\s*(.+)$/m);
@@ -434,10 +476,12 @@ if (!/^\d+\.\d+\.\d+/.test(newVersion)) {
   process.exit(1);
 }
 
-// ตรว version เก่าจาก git HEAD เพื่อดูว่าเป็น version ใหม่ไหม
+// ตรว version เก่า (จุดที่เคยเป็นบั๊ก v6.1: ใช้ HEAD ตรงๆ ซึ่งหลัง push แล้ว
+// HEAD คือ commit ใหม่ไปแล้ว ทำให้ prevVersion == newVersion เสมอ)
+// v6.2: ใช้ getPreviousCurrentMdContent() ที่ย้อนหา commit ก่อนหน้าจริงๆ
 var prevVersion = null;
 for (var pi = 0; pi < LANGS.length; pi++) {
-  var prevContent = git(['show', 'HEAD:' + CONFIG.perLangCurrent.replace('{lang}', LANGS[pi])]);
+  var prevContent = getPreviousCurrentMdContent(LANGS[pi], newVersion);
   if (prevContent) {
     var prevMatch = prevContent.match(/^version:\s*(.+)$/m);
     if (prevMatch) { prevVersion = prevMatch[1].trim(); break; }

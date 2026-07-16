@@ -1,23 +1,26 @@
 ---
-version: 2.2.2
-date: 2026-07-16T22:32:38.737Z
-title: Restructured history back into releases folder per language
-subtitle: Moved history files back into releases folder within each language to clearly separate current.md from history, while keeping the automatic file generation system so developers don't need to create files manually.
+version: 2.2.3
+date: 2026-07-16T22:57:29.839Z
+title: Fixed release history not being saved
+subtitle: Corrected a timing bug in the release script that read the already-updated file instead of the previous version, plus synced the CI workflow with the per-language releases folder structure.
 notify: true
 ---
 
-**TL;DR** — Moved history files back into releases folder within each language to clearly separate current.md from history. Developers still don't need to create files in releases/ — the system does it automatically.
+**TL;DR** — Fixed the root cause of update history not being saved during deploy: the release script was comparing the new version against itself instead of the true previous version, and the CI workflow was still checking for old file paths that no longer exist.
 
-## About this system
+## About this fix
 
-The release notes system on our website is the page that shows the history of every update. In version 2.2.0, we reduced system redundancy and moved history files directly into language folders. However, we wanted to separate current.md from history more clearly. This update moves history files back into releases folder within each language, while keeping the automatic file generation system so developers don't need to create files manually.
+Deploys were completing, but no history file for the previous version was ever created. The release script decided what "the previous version" was by reading `current.md` from the Git `HEAD` commit — but by the time the CI build runs, `HEAD` already **is** the commit with the new version, since the version bump is committed and pushed before CI executes. That made the script always see "previous version" and "new version" as identical, so it concluded nothing had changed and skipped saving history entirely.
 
-### Improved
+Separately, the CI workflow was still verifying and committing an older, root-level release file layout that was replaced when history moved into a per-language `releases/` folder, so even a correct snapshot would not have been picked up.
 
-- **Clear separation of current.md from history**
-  Now current.md, which contains the current version's data, sits outside the releases folder, while each version's history files are in the releases folder within each language. This clearly separates current data from history, making the structure easier for developers to understand.
+### Fixed
 
-- **Developers don't need to create files in releases/**
+- **Release script now finds the real previous version**
+  Instead of assuming `HEAD` is always the older commit, the script now checks whether `HEAD`'s version already matches the new version. If it does (the CI-after-push case), it walks back through Git history for that file to find the commit that actually held the previous version. This works correctly both when run locally before a commit and when run in CI after a push.
+
+- **CI workflow synced with the per-language releases structure**
+  Build verification and the auto-commit step now check and stage `assets/md/en/releases/` and `assets/md/th/releases/`, matching what the release script actually generates, so history files are verified and committed correctly on every deploy.
   The system still automatically creates history files in the releases folder when there's a new version. Developers don't need to create or manage files in the releases folder themselves — they just edit current.md.
 
 ### What you'll notice
