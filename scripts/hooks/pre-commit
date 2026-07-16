@@ -1,0 +1,42 @@
+#!/bin/bash
+# scripts/hooks/pre-commit — Layer 1: Pre-commit validation
+# 4-layer version control system for Fantrove
+#
+# ตรวจสอบก่อน commit:
+#   1. validate-release.js (closed system check)
+#   2. version bump check (ยกเว้น bypass)
+#   3. release notes exist
+#
+# ถ้าไม่ผ่าน → commit ถูก block
+#
+# การติดตั้ง: รัน scripts/hooks/install.sh
+
+set -e
+
+echo "🔍  Layer 1: Pre-commit validation..."
+
+# หา root ของ repo
+REPO_ROOT=$(git rev-parse --show-toplevel)
+cd "$REPO_ROOT"
+
+# ตรว Node.js
+if ! command -v node &> /dev/null; then
+  echo "❌  ไม่พบ Node.js — ติดตั้งก่อนใช้ hooks"
+  exit 1
+fi
+
+# รัน validate-release.js ใน pre-commit mode
+# --staged: ตรวไฟล์ที่ staged
+# (validate-release.js บังคับ version bump อัตโนมัติใน staged mode ยกเว้นมี bypass)
+node scripts/validate-release.js --staged
+
+EXIT_CODE=$?
+if [ $EXIT_CODE -ne 0 ]; then
+  echo ""
+  echo "❌  Layer 1 FAILED — commit ถูก block"
+  echo "    แก้ไขปัญหาข้างต้นแล้วลองอีกครั้ง"
+  exit 1
+fi
+
+echo "✅  Layer 1 PASSED — commit อนุญาต"
+exit 0

@@ -451,9 +451,24 @@ document.getElementById('title').textContent = 'Page Title';
 
 ---
 
-## 9. กฎเกี่ยวกับ Release Notes (v5.0 — Closed System)
+## 9. กฎเกี่ยวกับ Release Notes (v5.1 — Closed System + 4-Layer Version Control)
 
-> ⚠️ **v5.0:** ระบบ release notes เป็น **closed system** — นักพัฒนาเขียน/แก้ได้แค่ `assets/md/{en,th}/current.md` เท่านั้น ไฟล์อื่นทุกไฟล์เป็น generated artifacts ที่ build script สร้างใน CI/CD
+> ⚠️ **v5.1:** ระบบ release notes เป็น **closed system** + มี **4 ชั้นป้องกัน** ที่บังคับ version bump ทุกการส่งโค้ด (ยกเว้น bypass)
+>
+> **v5.1:** ไม่ต้องส่ง `APP_VERSION` env var แล้ว — script อ่าน version จาก `current.md` โดยตรง
+
+### 9.0 ระบบ 4 ชั้น (4-Layer Version Control)
+
+ตั้งแต่ v5.1 เป็นต้นไป ทุกการ commit/push ต้องเปลี่ยน version (ยกเว้น bypass):
+
+| Layer | ที่ไหน | ตรวอะไร | บล็อกอะไร |
+|---|---|---|---|
+| 1. Pre-commit | local hook | version bump + generated artifacts | commit |
+| 2. Pre-push | local hook | version bump + JS syntax + current.md ครบ | push |
+| 3. CI | GitHub Actions | validate + build + verify | deploy |
+| 4. Deploy | Cloudflare Pages | (รันหลัง Layer 3 ผ่าน) | — |
+
+ติดตั้ง hooks: `bash scripts/hooks/install.sh`
 
 ### 9.1 ห้ามแตะ generated artifacts (Closed System)
 
@@ -546,6 +561,47 @@ fetch('/assets/json/version.json')
 ```
 
 > ดูรายละเอียดใน [`11-Release-Notes-System.md`](./11-Release-Notes-System.md) และ [`RELEASE_NOTES_GUIDE.md`](./RELEASE_NOTES_GUIDE.md)
+
+### 9.6 ห้ามใช้ APP_VERSION env var (v5.1+)
+
+ตั้งแต่ v5.1 เป็นต้นไป `scripts/update-version.js` ไม่ต้องการ `APP_VERSION` แล้ว — อ่าน version จาก `current.md` โดยตรง
+
+```bash
+# ❌ ห้าม — legacy v5.0 ที่ยกเลิกแล้ว
+APP_VERSION=2.1.0 node scripts/update-version.js
+
+# ✅ ถูก — v5.1+ ไม่ต้องส่ง APP_VERSION
+node scripts/update-version.js
+```
+
+ห้ามตั้ง `APP_VERSION` ใน Cloudflare dashboard หรือ GitHub Actions secrets — ไม่จำเป็นแล้ว
+
+### 9.7 ห้ามแก้ `.release-bypass-counter` ด้วยมือ
+
+ไฟล์ `.release-bypass-counter` เป็น generated state — ระบบอัปเดตเองเมื่อใช้ bypass token
+
+```bash
+# ❌ ห้าม — แก้ counter ด้วยมือ
+echo "0" > .release-bypass-counter  # reset เพื่อ bypass ซ้ำ
+
+# ✅ ถูก — แก้เฉพาะ .release-bypass ให้เป็นเลขที่มากกว่า counter
+echo "1" > .release-bypass  # ถ้า counter=0
+```
+
+### 9.8 ห้ามลบไฟล์ bypass
+
+ห้ามลบ `.release-bypass` หรือ `.release-bypass-counter` — ระบบต้องการทั้งสองไฟล์
+
+```bash
+# ❌ ห้าม
+rm .release-bypass
+rm .release-bypass-counter
+
+# ✅ ถูก — แก้เนื้อหาได้ แต่ห้ามลบไฟล์
+echo "0" > .release-bypass  # reset เป็น 0 ได้ (ปิด bypass)
+```
+
+> ดูรายละเอียดใน [`11-Release-Notes-System.md`](./11-Release-Notes-System.md) section 4-5
 
 ---
 

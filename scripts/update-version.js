@@ -1,29 +1,19 @@
 #!/usr/bin/env node
 // scripts/update-version.js — Fantrove Verse Release Tool
+// v5.1: CLOSED SYSTEM + NO APP_VERSION — อ่าน version จาก current.md โดยตรง
+//
+// v5.1 changes จาก v5.0:
+//     - ลบ APP_VERSION env var requirement — ไม่ต้องตั้งค่าใน Cloudflare dashboard อีก
+//     - อ่าน version จาก assets/md/{en,th}/current.md โดยตรง (เหมือนที่ระบบทำอยู่แล้ว)
+//     - ไม่ต้องส่ง APP_VERSION=2.1.0 ใน CI/CD อีกต่อไป — แค่รัน `node scripts/update-version.js`
+//
 // v5.0: CLOSED SYSTEM — ระบบ release notes แบบปิด
 //     นักพัฒนาเขียน/แก้ได้แค่ assets/md/{en,th}/current.md เท่านั้น
 //     ไฟล์อื่นทุกไฟล์ในระบบ release notes เป็น generated artifacts ที่
 //     script นี้สร้างใน CI/CD เท่านั้น — ไม่มี legacy fallback แล้ว
 //
-//     สิ่งที่ script นี้ทำ (ทุกขั้นตอนอัตโนมัติ ไม่ต้อง intervention):
-//     1. อ่าน assets/md/{en,th}/current.md (version, title, subtitle, sections)
-//     2. ตรวจ version ใน release-dates.json registry:
-//        - version ใหม่ → บันทึก NOW เป็น release date ถาวร
-//        - version เดิม → คง date เดิม (date ไม่เปลี่ยนแม้แก้เนื้อหา)
-//     3. sync date: ใน current.md ให้ตรง registry เสมอ (เขียนทับถ้านักพัฒนาใส่เอง)
-//     4. สร้าง assets/md/{en,th}/releases/v{version}.md (เมื่อ version ใหม่)
-//     5. สร้าง assets/md/releases/index.json (manifest สำหรับ client)
-//     6. สร้าง assets/json/version.json (runtime metadata)
-//     7. บันทึก release-dates.json (registry ที่อัปเดตแล้ว)
-//     8. HTML cache busting (?v={version}-{dateStr})
-//
-// v5.0 changes จาก v4.1:
-//     - ลบ legacy fallback: whats-new.json, release-history.json, single-file current.md
-//     - ลบ useLegacyMd / useLegacyJson flags (ใช้ usePerLang เท่านั้น)
-//     - เพิ่ม validation: ถ้าหา current.md ไม่ได้ → fail ทันที (ไม่ fallback)
-//     - เพิ่ม warning เมื่อนักพัฒนาใส่ date: เอง (ระบบจะ sync ทับ)
-//
-// Build: git fetch --unshallow && APP_VERSION=2.0.0 node scripts/update-version.js
+// Build: git fetch --unshallow && node scripts/update-version.js
+//        (ไม่ต้องส่ง APP_VERSION แล้ว — อ่านจาก current.md โดยตรง)
 'use strict';
 
 const fs   = require('fs');
@@ -49,9 +39,8 @@ const CONFIG = {
   assetPattern:     /((?:src|href)=["'][^"':]*?\.(?:js|css|json))\?v=[^"'\s&]*/g
 };
 
-const APP_VERSION = process.env.APP_VERSION || process.argv[2];
-if (!APP_VERSION) { console.error('\n  ❌  ไม่พบ APP_VERSION\n'); process.exit(1); }
-if (!/^\d+\.\d+\.\d+/.test(APP_VERSION)) { console.error(`\n  ❌  "${APP_VERSION}" ไม่ใช่ semver\n`); process.exit(1); }
+// v5.1: ลบ APP_VERSION requirement — อ่าน version จาก current.md โดยตรง
+// ไม่ต้องส่ง APP_VERSION env var หรือ argument อีกต่อไป
 
 const ROOT = path.resolve(__dirname, '..');
 const NOW  = new Date();
@@ -263,7 +252,8 @@ function compareSemver(a, b) {
 // ถ้าหาไม่ได้ → fail ทันที (ไม่มี legacy fallback แล้ว)
 
 let usePerLang = false;
-let newVersion = APP_VERSION;
+// v5.1: ไม่ใช้ APP_VERSION แล้ว — อ่าน version จาก current.md โดยตรง
+let newVersion = null;
 
 for (const lang of LANGS) {
   const p = path.join(ROOT, CONFIG.perLangCurrent.replace('{lang}', lang));
@@ -290,7 +280,8 @@ for (const lf of legacyFiles) {
   }
 }
 
-// อ่าน version จาก per-language file
+// v5.1: อ่าน version จาก per-language file (source of truth)
+// ไม่ต้องส่ง APP_VERSION แล้ว — version มาจาก current.md โดยตรง
 for (const lang of LANGS) {
   const p = path.join(ROOT, CONFIG.perLangCurrent.replace('{lang}', lang));
   if (fs.existsSync(p)) {
@@ -299,13 +290,26 @@ for (const lang of LANGS) {
   }
 }
 
+// v5.1: ตรวจว่าอ่าน version ได้หรือไม่
+if (!newVersion) {
+  console.error('\n  ❌  ไม่พบ version ใน assets/md/{en,th}/current.md');
+  console.error('      กรุณาเพิ่ม version: X.Y.Z ใน frontmatter ของ current.md\n');
+  process.exit(1);
+}
+
+// v5.1: ตรวจ semver format
+if (!/^\d+\.\d+\.\d+/.test(newVersion)) {
+  console.error(`\n  ❌  "${newVersion}" ไม่ใช่ semver ที่ถูกต้อง\n`);
+  process.exit(1);
+}
+
 const dateObj = makeDateObj(NOW);
 const dateStr = NOW.toISOString().slice(0,10).replace(/-/g,'');
 const timeStr = pad2(NOW.getUTCHours()) + pad2(NOW.getUTCMinutes());
 const buildId = `${newVersion}-${dateStr}${timeStr}`;
 
-console.log(`\n📦  Fantrove Release Tool v5.0 (CLOSED SYSTEM — Per-Language MD + Stable Release Dates)`);
-console.log(`    Version:  ${newVersion}`);
+console.log(`\n📦  Fantrove Release Tool v5.1 (CLOSED SYSTEM + NO APP_VERSION — read from current.md)`);
+console.log(`    Version:  ${newVersion} (อ่านจาก current.md โดยตรง)`);
 console.log(`    Build ID: ${buildId}`);
 console.log(`    Date:     ${dateObj.en}`);
 console.log(`    Source:   Per-language MD (assets/md/{en,th}/current.md)\n`);
@@ -667,7 +671,7 @@ console.log('\n' + '─'.repeat(56));
 console.log('  Version:  ' + newVersion + (isNewVersion ? ' (NEW)' : ' (same)'));
 console.log('  Build ID: ' + buildId);
 console.log('  Release:  ' + currentReleaseDateISO + (isNewVersion ? ' — บันทึกใหม่' : ' — คงเดิมจาก registry'));
-console.log('  Source:   Per-language MD (closed system v5.0)');
+console.log('  Source:   Per-language MD (closed system v5.1 — no APP_VERSION)');
 console.log('  History:  ' + releases.length + '/' + MAX_HISTORY);
 console.log('  HTML:     ' + updated + '/' + scanned + ' updated');
 console.log('─'.repeat(56) + '\n🚀  Ready!\n');

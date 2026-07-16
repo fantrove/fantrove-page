@@ -24,17 +24,22 @@
   const { CONFIG } = M;
 
   // ── Paginator constants ────────────────────────────────────────────────────
+  // v2.1: ลด first paint size ลงอย่างมาก — เดิมโหลด 4 categories × 60 items = 240 items
+  //   ตอนนี้โหลดแค่ 2 categories × 20 items = 40 items บน first paint
+  //   ที่เหลือค่อยทยอยโหลดเวลาเลื่อน เหมือนระบบฟีดที่ไม่ render เยอะครั้งแรก
   const PC = Object.freeze({
-    // WHY 4: เท่ากับ sub-nav layout — ผู้ใช้เห็น content เยอะพอใน first paint
-    //   แต่ไม่มากเกินไปจน block first render นาน
-    //   4 categories × ~20-50 items ต่อ category = ~100-200 items ต่อ first page
-    FIRST_PAGE_SIZE: 4,
-    // WHY 3: scroll-load แต่ละครั้งเพิ่ม 3 categories — พอเห็น content ใหม่ต่อรอบ
-    //   แต่ไม่น้อยเกินไปจนต้อง fetch บ่อย
-    PAGE_SIZE:       3,
-    // ถ้า category เดียวมี items เยอะมาก (เช่น emoji 1000+) ให้ slice เป็น chunk
-    //   ไม่งั้น URE/dom ต้อง render 1000+ items ทีเดียว → กระทบ memory
-    MAX_ITEMS_PER_CATEGORY_CHUNK: 60,
+    // WHY 2: first paint แค่ 2 categories — พอให้เห็น content เริ่มต้น
+    //   ไม่มากเกินไปจน block first render นาน เหมือนระบบฟีดที่ค่อยๆ โหลด
+    //   2 categories × ~20 items = ~40 items ต่อ first page (ลดจาก 240)
+    FIRST_PAGE_SIZE: 2,
+    // WHY 2: scroll-load แต่ละครั้งเพิ่ม 2 categories — ทยอยขึ้นมาทีละนิด
+    //   ไม่น้อยเกินไปจนต้อง fetch บ่อย ไม่มากเกินไปจน render หนัก
+    PAGE_SIZE:       2,
+    // v2.1: ลดจาก 60 → 20 — เท่ากับ FeedService.CHUNK_BUTTON
+    //   แต่ละ category แสดงได้สูงสุด 20 items ต่อ chunk
+    //   ถ้า category ใหญ่กว่า 20 จะทยอยโหลด chunk ถัดไปเวลาเลื่อน
+    //   ทำให้แต่ละ section ไม่สูงเกินไป เหมือน feed ที่แต่ละ segment มี 20 items
+    MAX_ITEMS_PER_CATEGORY_CHUNK: 20,
     // เก็บ sub-chunk cursor สำหรับ category ใหญ่ — ถ้าเลื่อนจบ chunk 0 แล้วยัง
     //   ไม่หมด category ก็โหลด chunk ถัดไปของ category เดิมก่อน
   });

@@ -1,29 +1,33 @@
-# 11 — ระบบหน้า "มีอะไรใหม่" (What's New System) v5.0
+# 11 — ระบบหน้า "มีอะไรใหม่" (What's New System) v5.1
 
 > เอกสารนี้อธิบายระบบ What's New ของ **Fantrove** — ระบบที่แสดง release notes และ popup แจ้งเตือนเมื่อมีเวอร์ชั่นใหม่
 >
-> **v5.0 — CLOSED SYSTEM:** ระบบ release notes เป็นระบบปิด นักพัฒนาเขียน/แก้ได้แค่ `assets/md/{en,th}/current.md` เท่านั้น ไฟล์อื่นทุกไฟล์เป็น generated artifacts ที่ `scripts/update-version.js` สร้างใน CI/CD
+> **v5.1 — CLOSED SYSTEM + 4-LAYER VERSION CONTROL:** ระบบ release notes เป็นระบบปิด นักพัฒนาเขียน/แก้ได้แค่ `assets/md/{en,th}/current.md` เท่านั้น พร้อมระบบ 4 ชั้นที่บังคับ version bump ทุกการส่งโค้ด (ยกเว้น bypass)
+>
+> **v5.1 — NO APP_VERSION:** ไม่ต้องส่ง `APP_VERSION` env var แล้ว — script อ่าน version จาก `current.md` โดยตรง
 >
 > **สำหรับ:** นักพัฒนา/AI ที่จะเขียน release notes หรือแก้ระบบแจ้งเตือน
 >
-> **ไฟล์หลัก:** `assets/js/new.js`, `assets/js/version-core.js`, `scripts/update-version.js`, `scripts/validate-release.js`
+> **ไฟล์หลัก:** `assets/js/new.js`, `assets/js/version-core.js`, `scripts/update-version.js`, `scripts/validate-release.js`, `scripts/hooks/`, `.github/workflows/release.yml`
 
 ---
 
 ## สารบัญ
 
-1. [ภาพรวมระบบ (v5.0 Closed System)](#1-ภาพรวมระบบ-v50-closed-system)
+1. [ภาพรวมระบบ (v5.1 Closed System + 4-Layer)](#1-ภาพรวมระบบ-v51-closed-system--4-layer)
 2. [โครงสร้างไฟล์](#2-โครงสร้างไฟล์)
 3. [นักพัฒนาเขียนอะไรได้บ้าง (Closed System Rules)](#3-นักพัฒนาเขียนอะไรได้บ้าง-closed-system-rules)
-4. [ระบบภาษา FvLang (v5.0)](#4-ระบบภาษา-fvlang-v50)
-5. [รูปแบบไฟล์ Markdown](#5-รูปแบบไฟล์-markdown)
-6. [ขั้นตอนเมื่ออัปเดตเวอร์ชั่นใหม่](#6-ขั้นตอนเมื่ออัปเดตเวอร์ชั่นใหม่)
-7. [Validation Script](#7-validation-script)
-8. [อ้างอิงข้ามเอกสาร](#8-อ้างอิงข้ามเอกสาร)
+4. [ระบบ 4 ชั้นป้องกันลืมอัปเดตเวอร์ชั่น (4-Layer Version Control)](#4-ระบบ-4-ชั้นป้องกันลืมอัปเดตเวอร์ชั่น-4-layer-version-control)
+5. [Bypass Mechanism](#5-bypass-mechanism)
+6. [ระบบภาษา FvLang (v5.0)](#6-ระบบภาษา-fvlang-v50)
+7. [รูปแบบไฟล์ Markdown](#7-รูปแบบไฟล์-markdown)
+8. [ขั้นตอนเมื่ออัปเดตเวอร์ชั่นใหม่](#8-ขั้นตอนเมื่ออัปเดตเวอร์ชั่นใหม่)
+9. [Validation Script](#9-validation-script)
+10. [อ้างอิงข้ามเอกสาร](#10-อ้างอิงข้ามเอกสาร)
 
 ---
 
-## 1. ภาพรวมระบบ (v5.0 Closed System)
+## 1. ภาพรวมระบบ (v5.1 Closed System + 4-Layer)
 
 ตั้งแต่ v5.0 เป็นต้นไป ระบบ release notes เป็น **ระบบปิด (closed system)** — นักพัฒนาเขียน/แก้ได้แค่ไฟล์เดียว:
 
@@ -217,7 +221,158 @@ assets/md/{lang}/releases/
 
 ---
 
-## 4. ระบบภาษา FvLang (v5.0)
+## 4. ระบบ 4 ชั้นป้องกันลืมอัปเดตเวอร์ชั่น (4-Layer Version Control)
+
+ตั้งแต่ v5.1 เป็นต้นไป ระบบมี **4 ชั้นป้องกัน** ที่บังคับว่าทุกการส่งโค้ดต้องเปลี่ยนเลขเวอร์ชั่น (ยกเว้นใช้ bypass token)
+
+### 4.1 แผนภาพ 4 ชั้น
+
+```
+นักพัฒนาเขียน current.md (เปลี่ยน version:)
+        │
+        ▼
+┌─────────────────────────────────────────────────────────┐
+│ Layer 1: Pre-commit (local)                              │
+│ - validate-release.js --staged                           │
+│ - ตรว version bump (ยกเว้น bypass)                        │
+│ - ตรว generated artifacts (block ถ้าแก้)                  │
+│ ถ้าไม่ผ่าน → commit ไม่ได้                                  │
+└─────────────────────────────────────────────────────────┘
+        │ (commit สำเร็จ)
+        ▼
+┌─────────────────────────────────────────────────────────┐
+│ Layer 2: Pre-push (local)                                │
+│ - validate-release.js --pre-push                         │
+│ - ตรว version bump (ยกเว้น bypass)                        │
+│ - ตรว JS syntax ของไฟล์ที่เปลี่ยน                          │
+│ - ตรว current.md มีครบทั้ง en + th                        │
+│ ถ้าไม่ผ่าน → push ไม่ได้                                    │
+└─────────────────────────────────────────────────────────┘
+        │ (push สำเร็จ)
+        ▼
+┌─────────────────────────────────────────────────────────┐
+│ Layer 3: CI (GitHub Actions)                             │
+│ - validate-release.js --ci                               │
+│ - update-version.js (build artifacts)                    │
+│ - verify build artifacts ครบ                             │
+│ - commit artifacts กลับเข้า repo                          │
+│ ถ้าไม่ผ่าน → deploy ไม่ทำงาน                               │
+└─────────────────────────────────────────────────────────┘
+        │ (CI ผ่าน)
+        ▼
+┌─────────────────────────────────────────────────────────┐
+│ Layer 4: Deploy (Cloudflare Pages)                       │
+│ - deploy เฉพาะเวอร์ชั่นที่ผ่านทุกชั้น                        │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 4.2 การติดตั้ง Layer 1 + Layer 2 (local hooks)
+
+รันคำสั่งนี้ครั้งเดียวบนเครื่องนักพัฒนา:
+
+```bash
+bash scripts/hooks/install.sh
+```
+
+script จะ:
+- copy `scripts/hooks/pre-commit` → `.githooks/pre-commit`
+- copy `scripts/hooks/pre-push` → `.githooks/pre-push`
+- ตั้ง `git config core.hooksPath .githooks`
+
+หลังติดตั้ง ทุกครั้งที่ `git commit` และ `git push` จะมี validation อัตโนมัติ
+
+### 4.3 การยกเลิก hooks
+
+```bash
+git config --unset core.hooksPath
+```
+
+### 4.4 Layer 3 (CI) — GitHub Actions
+
+ไฟล์ `.github/workflows/release.yml` รันอัตโนมัติเมื่อ push ไป `main`:
+
+1. **Validate** — `node scripts/validate-release.js --ci --allow-generated`
+2. **Build** — `node scripts/update-version.js` (ไม่ต้องส่ง APP_VERSION)
+3. **Verify** — ตรว generated artifacts ครบ
+4. **Commit** — commit artifacts กลับเข้า repo (ด้วย bot account)
+5. **Deploy** — Cloudflare Pages deploy
+
+### 4.5 การตั้งค่า Cloudflare
+
+ไม่ต้องตั้งค่า `APP_VERSION` ใน Cloudflare dashboard อีกต่อไป — CI อ่าน version จาก `current.md` โดยตรง
+
+Secrets ที่ต้องตั้งใน GitHub repo:
+- `CLOUDFLARE_API_TOKEN` — API token สำหรับ Cloudflare Pages
+- `CLOUDFLARE_ACCOUNT_ID` — Account ID ของ Cloudflare
+
+---
+
+## 5. Bypass Mechanism
+
+### 5.1 เมื่อไหร่ต้องใช้ bypass
+
+บางครั้งนักพัฒนาอาจตั้งใจไม่เปลี่ยน version — เช่น:
+- แก้ไขเล็กน้อยที่ไม่ใช่ release จริง
+- แก้ typo ในโค้ด
+- แก้ config ที่ไม่กระทบผู้ใช้
+
+ในกรณีเหล่านี้ ให้ใช้ bypass token
+
+### 5.2 วิธีใช้ bypass
+
+1. แก้ไขไฟล์ `.release-bypass` ให้เป็นเลขที่มากกว่า `.release-bypass-counter`
+   - ถ้า `.release-bypass-counter` = `0` → ใส่ `1` ใน `.release-bypass`
+   - ถ้า `.release-bypass-counter` = `1` → ใส่ `2` ใน `.release-bypass`
+
+2. Commit ปกติ — pre-commit/pre-push จะตรวพบ bypass และอนุญาต
+
+3. หลัง commit สำเร็จ `.release-bypass-counter` จะถูกอัปเดตอัตโนมัติเป็นเลขที่ใช้
+
+4. ครั้งถัดไปที่จะ bypass ต้องเพิ่มเลขอีก
+
+### 5.3 ไฟล์ bypass
+
+| ไฟล์ | หน้าที่ | committed? |
+|---|---|---|
+| `.release-bypass` | token ปัจจุบัน (เลขที่นักพัฒนาใส่) | ✅ ใช่ |
+| `.release-bypass-counter` | token ล่าสุดที่ใช้แล้ว | ✅ ใช่ (อัปเดตอัตโนมัติ) |
+
+ทั้งสองไฟล์ committed เพื่อให้ shared ข้าม developers และ CI
+
+### 5.4 ตัวอย่าง
+
+```bash
+# สถานะเริ่มต้น
+$ cat .release-bypass        # 0
+$ cat .release-bypass-counter # 0
+
+# ต้องการ bypass (ไม่เปลี่ยน version)
+$ echo "1" > .release-bypass
+$ git add .release-bypass assets/js/some-file.js
+$ git commit -m "fix: minor typo"
+# pre-commit: bypass token 1 > counter 0 → allow, counter → 1
+
+# ต้องการ bypass อีกครั้ง
+$ echo "1" > .release-bypass  # ลองใช้เลขเดิม
+$ git commit -m "fix: another typo"
+# pre-commit: bypass token 1 <= counter 1 → BLOCK!
+
+$ echo "2" > .release-bypass  # ต้องเพิ่มเลข
+$ git commit -m "fix: another typo"
+# pre-commit: bypass token 2 > counter 1 → allow, counter → 2
+```
+
+### 5.5 กฎเหล็กของ bypass
+
+- แต่ละ token ใช้ได้ครั้งเดียวเท่านั้น
+- ต้องเพิ่มเลขทุกครั้งที่จะ bypass ใหม่
+- ไม่สามารถข้ามเลขได้ (ต้อง 1, 2, 3, ... ตามลำดับ)
+- ห้ามลบไฟล์ `.release-bypass` หรือ `.release-bypass-counter`
+- ห้ามแก้ `.release-bypass-counter` ด้วยมือ — ระบบอัปเดตเอง
+
+---
+
+## 6. ระบบภาษา FvLang (v5.0)
 
 ไฟล์ `lang-core.js` โหลดเป็น script แรกสุดใน `<head>` ก่อน `language.js`
 
@@ -247,7 +402,7 @@ window 'fv:langchange'  // → CustomEvent, detail: { lang, previousLang }
 
 ---
 
-## 5. รูปแบบไฟล์ Markdown
+## 7. รูปแบบไฟล์ Markdown
 
 แต่ละไฟล์ `current.md` เป็นภาษาเดียว — `title`, `subtitle`, `description` เป็น string ธรรมดา ไม่ต้องมี i18n block
 
@@ -297,9 +452,9 @@ Context paragraph in this language.
 
 ---
 
-## 6. ขั้นตอนเมื่ออัปเดตเวอร์ชั่นใหม่
+## 8. ขั้นตอนเมื่ออัปเดตเวอร์ชั่นใหม่
 
-### 6.1 เขียน release note ใหม่ใน `current.md`
+### 8.1 เขียน release note ใหม่ใน `current.md`
 
 แก้ `assets/md/en/current.md` และ `assets/md/th/current.md`:
 
@@ -310,25 +465,45 @@ Context paragraph in this language.
 
 > ⚠️ **ห้ามแตะไฟล์อื่น** — นักพัฒนาเขียนได้แค่ `current.md` (en + th) เท่านั้น ดู section 3
 
-### 6.2 Commit & deploy
+### 8.2 Commit & deploy (v5.1 — ไม่ต้องส่ง APP_VERSION)
 
 ```bash
-# 1. ตรวจสอบว่าแตะเฉพาะ current.md
-node scripts/validate-release.js --staged
+# 1. ติดตั้ง hooks (ครั้งแรกเท่านั้น)
+bash scripts/hooks/install.sh
 
-# 2. Commit
+# 2. Commit — pre-commit hook ตรว version bump อัตโนมัติ
 git add assets/md/en/current.md assets/md/th/current.md
-git commit -m "release: v2.0.0"
-git push
+git commit -m "release: v2.1.0"
+# pre-commit: ✅ version เปลี่ยน 2.0.0 → 2.1.0
 
-# 3. CI/CD:
-git fetch --unshallow
-APP_VERSION=2.0.0 node scripts/update-version.js
+# 3. Push — pre-push hook ตร JS syntax + version bump อัตโนมัติ
+git push
+# pre-push: ✅ ผ่าน
+
+# 4. CI/CD (GitHub Actions) ทำอัตโนมัติ:
+#    - validate-release.js --ci
+#    - update-version.js (ไม่ต้องส่ง APP_VERSION — อ่านจาก current.md)
+#    - commit artifacts กลับเข้า repo
+#    - deploy ขึ้น Cloudflare Pages
 ```
 
-### 6.3 Build script ทำอัตโนมัติ
+### 8.3 กรณีไม่เปลี่ยน version (ใช้ bypass)
 
-1. **Validation** (`validate-release.js`) — ตรวจว่านักพัฒนาแตะเฉพาะ `current.md` เท่านั้น
+```bash
+# 1. เพิ่มเลขใน .release-bypass (ต้องมากกว่า .release-bypass-counter)
+echo "1" > .release-bypass
+
+# 2. Commit — pre-commit hook ตรวพบ bypass และอนุญาต
+git add .release-bypass assets/js/some-fix.js
+git commit -m "fix: minor typo"
+# pre-commit: 🔓 bypass token 1 > counter 0 → allow, counter → 1
+
+# 3. ครั้งถัดไปต้องเพิ่มเลขเป็น 2
+```
+
+### 8.4 Build script ทำอัตโนมัติ (CI/CD)
+
+1. **Validation** (`validate-release.js --ci`) — ตรว version bump + generated artifacts
 2. **STEP 0** — โหลด `release-dates.json` registry
 3. **กำหนด release date** — version ใหม่ → ใช้ NOW; version เดิม → ใช้ date เดิม
 4. **STEP 1** — สร้าง history จาก git log (backfill registry สำหรับ version เก่า)
@@ -339,7 +514,7 @@ APP_VERSION=2.0.0 node scripts/update-version.js
 9. **STEP 3.5** — บันทึก `release-dates.json` (registry ที่อัปเดตแล้ว)
 10. **STEP 4** — HTML cache busting (เพิ่ม `?v={version}-{dateStr}` ให้ assets)
 
-### 6.4 ตรวจสอบหลัง deploy
+### 8.5 ตรวจสอบหลัง deploy
 
 - [ ] เปิดหน้า What's New บนเว็บ — ควรแสดง release ใหม่
 - [ ] ทดสอบในหน้าต่าง incognito — ถ้า `notify: true` popup ควรเด้ง
@@ -349,7 +524,7 @@ APP_VERSION=2.0.0 node scripts/update-version.js
 
 ---
 
-## 7. Validation Script
+## 9. Validation Script
 
 `scripts/validate-release.js` คือ validator สำหรับ closed system — ตรวจว่านักพัฒนาแตะเฉพาะ `current.md` เท่านั้น
 
@@ -402,7 +577,7 @@ const ALLOWED_FILES = new Set([
 
 ---
 
-## 8. อ้างอิงข้าวเอกสาร
+## 10. อ้างอิงข้ามเอกสาร
 
 - [`RELEASE_NOTES_GUIDE.md`](./RELEASE_NOTES_GUIDE.md) — มาตรฐานการเขียน release notes
 - [`04-Internationalization-And-Build.md`](./04-Internationalization-And-Build.md) — ระบบภาษาทั้งหมด (FvLang เป็นส่วนหนึ่ง)

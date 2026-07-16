@@ -1,0 +1,112 @@
+# .github/workflows/release.yml — Layer 3: CI validation + build + deploy
+# 4-layer version control system for Fantrove
+#
+# Workflow:
+#   1. Validate (validate-release.js --ci)
+#   2. Build (update-version.js — ไม่ต้องส่ง APP_VERSION แล้ว)
+#   3. Deploy to Cloudflare Pages (เฉพาะ main branch)
+#
+# ถ้า validate ไม่ผ่าน → deploy ไม่ทำงาน
+
+name: Release
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+  deployments: write
+
+jobs:
+  validate:
+    name: Layer 3 — Validate + Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # ต้องการ full history สำหรับ git log
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Layer 3.1 — Validate release (CI mode)
+        run: |
+          echo "🔍  Layer 3.1: CI validation..."
+          node scripts/validate-release.js --ci --allow-generated
+          echo "✅  Layer 3.1 PASSED"
+
+      - name: Layer 3.2 — Build (update-version.js)
+        run: |
+          echo "📦  Layer 3.2: Building release artifacts..."
+          # v5.1: ไม่ต้องส่ง APP_VERSION แล้ว — อ่านจาก current.md โดยตรง
+          node scripts/update-version.js
+          echo "✅  Layer 3.2 PASSED"
+
+      - name: Layer 3.3 — Verify build artifacts
+        run: |
+          echo "🔎  Layer 3.3: Verifying build artifacts..."
+          # ตรวว่า generated artifacts ถูกสร้างครบ
+          test -f assets/md/releases/index.json || { echo "❌  ไม่พบ releases/index.json"; exit 1; }
+          test -f assets/json/version.json || { echo "❌  ไม่พบ version.json"; exit 1; }
+          test -f assets/json/release-dates.json || { echo "❌  ไม่พบ release-dates.json"; exit 1; }
+          # ตรวว่า version.json มี version ที่ถูกต้อง
+          VERSION=$(node -e "console.log(require('./assets/json/version.json').version)")
+          if [ -z "$VERSION" ]; then
+            echo "❌  version.json ไม่มี version"
+            exit 1
+          fi
+          echo "   Version: $VERSION"
+          echo "✅  Layer 3.3 PASSED"
+
+      - name: Layer 3.4 — Commit build artifacts
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          echo "📝  Layer 3.4: Committing build artifacts..."
+          git config user.name "Fantrove CI"
+          git config user.email "ci@fantrove.local"
+          git add assets/md/releases/ assets/json/release-dates.json assets/json/version.json assets/md/en/current.md assets/md/th/current.md
+          if git diff --staged --quiet; then
+            echo "   ไม่มี artifacts ใหม่ต้อง commit"
+          else
+            git commit -m "ci: build artifacts for v$(node -e "console.log(require('./assets/json/version.json').version)") [skip ci]"
+            git push
+            echo "   Pushed build artifacts"
+          fi
+          echo "✅  Layer 3.4 PASSED"
+
+  deploy:
+    name: Layer 4 — Deploy to Cloudflare Pages
+    needs: validate
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Rebuild after CI commit
+        run: |
+          # รอ CI commit จาก job ก่อนหน้า แล้ว rebuild
+          git pull origin main || true
+          node scripts/update-version.js || true
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: fantrove
+          directory: .
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}

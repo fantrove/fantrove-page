@@ -1,39 +1,37 @@
 ---
-version: 2.0.0
-date: 2026-07-16T10:17:46.458Z
-title: Lazy-loaded content for every category + position memory on navigation + closed release system
-subtitle: Navigation now loads content incrementally as you scroll in every category (not just the feed page) and remembers your scroll position when you switch tabs and come back — like X. The release notes system is now a closed system where developers can only write content for the current version.
+version: 2.1.0
+date: 2026-07-16T12:27:39.693Z
+title: Reduced initial load in every category + 4-layer version control system
+subtitle: Significantly reduced the amount of content loaded on first paint in non-feed categories — now shows just enough to start, then loads more as you scroll like the feed system. Added a 4-layer system that forces version bumps on every code submission, unless intentionally bypassed with a token.
 notify: true
 ---
 
-**TL;DR** — Every category now loads content piece by piece as you scroll instead of pulling everything at once. When you switch to another page and come back, your content and scroll position are preserved. The release notes system is now closed — developers can only write the current version's content, while the system handles dates and history automatically.
+**TL;DR** — Opening Symbols or Emojis for the first time now loads much less content — just enough to see the start, then gradually loads more as you scroll, just like the feed system. From now on, every code submission must include a version bump, or it will be blocked — unless you intentionally bypass with a token.
 
 ## About this system
 
-The navigation system on the Discover page is what controls how emojis and symbols are displayed by category — it remembers which category you're in, lets you switch without refreshing, and loads new data when you change categories. Previously, only the combined feed page loaded content incrementally as you scrolled, while specific categories like Symbols or Emojis still loaded everything at once. This update makes every category load incrementally the same way, adds position memory when switching back and forth, and turns the release notes system into a closed system for stability.
-
-### New
-
-- **Lazy-loaded content in every category**
-  Every category button (Symbols, Emojis, Fancy Text) now loads content in chunks as you scroll to it — it no longer pulls everything at once on initial load. This makes the page open faster, especially on mobile or slow networks, because the system only loads what needs to be shown at that moment and fetches more as you reach it. If you never scroll to a section, that section is never loaded, saving both time and data.
-
-- **Position memory when switching tabs**
-  When you tap another category and come back, the system remembers where you scrolled to and the content you've already loaded is still there — no need to start over from the top. Similar to how X works, this makes switching between categories smoother. You don't have to scroll back to where you were. The system keeps track of roughly the last 5 categories you visited; beyond that, it starts fresh to save memory.
-
-- **Closed release notes system**
-  The release notes system is now a closed system — developers can only write content for the current version. The system handles dates and the entire update history automatically. This prevents mistakes that could cause dates to be inaccurate or history to be corrupted, making the information users see in the "What's New" page reliable and consistent.
+The navigation system on the Discover page controls how emojis and symbols are displayed by category. In version 2.0.0, we made every category load content incrementally, but the initial load was still too heavy. This update significantly reduces that initial load to match the feed system's lightweight first paint, and adds a 4-layer system to prevent forgetting version bumps — a problem that caused update history confusion.
 
 ### Improved
 
-- **More stable date recording**
-  The system records only the first release date of each version as the source of truth. If developers edit content within the same version, the date doesn't change — the history stays as it was until the version number changes, at which point a new record is created. This makes the update history stable, not shifting around when content is edited.
+- **Reduced initial content load in non-feed categories**
+  Previously, opening the Symbols or Emojis category loaded a large amount of content all at once, which could make the page feel slow at first. Now the system loads only the first 2 subcategories, with each showing at most 20 items — roughly 40 items total on the first screen. The rest loads gradually as you scroll to it, just like the feed system that doesn't load much on first paint. This makes the page open noticeably faster, especially on mobile or slow networks.
 
-- **Removed legacy storage systems**
-  The old release notes system that used a single combined file has been removed. It now uses a folder structure that stores each version separately, making it easier to maintain and audit. Each version has its own file, and the system automatically creates a new file when a new version is released.
+### New
+
+- **4-layer version control system**
+  From now on, every code submission must include a version bump — if you forget, the submission will be blocked. The system has 4 layers of protection: Layer 1 checks before committing code, Layer 2 checks before pushing to the server, Layer 3 checks in GitHub's automated system, and Layer 4 only releases versions that pass all checks. This ensures every version that goes live has a correct version number and clean update history.
+
+- **Bypass token for intentional same-version commits**
+  Sometimes you intentionally don't change the version number, such as minor fixes that aren't real updates. The system provides a bypass token — you increase the number in the bypass file, and the system allows that one submission through. But it only works once; the next time you need to increase the number again. This ensures it's truly intentional, not just forgetting.
+
+### Removed
+
+- **Removed the APP_VERSION variable that had to be set in the dashboard**
+  Previously, releasing a new version required setting the APP_VERSION variable in the Cloudflare dashboard, which was cumbersome. Now the system reads the version number directly from the release notes file — no extra configuration needed, removing an unnecessary step.
 
 ### What you'll notice
 
-- Discover page opens faster — only loads what's visible first, then fetches more as you scroll
-- Switch to another category and come back — your content and scroll position are preserved
-- Dates in the "What's New" page are always correct — showing when the version was actually released
-- Update history is stable — dates don't shift around when content is edited
+- Opening Symbols or Emojis is noticeably faster — less loaded on first paint
+- Scrolling down gradually reveals more content, piece by piece
+- Update history is always accurate because every version passes 4 layers of checks

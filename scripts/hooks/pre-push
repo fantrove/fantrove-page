@@ -1,0 +1,39 @@
+#!/bin/bash
+# scripts/hooks/pre-push — Layer 2: Pre-push validation
+# 4-layer version control system for Fantrove
+#
+# ตรวจสอบก่อน push:
+#   1. ไฟล์สำคัญครบ (current.md ทั้ง en + th)
+#   2. JS syntax check ของไฟล์ที่เปลี่ยน
+#   3. version bump check (ยกเว้น bypass)
+#
+# ถ้าไม่ผ่าน → push ถูก block
+#
+# การติดตั้ง: รัน scripts/hooks/install.sh
+
+set -e
+
+echo "🔍  Layer 2: Pre-push validation..."
+
+REPO_ROOT=$(git rev-parse --show-toplevel)
+cd "$REPO_ROOT"
+
+if ! command -v node &> /dev/null; then
+  echo "❌  ไม่พบ Node.js"
+  exit 1
+fi
+
+# รัน validate-release.js ใน pre-push mode
+# --pre-push: บังคับ version bump + ตรว JS syntax + ตรว current.md
+node scripts/validate-release.js --pre-push
+
+EXIT_CODE=$?
+if [ $EXIT_CODE -ne 0 ]; then
+  echo ""
+  echo "❌  Layer 2 FAILED — push ถูก block"
+  echo "    แก้ไขปัญหาข้างต้นแล้วลองอีกครั้ง"
+  exit 1
+fi
+
+echo "✅  Layer 2 PASSED — push อนุญาต"
+exit 0
