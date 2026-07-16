@@ -1,5 +1,5 @@
 ---
-version: 2.2.1
+version: 2.2.2
 date: 2026-07-16T22:32:38.737Z
 title: Restructured history back into releases folder per language
 subtitle: Moved history files back into releases folder within each language to clearly separate current.md from history, while keeping the automatic file generation system so developers don't need to create files manually.
