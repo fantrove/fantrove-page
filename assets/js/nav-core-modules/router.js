@@ -16,6 +16,12 @@
  *   • ลบ _waitUntilFree — ไม่ต่อคิวแล้ว คลิกใหม่ = รีเสร็จทั้งหมดทันที
  *   • เรียก LoadingService._forceReset() ก่อน show() เสมอ
  *     เพื่อรีเซ็ต session counter และลบ overlay เดิมทิ้ง
+ *
+ * v4 — Render-behind-overlay pattern:
+ *   • LoadingService แสดงแค่ข้อความ "Loading…" / "กำลังโหลด…" เท่านั้น (v2.1)
+ *   • Content mount ใต้ overlay ก่อน → รอ 1 rAF → hideInstant() ลบ overlay
+ *     ทำให้ user เห็น smooth transition ไม่มี blank flash
+ *   • setPhase() ยังคงถูกเรียกแต่เป็น no-op (เก็บไว้เผื่อต้องการเปิดใช้ภายหลัง)
  */
 (function (M) {
   'use strict';
@@ -190,6 +196,7 @@
       this._setNavLoading(true);
 
       // ── Show loading overlay (เริ่ม session ใหม่ หลัง reset แล้ว) ────────
+      // v4: show() จะแสดงข้อความ "Loading…" / "กำลังโหลด…" เท่านั้น
       try { M.LoadingService?.show(); } catch (_) {}
 
       // ── v4: Guarantee overlay paint before mutating content ──────────
@@ -312,6 +319,8 @@
 
         if (main === CONFIG.ALL_BUTTON.URL) {
           // ── Smart infinite feed ───────────────────────────────────────────
+          // v4: renderFeed จะเรียก hideInstant() เมื่อ first page พร้อม
+          //   (content mount ใต้ overlay ก่อน → 1 rAF → ลบ overlay)
           try {
             await M.ContentService.renderFeed(lang);
           } catch (feedErr) {
@@ -331,7 +340,12 @@
             const results  = await Promise.all(jobs);
             if (myGen !== this._navGen) return;
             const combined = results.flatMap(r => Array.isArray(r) ? r : (r ? [r] : []));
+            // v4: renderContent จะเรียก hideInstant() ใน finally
+            //   (content mount ใต้ overlay ก่อน → 1 rAF → ลบ overlay)
             if (combined.length) await M.ContentService.renderContent(combined);
+          } else {
+            // v4: ไม่มี fetch job — hideInstant ทันที
+            try { await M.LoadingService?.hideInstant(); } catch (_) {}
           }
         }
 

@@ -3,20 +3,25 @@
  * @file loading.js
  * LoadingService — thin proxy that delegates to FVL (FantroveVerse Loader).
  *
- * v1.7.2 — "Always-show, force-restart" architecture
+ * v2.1 — "Always-show, render-behind-overlay, single-message"
  *
- * Key principles:
- *   1. NO DELAY — overlay shows immediately on show() call
- *   2. ALWAYS SHOWS on every show() call, even if overlay is already visible
- *      (this is critical: when navigating between categories rapidly, each
- *       navigation must trigger a visible loading state, not be silently
- *       absorbed by idempotency)
- *   3. FORCE RESTART — when show() is called while overlay is already visible,
- *      the spinner animation is restarted to give clear visual feedback that
- *      a new operation has started
- *   4. Session counter — overlay only hides when ALL sessions are closed
- *   5. Direct forward — every show/hide is forwarded to FVL immediately,
- *      no cached state that can drift from FVL's actual state
+ * Simplified from v2.0 based on user feedback:
+ *   • แสดงแค่ข้อความ "กำลังโหลด…" / "Loading…" เท่านั้น
+ *   • ไม่มี phase indicators (เช่น "2/4 · Fetching content…")
+ *   • ไม่มี topbar progress bar
+ *   • ไม่มี sub-message
+ *   • เหลือแค่ ring spinner + ข้อความเดียว
+ *
+ * สิ่งที่ยังคงไว้จาก v2.0:
+ *   • ALWAYS-SHOW on every show() call (force-restart + pulse)
+ *   • Session counter
+ *   • MIN_VISIBLE_MS = 300ms (กัน flash บน cached loads)
+ *   • RENDER-BEHIND-OVERLAY pattern (hideInstant รอ 1 rAF ให้ content paint ก่อน)
+ *
+ * Preserved from v1.7.2:
+ *   • NO DELAY — overlay shows immediately on show() call
+ *   • FORCE RESTART — show() while visible pulses the spinner
+ *   • Direct forward to FVL
  *
  * @module loading
  * @depends {config.js, state.js, fvl.js (loaded separately)}
@@ -33,15 +38,18 @@
   var NAV_BEHIND_Z = 15999;
 
   // ── Minimum visible time ──────────────────────────────────────────────────
-  // WHY 200ms: Once the overlay becomes visible, it must stay visible for at
-  // least 200ms before hiding — even if all sessions close immediately. This
-  // prevents the overlay from flashing for 1 frame on cached loads (which
-  // can complete in <50ms), giving the user clear visual feedback that a
-  // navigation happened.
-  //
-  // This is NOT a delay on show() — the overlay shows instantly. It's only
-  // a delay on hide() when the overlay was shown very recently.
-  var MIN_VISIBLE_MS = 200;
+  // WHY 300ms: UX research (NN/g, virtuslab.com) recommends 300-600ms as the
+  // sweet spot. 300ms prevents 1-frame flashes on cached loads while still
+  // feeling snappy. The overlay shows INSTANTLY on show() — this is only a
+  // delay on the FINAL hide.
+  var MIN_VISIBLE_MS = 300;
+
+  // ── Single loading message (localized) ─────────────────────────────────────
+  // v2.1: แสดงแค่ข้อความเดียว ไม่มี phase indicators
+  var LOADING_MESSAGE = Object.freeze({
+    en: 'Loading…',
+    th: 'กำลังโหลด…',
+  });
 
   // ── FVL availability check ────────────────────────────────────────────────
   function _fvl() {
@@ -69,24 +77,19 @@
     } catch (_) { return false; }
   }
 
+  /**
+   * Get the localized loading message.
+   * @returns {string}
+   */
+  function _loadingMessage() {
+    var lang = 'en';
+    try {
+      lang = localStorage.getItem('selectedLang') || 'en';
+    } catch (_) {}
+    return LOADING_MESSAGE[lang] || LOADING_MESSAGE.en;
+  }
+
   // ── LoadingService ────────────────────────────────────────────────────────
-  //
-  // v1.7.2 Architecture: "Always-show, force-restart"
-  // ───────────────────────────────────────────────
-  // The previous v1.7.1 design relied on FVL's idempotency: calling show()
-  // on an already-shown instance just updated the message. But this meant
-  // that rapid navigation between categories would NOT produce a visible
-  // "loading" state on subsequent navigations — the overlay was already
-  // there, so nothing changed visually.
-  //
-  // v1.7.2 fixes this by FORCING a visual restart on every show() call:
-  //   - If FVL has no active instance → call FVL.show() (creates one)
-  //   - If FVL has an active instance → "pulse" it (brief opacity dip +
-  //     restart spinner animation) so the user sees that a new operation
-  //     has started
-  //
-  // This ensures that EVERY navigation produces clear visual feedback,
-  // even when navigations happen back-to-back.
 
   var LoadingService = {
 
@@ -122,17 +125,40 @@
       }
     },
 
+    // ── Phase API (kept for back-compat but no-op visually) ─────────────────
+    //
+    // v2.1: setPhase() ยังคงไว้เพื่อไม่ให้ code ที่เรียกใช้ (router.js,
+    //   content.js, init.js) พัง แต่ไม่เปลี่ยนข้อความที่แสดงผล
+    //   ข้อความยังคงเป็น "Loading…" / "กำลังโหลด…" เสมอ
+    //
+    //   ถ้าต้องการเปิด phase messages ภายหลัง สามารถ uncomment โค้ดด้านล่าง
+    //   และใส่ PHASE_MESSAGES + step indicator กลับเข้าไปได้
+
+    /**
+     * Set the current loading phase.
+     * v2.1: NO-OP visually — just updates internal state.
+     * Kept for back-compat with router.js / content.js / init.js that call it.
+     *
+     * @param {string} phase    One of: 'initializing' | 'fetching' | 'processing' | 'rendering' | 'ready'
+     * @param {string} [customMsg] Optional override message (ignored in v2.1)
+     */
+    setPhase: function (phase, customMsg) {
+      // v2.1: NO-OP — แสดงแค่ "Loading…" เสมอ ไม่เปลี่ยนตาม phase
+      // เก็บไว้เพื่อ back-compat เท่านั้น
+      this._currentPhase = phase || 'initializing';
+    },
+
+    /** Internal phase state (kept for debugging) */
+    _currentPhase: 'initializing',
+
     /**
      * Show the loading overlay (open a navigation session).
      *
-     * v1.7.2 behavior:
+     * v2.1 behavior:
      *   1. Increment session counter
-     *   2. ALWAYS call FVL.show() — FVL.show() is idempotent:
-     *      - If no instance exists → creates one and shows it
-     *      - If instance is 'shown' → updates message, returns existing handle
-     *      - If instance is 'hiding' → cancels hide, restores shown state
-     *      - If instance is 'hidden' → creates new instance
-     *   3. If overlay was already visible, also pulse to signal new operation
+     *   2. ALWAYS call FVL.show() — idempotent
+     *   3. Apply single "Loading…" message (localized)
+     *   4. If overlay was already visible, pulse to signal new operation
      *
      * NO DELAY. The overlay shows immediately on every show() call.
      *
@@ -149,21 +175,17 @@
       // Open a new session
       this._sessionCount++;
 
-      // Normalize opts
+      // Normalize opts — v2.1: ใส่ข้อความ "Loading…" เสมอ ไม่รับ message จาก caller
       var o = (typeof opts === 'string') ? { message: opts } : (opts || {});
       o.mode = 'fullscreen';
       o.id = o.id || DEFAULT_ID;
       if (o.zIndex == null) o.zIndex = NAV_BEHIND_Z;
-      // v1.8: Framework-level enhancements
-      // WHY instant: Skip 140ms fade-in — overlay is opaque from the first paint.
-      //   This prevents a race condition where content changes behind the
-      //   overlay before it's fully visible (visible jank). The caller
-      //   (router.js) awaits one rAF after show() to guarantee the paint.
-      // WHY lockScroll: Block scrolling while loading — user should not be
-      //   able to scroll the (hidden) content behind the overlay. This is
-      //   a framework-level feature (FVL handles position:fixed + restore).
-      o.instant = o.instant !== false;       // default true (caller can opt out)
-      o.lockScroll = o.lockScroll !== false;  // default true
+      o.instant = o.instant !== false;       // default true
+      o.lockScroll = o.lockScroll !== false; // default true
+
+      // v2.1: แสดงแค่ "Loading…" ไม่รับ message อื่น
+      o.message = _loadingMessage();
+
       this._lastOpts = o;
 
       // Check if overlay was already active (for pulse decision)
@@ -186,34 +208,23 @@
 
     /**
      * Pulse the overlay: briefly dip opacity + restart spinner animation.
-     * This gives clear visual feedback that a new operation has started,
-     * even when the overlay was already visible.
-     *
-     * The pulse is implemented via CSS class toggle (.fvl-pulse), which
-     * the CSS animates over 350ms. The spinner animation is restarted by
-     * briefly removing and re-adding the animation property.
+     * (Unchanged from v1.7.2)
      */
     _pulse: function () {
-      if (this._pulseInProgress) return; // don't stack pulses
+      if (this._pulseInProgress) return;
       if (!this._el) return;
 
       var el = this._el;
       this._pulseInProgress = true;
 
-      // Add pulse class (CSS handles the opacity dip)
       el.classList.add('fvl-pulse');
 
-      // v3: Restart spinner โดยไม่ forced reflow
-      // WHY เดิม: getComputedStyle() + void arc.offsetWidth = forced synchronous layout
-      //   ทำให้ main thread block 5-20ms ระหว่าง navigation
-      // วิธีใหม่: clone node → replace → animation restart โดยไม่ต้องอ่าน layout
       var arc = el.querySelector('.fvl-arc');
       if (arc) {
         var clone = arc.cloneNode(true);
         arc.parentNode.replaceChild(clone, arc);
       }
 
-      // Remove pulse class after animation completes
       var self = this;
       setTimeout(function() {
         el.classList.remove('fvl-pulse');
@@ -227,24 +238,20 @@
      * Decrements session counter. Only hides the overlay when ALL sessions
      * are closed (counter reaches 0).
      *
-     * MIN_VISIBLE_MS: if the overlay was shown less than 200ms ago, defer
-     * the hide until the 200ms has elapsed. This prevents 1-frame flashes
-     * on cached loads. The hide is NOT delayed if there are still open
-     * sessions (only the final hide is delayed).
+     * MIN_VISIBLE_MS: if the overlay was shown less than 300ms ago, defer
+     * the hide until the 300ms has elapsed (prevents 1-frame flashes).
+     *
+     * @returns {Promise<void>}
      */
     hide: function () {
-      // Decrement session counter (never below 0)
       if (this._sessionCount > 0) this._sessionCount--;
 
-      // If there are still open sessions, don't hide
       if (this._sessionCount > 0) {
         return Promise.resolve();
       }
 
-      // All sessions closed — check minimum visible time
       var elapsed = Date.now() - this._visibleSince;
       if (this._visibleSince > 0 && elapsed < MIN_VISIBLE_MS) {
-        // Defer hide until MIN_VISIBLE_MS has elapsed
         var self = this;
         if (this._pendingHideTimer) clearTimeout(this._pendingHideTimer);
         return new Promise(function(resolve) {
@@ -257,7 +264,6 @@
         });
       }
 
-      // Minimum time satisfied — hide immediately
       var fvl = _fvl();
       if (!fvl) return Promise.resolve();
       return fvl.hide(DEFAULT_ID);
@@ -310,16 +316,15 @@
     },
 
     /**
-     * v3→v4: Hide loading แบบ instant — ไม่มี fade-out animation
-     * WHY: เมื่อ content พร้อมแล้ว ไม่ต้อง fade-out 180ms
-     *   ซ่อนทันทีแบบ Google/Microsoft — content ปรากฏปั๊บ
-     *   ลด forced reflow จาก CSS transition ด้วย
+     * v2.1: Hide loading แบบ instant — ไม่มี fade-out animation
      *
-     * v4: rAF guard — ถ้า overlay ถูกสร้างใน frame เดียวกับที่ hide
-     *   ถูกเรียก (เช่น cached load เร็วมาก), browser อาจไม่เคย paint
-     *   overlay เลย → ผู้ใช้เห็น content เปลี่ยนอยู่เบื้องหลัง
-     *   วิธีแก้: ถ้า overlay อยู่ในสถานะ 'showing' (ยังไม่ถูก paint),
-     *   รอ 1 rAF ก่อนลบ เพื่อให้ browser ได้ paint อย่างน้อย 1 ครั้ง
+     * RENDER-BEHIND-OVERLAY PATTERN (Netflix/Spotify/Instagram):
+     *   Content is already mounted into the DOM BEFORE hideInstant() is
+     *   called. We then:
+     *     1. Wait 1 rAF so the browser paints the content under the overlay
+     *     2. Remove the overlay instantly (no fade-out)
+     *   This eliminates the "blank flash" between hide-loading and
+     *   show-content.
      */
     hideInstant: function () {
       if (this._sessionCount > 0) this._sessionCount--;
@@ -332,9 +337,6 @@
       }
 
       var self = this;
-
-      // v4: Check if FVL instance is still in 'showing' state (not yet painted).
-      // If so, defer removal by 1 rAF to guarantee at least one paint.
       var fvl = _fvl();
       var inst = null;
       if (fvl) {
@@ -353,38 +355,27 @@
         return Promise.resolve();
       }
 
-      // Normal case: overlay was fully shown — remove immediately.
-      this._removeOverlayNow(fvl);
+      // v2.0: Wait 1 rAF before removing overlay so any pending content
+      // mount (which happened just before hideInstant() was called) gets
+      // painted by the browser FIRST. Then the overlay is removed,
+      // revealing the already-painted content underneath.
+      //
+      // This is the "render behind overlay" pattern: content paints under
+      // the overlay, then overlay disappears — user sees smooth transition
+      // from loading → content with no blank frame.
+      requestAnimationFrame(function () {
+        self._removeOverlayNow(fvl);
+      });
       return Promise.resolve();
     },
 
     /**
      * v4: Internal — actually remove overlay DOM + FVL instance.
-     * Split from hideInstant() so the rAF guard can call it deferred.
-     *
-     * v2 FIX (scroll-lock restore):
-     *   Previously this method removed the DOM element + FVL instance
-     *   from the registry but NEVER restored the body scroll-lock styles
-     *   that FVL applied when `lockScroll: true` (the default for
-     *   fullscreen mode). The result: after the first navigation on
-     *   pages that use ContentService (e.g. /data/verse/discover/),
-     *   `body.style.position` remained `fixed` forever, making the page
-     *   unscrollable. Other pages (home, etc.) don't use nav-core's
-     *   navigation flow, which is why only the discover page was affected.
-     *
-     *   Fix: mirror the cleanup that FVL._cleanup() and _forceReset()
-     *   already do — restore `position`/`top`/`width` on <body> and
-     *   scroll back to the saved offset BEFORE removing the instance.
-     *   Also add a defensive sweep in case the FVL instance was already
-     *   removed from the registry (e.g. by a prior _forceReset) while
-     *   the body styles were still locked.
+     * (Preserved from v1.7.2 with scroll-lock restore fix)
      */
     _removeOverlayNow: function (fvl) {
       if (!fvl) fvl = _fvl();
 
-      // ── Restore body scroll-lock (primary fix) ───────────────────────────
-      // We MUST read the instance BEFORE removing it from the registry,
-      // because the instance holds `_lockedScrollY` (the saved scroll offset).
       var inst = null;
       if (fvl) {
         try { inst = fvl.modules().State.getInstance(DEFAULT_ID); } catch (_) {}
@@ -398,9 +389,6 @@
           inst._lockedScrollY = null;
         } catch (_) {}
       } else {
-        // Defensive sweep: if no instance was found (e.g. already removed
-        // by an earlier _forceReset) but the body is still locked from a
-        // previous show(), unlock it so the page can scroll again.
         try {
           if (document.body.style.position === 'fixed') {
             document.body.style.position = '';
@@ -410,7 +398,6 @@
         } catch (_) {}
       }
 
-      // ลบ DOM ทันที — ไม่ผ่าน FVL animation
       if (this._el) {
         try {
           if (this._el.parentNode) this._el.parentNode.removeChild(this._el);
@@ -428,33 +415,29 @@
     hideFromContent: function ()   { return this.hide(); },
 
     // ── Emergency reset (used at start of each navigateTo) ───────────────
-    // v3: ลบ overlay DOM ทันที ไม่รอ leave animation
-    // WHY: เมื่อคลิกรัวๆ เราต้องการ "รีเซ็ตทุกอย่างใหม่" ไม่ใช่ "รอให้เลือนหาย"
-    //   การเรียก fvl.hide() จะมี animation delay 180ms ซึ่งทำให้ show() ตัวใหม่
-    //   อาจเจอ instance ที่อยู่ในสถานะ 'hiding' แล้วทำให้การแสดงผลผิดพลาด
+    // (Preserved from v1.7.2)
     _forceReset: function () {
       this._sessionCount = 0;
       this._pulseInProgress = false;
       this._visibleSince = 0;
+      this._currentPhase = 'initializing';
       if (this._pendingHideTimer) {
         clearTimeout(this._pendingHideTimer);
         this._pendingHideTimer = null;
       }
-      // ลบ overlay DOM ทันที — ไม่รอ animation
+      // Remove fullscreen overlay
       if (this._el) {
         try {
           if (this._el.parentNode) this._el.parentNode.removeChild(this._el);
         } catch (_) {}
         this._el = null;
       }
-      // ลบ FVL instance ออกจาก registry ทันที
       var fvl = _fvl();
       if (fvl) {
         try {
           var modules = fvl.modules();
           var inst = modules.State.getInstance(DEFAULT_ID);
           if (inst) {
-            // ทำ cleanup เหมือน FVL ภายใน แต่ทันที (skip animation)
             if (inst.mode === 'fullscreen' && inst._lockedScrollY != null) {
               try {
                 document.body.style.position = '';
@@ -467,10 +450,14 @@
             modules.State.removeInstance(DEFAULT_ID);
           }
         } catch (_) {
-          // Fallback: ลอง hide ปกติ ถ้า internal API ใช้ไม่ได้
           try { fvl.hide(DEFAULT_ID); } catch (__) {}
         }
       }
+    },
+
+    /** Get current phase. Useful for debugging. */
+    getCurrentPhase: function () {
+      return this._currentPhase;
     },
   };
 
@@ -486,7 +473,7 @@
 
   M.LoadingService = LoadingService;
 
-  // ── Global convenience aliases (kept for back-compat with external scripts)
+  // ── Global convenience aliases (kept for back-compat with external scripts) ──
   try {
     if (!window._navCore_contentLoadingManager)
       window._navCore_contentLoadingManager = LoadingService;

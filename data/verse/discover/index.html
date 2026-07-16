@@ -38,6 +38,156 @@
     .fv-sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;}
   </style>
 
+  <!-- ═════════════════════════════════════════════════════════════════════════
+       BOOT LOADER — inline CSS + HTML rendered immediately
+       ═════════════════════════════════════════════════════════════════════════
+       WHY inline in <head>: This CSS + HTML is parsed and painted BEFORE any
+       external resource loads. The user sees a fullscreen loading overlay
+       within the first paint (~50-100ms on 3G mobile), covering the page
+       until NavCore + FVL are ready.
+
+       Pattern: "Cover-all initial loader" (Spotify/TikTok app shell pattern)
+         • Fullscreen overlay covering header + content
+         • Ring spinner (SVG, CSS-animated)
+         • Localized message ("Loading..." / "กำลังโหลด...")
+         • Auto-dismissed by NavCore InitService.start() finally block
+         • Safety timeout: 12s auto-hide (in case NavCore fails to load)
+
+       Why not wait for FVL: FVL itself loads as <script defer> in <body>.
+       If we waited for FVL, the user would see a blank white page for
+       200-500ms (depending on connection) before any loading indicator
+       appeared. The inline loader eliminates that blank window.
+
+       Coordination with FVL:
+         1. Inline loader shows immediately (this <style> + <div>)
+         2. nav-core.js loads → NavCoreModules.InitService.start() runs
+         3. LoadingService.show() shows FVL fullscreen overlay ON TOP of
+            the inline loader (FVL z-index = 17500, inline = 99998)
+         4. InitService finally block calls window.__removeBootLoader()
+            which fades out the inline loader
+         5. FVL overlay continues to show phase messages until content
+            is rendered, then hideInstant() removes it
+
+       Result: User sees continuous loading from first paint to content
+       ready, with no blank gaps. This is the "app shell" pattern used
+       by Spotify, TikTok, and Twitter for initial load.
+       ═════════════════════════════════════════════════════════════════════════ -->
+  <style>
+    /* ── Boot loader keyframes (outside @layer for max compat) ───────────── */
+    @keyframes _fv_boot_spin { to { transform: rotate(360deg); } }
+    @keyframes _fv_boot_fade_out { from { opacity: 1; } to { opacity: 0; } }
+    @keyframes _fv_boot_pulse {
+      0%, 100% { opacity: 0.7; }
+      50% { opacity: 1; }
+    }
+
+    /* ── Boot loader overlay ─────────────────────────────────────────────── */
+    #fv-boot-loader {
+      position: fixed;
+      inset: 0;
+      z-index: 99998;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 22px;
+      background: var(--fv-surface-page, #ffffff);
+      contain: layout style;
+      transform: translateZ(0);
+      font-family: var(--fv-font-stack, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+      box-sizing: border-box;
+      transition: opacity 220ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    #fv-boot-loader.fv-boot-hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* ── Spinner (matches FVL ring style) ────────────────────────────────── */
+    #fv-boot-loader .fv-boot-spinner {
+      width: 68px;
+      height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      will-change: transform;
+    }
+    #fv-boot-loader .fv-boot-spinner svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+      display: block;
+    }
+    #fv-boot-loader .fv-boot-track {
+      stroke: #e8f5ef;
+      stroke-width: 3.5;
+      fill: none;
+    }
+    #fv-boot-loader .fv-boot-arc {
+      stroke: var(--fv-brand-teal-light, #13b47f);
+      stroke-width: 3.5;
+      stroke-linecap: round;
+      stroke-dasharray: 88 132;
+      fill: none;
+      transform-box: fill-box;
+      transform-origin: center;
+      will-change: transform;
+      animation: _fv_boot_spin 0.7s linear infinite;
+    }
+
+    /* ── Text block ──────────────────────────────────────────────────────── */
+    #fv-boot-loader .fv-boot-text {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      contain: layout style;
+    }
+    #fv-boot-loader .fv-boot-msg {
+      font-size: 16px;
+      font-weight: 600;
+      color: #3c4043;
+      text-align: center;
+      line-height: 1.4;
+      min-width: 100px;
+      min-height: 1.4em;
+    }
+    #fv-boot-loader .fv-boot-sub {
+      font-size: 13px;
+      font-weight: 400;
+      color: #9aa0a6;
+      text-align: center;
+      line-height: 1.4;
+      animation: _fv_boot_pulse 1.6s ease-in-out infinite;
+    }
+    #fv-boot-loader .fv-boot-sub:empty { display: none; }
+
+    /* ── Phase indicator dots (visual progress) ──────────────────────────── */
+    #fv-boot-loader .fv-boot-dots {
+      display: flex;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    #fv-boot-loader .fv-boot-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #e0e0e0;
+      transition: background 220ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    #fv-boot-loader .fv-boot-dot.fv-boot-dot-active {
+      background: var(--fv-brand-teal-light, #13b47f);
+    }
+
+    /* ── prefers-reduced-motion ──────────────────────────────────────────── */
+    @media (prefers-reduced-motion: reduce) {
+      #fv-boot-loader .fv-boot-arc { animation: none; }
+      #fv-boot-loader .fv-boot-sub { animation: none; }
+      #fv-boot-loader.fv-boot-hidden { transition: none; }
+    }
+  </style>
+
   <script>window.dataLayer=window.dataLayer||[];dataLayer.push({'gtm.start':new Date().getTime(),event:'gtm.js'});</script>
   <script async src="https://www.googletagmanager.com/gtm.js?id=GTM-PJ397CLS"></script>
   <script id="Cookiebot" src="https://consent.cookiebot.com/uc.js" data-cbid="16a70d79-a7a7-4b66-89da-afb49e453c67" data-blockingmode="auto" type="text/javascript" async></script>
@@ -47,6 +197,169 @@
 </head>
 
 <body>
+  <!-- ═════════════════════════════════════════════════════════════════════════
+       BOOT LOADER — shown immediately, covers everything until NavCore ready
+       ═════════════════════════════════════════════════════════════════════════
+       Rendered synchronously in <body> so it appears on the very first paint.
+       The inline script below manages phase messages + auto-dismiss.
+       ═════════════════════════════════════════════════════════════════════════ -->
+  <div id="fv-boot-loader" role="status" aria-live="polite" aria-label="Loading">
+    <div class="fv-boot-spinner" aria-hidden="true">
+      <svg viewBox="0 0 52 52">
+        <circle class="fv-boot-track" cx="26" cy="26" r="22"></circle>
+        <circle class="fv-boot-arc" cx="26" cy="26" r="22"></circle>
+      </svg>
+    </div>
+    <div class="fv-boot-text">
+      <div class="fv-boot-msg" id="fv-boot-msg">Loading…</div>
+      <div class="fv-boot-sub" id="fv-boot-sub">Preparing experience</div>
+      <div class="fv-boot-dots" aria-hidden="true">
+        <span class="fv-boot-dot fv-boot-dot-active" id="fv-boot-dot-1"></span>
+        <span class="fv-boot-dot" id="fv-boot-dot-2"></span>
+        <span class="fv-boot-dot" id="fv-boot-dot-3"></span>
+        <span class="fv-boot-dot" id="fv-boot-dot-4"></span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ── Boot loader controller ──────────────────────────────────────────────
+       Why this script is inline + synchronous in <body>:
+         It must run BEFORE NavCore finishes loading, so it can:
+           1. Pick up the user's selected language for the message
+           2. Listen for NavCore phase events to update the boot loader UI
+           3. Expose window.__removeBootLoader() for InitService to call
+
+       Phase mapping (synced with LoadingService v2.0 PHASES):
+         initializing → dot 1 active, "Preparing…"
+         fetching     → dot 2 active, "Fetching content…"
+         processing   → dot 3 active, "Processing data…"
+         rendering    → dot 4 active, "Rendering…"
+         ready        → all dots active, then dismiss
+
+       The boot loader is REMOVED (not just hidden) by InitService.start()
+       finally block, AFTER FVL fullscreen overlay has taken over. This
+       prevents any flash where neither loader is visible.
+       ─────────────────────────────────────────────────────────────────────── */
+    (function () {
+      'use strict';
+      if (window.__bootLoaderInstalled) return;
+      window.__bootLoaderInstalled = true;
+
+      var PHASE_TEXT = {
+        en: {
+          initializing: 'Preparing…',
+          fetching:     'Fetching content…',
+          processing:   'Processing data…',
+          rendering:    'Rendering…',
+          ready:        'Ready',
+        },
+        th: {
+          initializing: 'กำลังเตรียมระบบ…',
+          fetching:     'กำลังดึงข้อมูล…',
+          processing:   'กำลังประมวลผล…',
+          rendering:    'กำลังแสดงผล…',
+          ready:        'พร้อมแล้ว',
+        },
+      };
+      var SUB_TEXT = {
+        en: { initial: 'Preparing experience' },
+        th: { initial: 'กำลังเตรียมประสบการณ์' },
+      };
+
+      function getLang() {
+        try {
+          return (localStorage.getItem('selectedLang') || 'en');
+        } catch (_) { return 'en'; }
+      }
+
+      function setPhase(phase) {
+        var lang = getLang();
+        var msgs = PHASE_TEXT[lang] || PHASE_TEXT.en;
+        var msgEl = document.getElementById('fv-boot-msg');
+        if (msgEl) msgEl.textContent = msgs[phase] || PHASE_TEXT.en[phase] || 'Loading…';
+
+        // Update dots
+        var phaseOrder = ['initializing', 'fetching', 'processing', 'rendering', 'ready'];
+        var idx = phaseOrder.indexOf(phase);
+        if (idx < 0) idx = 0;
+        for (var i = 1; i <= 4; i++) {
+          var dot = document.getElementById('fv-boot-dot-' + i);
+          if (dot) {
+            if (i <= idx + 1) dot.classList.add('fv-boot-dot-active');
+            else dot.classList.remove('fv-boot-dot-active');
+          }
+        }
+      }
+
+      // Set initial message based on stored language
+      function init() {
+        var lang = getLang();
+        var msgs = PHASE_TEXT[lang] || PHASE_TEXT.en;
+        var subs = SUB_TEXT[lang] || SUB_TEXT.en;
+        var msgEl = document.getElementById('fv-boot-msg');
+        var subEl = document.getElementById('fv-boot-sub');
+        if (msgEl) msgEl.textContent = msgs.initializing;
+        if (subEl) subEl.textContent = subs.initial;
+        setPhase('initializing');
+      }
+
+      // Listen for NavCore phase events (LoadingService dispatches these)
+      // FVL system events: fvl:shown, fvl:hiding, fvl:hidden
+      // We also listen for 'navcore:phase' custom event (dispatched by LoadingService.setPhase)
+      window.addEventListener('navcore:phase', function (e) {
+        try {
+          var phase = e.detail && e.detail.phase;
+          if (phase) setPhase(phase);
+        } catch (_) {}
+      });
+
+      // Expose remove function for InitService.start() finally block
+      window.__removeBootLoader = function () {
+        var el = document.getElementById('fv-boot-loader');
+        if (!el) return;
+        el.classList.add('fv-boot-hidden');
+        setTimeout(function () {
+          try {
+            if (el.parentNode) el.parentNode.removeChild(el);
+          } catch (_) {}
+        }, 250); // wait for fade-out transition
+      };
+
+      // Safety timeout: if NavCore hasn't taken over after 12s, force hide
+      // WHY 12s: covers slow 3G + cold cache + heavy CDN. If NavCore truly
+      //   failed to load, we don't want the user stuck on a loader forever.
+      setTimeout(function () {
+        var el = document.getElementById('fv-boot-loader');
+        if (el && !el.classList.contains('fv-boot-hidden')) {
+          // Check if NavCore has actually taken over (FVL active)
+          var fvlActive = false;
+          try {
+            if (window.FVL && typeof window.FVL.isActive === 'function') {
+              fvlActive = window.FVL.isActive('fvl-default-fullscreen');
+            }
+          } catch (_) {}
+          // Only force-hide if NavCore has taken over OR if 12s truly elapsed
+          // If NavCore is still loading, give it 6 more seconds
+          if (fvlActive || !window._navCore_bootstrapping) {
+            window.__removeBootLoader();
+          } else {
+            setTimeout(function () {
+              window.__removeBootLoader();
+            }, 6000);
+          }
+        }
+      }, 12000);
+
+      // Initialize phase text on DOMContentLoaded (or now if already loaded)
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init, { once: true });
+      } else {
+        init();
+      }
+    })();
+  </script>
+
   <!-- Early bootstrap: render minimal UI as soon as parser hits <body> -->
   <script src="/assets/js/nav-core-early.js" async></script>
 

@@ -58,6 +58,7 @@
       this._cacheElements();
 
       // ── Phase 3: Show loading overlay early ────────────────────────────────
+      // v4: show() จะแสดงข้อความ "Loading…" / "กำลังโหลด…" เท่านั้น
       try { LoadingService.show(); } catch (_) {}
 
       // ── Phase 4: Core service setup ────────────────────────────────────────
@@ -111,6 +112,8 @@
         } catch (_) {}
 
         // ── Phase 8: Initial navigation ────────────────────────────────────
+        // v4: navigateTo จะเรียก hideInstant() เมื่อ content พร้อม
+        //   (content mount ใต้ overlay ก่อน → 1 rAF → ลบ overlay)
         try {
           const url = window.location.search;
           if (!url || url === '?') {
@@ -137,11 +140,31 @@
         console.error('[NavCore/Init] bootstrap error:', error);
         try { Utils.showErrorFullscreen(error, { label: 'App Bootstrap', title: 'เกิดข้อผิดพลาดในการโหลดแอพพลิเคชัน กรุณารีเฟรชหน้า' }); } catch (_) {}
       } finally {
+        // v4: ตรวจว่า LoadingService ยัง active อยู่หรือไม่ — ถ้าใช่ ให้ force hide
+        //   (defensive: บาง route ไม่ได้เรียก renderContent ก็จะไม่ถึง hideInstant)
+        try {
+          if (LoadingService.isShown()) {
+            await LoadingService.hideInstant();
+          }
+        } catch (_) {}
+
         try {
           if (typeof window.__removeInstantLoadingOverlay === 'function'
             && window.__instantLoadingOverlayShown) {
             window.__removeInstantLoadingOverlay();
             window.__instantLoadingOverlayShown = false;
+          }
+        } catch (_) {}
+
+        // v4: ลบ boot loader inline (ถ้ามี) — เผื่อกรณีที่ user มาจากหน้า
+        //   discover ที่มี inline boot loader แสดงอยู่ก่อน NavCore พร้อม
+        try {
+          if (typeof window.__removeBootLoader === 'function') {
+            window.__removeBootLoader();
+          } else {
+            // Fallback: remove by ID ถ้า function ไม่ถูก export
+            var bl = document.getElementById('fv-boot-loader');
+            if (bl && bl.parentNode) bl.parentNode.removeChild(bl);
           }
         } catch (_) {}
 

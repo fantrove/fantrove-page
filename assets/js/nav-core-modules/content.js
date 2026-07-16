@@ -178,9 +178,12 @@
         const items = await this._resolveAll(data, lang);
         if (sess !== _sess) return;
 
-        // v3: Render content ก่อน แล้วค่อยซ่อน loading
+        // v4: Render content ก่อน แล้วค่อยซ่อน loading
         // WHY: ถ้าซ่อน loading ก่อน → ผู้ใช้เห็นหน้าว่างช่วงระหว่าง fade-out กับ render
         //   เหมือน Google/Microsoft — content พร้อมก่อน ถึงจะซ่อน overlay
+        //   v4: This is the "render behind overlay" pattern (Netflix/Spotify).
+        //     Content is mounted under the overlay, then hideInstant()
+        //     waits 1 rAF for paint before removing the overlay.
         _ureHandle = window.URE.mount({
           container          : ctr,
           data               : items,
@@ -196,9 +199,9 @@
         console.error('[NavCore/Content] renderContent error:', e);
         try { M.LoadingService?.hide(); } catch (err) { console.warn('[Content] LoadingService.hide failed in catch:', err); }
       } finally {
-        // v3: ซ่อน loading หลัง render เสร็จ (ถ้ายังไม่ถูกซ่อน)
-        //   render เสร็จแล้ว ซ่อนทันที ไม่ต้องรอ animation
-        //   ใช้ hideInstant() — ลบ DOM ทันที เหมือน Google/Microsoft
+        // v4: hideInstant — overlay will be removed after 1 rAF so the
+        //   just-mounted content paints underneath first.
+        //   This is the "render behind overlay" pattern.
         try { M.LoadingService?.hideInstant(); } catch (_) {}
       }
     },
@@ -255,6 +258,8 @@
         // WHY: ถ้าซ่อนก่อน render → ผู้ใช้เห็นหน้าว่าง 180ms+ (blank flash)
         //   ตอนนี้ content render เสร็จแล้ว → ซ่อน loading ทันที
         //   ใช้ hideInstant() — ลบ DOM ทันที เหมือน Google/Microsoft
+        //   v4: hideInstant จะรอ 1 rAF ให้ browser paint content ก่อน remove overlay
+        //     → render-behind-overlay pattern (Netflix/Spotify)
         try { M.LoadingService?.hideInstant(); } catch (_) {}
 
         if (sess !== _sess) return;
