@@ -1,26 +1,26 @@
 ---
-version: 2.2.3
-date: 2026-07-16T22:57:29.839Z
-title: Fixed release history not being saved
-subtitle: Corrected a timing bug in the release script that read the already-updated file instead of the previous version, plus synced the CI workflow with the per-language releases folder structure.
+version: 2.2.4
+date: 2026-07-16T23:30:00.000Z
+title: Fixed the 4-layer version-bump block not actually working
+subtitle: The CI layer's version-bump check always compared the new commit against itself and could never detect a real bump, and the local git hooks that block forgotten version bumps were never installed unless someone remembered to run a manual command.
 notify: true
 ---
 
-**TL;DR** — Fixed the root cause of update history not being saved during deploy: the release script was comparing the new version against itself instead of the true previous version, and the CI workflow was still checking for old file paths that no longer exist.
+**TL;DR** — The 4-layer version-control system was only half-working: the CI check that's supposed to block a forgotten version bump always read the exact same commit on both sides of the comparison, so it could never tell a real bump from no bump at all. Local pre-commit/pre-push hooks are now installed automatically too, instead of relying on a manual step nobody remembers to run.
 
 ## About this fix
 
-Deploys were completing, but no history file for the previous version was ever created. The release script decided what "the previous version" was by reading `current.md` from the Git `HEAD` commit — but by the time the CI build runs, `HEAD` already **is** the commit with the new version, since the version bump is committed and pushed before CI executes. That made the script always see "previous version" and "new version" as identical, so it concluded nothing had changed and skipped saving history entirely.
+This system is meant to block a commit, push, or deploy if the version number wasn't bumped. Checking the actual project history showed that layer had never once completed successfully — not a single CI-generated commit exists anywhere in over a thousand commits. The cause was the same class of bug fixed in 2.2.3: the CI check compared the version in `current.md` against `current.md` read from Git `HEAD` — but in CI, `HEAD` **is** the commit that already contains the version bump, so both sides were always identical. The check couldn't distinguish "version really changed" from "forgot to bump," so it either silently failed to block, or would have blocked every single release.
 
-Separately, the CI workflow was still verifying and committing an older, root-level release file layout that was replaced when history moved into a per-language `releases/` folder, so even a correct snapshot would not have been picked up.
+Separately, the local pre-commit and pre-push hooks that are supposed to catch a forgotten bump before it's even pushed only activate if a developer manually runs a one-time setup command — easy to forget, especially on a fresh clone.
 
 ### Fixed
 
-- **Release script now finds the real previous version**
-  Instead of assuming `HEAD` is always the older commit, the script now checks whether `HEAD`'s version already matches the new version. If it does (the CI-after-push case), it walks back through Git history for that file to find the commit that actually held the previous version. This works correctly both when run locally before a commit and when run in CI after a push.
+- **CI version-bump check now compares against the real previous release**
+  The check now looks at whether Git's `HEAD` already matches the file on disk. If it does (the CI-after-push case), it walks back through that file's Git history to find the commit that held the actual previous version, instead of comparing a commit against itself. Verified against both a genuine version bump (passes) and a forgotten bump (correctly blocks).
 
-- **CI workflow synced with the per-language releases structure**
-  Build verification and the auto-commit step now check and stage `assets/md/en/releases/` and `assets/md/th/releases/`, matching what the release script actually generates, so history files are verified and committed correctly on every deploy.
+- **Git hooks now install automatically**
+  Pre-commit and pre-push validation now install themselves the first time dependencies are installed, the same way most Node.js projects auto-install Git hooks, instead of depending on a developer remembering a separate manual command. Hook installation safely skips itself in CI and in non-Git environments so it can't break automated builds.
   The system still automatically creates history files in the releases folder when there's a new version. Developers don't need to create or manage files in the releases folder themselves — they just edit current.md.
 
 ### What you'll notice

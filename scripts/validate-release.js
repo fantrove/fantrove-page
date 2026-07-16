@@ -1,5 +1,16 @@
 #!/usr/bin/env node
 // scripts/validate-release.js — Fantrove Release Validator
+// v1.5: FIX — Layer 3 (CI) เช็ค version bump ผิดพลาดเสมอ (HEAD timing bug)
+//
+// v1.5 changes จาก v1.4:
+//     - getLastCommittedVersion() เดิมอ่าน `git show HEAD:current.md` ตรงๆ
+//       ซึ่งใน CI ที่รันหลัง push, HEAD คือ commit ที่ bump แล้ว (เหมือน disk
+//       เป๊ะ) ทำให้ current === lastCommitted เสมอ → CI คิดว่า "ไม่เคย bump"
+//       ทุกครั้ง ไม่ว่าจะ bump จริงหรือไม่ (บั๊กคลาสเดียวกับที่แก้ใน
+//       update-version.js v6.2) → Layer 3 ไม่เคยผ่านจริงๆ
+//     - แก้โดยตรวจก่อนว่า HEAD ตรงกับ disk หรือไม่ ถ้าตรง (CI) ให้ย้อน
+//       git log หา commit ก่อนหน้าที่แก้ไฟล์นี้จริงๆ แทน
+//
 // v1.4: v6.1 PER-LANG releases/ FOLDER — ปรับ generated patterns
 //
 // v1.4 changes จาก v1.3:
@@ -197,14 +208,40 @@ function readVersionFromCurrentMd(lang) {
   } catch (_) { return null; }
 }
 
+// v1.5 FIX: เดิมใช้ `git show HEAD:current.md` ตรงๆ ซึ่งพังในบริบท CI —
+// พอ CI checkout commit ที่ push มา, HEAD *คือ* commit ที่ bump เวอร์ชั่นไปแล้ว
+// (เหมือนกับไฟล์บน disk เป๊ะ) ทำให้ current === lastCommitted เสมอ ไม่ว่าจะ
+// bump จริงหรือไม่ก็ตาม → checkVersionBump() เห็นว่า "ไม่เคย bump" ทุกครั้งใน
+// CI (ยืนยันจาก git log: ตลอด 1,100+ commits ไม่มี commit จาก "Fantrove CI"
+// เลยสักครั้ง — แปลว่า Layer 3 fail มาตลอดโดยไม่มีใครรู้)
+// วิธีแก้: ตรวจก่อนว่า HEAD ตรงกับเวอร์ชั่นบน disk หรือไม่
+//   - ไม่ตรง (ปกติ: pre-commit/pre-push ที่รันก่อน commit จริง) → ใช้ HEAD ได้เลย
+//   - ตรงกัน (CI หลัง push) → ย้อน git log หา commit ก่อนหน้าที่แก้ไฟล์นี้จริงๆ
 function getLastCommittedVersion(lang) {
   try {
-    const r = spawnSync('git', ['show', `HEAD:assets/md/${lang}/current.md`], {
+    const relPath = `assets/md/${lang}/current.md`;
+    const r = spawnSync('git', ['show', `HEAD:${relPath}`], { encoding: 'utf8', cwd: ROOT });
+    if (r.status !== 0 || !r.stdout) return null;
+    const headMatch = r.stdout.match(/^version:\s*(.+)$/m);
+    const headVersion = headMatch ? headMatch[1].trim() : null;
+
+    const diskVersion = readVersionFromCurrentMd(lang);
+    if (headVersion !== diskVersion) {
+      // HEAD ยังไม่ใช่ commit ที่ bump — เป็นของเก่าจริง ใช้ได้ตรงๆ
+      return headVersion;
+    }
+
+    // HEAD มีเนื้อหาตรงกับ disk เป๊ะ (CI หลัง push) — ย้อนหา commit ก่อนหน้าจริงๆ
+    const log = spawnSync('git', ['log', '--format=%H', '-n', '2', '--', relPath], {
       encoding: 'utf8', cwd: ROOT,
     });
-    if (r.status !== 0 || !r.stdout) return null;
-    const m = r.stdout.match(/^version:\s*(.+)$/m);
-    return m ? m[1].trim() : null;
+    const hashes = (log.status === 0 && log.stdout) ? log.stdout.split('\n').filter(Boolean) : [];
+    if (hashes.length < 2) return null; // ไม่มีประวัติก่อนหน้า (release แรก)
+
+    const prevShow = spawnSync('git', ['show', `${hashes[1]}:${relPath}`], { encoding: 'utf8', cwd: ROOT });
+    if (prevShow.status !== 0 || !prevShow.stdout) return null;
+    const prevMatch = prevShow.stdout.match(/^version:\s*(.+)$/m);
+    return prevMatch ? prevMatch[1].trim() : null;
   } catch (_) { return null; }
 }
 
@@ -325,7 +362,7 @@ function main() {
   }
 
   const modeLabel = ciMode ? 'CI' : prePushMode ? 'pre-push' : mode === 'staged' ? 'pre-commit' : mode;
-  console.log('🔍  Fantrove Release Validator v1.4 (v6.1 — per-lang releases/ folder)');
+  console.log('🔍  Fantrove Release Validator v1.5 (fixed CI version-bump check)');
   console.log('    Mode: ' + modeLabel + (commitHash ? ' (' + commitHash + ')' : '') + (allowGenerated || ciMode ? ' (allow-generated)' : ''));
   console.log('');
 
