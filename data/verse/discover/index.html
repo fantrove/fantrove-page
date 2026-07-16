@@ -41,45 +41,19 @@
   <!-- ═════════════════════════════════════════════════════════════════════════
        BOOT LOADER — inline CSS + HTML rendered immediately
        ═════════════════════════════════════════════════════════════════════════
-       WHY inline in <head>: This CSS + HTML is parsed and painted BEFORE any
-       external resource loads. The user sees a fullscreen loading overlay
-       within the first paint (~50-100ms on 3G mobile), covering the page
-       until NavCore + FVL are ready.
+       v2.1: เหลือแค่ ring spinner + ข้อความ "Loading…" / "กำลังโหลด…"
+             ไม่มี phase dots, ไม่มี sub-message, ไม่มี step indicators
 
        Pattern: "Cover-all initial loader" (Spotify/TikTok app shell pattern)
          • Fullscreen overlay covering header + content
          • Ring spinner (SVG, CSS-animated)
-         • Localized message ("Loading..." / "กำลังโหลด...")
+         • Single localized message
          • Auto-dismissed by NavCore InitService.start() finally block
          • Safety timeout: 12s auto-hide (in case NavCore fails to load)
-
-       Why not wait for FVL: FVL itself loads as <script defer> in <body>.
-       If we waited for FVL, the user would see a blank white page for
-       200-500ms (depending on connection) before any loading indicator
-       appeared. The inline loader eliminates that blank window.
-
-       Coordination with FVL:
-         1. Inline loader shows immediately (this <style> + <div>)
-         2. nav-core.js loads → NavCoreModules.InitService.start() runs
-         3. LoadingService.show() shows FVL fullscreen overlay ON TOP of
-            the inline loader (FVL z-index = 17500, inline = 99998)
-         4. InitService finally block calls window.__removeBootLoader()
-            which fades out the inline loader
-         5. FVL overlay continues to show phase messages until content
-            is rendered, then hideInstant() removes it
-
-       Result: User sees continuous loading from first paint to content
-       ready, with no blank gaps. This is the "app shell" pattern used
-       by Spotify, TikTok, and Twitter for initial load.
        ═════════════════════════════════════════════════════════════════════════ -->
   <style>
     /* ── Boot loader keyframes (outside @layer for max compat) ───────────── */
     @keyframes _fv_boot_spin { to { transform: rotate(360deg); } }
-    @keyframes _fv_boot_fade_out { from { opacity: 1; } to { opacity: 0; } }
-    @keyframes _fv_boot_pulse {
-      0%, 100% { opacity: 0.7; }
-      50% { opacity: 1; }
-    }
 
     /* ── Boot loader overlay ─────────────────────────────────────────────── */
     #fv-boot-loader {
@@ -136,14 +110,7 @@
       animation: _fv_boot_spin 0.7s linear infinite;
     }
 
-    /* ── Text block ──────────────────────────────────────────────────────── */
-    #fv-boot-loader .fv-boot-text {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      contain: layout style;
-    }
+    /* ── Single loading message ─────────────────────────────────────────── */
     #fv-boot-loader .fv-boot-msg {
       font-size: 16px;
       font-weight: 600;
@@ -153,37 +120,10 @@
       min-width: 100px;
       min-height: 1.4em;
     }
-    #fv-boot-loader .fv-boot-sub {
-      font-size: 13px;
-      font-weight: 400;
-      color: #9aa0a6;
-      text-align: center;
-      line-height: 1.4;
-      animation: _fv_boot_pulse 1.6s ease-in-out infinite;
-    }
-    #fv-boot-loader .fv-boot-sub:empty { display: none; }
-
-    /* ── Phase indicator dots (visual progress) ──────────────────────────── */
-    #fv-boot-loader .fv-boot-dots {
-      display: flex;
-      gap: 6px;
-      margin-top: 4px;
-    }
-    #fv-boot-loader .fv-boot-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: #e0e0e0;
-      transition: background 220ms cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    #fv-boot-loader .fv-boot-dot.fv-boot-dot-active {
-      background: var(--fv-brand-teal-light, #13b47f);
-    }
 
     /* ── prefers-reduced-motion ──────────────────────────────────────────── */
     @media (prefers-reduced-motion: reduce) {
       #fv-boot-loader .fv-boot-arc { animation: none; }
-      #fv-boot-loader .fv-boot-sub { animation: none; }
       #fv-boot-loader.fv-boot-hidden { transition: none; }
     }
   </style>
@@ -199,9 +139,7 @@
 <body>
   <!-- ═════════════════════════════════════════════════════════════════════════
        BOOT LOADER — shown immediately, covers everything until NavCore ready
-       ═════════════════════════════════════════════════════════════════════════
-       Rendered synchronously in <body> so it appears on the very first paint.
-       The inline script below manages phase messages + auto-dismiss.
+       v2.1: เหลือแค่ spinner + ข้อความเดียว
        ═════════════════════════════════════════════════════════════════════════ -->
   <div id="fv-boot-loader" role="status" aria-live="polite" aria-label="Loading">
     <div class="fv-boot-spinner" aria-hidden="true">
@@ -210,61 +148,26 @@
         <circle class="fv-boot-arc" cx="26" cy="26" r="22"></circle>
       </svg>
     </div>
-    <div class="fv-boot-text">
-      <div class="fv-boot-msg" id="fv-boot-msg">Loading…</div>
-      <div class="fv-boot-sub" id="fv-boot-sub">Preparing experience</div>
-      <div class="fv-boot-dots" aria-hidden="true">
-        <span class="fv-boot-dot fv-boot-dot-active" id="fv-boot-dot-1"></span>
-        <span class="fv-boot-dot" id="fv-boot-dot-2"></span>
-        <span class="fv-boot-dot" id="fv-boot-dot-3"></span>
-        <span class="fv-boot-dot" id="fv-boot-dot-4"></span>
-      </div>
-    </div>
+    <div class="fv-boot-msg" id="fv-boot-msg">Loading…</div>
   </div>
 
   <script>
-    /* ── Boot loader controller ──────────────────────────────────────────────
+    /* ── Boot loader controller (v2.1 — minimal) ────────────────────────────
        Why this script is inline + synchronous in <body>:
          It must run BEFORE NavCore finishes loading, so it can:
            1. Pick up the user's selected language for the message
-           2. Listen for NavCore phase events to update the boot loader UI
-           3. Expose window.__removeBootLoader() for InitService to call
+           2. Expose window.__removeBootLoader() for InitService to call
 
-       Phase mapping (synced with LoadingService v2.0 PHASES):
-         initializing → dot 1 active, "Preparing…"
-         fetching     → dot 2 active, "Fetching content…"
-         processing   → dot 3 active, "Processing data…"
-         rendering    → dot 4 active, "Rendering…"
-         ready        → all dots active, then dismiss
-
-       The boot loader is REMOVED (not just hidden) by InitService.start()
-       finally block, AFTER FVL fullscreen overlay has taken over. This
-       prevents any flash where neither loader is visible.
+       v2.1: ไม่มี phase tracking แล้ว — แค่ตั้งข้อความ "Loading…" ตามภาษา
        ─────────────────────────────────────────────────────────────────────── */
     (function () {
       'use strict';
       if (window.__bootLoaderInstalled) return;
       window.__bootLoaderInstalled = true;
 
-      var PHASE_TEXT = {
-        en: {
-          initializing: 'Preparing…',
-          fetching:     'Fetching content…',
-          processing:   'Processing data…',
-          rendering:    'Rendering…',
-          ready:        'Ready',
-        },
-        th: {
-          initializing: 'กำลังเตรียมระบบ…',
-          fetching:     'กำลังดึงข้อมูล…',
-          processing:   'กำลังประมวลผล…',
-          rendering:    'กำลังแสดงผล…',
-          ready:        'พร้อมแล้ว',
-        },
-      };
-      var SUB_TEXT = {
-        en: { initial: 'Preparing experience' },
-        th: { initial: 'กำลังเตรียมประสบการณ์' },
+      var MSG = {
+        en: 'Loading…',
+        th: 'กำลังโหลด…',
       };
 
       function getLang() {
@@ -273,46 +176,11 @@
         } catch (_) { return 'en'; }
       }
 
-      function setPhase(phase) {
-        var lang = getLang();
-        var msgs = PHASE_TEXT[lang] || PHASE_TEXT.en;
-        var msgEl = document.getElementById('fv-boot-msg');
-        if (msgEl) msgEl.textContent = msgs[phase] || PHASE_TEXT.en[phase] || 'Loading…';
-
-        // Update dots
-        var phaseOrder = ['initializing', 'fetching', 'processing', 'rendering', 'ready'];
-        var idx = phaseOrder.indexOf(phase);
-        if (idx < 0) idx = 0;
-        for (var i = 1; i <= 4; i++) {
-          var dot = document.getElementById('fv-boot-dot-' + i);
-          if (dot) {
-            if (i <= idx + 1) dot.classList.add('fv-boot-dot-active');
-            else dot.classList.remove('fv-boot-dot-active');
-          }
-        }
-      }
-
-      // Set initial message based on stored language
       function init() {
         var lang = getLang();
-        var msgs = PHASE_TEXT[lang] || PHASE_TEXT.en;
-        var subs = SUB_TEXT[lang] || SUB_TEXT.en;
         var msgEl = document.getElementById('fv-boot-msg');
-        var subEl = document.getElementById('fv-boot-sub');
-        if (msgEl) msgEl.textContent = msgs.initializing;
-        if (subEl) subEl.textContent = subs.initial;
-        setPhase('initializing');
+        if (msgEl) msgEl.textContent = MSG[lang] || MSG.en;
       }
-
-      // Listen for NavCore phase events (LoadingService dispatches these)
-      // FVL system events: fvl:shown, fvl:hiding, fvl:hidden
-      // We also listen for 'navcore:phase' custom event (dispatched by LoadingService.setPhase)
-      window.addEventListener('navcore:phase', function (e) {
-        try {
-          var phase = e.detail && e.detail.phase;
-          if (phase) setPhase(phase);
-        } catch (_) {}
-      });
 
       // Expose remove function for InitService.start() finally block
       window.__removeBootLoader = function () {
@@ -351,7 +219,7 @@
         }
       }, 12000);
 
-      // Initialize phase text on DOMContentLoaded (or now if already loaded)
+      // Initialize message on DOMContentLoaded (or now if already loaded)
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init, { once: true });
       } else {
