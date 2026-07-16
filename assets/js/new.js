@@ -1,19 +1,23 @@
-// new.js — v2.1.0
-// Per-language Markdown What's New system
-// - อ่าน /assets/md/{lang}/current.md (ปัจจุบัน แยกภาษา)
-// - อ่าน /assets/json/release-history.json (ประวัติ — สร้างโดย build script รวม i18n)
-// - รองรับ fallback: current.md เดี่ยว, whats-new.json เก่า
-// - version.json poll เช็คเวอร์ชั่นใหม่เหมือนเดิม
+// new.js — v4.1.0 (v6.1 — per-lang releases/ folder)
+// Per-language Markdown What's New system — v6.1 structure
+//
+// v4.1 changes จาก v4.0:
+//   - อ่าน index.json จาก /assets/md/{lang}/releases/index.json (กลับไปมี releases/ folder)
+//   - อ่านประวัติจาก /assets/md/{lang}/releases/v{version}.md
+//   - current.md อยู่นอก releases/ เพื่อแยกชัดเจน
+//
+// ข้อมูลที่ใช้:
+//   - /assets/md/{lang}/current.md (release notes ปัจจุบัน — นักพัฒนาเขียน)
+//   - /assets/md/{lang}/releases/index.json (manifest — build script สร้าง)
+//   - /assets/md/{lang}/releases/v{version}.md (release notes แต่ละ version — build script สร้าง)
+//   - /assets/json/version.json (runtime metadata — build script สร้าง สำหรับ poll)
 
 (function() {
   'use strict';
 
-  var CURRENT_MD_BASE   = '/assets/md/{lang}/current.md';   // per-language
-  var CURRENT_MD_LEGACY = '/assets/md/current.md';          // single-file (old v1.4.0 format)
-  var RELEASES_INDEX_URL = '/assets/md/releases/index.json'; // v4.1+: manifest ของ releases/
-  var RELEASES_MD_BASE  = '/assets/md/{lang}/releases/v{version}.md'; // per-version markdown
-  var HISTORY_URL_LEGACY = '/assets/json/release-history.json'; // legacy fallback (v4.0 and earlier)
-  var LEGACY_CURRENT    = '/assets/json/whats-new.json';
+  var CURRENT_MD_BASE   = '/assets/md/{lang}/current.md';                  // per-language (closed system)
+  var RELEASES_INDEX_URL = '/assets/md/{lang}/releases/index.json';        // v4.1: index.json ใน releases/
+  var RELEASES_MD_BASE  = '/assets/md/{lang}/releases/v{version}.md';      // v4.1: history ใน releases/
   var VERSION_URL       = '/assets/json/version.json';
   var POLL_INTERVAL_MS  = 60 * 1000;
   var REAL_DATE_SEC     = 10 * 86400;
@@ -111,7 +115,8 @@
   var SECTION_CFG = {
     'new':      { color:'#13b47f', bg:'rgba(19,180,127,.09)',  border:'rgba(19,180,127,.2)',  label:{en:'New',      th:'ใหม่'        } },
     'improved': { color:'#0eb0d5', bg:'rgba(14,176,213,.09)',  border:'rgba(14,176,213,.2)',  label:{en:'Improved', th:'ปรับปรุง'    } },
-    'fixed':    { color:'#f59e0b', bg:'rgba(245,158,11,.09)',  border:'rgba(245,158,11,.2)',  label:{en:'Fixed',    th:'แก้ไขปัญหา' } }
+    'fixed':    { color:'#f59e0b', bg:'rgba(245,158,11,.09)',  border:'rgba(245,158,11,.2)',  label:{en:'Fixed',    th:'แก้ไขปัญหา' } },
+    'removed':  { color:'#ef4444', bg:'rgba(239,68,68,.09)',   border:'rgba(239,68,68,.2)',   label:{en:'Removed',  th:'ลบออก'      } }
   };
 
   // ══════════════════════════════════════════════════════════════════════════════
@@ -167,7 +172,7 @@
       var currentSection = null, currentItem = null;
       for (var i = 0; i < lines.length; i++) {
         var line = lines[i];
-        var headingMatch = line.match(/^###\s+(New|Improved|Fixed)\s*$/i);
+        var headingMatch = line.match(/^###\s+(New|Improved|Fixed|Removed)\s*$/i);
         if (headingMatch) {
           if (currentSection) result.sections.push(currentSection);
           currentSection = { type: headingMatch[1].toLowerCase(), items: [] };
@@ -233,14 +238,11 @@
   }
 
   // ══════════════════════════════════════════════════════════════════════════════
-  //  MAIN DATA PIPELINE
+  //  MAIN DATA PIPELINE (v3.0 — closed system, no legacy fallback)
   // ══════════════════════════════════════════════════════════════════════════════
-  //  1. fetch /assets/md/{lang}/current.md → parse (per-language)
-  //     fallback: /assets/md/current.md → parse (legacy single-file with i18n)
-  //     fallback: /assets/json/whats-new.json (old JSON)
-  //  2. fetch /assets/md/releases/index.json (v4.1+ manifest)
+  //  1. fetch /assets/md/{lang}/current.md → parse (per-language, ปัจจุบัน)
+  //  2. fetch /assets/md/releases/index.json (manifest ของประวัติ)
   //     สำหรับแต่ละ version ที่ hasDetails: true → fetch /assets/md/{lang}/releases/v{version}.md
-  //     fallback: /assets/json/release-history.json (legacy v4.0)
   //  3. render
 
   function loadContent() {
@@ -248,42 +250,22 @@
     var currentRelease = null;
     var historyData    = { releases: [] };
 
-    // Step 1: โหลด current release — ลอง per-language MD → legacy MD → JSON
+    // Step 1: โหลด current release — เฉพาะ per-language MD (closed system)
     var perLangUrl = CURRENT_MD_BASE.replace('{lang}', lang);
 
     fetchText(perLangUrl).then(function(mdText) {
       if (mdText && mdText.trim()) {
         var parsed = parseMD(mdText, lang);
-        if (parsed.version) {
-          currentRelease = parsed;
-          return null; // ไม่ต้อง fallback
-        }
-      }
-      // Fallback 2: legacy single-file MD (มี i18n blocks)
-      return fetchText(CURRENT_MD_LEGACY);
-    }).then(function(mdText) {
-      if (mdText && !currentRelease) {
-        var parsed = parseMD(mdText, null); // null = legacy i18n mode
         if (parsed.version) currentRelease = parsed;
-        return null;
       }
-      // Fallback 3: JSON เก่า
-      if (!currentRelease) return fetchJSON(LEGACY_CURRENT);
-    }).then(function(json) {
-      if (json && !currentRelease && json.version) currentRelease = json;
+      // v3.0: ไม่มี legacy fallback แล้ว — ถ้าไม่มี current.md จะ currentRelease = null
+      // และ render จะแสดง "ไม่พบข้อมูลอัปเดต" แทน
 
-      // Step 2: โหลดประวัติ — v4.1+ ใช้ releases/index.json
+      // Step 2: โหลดประวัติจาก releases/index.json
       return loadHistoryFromIndex(lang);
     }).then(function(history) {
       if (history && history.releases && history.releases.length) {
         historyData = history;
-      }
-      // Fallback: legacy release-history.json (สำหรับเว็บที่ยังไม่ได้ bump เป็น v4.1+)
-      if (!historyData.releases.length) return fetchJSON(HISTORY_URL_LEGACY);
-      return null;
-    }).then(function(legacyHistory) {
-      if (legacyHistory && legacyHistory.releases && legacyHistory.releases.length) {
-        historyData = legacyHistory;
       }
 
       // Step 3: Render
@@ -296,13 +278,14 @@
     });
   }
 
-  // v4.1+: โหลดประวัติจาก releases/index.json + ไฟล์ markdown แต่ละ version
-  //  1. fetch /assets/md/releases/index.json → ได้ list ของ versions + dates + hasDetails
-  //  2. สำหรับแต่ละ version ที่ hasDetails: true → fetch /assets/md/{lang}/releases/v{version}.md → parse
+  // v4.0: โหลดประวัติจาก per-language index.json + ไฟล์ markdown แต่ละ version
+  //  1. fetch /assets/md/{lang}/index.json → ได้ list ของ versions + dates + hasDetails
+  //  2. สำหรับแต่ละ version ที่ hasDetails: true → fetch /assets/md/{lang}/v{version}.md → parse
   //  3. สำหรับ version ที่ hasDetails: false → ใช้แค่ version + date (basic record)
   //  4. กรอง version ปัจจุบันออก (currentRelease แสดงแยก)
   function loadHistoryFromIndex(lang) {
-    return fetchJSON(RELEASES_INDEX_URL).then(function(index) {
+    var indexUrl = RELEASES_INDEX_URL.replace('{lang}', lang);
+    return fetchJSON(indexUrl).then(function(index) {
       if (!index || !index.versions || !index.versions.length) return { releases: [] };
 
       var promises = index.versions.map(function(entry) {
@@ -340,7 +323,7 @@
         return { releases: releases };
       });
     }).catch(function() {
-      // index.json ไม่มี → return empty (fallback ไป legacy ใน caller)
+      // index.json ไม่มี → return empty
       return { releases: [] };
     });
   }
@@ -396,9 +379,23 @@
           if (!isNaN(ts) && ts) try { chip.setAttribute('data-ts', String(ts)); } catch(e) {}
           header.appendChild(chip);
         }
-        if (!isNaN(sec) && sec < REAL_DATE_SEC) {
-          var fullDateStr = typeof release.date === 'object' ? t(release.date) : (typeof release.date === 'string' ? release.date : '');
-          if (fullDateStr) { var ds = document.createElement('span'); ds.className = 'wn-date-full'; ds.textContent = fullDateStr; header.appendChild(ds); }
+        // v4.0 bug fix: แสดง full date เสมอ (ไม่ใช่แค่ < 10 วัน)
+        // dateSource อาจเป็น ISO string หรือ object {en, th} — จัดการทั้งสองกรณี
+        var fullDateStr = '';
+        if (typeof dateSource === 'object' && dateSource) {
+          fullDateStr = t(dateSource);
+        } else if (typeof dateSource === 'string') {
+          // ISO string → format เป็น full date ในภาษาที่เลือก
+          var parsedTs = Date.parse(dateSource);
+          if (!isNaN(parsedTs)) {
+            fullDateStr = toFullDate(parsedTs, lang);
+          } else {
+            fullDateStr = dateSource;  // fallback แสดง raw string
+          }
+        }
+        if (fullDateStr) {
+          var ds = document.createElement('span'); ds.className = 'wn-date-full'; ds.textContent = fullDateStr;
+          header.appendChild(ds);
         }
       } catch(e) {}
     }

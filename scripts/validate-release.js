@@ -1,24 +1,17 @@
 #!/usr/bin/env node
 // scripts/validate-release.js — Fantrove Release Validator
-// v1.2: STRICT current.md ONLY — auto-snapshot ทำให้นักพัฒนาไม่ต้องสร้าง releases/ เอง
+// v1.4: v6.1 PER-LANG releases/ FOLDER — ปรับ generated patterns
 //
-// v1.2 changes จาก v1.1:
-//     - เน้นย้ำว่านักพัฒนาแตะได้แค่ current.md เท่านั้น
-//     - releases/v{version}.md ถูกสร้างอัตโนมัติโดย update-version.js v5.2 (AUTO-SNAPSHOT)
-//     - นักพัฒนาไม่ต้องสร้างไฟล์ใน releases/ เองอีกต่อไป — ระบบจัดการหมด
-//     - แก้ date: ใน current.md เองไม่มีผล — ระบบเขียนทับเสมอ
+// v1.4 changes จาก v1.3:
+//     - ปรับ GENERATED_PATTERNS สำหรับ v6.1:
+//       • assets/md/{lang}/releases/index.json (per-language manifest)
+//       • assets/md/{lang}/releases/v{version}.md (history ใน releases/)
+//     - ลบ patterns เดิม:
+//       • assets/md/{lang}/index.json (ย้ายไป releases/ แล้ว)
+//       • assets/md/{lang}/v{version}.md (ย้ายไป releases/ แล้ว)
 //
+// v1.2: STRICT current.md ONLY
 // v1.1: 4-layer version control + bypass mechanism
-//   • นักพัฒนาเขียน/แก้ได้แค่ assets/md/{en,th}/current.md เท่านั้น
-//   • ถ้า commit โดยไม่เปลี่ยน version → BLOCK (Layer 1: pre-commit)
-//   • ยกเว้นถ้ามี bypass token ที่ยังไม่ได้ใช้ → allow ครั้งเดียว
-//
-// Bypass mechanism (v1.1):
-//   • ไฟล์ .release-bypass (committed) เก็บตัวเลข counter (เช่น 1)
-//   • ไฟล์ .release-bypass-counter (committed) เก็บ counter ล่าสุดที่ใช้แล้ว
-//   • ถ้า .release-bypass > .release-bypass-counter → allow bypass, อัปเดต counter
-//   • ใช้ครั้งเดียว — ต้องเพิ่มเลขใหม่ถึงจะ bypass ได้อีก
-//   • บังคับให้นักพัฒนาแก้ไข conscious action แต่ละครั้ง
 //
 // 4-layer system:
 //   Layer 1 (pre-commit): validate-release.js --staged (this script)
@@ -52,14 +45,26 @@ const ALLOWED_FILES = new Set([
 ]);
 
 // ── ไฟล์ที่เป็น generated artifacts (blocklist) ─────────────────────────────
+// v1.4: ปรับสำหรับ v6.1 — releases/ folder ในแต่ละภาษา
 const GENERATED_PATTERNS = [
+  // v6.1: per-language releases/ folder
+  /^assets\/md\/en\/releases\/index\.json$/,
+  /^assets\/md\/th\/releases\/index\.json$/,
   /^assets\/md\/en\/releases\/v.*\.md$/,
   /^assets\/md\/th\/releases\/v.*\.md$/,
-  /^assets\/md\/releases\/index\.json$/,
-  /^assets\/json\/release-dates\.json$/,
+  // v6.0 legacy: index.json / v*.md ใน root ของภาษา (ควรจะย้ายไป releases/ แล้ว)
+  /^assets\/md\/en\/index\.json$/,
+  /^assets\/md\/th\/index\.json$/,
+  /^assets\/md\/en\/v.*\.md$/,
+  /^assets\/md\/th\/v.*\.md$/,
+  // version.json (backward compat for new.js poll)
   /^assets\/json\/version\.json$/,
+  // Legacy paths (ถ้ามีอยู่ให้ block ด้วย)
+  /^assets\/md\/releases\/.*$/,
+  /^assets\/json\/release-dates\.json$/,
   /^assets\/json\/whats-new\.json$/,
   /^assets\/json\/release-history\.json$/,
+  /^assets\/md\/current\.md$/,
 ];
 
 // ── Bypass files ────────────────────────────────────────────────────────────
@@ -67,8 +72,11 @@ const BYPASS_FILE = path.join(ROOT, '.release-bypass');
 const BYPASS_COUNTER_FILE = path.join(ROOT, '.release-bypass-counter');
 
 function isReleaseNotesFile(filePath) {
-  return /^assets\/(md|json)\/(releases|whats-new|release-history|release-dates|version)/.test(filePath)
-      || /^assets\/md\/(en|th)\/(current\.md|releases\/)/.test(filePath);
+  // v1.4: ปรับสำหรับ v6.1 — releases/ folder ในแต่ละภาษา
+  return /^assets\/md\/(en|th)\/(current\.md|index\.json|v.*\.md)$/.test(filePath)
+      || /^assets\/md\/(en|th)\/releases\//.test(filePath)
+      || /^assets\/md\/releases\//.test(filePath)
+      || /^assets\/json\/(version|whats-new|release-history|release-dates)\.json$/.test(filePath);
 }
 
 function isGenerated(filePath) {
@@ -317,7 +325,7 @@ function main() {
   }
 
   const modeLabel = ciMode ? 'CI' : prePushMode ? 'pre-push' : mode === 'staged' ? 'pre-commit' : mode;
-  console.log('🔍  Fantrove Release Validator v1.2 (current.md ONLY — auto-snapshot)');
+  console.log('🔍  Fantrove Release Validator v1.4 (v6.1 — per-lang releases/ folder)');
   console.log('    Mode: ' + modeLabel + (commitHash ? ' (' + commitHash + ')' : '') + (allowGenerated || ciMode ? ' (allow-generated)' : ''));
   console.log('');
 
