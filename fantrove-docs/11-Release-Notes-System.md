@@ -1,10 +1,10 @@
-# 11 — ระบบหน้า "มีอะไรใหม่" (What's New System) v5.1
+# 11 — ระบบหน้า "มีอะไรใหม่" (What's New System) v5.2
 
 > เอกสารนี้อธิบายระบบ What's New ของ **Fantrove** — ระบบที่แสดง release notes และ popup แจ้งเตือนเมื่อมีเวอร์ชั่นใหม่
 >
-> **v5.1 — CLOSED SYSTEM + 4-LAYER VERSION CONTROL:** ระบบ release notes เป็นระบบปิด นักพัฒนาเขียน/แก้ได้แค่ `assets/md/{en,th}/current.md` เท่านั้น พร้อมระบบ 4 ชั้นที่บังคับ version bump ทุกการส่งโค้ด (ยกเว้น bypass)
+> **v5.2 — AUTO-SNAPSHOT + STRICT 7-HISTORY LIMIT:** ระบบบันทึกข้อมูลเวอร์ชั่นเก่าเป็นไฟล์ประวัติอัตโนมัติก่อนเปลี่ยนเป็นเวอร์ชั่นใหม่ และจำกัดประวัติที่แสดงเป็น 7 รายการล่าสุดไม่รวมเวอร์ชั่นปัจจุบัน
 >
-> **v5.1 — NO APP_VERSION:** ไม่ต้องส่ง `APP_VERSION` env var แล้ว — script อ่าน version จาก `current.md` โดยตรง
+> **v5.1 — CLOSED SYSTEM + 4-LAYER VERSION CONTROL + NO APP_VERSION:** ระบบปิด นักพัฒนาเขียน/แก้ได้แค่ `current.md` พร้อมระบบ 4 ชั้นบังคับ version bump
 >
 > **สำหรับ:** นักพัฒนา/AI ที่จะเขียน release notes หรือแก้ระบบแจ้งเตือน
 >
@@ -27,7 +27,7 @@
 
 ---
 
-## 1. ภาพรวมระบบ (v5.1 Closed System + 4-Layer)
+## 1. ภาพรวมระบบ (v5.2 Closed System + 4-Layer + Auto-Snapshot)
 
 ตั้งแต่ v5.0 เป็นต้นไป ระบบ release notes เป็น **ระบบปิด (closed system)** — นักพัฒนาเขียน/แก้ได้แค่ไฟล์เดียว:
 
@@ -372,7 +372,72 @@ $ git commit -m "fix: another typo"
 
 ---
 
-## 6. ระบบภาษา FvLang (v5.0)
+## 6. Auto-Snapshot ประวัติเวอร์ชั่นเก่า (v5.2)
+
+### 6.1 ปัญหาที่แก้
+
+ก่อน v5.2 นักพัฒนาต้องสร้างไฟล์ `releases/v{version}.md` เองทุกครั้งที่มีเวอร์ชั่นใหม่ ถ้าลืม → ประวัติของเวอร์ชั่นเก่าหายไป เพราะ `current.md` ถูกเขียนทับด้วยเวอร์ชั่นใหม่
+
+### 6.2 วิธีการทำงาน (AUTO-SNAPSHOT)
+
+เมื่อ `update-version.js` v5.2 ตรวจพบว่ามีการ bump version ใหม่:
+
+1. อ่าน `current.md` **เก่า** จาก `git HEAD` (ก่อนที่นักพัฒนาจะแก้)
+2. ดึง version เก่าจาก content
+3. ถ้ายังไม่มี `releases/v{prevVersion}.md` → สร้างใหม่จาก content เก่า
+4. ถ้ามีอยู่แล้ว → skip (ไม่เขียนทับ เพื่อ preserve integrity)
+5. sync date ใน snapshot ให้ตรงกับ registry
+
+### 6.3 ตัวอย่าง Workflow
+
+```bash
+# สถานะ: current.md = v2.1.0 (committed)
+$ head -2 assets/md/en/current.md
+---
+version: 2.1.0
+
+# นักพัฒนาแก้เป็น v2.1.1
+$ sed -i 's/version: 2.1.0/version: 2.1.1/' assets/md/en/current.md assets/md/th/current.md
+
+# รัน update-version.js
+$ node scripts/update-version.js
+# 📸 v5.2 AUTO-SNAPSHOT: บันทึก current.md เก่า (v2.1.0) เป็น releases/v2.1.0.md
+# ✅ assets/md/en/releases/v2.1.0.md → AUTO-SNAPSHOT สร้างใหม่
+# ✅ assets/md/th/releases/v2.1.0.md → AUTO-SNAPSHOT สร้างใหม่
+# ✅ assets/md/en/releases/v2.1.1.md → สร้างใหม่
+# ✅ assets/md/th/releases/v2.1.1.md → สร้างใหม่
+```
+
+นักพัฒนา **ไม่ต้องสร้างไฟล์ใน `releases/` เอง** — ระบบจัดการหมด
+
+### 6.4 STRICT 7-HISTORY LIMIT
+
+`index.json` เก็บเฉพาะ **7 versions ล่าสุด ไม่รวม version ปัจจุบัน**:
+
+```json
+{
+  "versions": [
+    { "version": "2.1.0", "date": "...", "hasDetails": true },
+    { "version": "2.0.0", "date": "...", "hasDetails": true },
+    { "version": "1.9.1", "date": "...", "hasDetails": false },
+    ... (รวม 7 entries)
+  ]
+}
+```
+
+- version ปัจจุบัน (เช่น 2.1.1) **ไม่อยู่ใน index.json** — แสดงแยกจาก `current.md`
+- ไฟล์ `releases/v{oldVersion}.md` ของ version เก่ากว่า 7 ล่าสุดยังอยู่ใน folder — แค่ไม่ปรากฏใน `index.json`
+
+### 6.5 กฎเหล็กของ Auto-Snapshot
+
+- นักพัฒนา **ไม่ต้องสร้าง** `releases/v{version}.md` เอง — ระบบสร้างให้อัตโนมัติ
+- นักพัฒนา **ห้ามลบ** `releases/v{version}.md` — ระบบจะไม่สร้างใหม่ถ้ามีอยู่แล้ว
+- นักพัฒนา **ห้ามแก้** `releases/v{version}.md` — เป็น snapshot ถาวร
+- ระบบอ่าน `current.md` เก่าจาก `git HEAD` — ต้อง commit ก่อนถึงจะ snapshot ได้
+
+---
+
+## 7. ระบบภาษา FvLang (v5.0)
 
 ไฟล์ `lang-core.js` โหลดเป็น script แรกสุดใน `<head>` ก่อน `language.js`
 

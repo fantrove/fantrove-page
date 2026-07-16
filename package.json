@@ -1,12 +1,17 @@
 {
   "name": "fantrove-hub360",
-  "version": "1.0.0",
+  "version": "2.1.1",
   "private": true,
   "description": "Fantrove Emoji & Symbols Hub — static build system",
   "scripts": {
     "build": "node scripts/build.js",
     "build:dry": "node scripts/build.js --dry-run",
     "build:verbose": "node scripts/build.js --verbose",
+    "release": "node scripts/update-version.js",
+    "validate": "node scripts/validate-release.js",
+    "validate:staged": "node scripts/validate-release.js --staged",
+    "validate:ci": "node scripts/validate-release.js --ci --allow-generated",
+    "hooks:install": "bash scripts/hooks/install.sh",
     "dev": "echo 'Development mode: open index.html / home/index.html directly in browser (no build required)'",
     "clean": "node -e \"const fs=require('fs'); if(fs.existsSync('dist')) fs.rmSync('dist',{recursive:true,force:true}); console.log('dist/ cleaned');\"",
     "generate-sitemap": "node scripts/generate-sitemap.js",

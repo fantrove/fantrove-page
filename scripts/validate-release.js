@@ -1,8 +1,14 @@
 #!/usr/bin/env node
 // scripts/validate-release.js — Fantrove Release Validator
-// v1.1: 4-layer version control + bypass mechanism
+// v1.2: STRICT current.md ONLY — auto-snapshot ทำให้นักพัฒนาไม่ต้องสร้าง releases/ เอง
 //
-// WHY: ระบบ release notes ต้องเป็น "ระบบปิด" + บังคับ version bump
+// v1.2 changes จาก v1.1:
+//     - เน้นย้ำว่านักพัฒนาแตะได้แค่ current.md เท่านั้น
+//     - releases/v{version}.md ถูกสร้างอัตโนมัติโดย update-version.js v5.2 (AUTO-SNAPSHOT)
+//     - นักพัฒนาไม่ต้องสร้างไฟล์ใน releases/ เองอีกต่อไป — ระบบจัดการหมด
+//     - แก้ date: ใน current.md เองไม่มีผล — ระบบเขียนทับเสมอ
+//
+// v1.1: 4-layer version control + bypass mechanism
 //   • นักพัฒนาเขียน/แก้ได้แค่ assets/md/{en,th}/current.md เท่านั้น
 //   • ถ้า commit โดยไม่เปลี่ยน version → BLOCK (Layer 1: pre-commit)
 //   • ยกเว้นถ้ามี bypass token ที่ยังไม่ได้ใช้ → allow ครั้งเดียว
@@ -311,7 +317,7 @@ function main() {
   }
 
   const modeLabel = ciMode ? 'CI' : prePushMode ? 'pre-push' : mode === 'staged' ? 'pre-commit' : mode;
-  console.log('🔍  Fantrove Release Validator v1.1');
+  console.log('🔍  Fantrove Release Validator v1.2 (current.md ONLY — auto-snapshot)');
   console.log('    Mode: ' + modeLabel + (commitHash ? ' (' + commitHash + ')' : '') + (allowGenerated || ciMode ? ' (allow-generated)' : ''));
   console.log('');
 

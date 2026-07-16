@@ -1,16 +1,33 @@
 #!/usr/bin/env node
 // scripts/update-version.js — Fantrove Verse Release Tool
+// v5.2: AUTO-SNAPSHOT PREVIOUS + STRICT 7-HISTORY LIMIT
+//
+// v5.2 changes จาก v5.1:
+//     - AUTO-SNAPSHOT: ก่อน bump version ใหม่ ระบบจะ snapshot current.md เก่า
+//       (จาก git HEAD) เป็น releases/v{prevVersion}.md อัตโนมัติ
+//       ทำให้ประวัติย้อนหลังถูกบันทึกโดยอัตโนมัติ ไม่ต้องเขียนเอง
+//     - STRICT 7-HISTORY LIMIT: index.json เก็บเฉพาะ 7 versions ล่าสุด (ไม่รวมปัจจุบัน)
+//       เก่ากว่านั้นจะถูก prune ออกจาก index.json (แต่ไฟล์ MD ยังอยู่ใน releases/)
+//     - DEEP STRICT MODE: นักพัฒนาแตะได้แค่ current.md เท่านั้น — แก้ date หรือ
+//       generated artifacts เองไม่มีผล เพราะระบบเขียนทับเสมอ
+//
 // v5.1: CLOSED SYSTEM + NO APP_VERSION — อ่าน version จาก current.md โดยตรง
-//
-// v5.1 changes จาก v5.0:
-//     - ลบ APP_VERSION env var requirement — ไม่ต้องตั้งค่าใน Cloudflare dashboard อีก
-//     - อ่าน version จาก assets/md/{en,th}/current.md โดยตรง (เหมือนที่ระบบทำอยู่แล้ว)
-//     - ไม่ต้องส่ง APP_VERSION=2.1.0 ใน CI/CD อีกต่อไป — แค่รัน `node scripts/update-version.js`
-//
 // v5.0: CLOSED SYSTEM — ระบบ release notes แบบปิด
-//     นักพัฒนาเขียน/แก้ได้แค่ assets/md/{en,th}/current.md เท่านั้น
-//     ไฟล์อื่นทุกไฟล์ในระบบ release notes เป็น generated artifacts ที่
-//     script นี้สร้างใน CI/CD เท่านั้น — ไม่มี legacy fallback แล้ว
+//
+//     สิ่งที่ script นี้ทำ (ทุกขั้นตอนอัตโนมัติ ไม่ต้อง intervention):
+//     1. อ่าน assets/md/{en,th}/current.md (version, title, subtitle, sections)
+//     2. [v5.2] AUTO-SNAPSHOT: ถ้า version ใหม่ → อ่าน current.md เก่าจาก git HEAD
+//        แล้ว snapshot เป็น releases/v{prevVersion}.md ทั้ง en + th
+//     3. ตรวจ version ใน release-dates.json registry:
+//        - version ใหม่ → บันทึก NOW เป็น release date ถาวร
+//        - version เดิม → คง date เดิม (date ไม่เปลี่ยนแม้แก้เนื้อหา)
+//     4. sync date: ใน current.md ให้ตรง registry เสมอ (เขียนทับเสมอ)
+//     5. สร้าง assets/md/{en,th}/releases/v{version}.md (เมื่อ version ใหม่)
+//     6. สร้าง assets/md/releases/index.json (manifest สำหรับ client)
+//        [v5.2] เก็บเฉพาะ 7 versions ล่าสุด ไม่รวม version ปัจจุบัน
+//     7. สร้าง assets/json/version.json (runtime metadata)
+//     8. บันทึก release-dates.json (registry ที่อัปเดตแล้ว)
+//     9. HTML cache busting (?v={version}-{dateStr})
 //
 // Build: git fetch --unshallow && node scripts/update-version.js
 //        (ไม่ต้องส่ง APP_VERSION แล้ว — อ่านจาก current.md โดยตรง)
@@ -308,7 +325,7 @@ const dateStr = NOW.toISOString().slice(0,10).replace(/-/g,'');
 const timeStr = pad2(NOW.getUTCHours()) + pad2(NOW.getUTCMinutes());
 const buildId = `${newVersion}-${dateStr}${timeStr}`;
 
-console.log(`\n📦  Fantrove Release Tool v5.1 (CLOSED SYSTEM + NO APP_VERSION — read from current.md)`);
+console.log(`\n📦  Fantrove Release Tool v5.2 (AUTO-SNAPSHOT + STRICT 7-HISTORY LIMIT)`);
 console.log(`    Version:  ${newVersion} (อ่านจาก current.md โดยตรง)`);
 console.log(`    Build ID: ${buildId}`);
 console.log(`    Date:     ${dateObj.en}`);
@@ -483,6 +500,87 @@ releases.sort(function (a, b) {
 });
 if (releases.length > MAX_HISTORY) releases = releases.slice(0, MAX_HISTORY);
 
+// ── STEP 1.6.5: [v5.2] AUTO-SNAPSHOT PREVIOUS VERSION ──────────────────────────
+//  ก่อน bump version ใหม่ ระบบจะ snapshot current.md เก่า (จาก git HEAD) เป็น
+//  releases/v{prevVersion}.md อัตโนมัติ ทำให้ประวัติย้อนหลังถูกบันทึกโดยอัตโนมัติ
+//
+//  WHY: ก่อนหน้านี้ ถ้านักพัฒนาแก้ current.md เป็น version ใหม่ แล้ว commit + push
+//       โดยไม่ได้สร้าง releases/v{prevVersion}.md เอง ประวัติของ version เก่าจะหายไป
+//       (current.md ถูกเขียนทับด้วย version ใหม่)
+//
+//  v5.2 fix: ระบบอ่าน current.md เก่าจาก git HEAD ก่อน แล้ว snapshot เป็น
+//            releases/v{prevVersion}.md อัตโนมัติ ไม่ต้องเขียนเอง
+//
+//  เงื่อนไข:
+//   - ทำงานเฉพาะเมื่อ isNewVersion = true (มีการ bump version ใหม่)
+//   - ถ้ายังไม่มี releases/v{prevVersion}.md อยู่ → สร้างใหม่
+//   - ถ้ามีอยู่แล้ว → skip (ไม่เขียนทับ)
+//   - ใช้ git show HEAD:path เพื่ออ่าน current.md เก่า (ก่อน commit ปัจจุบัน)
+
+if (isNewVersion) {
+  // อ่าน version เก่าจาก git HEAD (current.md ก่อนที่นักพัฒนาจะแก้)
+  var prevVersion = null;
+  for (var pl = 0; pl < LANGS.length; pl++) {
+    var prevLang = LANGS[pl];
+    var prevContent = git(['show', 'HEAD:' + CONFIG.perLangCurrent.replace('{lang}', prevLang)]);
+    if (prevContent) {
+      var prevMatch = prevContent.match(/^version:\s*(.+)$/m);
+      if (prevMatch) {
+        prevVersion = prevMatch[1].trim();
+        break;
+      }
+    }
+  }
+
+  if (prevVersion && prevVersion !== newVersion) {
+    console.log(`📸  v5.2 AUTO-SNAPSHOT: บันทึก current.md เก่า (v${prevVersion}) เป็น releases/v${prevVersion}.md`);
+
+    var prevReleaseDateISO = releaseDatesRegistry.versions[prevVersion];
+    if (!prevReleaseDateISO) {
+      // ถ้ายังไม่มีใน registry → ใช้ commit time ของ HEAD
+      var headCommitTime = git(['log', '-1', '--format=%ct', 'HEAD']);
+      if (headCommitTime) {
+        prevReleaseDateISO = new Date(parseInt(headCommitTime, 10) * 1000).toISOString();
+      } else {
+        prevReleaseDateISO = NOW.toISOString();
+      }
+      releaseDatesRegistry.versions[prevVersion] = prevReleaseDateISO;
+      console.log(`    📌  Backfill registry จาก HEAD: "${prevVersion}" → ${prevReleaseDateISO}`);
+    }
+
+    for (var sl = 0; sl < LANGS.length; sl++) {
+      var snapLang = LANGS[sl];
+      var snapSrcContent = git(['show', 'HEAD:' + CONFIG.perLangCurrent.replace('{lang}', snapLang)]);
+      if (snapSrcContent) {
+        var snapRelDir = path.join(ROOT, CONFIG.perLangReleases.replace('{lang}', snapLang));
+        var snapDestPath = path.join(snapRelDir, 'v' + prevVersion + '.md');
+
+        // ถ้ายังไม่มีไฟล์ → สร้างใหม่ (ถ้ามีแล้วไม่เขียนทับ เพื่อ preserve integrity)
+        if (!fs.existsSync(snapDestPath)) {
+          fs.mkdirSync(snapRelDir, { recursive: true });
+
+          // sync date ใน content ที่จะ snapshot
+          var snapContent = snapSrcContent;
+          if (/^date:\s*.+$/m.test(snapContent)) {
+            snapContent = snapContent.replace(/^date:\s*.+$/m, 'date: ' + prevReleaseDateISO);
+          } else {
+            snapContent = snapContent.replace(/^(version:\s*.+)$/m, '$1\ndate: ' + prevReleaseDateISO);
+          }
+
+          fs.writeFileSync(snapDestPath, snapContent, 'utf8');
+          console.log(`✅  ${CONFIG.perLangReleases.replace('{lang}', snapLang)}/v${prevVersion}.md → AUTO-SNAPSHOT สร้างใหม่`);
+        } else {
+          console.log(`⏭️   ${CONFIG.perLangReleases.replace('{lang}', snapLang)}/v${prevVersion}.md → มีอยู่แล้ว (skip)`);
+        }
+      }
+    }
+  } else if (!prevVersion) {
+    console.log(`ℹ️  v5.2 AUTO-SNAPSHOT: ไม่พบ version เก่าใน git HEAD (อาจเป็น commit แรก) — skip`);
+  } else {
+    console.log(`ℹ️  v5.2 AUTO-SNAPSHOT: version เก่า (${prevVersion}) เท่ากับ version ใหม่ (${newVersion}) — skip`);
+  }
+}
+
 // ── STEP 1.7: สร้าง releases/v{version}.md สำหรับ version ปัจจุบัน (เมื่อ version ใหม่) ──
 //  v4.1: ยกเลิก release-history.json ใช้ releases/ folder + index.json แทน
 //  - ถ้าเป็น version ใหม่ → copy current.md (ที่มี date แล้ว) ไป releases/v{version}.md
@@ -569,15 +667,31 @@ for (var ai = 0; ai < allVersions.length; ai++) {
   indexEntries.push({ version: v, date: vDate, hasDetails: hasDetails });
 }
 
-// limit เท่า MAX_HISTORY — ให้ priority กับ version ที่มีไฟล์ markdown ก่อน (hasDetails: true)
-// เพราะ client สามารถแสดงรายละเอียดได้ ส่วน version ที่ไม่มีไฟล์จะแสดงแค่ version + date
-// วิธี: แยก hasDetails=true และ hasDetails=false แล้วเอา hasDetails=true ก่อน (ตามลำดับเวลา)
+// v5.2 STRICT 7-HISTORY LIMIT — เก็บเฉพาะ 7 versions ล่าสุด ไม่รวม version ปัจจุบัน
+// WHY: ก่อนหน้านี้ index.json เก็บ MAX_HISTORY=7 รวม version ปัจจุบัน ทำให้เห็น
+//      แค่ 6 ประวัติย้อนหลัง + 1 ปัจจุบัน ผู้ใช้ต้องการ 7 ประวัติย้อนหลังจริงๆ
+//      (ไม่รวม version ปัจจุบันที่แสดงแยกในหน้า What's New)
+//
+// วิธี:
+//   1. กรอง version ปัจจุบัน (newVersion) ออกจาก indexEntries — ปัจจุบันแสดงแยกใน current.md
+//   2. ให้ priority กับ version ที่มีไฟล์ markdown (hasDetails: true) ก่อน
+//   3. เลือก MAX_HISTORY ล่าสุด (7 ประวัติ)
+//   4. re-sort ตาม date (ใหม่ → เก่า)
+//
+// หมายเหตุ: ไฟล์ releases/v{oldVersion}.md ของ version เก่ากว่า 7 ล่าสุดยังอยู่ใน
+//           releases/ folder — แค่ไม่ปรากฏใน index.json อีก เพื่อ limit ขนาด manifest
+
+// v5.2: กรอง version ปัจจุบันออกจาก indexEntries
+var indexEntriesFiltered = indexEntries.filter(function (e) {
+  return e.version !== newVersion;
+});
+
+var withDetails = indexEntriesFiltered.filter(function (e) { return e.hasDetails; });
+var withoutDetails = indexEntriesFiltered.filter(function (e) { return !e.hasDetails; });
+
+// v5.2: ให้ priority กับ hasDetails=true ก่อน (ตามลำดับเวลา ใหม่ → เก่า)
 // ถ้า hasDetails=true มากกว่า MAX_HISTORY → เอา MAX_HISTORY ล่าสุด
 // ถ้า hasDetails=true น้อยกว่า MAX_HISTORY → เติม hasDetails=false จนครบ MAX_HISTORY
-// สุดท้าย re-sort ตาม date (ใหม่ → เก่า) เพื่อให้แสดงตามลำดับเวลาที่ถูกต้อง
-var withDetails = indexEntries.filter(function (e) { return e.hasDetails; });
-var withoutDetails = indexEntries.filter(function (e) { return !e.hasDetails; });
-
 if (withDetails.length >= MAX_HISTORY) {
   indexEntries = withDetails.slice(0, MAX_HISTORY);
 } else {
@@ -592,6 +706,11 @@ indexEntries.sort(function (a, b) {
   if (aISO && bISO) return bISO.localeCompare(aISO);
   return compareSemver(b.version, a.version);
 });
+
+// v5.2: ตัดให้เหลือ MAX_HISTORY หลัง re-sort (กันกรณี edge case)
+if (indexEntries.length > MAX_HISTORY) {
+  indexEntries = indexEntries.slice(0, MAX_HISTORY);
+}
 
 fs.mkdirSync(path.dirname(releasesIndexPath), { recursive: true });
 fs.writeFileSync(releasesIndexPath, JSON.stringify({
@@ -671,7 +790,7 @@ console.log('\n' + '─'.repeat(56));
 console.log('  Version:  ' + newVersion + (isNewVersion ? ' (NEW)' : ' (same)'));
 console.log('  Build ID: ' + buildId);
 console.log('  Release:  ' + currentReleaseDateISO + (isNewVersion ? ' — บันทึกใหม่' : ' — คงเดิมจาก registry'));
-console.log('  Source:   Per-language MD (closed system v5.1 — no APP_VERSION)');
+console.log('  Source:   Per-language MD (closed system v5.2 — auto-snapshot + 7-history)');
 console.log('  History:  ' + releases.length + '/' + MAX_HISTORY);
 console.log('  HTML:     ' + updated + '/' + scanned + ' updated');
 console.log('─'.repeat(56) + '\n🚀  Ready!\n');
