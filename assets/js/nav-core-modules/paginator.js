@@ -16,6 +16,19 @@
 //   - FeedService: algorithmic ranking (UCB1 + diversity + jitter)
 //   - SourcePaginator: sequential — เรียงตาม category order ใน index
 //   - เหมาะกับ route เฉพาะ type (เช่น Symbols) ที่ user คาดหวัง order คงที่
+//
+// v2.2 — Dynamic first page + ลบ sub-chunking:
+//   • FIRST_PAGE_SIZE คำนวณจาก viewport height แบบ dynamic (2–6 categories)
+//     ทำให้ first paint เพียงพอเติม viewport บนจอใหญ่ → sentinel อยู่ล่าง viewport
+//     → observer ไม่ fire ทันที → user scroll ได้ก่อน แล้วค่อย trigger load ถัดไป
+//   • ลบ sub-chunking (MAX_ITEMS_PER_CATEGORY_CHUNK, _loadNextChunk, currentCatId, itemCursor)
+//     WHY: sub-chunking แบ่งหมวดใหญ่เป็นก้อน 20 items แต่ละ chunk กลายเป็น group แยก
+//          แถวสุดท้ายของแต่ละ chunk มี margin: 0 0 40px (ure-btn-row--last)
+//          → ระหว่าง chunk ของหมวดเดียวกันเกิดช่องว่าง 40px (1 แถวว่าง)
+//          ซึ่งเป็นปัญหาที่ user รายงานเป็นเวลานาน
+//   • ตอนนี้แต่ละ category ถูก render เป็น group เดียวต่อเนื่อง ไม่มีช่องว่างภายใน
+//     ส่วน performance ของหมวดใหญ่ (100+ items) อยู่ในมือของ content-visibility: auto
+//     บน .feed-page ที่ browser ข้ามการ render ของ off-screen content อยู่แล้ว
 
 // @ts-check
 (function (M) {
@@ -24,38 +37,67 @@
   const { CONFIG } = M;
 
   // ── Paginator constants ────────────────────────────────────────────────────
-  // v2.1: ลด first paint size ลงอย่างมาก — เดิมโหลด 4 categories × 60 items = 240 items
-  //   ตอนนี้โหลดแค่ 2 categories × 20 items = 40 items บน first paint
-  //   ที่เหลือค่อยทยอยโหลดเวลาเลื่อน เหมือนระบบฟีดที่ไม่ render เยอะครั้งแรก
+  // v2.2: FIRST_PAGE_SIZE เป็น dynamic — คำนวณจาก viewport height ที่ runtime
+  //   ดู _calcFirstPageSize() ด้านล่าง
+  //   ก่อนหน้านี้ FIRST_PAGE_SIZE = 2 (คงที่) → บนจอใหญ่เนื้อหาสั้นเกินไป
   const PC = Object.freeze({
-    // WHY 2: first paint แค่ 2 categories — พอให้เห็น content เริ่มต้น
-    //   ไม่มากเกินไปจน block first render นาน เหมือนระบบฟีดที่ค่อยๆ โหลด
-    //   2 categories × ~20 items = ~40 items ต่อ first page (ลดจาก 240)
-    FIRST_PAGE_SIZE: 2,
-    // WHY 2: scroll-load แต่ละครั้งเพิ่ม 2 categories — ทยอยขึ้นมาทีละนิด
-    //   ไม่น้อยเกินไปจนต้อง fetch บ่อย ไม่มากเกินไปจน render หนัก
-    PAGE_SIZE:       2,
-    // v2.1: ลดจาก 60 → 20 — เท่ากับ FeedService.CHUNK_BUTTON
-    //   แต่ละ category แสดงได้สูงสุด 20 items ต่อ chunk
-    //   ถ้า category ใหญ่กว่า 20 จะทยอยโหลด chunk ถัดไปเวลาเลื่อน
-    //   ทำให้แต่ละ section ไม่สูงเกินไป เหมือน feed ที่แต่ละ segment มี 20 items
-    MAX_ITEMS_PER_CATEGORY_CHUNK: 20,
-    // เก็บ sub-chunk cursor สำหรับ category ใหญ่ — ถ้าเลื่อนจบ chunk 0 แล้วยัง
-    //   ไม่หมด category ก็โหลด chunk ถัดไปของ category เดิมก่อน
+    // Dynamic range สำหรับ first paint (คำนวณจาก viewport)
+    //   ต่ำสุด 2: กรณี viewport เล็กมาก (มือถือ landscape)
+    //   สูงสุด 6: กรณีจอ desktop ใหญ่ — มากกว่านี้ first paint ช้าเกินไป
+    FIRST_PAGE_SIZE_MIN:     2,
+    FIRST_PAGE_SIZE_MAX:     6,
+    FIRST_PAGE_SIZE_DEFAULT: 3, // fallback ถ้า window ไม่ available
+
+    // Scroll-load ถัดไป — ทยอยทีละ 2 categories
+    //   WHY 2: พอให้ scroll ลงมาเจอ content ใหม่ต่อเนื่อง ไม่มากเกินจน render หนัก
+    PAGE_SIZE: 2,
   });
+
+  /**
+   * คำนวณจำนวน categories สำหรับ first paint ตาม viewport height
+   *
+   * หลักการ:
+   *   - ประมาณความสูงต่อ category = 210px (header ~50px + 2 rows × ~80px)
+   *   - ต้องการเติม viewport × 1.5 เพื่อให้ sentinel อยู่ล่าง viewport
+   *     → observer ไม่ fire ทันที → user scroll ได้ก่อน
+   *   - ระหว่าง MIN-MAX เพื่อกัน extreme cases
+   *
+   * @returns {number} จำนวน categories สำหรับ first paint
+   */
+  function _calcFirstPageSize() {
+    try {
+      const vh = window.innerHeight
+        || document.documentElement.clientHeight
+        || document.body?.clientHeight
+        || 800;
+      // WHY 210px: ประมาณการจาก layout จริง
+      //   header ~50px + 2 rows × ~80px = ~210px (กรณี category เล็ก 20 items)
+      //   ถ้า category ใหญ่กว่า 20 items ความสูงจะมากกว่านี้ → sentinel ไกลลงไปอีก
+      //   ซึ่งดี เพราะ user ต้อง scroll มากขึ้นก่อน trigger load ถัดไป
+      const estHeightPerCat = 210;
+      // WHY 1.5×: ต้องการเนื้อหาเกิน viewport 50% เพื่อให้ sentinel อยู่ล่าง viewport
+      //   ถ้าใส่ 1.0× sentinel อาจอยู่ใน viewport ทันที (rootMargin 600px จะ fire)
+      const target = Math.ceil((vh * 1.5) / estHeightPerCat);
+      return Math.max(PC.FIRST_PAGE_SIZE_MIN, Math.min(PC.FIRST_PAGE_SIZE_MAX, target));
+    } catch (_) {
+      return PC.FIRST_PAGE_SIZE_DEFAULT;
+    }
+  }
 
   /**
    * State shape (can be saved to / restored from RouteCache):
    *   {
-   *     source:    string,         // e.g. 'symbol', 'emoji', 'fancy'
-   *     layout:    'button'|'card',
-   *     filter:    string[]|null,
+   *     source:     string,         // e.g. 'symbol', 'emoji', 'fancy'
+   *     layout:     'button'|'card',
+   *     filter:     string[]|null,
    *     categories: Array<{id,name}>,
-   *     catCursor: number,         // index ใน categories ที่จะโหลดต่อไป
-   *     itemCursor: number,        // sub-chunk cursor ใน category ปัจจุบัน (ถ้ามี)
-   *     currentCatId: string|null, // id ของ category ที่กำลัง chunk อยู่
-   *     hasMore:   boolean,
+   *     catCursor:  number,         // index ใน categories ที่จะโหลดต่อไป
+   *     hasMore:    boolean,
    *   }
+   *
+   * v2.2: ลบ currentCatId และ itemCursor (sub-chunking fields) ออกจาก state
+   *   ถ้า restore จาก cache เก่าที่มี field เหล่านี้ → จะถูก ignore (ไม่ใช้)
+   *   ไม่กระทบการทำงานเพราะ code ใหม่ไม่อ้างถึง
    */
   const SourcePaginator = {
 
@@ -74,17 +116,18 @@
     async init(source, layout = 'button', filter = null) {
       if (!source) throw new Error('[Paginator] source required');
 
-      // ถ้ามี state อยู่แล้วและ source เดียวกัน → ไม่ re-init
+      // ถ้ามี state อยู่แล้วและ source + layout เดียวกัน → ไม่ re-init
       const existing = this._states.get(source);
-      if (existing && existing.source === source) return;
+      if (existing && existing.source === source && existing.layout === layout) return;
 
       const cats = await M.DataService.getTypeCategories(source);
       if (!cats || !cats.length) {
         this._states.set(source, {
-          source, layout, filter,
+          source,
+          layout,
+          filter,
           categories: [],
-          catCursor: 0, itemCursor: 0,
-          currentCatId: null,
+          catCursor: 0,
           hasMore: false,
         });
         return;
@@ -100,14 +143,17 @@
         filter,
         categories: filtered,
         catCursor: 0,
-        itemCursor: 0,
-        currentCatId: null,
         hasMore: filtered.length > 0,
       });
     },
 
     /**
      * Load next page — returns group descriptors เหมือน FeedService.loadNextPage
+     *
+     * v2.2: ลบ sub-chunking logic ออก — แต่ละ category ถูก load ทั้งหมดในครั้งเดียว
+     *   ก่อนหน้านี้: แบ่ง category ใหญ่เป็น chunk 20 items ทำให้เกิดช่องว่างระหว่าง chunk
+     *   ตอนนี้: โหลด category เต็ม ๆ ในครั้งเดียว → content-visibility: auto จัดการ render
+     *
      * @param {string} lang
      * @param {number} [n]  number of categories to load (default PAGE_SIZE)
      * @returns {Promise<{groups: Array, hasMore: boolean}>}
@@ -121,21 +167,6 @@
       for (let i = 0; i < n; i++) {
         if (!st.hasMore) break;
 
-        // ── Sub-chunking: ถ้ากำลัง chunk category ใหญ่อยู่ → โหลด chunk ถัดไป ──
-        if (st.currentCatId && st.itemCursor > 0) {
-          const chunkGroup = await this._loadNextChunk(st, lang);
-          if (chunkGroup) {
-            groups.push(chunkGroup);
-            // ถ้า chunk นี้ยังไม่จบ category → ยังอยู่ใน category เดิม ไม่เลื่อน catCursor
-            // ถ้า chunk นี้คือ chunk สุดท้ายของ category → ปรับ catCursor และ reset itemCursor
-            continue;
-          }
-          // chunk ว่าง → ไป category ถัดไป
-          st.currentCatId = null;
-          st.itemCursor = 0;
-        }
-
-        // ── Category ใหม่ ──────────────────────────────────────────────────
         if (st.catCursor >= st.categories.length) {
           st.hasMore = false;
           break;
@@ -144,22 +175,11 @@
         const cat = st.categories[st.catCursor];
         const group = await this._fetchCategoryGroup(st, cat, lang);
         if (group) {
-          // ตรวจว่า category นี้ใหญ่เกิน MAX_ITEMS_PER_CATEGORY_CHUNK ไหม
-          //   ถ้าใช่ → slice เอาแค่ chunk แรก แล้วเก็บ currentCatId ไว้ทยอยโหลด chunk ถัดไป
-          if (group.items.length > PC.MAX_ITEMS_PER_CATEGORY_CHUNK) {
-            const firstChunk = group.items.slice(0, PC.MAX_ITEMS_PER_CATEGORY_CHUNK);
-            st.currentCatId = cat.id;
-            st.itemCursor = PC.MAX_ITEMS_PER_CATEGORY_CHUNK;
-            groups.push({
-              group: {
-                type: st.layout,
-                header: group.header,
-                items: firstChunk,
-              },
-            });
-          } else {
-            groups.push({ group });
-          }
+          // v2.2: ส่งทั้ง group เลย — ไม่ slice เป็น chunk
+          //   WHY: content-visibility: auto บน .feed-page ข้าม render off-screen content
+          //        อยู่แล้ว → ไม่ต้อง split เพื่อ limit render
+          //        และการ split ทำให้เกิดช่องว่าง 40px ระหว่าง chunk (ure-btn-row--last margin)
+          groups.push({ group });
           st.catCursor++;
         } else {
           // fetch fail → ข้ามไป category ถัดไป
@@ -169,61 +189,16 @@
       }
 
       // อัปเดต hasMore
-      st.hasMore = st.catCursor < st.categories.length
-        || (st.currentCatId !== null && st.itemCursor > 0);
+      st.hasMore = st.catCursor < st.categories.length;
 
       return { groups, hasMore: st.hasMore };
     },
 
     /**
-     * โหลด chunk ถัดไปของ category ปัจจุบัน (sub-chunking สำหรับ category ใหญ่)
-     */
-    async _loadNextChunk(st, lang) {
-      if (!st.currentCatId) return null;
-
-      // หา category object จาก id
-      const cat = st.categories.find(c => c.id === st.currentCatId);
-      if (!cat) {
-        st.currentCatId = null;
-        st.itemCursor = 0;
-        return null;
-      }
-
-      // ดึง items ทั้งหมดของ category นี้อีกครั้ง (จาก cache ของ DataService — ไม่ fetch network ซ้ำ)
-      const full = await this._fetchCategoryGroup(st, cat, lang);
-      if (!full || !full.items.length) {
-        st.currentCatId = null;
-        st.itemCursor = 0;
-        return null;
-      }
-
-      const slice = full.items.slice(
-        st.itemCursor,
-        st.itemCursor + PC.MAX_ITEMS_PER_CATEGORY_CHUNK
-      );
-
-      if (!slice.length) {
-        // หมด category แล้ว
-        st.currentCatId = null;
-        st.itemCursor = 0;
-        st.catCursor++; // ไป category ถัดไปในรอบถัดไป
-        return null;
-      }
-
-      st.itemCursor += slice.length;
-
-      return {
-        group: {
-          type: st.layout,
-          header: null, // ไม่ show header ซ้ำ — เคย show ใน chunk แรกแล้ว
-          items: slice,
-        },
-      };
-    },
-
-    /**
      * Fetch category data (delegated to DataService — ใช้ cache ของมัน)
      * ส่งกลับ { type, header, items } เหมือน _fetchSourceGroup ของเดิม
+     *
+     * v2.2: ไม่มีการ slice items ออกเป็น chunk แล้ว — ส่ง items ทั้งหมดของ category
      */
     async _fetchCategoryGroup(st, cat, lang) {
       try {
@@ -318,7 +293,11 @@
     restore(snap) {
       if (!snap || !snap.source) return;
       this._states.clear();
-      this._states.set(snap.source, JSON.parse(JSON.stringify(snap)));
+      // v2.2: ลบ currentCatId/itemCursor ถ้ามีอยู่ใน snap เก่า (backward compat)
+      const clean = { ...snap };
+      delete clean.currentCatId;
+      delete clean.itemCursor;
+      this._states.set(snap.source, JSON.parse(JSON.stringify(clean)));
     },
 
     /**
@@ -339,8 +318,12 @@
     },
 
     // ── Constants exposed for content.js ──────────────────────────────────────
-    FIRST_PAGE_SIZE: PC.FIRST_PAGE_SIZE,
-    PAGE_SIZE:       PC.PAGE_SIZE,
+    // v2.2: FIRST_PAGE_SIZE เป็น getter — คำนวณ dynamic ตาม viewport
+    //   content.js เรียก M.SourcePaginator.FIRST_PAGE_SIZE ตอน initial load
+    //   แต่ละครั้งที่เข้า route จะคำนวณใหม่ตาม viewport ปัจจุบัน
+    //   (รองรับ resize / orientation change โดยอัตโนมัติ)
+    get FIRST_PAGE_SIZE() { return _calcFirstPageSize(); },
+    PAGE_SIZE:            PC.PAGE_SIZE,
   };
 
   // ── Export ──────────────────────────────────────────────────────────────────

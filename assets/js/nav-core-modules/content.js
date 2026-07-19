@@ -101,13 +101,29 @@
     // WHY content-visibility:auto:
     //   browser discard rendering + layout ของ .feed-page ที่อยู่นอก viewport
     //   ทำให้มี DOM 400+ pages โดยไม่กินแรง GPU/memory มากเกินไป
-    //   contain-intrinsic-block-size: hint ความสูงโดยประมาณ
-    //   → scrollbar height ถูกต้องแม้ page ยังไม่ render จริง
-    //   800px ≈ group header (40px) + 2 rows × ~380px = สมเหตุสมผลสำหรับ 20 items
+    //
+    // v2.2 — Height caching ที่แม่นยำขึ้น:
+    //   ก่อนหน้านี้: contain-intrinsic-block-size: 800px (ค่าคงที่)
+    //     → แต่ละ .feed-page จอง 800px เสมอ แม้เนื้อหาจริงจะต่ำกว่า (เช่น 300px)
+    //     → เกิด "ช่องว่าง" ระหว่างกลุ่มเนื้อหาที่ user เห็นชัด (ปัญหาเรื้อรัง)
+    //     → ยิ่งหมวดเล็ก (20 items) ยิ่งเห็นช่องว่างมาก เพราะจอง 800px แต่ใช้จริง ~210px
+    //
+    //   ตอนนี้: contain-intrinsic-block-size: auto 300px
+    //     → `auto` = browser จำความสูงจริงหลัง render ครั้งแรก แล้วใช้ค่านั้นเป็น placeholder
+    //        ทำให้ scrollbar height ใกล้เคียงความจริง ลด layout shift ขณะ scroll
+    //     → `300px` = fallback สำหรับ render ครั้งแรก (ก่อน browser จำค่าจริงได้)
+    //        300px สมเหตุสมผลสำหรับ category เล็ก (header 50px + 2 rows × ~125px)
+    //     → รองรับ browser สมัยใหม่ (Chrome 95+, Firefox 101+, Safari 17+)
+    //
+    //   ผลกระทบต่อ SPA:
+    //     การ navigation ระหว่าง route → clearContent() ล้าง .feed-page เดิม
+    //     → new route สร้าง .feed-page ใหม่ → เริ่มจาก fallback 300px
+    //     → หลัง render แรก browser จำความสูงจริง → scroll ถัดไปใช้ค่าจริง
+    //     → ลด "jumping scrollbar" ที่เคยเกิดจาก 800px → actual size
     s.textContent = `
 .feed-page{
   content-visibility: auto;
-  contain-intrinsic-block-size: 800px;
+  contain-intrinsic-block-size: auto 300px;
 }
 #${FEED_SENTINEL_ID}{
   height: 1px;
