@@ -395,6 +395,99 @@ function htmlCacheBust(buildId) {
   return { scanned: scanned, updated: updated };
 }
 
+// ── v6.3: Dynamic loader cache busting ──────────────────────────────────────
+// ปัญหา: ไฟล์ที่ถูกโหลดแบบ dynamic (nav-core-modules/*.js, ure-modules/*.js, ฯลฯ)
+//   ไม่ได้อยู่ใน HTML โดยตรง จึงไม่ถูก regex ?v= ของ htmlCacheBust จับได้
+//   เมื่อไฟล์เหล่านี้ถูกอัพเดท browser ใช้ cache เดิม (1 วันตาม _headers) → user
+//   ไม่ได้รับการอัพเดท
+//
+// แนวทางแก้: แต่ละ dynamic loader (nav-core.js, ure.js, popup.js, ฯลฯ) มีตัวแปร
+//   `var FV_BUILD_ID = '';` ที่ build script จะแทนที่ด้วย buildId จริง
+//   loader ใช้ _v() helper ต่อ ?v=<buildId> ท้าย URL ของ modules ที่โหลด
+//
+// นอกจากนี้ยังจัดการ ES module imports (con-data-service.js → con-data-registry.js)
+//   โดยแทนที่ import path จาก './foo.js' → './foo.js?v=<buildId>'
+//
+// รายชื่อไฟล์ที่มี FV_BUILD_ID variable:
+var DYNAMIC_LOADERS = [
+  'assets/js/nav-core.js',
+  'assets/js/ure/ure.js',
+  'assets/js/popup.js',
+  'assets/js/search-ui.js',
+  'assets/js/language.js',
+  'assets/js/nav-core-modules/loading.js',
+];
+
+// รายชื่อไฟล์ที่มี ES module imports ที่ต้อง cache-bust:
+var ES_MODULE_FILES = [
+  'assets/js/con-data-service/con-data-service.js',
+];
+
+// Regex สำหรับจับ FV_BUILD_ID = '...' หรือ FV_BUILD_ID = "..."
+//   จับทั้งกรณีที่มีค่าเดิม (เช่น build ครั้งก่อน) และกรณีที่เป็น '' (source)
+var FV_BUILD_ID_PATTERN = /(FV_BUILD_ID\s*=\s*)['"][^'"]*['"]/;
+
+// Regex สำหรับจับ ES module import path ที่ลงท้ายด้วย .js (มีหรือไม่มี ?v= ก็ได้)
+//   จับทั้ง relative imports (./foo.js, ../bar.js) และ absolute (/assets/.../foo.js)
+//   ไม่จับ CDN URLs (https://...) เพราะไม่ใช่ internal assets
+var ES_IMPORT_PATTERN = /(from\s+['"])([^'"]+\.js)(\?v=[^'"]*)?(['"])/g;
+
+function dynamicLoaderCacheBust(buildId) {
+  var updated = 0;
+  var scanned = 0;
+
+  // ── Phase 1: แทนที่ FV_BUILD_ID ใน dynamic loaders ──────────────────────
+  console.log('\n  Phase 1: Injecting FV_BUILD_ID into dynamic loaders...');
+  for (var i = 0; i < DYNAMIC_LOADERS.length; i++) {
+    var relPath = DYNAMIC_LOADERS[i];
+    var fullPath = path.join(ROOT, relPath);
+    if (!fs.existsSync(fullPath)) {
+      console.log('  ⚠️  ' + relPath + ' — file not found, skip');
+      continue;
+    }
+    scanned++;
+    var orig = fs.readFileSync(fullPath, 'utf8');
+    var next = orig.replace(FV_BUILD_ID_PATTERN, "$1'" + buildId + "'");
+    if (next !== orig) {
+      fs.writeFileSync(fullPath, next, 'utf8');
+      updated++;
+      console.log('  ✅  ' + relPath + ' — FV_BUILD_ID = ' + buildId);
+    } else {
+      console.log('  ⚠️  ' + relPath + ' — FV_BUILD_ID pattern not found');
+    }
+  }
+
+  // ── Phase 2: แทนที่ ES module import paths ──────────────────────────────
+  console.log('\n  Phase 2: Cache-busting ES module import paths...');
+  for (var j = 0; j < ES_MODULE_FILES.length; j++) {
+    var esRelPath = ES_MODULE_FILES[j];
+    var esFullPath = path.join(ROOT, esRelPath);
+    if (!fs.existsSync(esFullPath)) {
+      console.log('  ⚠️  ' + esRelPath + ' — file not found, skip');
+      continue;
+    }
+    scanned++;
+    var esOrig = fs.readFileSync(esFullPath, 'utf8');
+    var esNext = esOrig.replace(ES_IMPORT_PATTERN, function(match, prefix, importPath, oldVersion, quote) {
+      // ข้าม CDN URLs (http://, https://)
+      if (/^https?:\/\//.test(importPath)) return match;
+      // ถ้าไม่ใช่ relative import (./ หรือ ../) ก็ข้าม — อาจเป็น bare specifier
+      if (!importPath.startsWith('./') && !importPath.startsWith('../')) return match;
+      // แทนที่ด้วย importPath?v=<buildId> (เขียนทับ oldVersion ถ้ามี)
+      return prefix + importPath + '?v=' + buildId + quote;
+    });
+    if (esNext !== esOrig) {
+      fs.writeFileSync(esFullPath, esNext, 'utf8');
+      updated++;
+      console.log('  ✅  ' + esRelPath + ' — ES imports cache-busted');
+    } else {
+      console.log('  ⏭️  ' + esRelPath + ' — no ES imports to update');
+    }
+  }
+
+  return { scanned: scanned, updated: updated };
+}
+
 // ── Cleanup legacy files (v6.1) ──────────────────────────────────────────────
 //  ย้ายไฟล์จาก v6.0 structure (lang/v*.md, lang/index.json) ไป v6.1 (lang/releases/)
 //  ลบไฟล์ legacy อื่นๆ ที่ไม่ใช้แล้ว
@@ -557,6 +650,15 @@ console.log('🌐  STEP 7: HTML cache busting...');
 var htmlResult = htmlCacheBust(buildId);
 console.log('');
 
+// ── STEP 7.5: Dynamic loader cache busting (v6.3) ────────────────────────────
+//  WHY: HTML cache busting (STEP 7) จับเฉพาะ ?v= ที่อยู่ใน src/href ของ HTML
+//    ไฟล์ที่ถูกโหลดแบบ dynamic (เช่น nav-core-modules/*.js) ไม่ได้อยู่ใน HTML
+//    จึงต้อง inject buildId ลงในตัว loader เอง (FV_BUILD_ID variable)
+//    และ ES module imports ที่ไม่ได้ผ่าน HTML (เช่น con-data-registry.js)
+console.log('🔌  STEP 7.5: Dynamic loader cache busting...');
+var loaderResult = dynamicLoaderCacheBust(buildId);
+console.log('');
+
 // ── Summary ──────────────────────────────────────────────────────────────────
 console.log('\n' + '─'.repeat(56));
 console.log('  Version:  ' + newVersion + (isNewVersion ? ' (NEW)' : ' (same)'));
@@ -564,4 +666,5 @@ console.log('  Build ID: ' + buildId);
 console.log('  Release:  ' + currentReleaseDateISO + (isNewVersion ? ' — บันทึกใหม่' : ' — คงเดิม'));
 console.log('  Source:   Per-language MD (v6.1 — releases/ folder per lang)');
 console.log('  HTML:     ' + htmlResult.updated + '/' + htmlResult.scanned + ' updated');
+console.log('  Loaders:  ' + loaderResult.updated + '/' + loaderResult.scanned + ' updated (v6.3 dynamic + ES imports)');
 console.log('─'.repeat(56) + '\n🚀  Ready!\n');

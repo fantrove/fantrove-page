@@ -38,6 +38,16 @@
   // Guard: ไม่ init ซ้ำ
   if (window.__langUI?._initialized) return;
   
+  // ── Build ID (replaced at build time by scripts/update-version.js) ──────────
+  // WHY: lang-modules/*.js ไม่ได้อยู่ใน HTML โดยตรง
+  //   จึงไม่ถูก regex ?v= ของ update-version.js จับได้
+  //   FV_BUILD_ID ถูก inject buildId จริงตอน build → ใช้ต่อ ?v= ท้าย URL
+  //   dev mode: ค่า '' → _v() คืน '' → URL ไม่มี ?v= → browser cache ปกติ
+  var FV_BUILD_ID = '';
+  
+  /** คืน query string '?v=<buildId>' ถ้าไม่มี buildId คืน '' */
+  function _v() { return FV_BUILD_ID ? '?v=' + FV_BUILD_ID : ''; }
+  
   // ══════════════════════════════════════════════════════════════════════════
   // FvLang INTEGRATION — ใช้ภาษาจาก lang-core.js
   // ══════════════════════════════════════════════════════════════════════════
@@ -162,11 +172,12 @@
   function loadScript(url) {
     return new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = url;
+      // WHY _v(): ต่อ ?v=<buildId> เพื่อ cache-bust lang-modules ที่ไม่ได้อยู่ใน HTML
+      s.src = url + _v();
       s.async = false;
       s.setAttribute('data-lang-internal', '');
       s.onload = () => resolve();
-      s.onerror = () => reject(new Error('[LangUI] Failed to load: ' + url));
+      s.onerror = () => reject(new Error('[LangUI] Failed to load: ' + url + _v()));
       _origAppend.call(document.head, s);
     });
   }

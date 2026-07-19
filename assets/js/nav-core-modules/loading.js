@@ -29,6 +29,16 @@
 (function (M) {
   'use strict';
 
+  // ── Build ID (replaced at build time by scripts/update-version.js) ──────────
+  // WHY: FVL (loading-system/fvl.js) ไม่ได้อยู่ใน HTML ทุกหน้า
+  //   บางหน้า loading.js โหลด FVL เองแบบ dynamic → URL ไม่มี ?v= → ใช้ cache เดิม
+  //   FV_BUILD_ID ถูก inject buildId จริงตอน build → ใช้ต่อ ?v= ท้าย URL
+  //   dev mode: ค่า '' → _v() คืน '' → URL ไม่มี ?v= → browser cache ปกติ
+  var FV_BUILD_ID = '';
+
+  /** คืน query string '?v=<buildId>' ถ้าไม่มี buildId คืน '' */
+  function _v() { return FV_BUILD_ID ? '?v=' + FV_BUILD_ID : ''; }
+
   var DEFAULT_ID = 'fvl-default-fullscreen';
 
   // ── Z-index strategy ──────────────────────────────────────────────────────
@@ -70,7 +80,8 @@
       }
       if (!base) return false;
       var s = document.createElement('script');
-      s.src = base + '/loading-system/fvl.js';
+      // WHY _v(): ต่อ ?v=<buildId> เพื่อ cache-bust fvl.js ที่ loading.js โหลดเองแบบ dynamic
+      s.src = base + '/loading-system/fvl.js' + _v();
       s.async = false;
       document.head.appendChild(s);
       return true;

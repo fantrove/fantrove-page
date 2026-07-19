@@ -3,11 +3,27 @@
  * @file nav-core.js
  * Entry point for NavCore — Navigation & Content Management System
  * (fixed: getModuleBase() now handles ?v=BUILD_ID query strings)
+ *
+ * Cache-busting v1.0:
+ *   FV_BUILD_ID ถูกแทนที่ด้วย build ID จริงโดย scripts/update-version.js
+ *   ทุก module ที่ nav-core.js โหลดแบบ dynamic จะได้ ?v=<buildId> ต่อท้าย URL
+ *   → browser ไม่ใช้ cache เดิมเมื่อ module ถูกอัพเดท
+ *   ใน dev mode (ไม่ผ่าน build) FV_BUILD_ID = '' → _v() คืน '' → ไม่มี ?v=
  */
 (function() {
   'use strict';
   
   if (window._navCore?._initialized) return;
+  
+  // ── Build ID (replaced at build time by scripts/update-version.js) ──────────
+  // WHY: dynamic-loaded modules (nav-core-modules/*.js) ไม่ได้อยู่ใน HTML
+  //   จึงไม่ถูก regex ?v= ของ update-version.js จับได้
+  //   ตัวแปรนี้ถูก inject buildId จริงตอน build → ใช้ต่อ ?v= ท้าย URL ของ modules
+  //   dev mode: ค่า '' (ว่าง) → _v() คืน '' → URL ไม่มี ?v= → browser cache ปกติ
+  var FV_BUILD_ID = '';
+  
+  /** คืน query string '?v=<buildId>' สำหรับ cache-busting ถ้าไม่มี buildId คืน '' */
+  function _v() { return FV_BUILD_ID ? '?v=' + FV_BUILD_ID : ''; }
   
   const PHASES = [
     ['types.js', 'config.js', 'state.js'],
@@ -44,10 +60,11 @@
   function loadScript(url) {
     return new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = url;
+      // WHY _v(): ต่อ ?v=<buildId> เพื่อ cache-bust module ที่ไม่ได้อยู่ใน HTML
+      s.src = url + _v();
       s.async = false;
       s.onload = () => resolve();
-      s.onerror = () => reject(new Error('[NavCore] Failed to load: ' + url));
+      s.onerror = () => reject(new Error('[NavCore] Failed to load: ' + url + _v()));
       document.head.appendChild(s);
     });
   }

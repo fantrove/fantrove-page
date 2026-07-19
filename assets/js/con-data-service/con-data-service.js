@@ -22,6 +22,14 @@
 //  ออกแบบเป็น neutral utility ไม่ผูกกับระบบใดระบบหนึ่ง (notification, search, ฯลฯ)
 //  ใช้ได้กับทุก consumer ที่มีข้อมูลบางส่วนและต้องการ full item context.
 //
+// v2.2.1 — Cache-busting for ES module imports
+//  import path ด้านล่างถูกเพิ่ม ?v=<buildId> โดย scripts/update-version.js ตอน build
+//  WHY: con-data-registry.js ไม่ได้อยู่ใน HTML โดยตรง (ถูก import จาก con-data-service.js)
+//    จึงไม่ถูก regex ?v= ของ update-version.js จับได้
+//    build script แทนที่ './con-data-registry.js' → './con-data-registry.js?v=<buildId>'
+//    → browser fetches เป็น URL ใหม่ → ไม่ใช้ cache เดิมเมื่อ registry ถูกอัพเดท
+//  dev mode: import path ไม่ถูกแก้ → ไม่มี ?v= → browser cache ปกติ
+//
 // =========================================================
 
 import ConDataRegistry from './con-data-registry.js';
