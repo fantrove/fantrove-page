@@ -3,6 +3,12 @@
  * @file types.js
  * Central typedef file — shared types for all modules.
  * No runtime code. Load this first.
+ *
+ * v4.0 — Added DiscoveryConfig, LangWeightConfig, DiscoveryItem,
+ *        QueryLanguageInfo, and extended SearchState with discovery
+ *        fields. These support the new Discovery system and the
+ *        smart query-language detection in SuggestionService.
+ *
  * @module types
  */
 
@@ -38,6 +44,41 @@
  * @property {string} displayName
  */
 
+/**
+ * Discovery item (v4.0).
+ *
+ * A related item surfaced in the discovery section after primary
+ * search results. Carries a score that reflects how strongly the
+ * item relates to the original query (higher = stronger).
+ *
+ * @typedef {Object} DiscoveryItem
+ * @property {any}        item         The raw copyable item
+ * @property {any}        typeObj      Parent type object
+ * @property {any}        category     Parent category object
+ * @property {string}     typeName     Type display name
+ * @property {string}     catName      Category display name
+ * @property {string}     itemName     Item display name
+ * @property {number}     score        Relatedness score (0..N)
+ * @property {string}     reason       Why this item was selected
+ *                                     ('same-category' | 'same-type' | 'token-overlap')
+ */
+
+/**
+ * Query language detection result (v4.0).
+ *
+ * Returned by SuggestionService.detectQueryLanguage(). Describes
+ * which language the query is "mostly" in, plus the character
+ * counts used to make that determination. Exposed for transparency
+ * and for unit testing.
+ *
+ * @typedef {Object} QueryLanguageInfo
+ * @property {string}   language     'th' | 'en' — the detected language
+ * @property {number}   thaiChars    Count of Thai-script chars (U+0E00–U+0E7F)
+ * @property {number}   latinChars   Count of Latin-script chars (A-Z, a-z)
+ * @property {string}   reason       'dominant-thai' | 'dominant-latin' | 'fallback-ui'
+ * @property {boolean}  confident    True if dominance threshold was met
+ */
+
 // ── Application state ─────────────────────────────────────────────────────────
 
 /**
@@ -56,6 +97,11 @@
  * @property {string}     selectedType
  * @property {string}     selectedCategory
  * @property {SearchHistoryEntry|null} lastCommittedSearchState
+ *
+ * Discovery state — owned by [DiscoveryService] (v4.0)
+ * @property {DiscoveryItem[]}  currentDiscovery    Currently rendered discovery items
+ * @property {boolean}          discoveryActive     True if discovery section is shown
+ * @property {Object|null}      discoveryHandle     URE handle for the discovery list (internal)
  *
  * Overlay state — owned by [OverlayService]
  * @property {boolean}    overlayOpen
@@ -108,6 +154,7 @@
  * @property {Function|null} documentKeydownOverlay
  * @property {Function|null} popstate
  * @property {Function|null} copyClick
+ * @property {Function|null} discoveryScroll  v4.0 — discovery infinite-scroll handler
  */
 
 // ── Config types ──────────────────────────────────────────────────────────────
@@ -130,6 +177,24 @@
  */
 
 /**
+ * Discovery system configuration (v4.0).
+ * @typedef {Object} DiscoveryConfig
+ * @property {number} maxRelatedItems      Max related items to compute per search
+ * @property {number} sampleTopN           Top-N primary results to sample for signal
+ * @property {number} minResultsForDiscovery  Min primary results before discovery runs
+ * @property {number} emptyStateMaxItems   Max items in empty-state discovery block
+ * @property {Readonly<{sameType:number, sameCategory:number, tokenOverlap:number}>} weights
+ */
+
+/**
+ * Language-detection configuration (v4.0).
+ * @typedef {Object} LangWeightConfig
+ * @property {number} dominanceRatio       Min ratio of (dominant/other) chars
+ * @property {number} minCharsForDominance Min absolute chars before a language can dominate
+ * @property {string} fallback             Fallback language ('auto' = UI lang)
+ */
+
+/**
  * @typedef {Object} AppConfig
  * @property {TimingConfig}                               TIMING
  * @property {Readonly<Record<string,number>>}            RENDER
@@ -139,6 +204,8 @@
  * @property {Readonly<{path:string}>}                    DB
  * @property {Readonly<Record<string,Record<string,string>>>} TEXTS
  * @property {Readonly<Record<string,string>>}            Icons
+ * @property {Readonly<DiscoveryConfig>}                  DISCOVERY    v4.0
+ * @property {Readonly<LangWeightConfig>}                 LANG_WEIGHT  v4.0
  */
 
 window.SearchModules = window.SearchModules || {};

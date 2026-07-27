@@ -47,6 +47,107 @@
       const lang = this.getLang();
       return CONFIG.TEXTS[lang]?.[key] ?? CONFIG.TEXTS[CONFIG.LANG.default][key] ?? key;
     },
+
+    /**
+     * Detect the dominant language of a search query (v4.0).
+     *
+     * WHY this exists:
+     *   The user reported that typing an English query sometimes surfaced
+     *   Thai suggestions, and vice versa. The root cause was that the old
+     *   suggestion engine returned matches in any language without
+     *   considering what script the user was typing in.
+     *
+     *   This function inspects the query's character composition and
+     *   returns the language that "dominates" by character count, with a
+     *   configurable dominance ratio. A single stray character (e.g. one
+     *   Thai char in an otherwise-English query) will NOT flip the
+     *   detected language, satisfying the user's requirement that one
+     *   stray character should not change the suggestion language.
+     *
+     * Algorithm (deterministic — aerospace: no magic, no ML):
+     *   1. Count Thai chars (U+0E00–U+0E7F) and Latin chars (A-Z, a-z).
+     *      Whitespace, digits, and punctuation are ignored.
+     *   2. If both counts are 0 → fallback to UI language.
+     *   3. If only one language has chars ≥ minCharsForDominance → that
+     *      language wins.
+     *   4. If both have ≥ minCharsForDominance → compute ratio
+     *      (max/min). If ratio ≥ dominanceRatio → dominant language wins.
+     *      Otherwise → fallback to UI language (close to 50/50).
+     *
+     * @param {string} query
+     * @returns {QueryLanguageInfo}
+     */
+    detectQueryLanguage(query) {
+      const q   = String(query || '');
+      let thai  = 0;
+      let latin = 0;
+
+      // Single-pass char scan — O(n), bounded by query length.
+      for (let i = 0; i < q.length; i++) {
+        const c = q.charCodeAt(i);
+        // Thai block: U+0E00 – U+0E7F (consonants, vowels, tone marks, digits)
+        if (c >= 0x0E00 && c <= 0x0E7F) { thai++; continue; }
+        // Latin: A-Z, a-z (basic ASCII letters only)
+        if ((c >= 0x41 && c <= 0x5A) || (c >= 0x61 && c <= 0x7A)) { latin++; continue; }
+        // Everything else (digits, punctuation, whitespace, other scripts)
+        // is intentionally ignored — it doesn't vote for either language.
+      }
+
+      const cfg = CONFIG.LANG_WEIGHT || { dominanceRatio: 1.5, minCharsForDominance: 2, fallback: 'auto' };
+      const minChars = cfg.minCharsForDominance;
+      const ratio    = cfg.dominanceRatio;
+
+      // Case 1: neither language has enough chars → fallback to UI lang.
+      if (thai < minChars && latin < minChars) {
+        const lang = cfg.fallback === 'auto' ? this.getLang() : cfg.fallback;
+        return { language: lang, thaiChars: thai, latinChars: latin, reason: 'fallback-ui', confident: false };
+      }
+
+      // Case 2: only Thai meets the threshold.
+      if (thai >= minChars && latin < minChars) {
+        return { language: 'th', thaiChars: thai, latinChars: latin, reason: 'dominant-thai', confident: true };
+      }
+
+      // Case 3: only Latin meets the threshold.
+      if (latin >= minChars && thai < minChars) {
+        return { language: 'en', thaiChars: thai, latinChars: latin, reason: 'dominant-latin', confident: true };
+      }
+
+      // Case 4: both meet the threshold → check dominance ratio.
+      const maxLang = thai > latin ? 'th' : 'en';
+      const maxVal  = Math.max(thai, latin);
+      const minVal  = Math.min(thai, latin);
+      // minVal is > 0 here (both ≥ minChars ≥ 2), so division is safe.
+      if (maxVal / minVal >= ratio) {
+        return {
+          language    : maxLang,
+          thaiChars   : thai,
+          latinChars  : latin,
+          reason      : maxLang === 'th' ? 'dominant-thai' : 'dominant-latin',
+          confident   : true,
+        };
+      }
+
+      // Case 5: close to 50/50 → fallback to UI lang.
+      const lang = cfg.fallback === 'auto' ? this.getLang() : cfg.fallback;
+      return { language: lang, thaiChars: thai, latinChars: latin, reason: 'fallback-ui', confident: false };
+    },
+
+    /**
+     * Quick check: does a string contain any Thai characters?
+     * Used by suggestion rendering to decide whether a suggestion is
+     * Thai or Latin (for language-aware filtering).
+     * @param {string} s
+     * @returns {boolean}
+     */
+    hasThaiChars(s) {
+      const str = String(s || '');
+      for (let i = 0; i < str.length; i++) {
+        const c = str.charCodeAt(i);
+        if (c >= 0x0E00 && c <= 0x0E7F) return true;
+      }
+      return false;
+    },
   };
 
   // ── DOMService ────────────────────────────────────────────────────────────

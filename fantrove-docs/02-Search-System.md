@@ -4,11 +4,11 @@
 >
 > **สำหรับ:** AI และนักพัฒนาที่จะแก้/ขยายระบบ Search
 >
-> **ไฟล์หลัก (v3.0):** `assets/js/search-system/search.js` (entry point หลัก ที่โหลดทุก module) + `assets/js/search-system/search-modules/` (13 modules รวม `engine.js`)
+> **ไฟล์หลัก (v4.0):** `assets/js/search-system/search.js` (entry point หลัก ที่โหลดทุก module) + `assets/js/search-system/search-modules/` (14 modules รวม `engine.js` และ `discovery.js`)
 >
 > **ไฟล์ legacy (ยังคงอยู่ชั่วคราว):** `assets/js/search-engine.js` + `assets/js/search-ui.js` + `assets/js/search-modules/` — ดู [`assets/js/search-system/MIGRATION.md`](../assets/js/search-system/MIGRATION.md) สำหรับการ migrate
 >
-> **ครอบคลุม:** สถาปัตยกรรม, อัลกอริทึม, โมดูลทั้งหมด, การผสานรวมกับ URE, URL/History, performance, aerospace software standards
+> **ครอบคลุม:** สถาปัตยกรรม, อัลกอริทึม, โมดูลทั้งหมด, การผสานรวมกับ URE, URL/History, performance, aerospace software standards, **Discovery system (v4.0)**, **Smart language detection (v4.0)**
 
 ---
 
@@ -30,6 +30,9 @@
 14. [ตัวแปร Global และ Events](#14-ตัวแปร-global-และ-events)
 15. [การเพิ่มประสิทธิภาพ (Performance)](#15-การเพิ่มประสิทธิภาพ-performance)
 16. [วงจรชีวิต (Lifecycle)](#16-วงจรชีวิต-lifecycle)
+17. [อ้างอิงข้ามเอกสาร](#17-อ้างอิงข้ามเอกสาร)
+18. [v3.0 Migration Notes](#18-v30-migration-notes)
+19. [v4.0 — Discovery System & Smart Language Detection](#19-v40--discovery-system--smart-language-detection)
 
 ---
 
@@ -1857,4 +1860,233 @@ NotificationService.copyText(text, name)
 - [`AI_CODING_GUIDE.md`](./AI_CODING_GUIDE.md) — มาตรฐานโค้ดที่ต้องยึดเมื่อแก้ Search
 - [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) — กฎเหล็กก่อนแตะ Search
 - [`12-SEO-Guide.md`](./12-SEO-Guide.md) — ⭐ SEO considerations (priority สูงสุด) ที่เกี่ยวข้องกับระบบนี้
-- [`assets/js/search-system/MIGRATION.md`](../assets/js/search-system/MIGRATION.md) — ★ v3.0 คู่มือ migration จาก v2.x
+- [`assets/js/search-system/MIGRATION.md`](../assets/js/search-system/MIGRATION.md) — ★ v3.0 คู่มือ migration จาก v2.x (เอกสารนี้ยังอ้างอิง v3.0 — ดู section 19 สำหรับ v4.0)
+
+---
+
+## 19. v4.0 — Discovery System & Smart Language Detection
+
+> **v4.0 การปรับปรุงครั้งใหญ่** — เพิ่ม Discovery System (YouTube-style related content) และ Smart Language Detection สำหรับ suggestions พร้อมปรับข้อความ UI ให้เป็นมิตรขึ้น
+>
+> **ไฟล์ใหม่:** `assets/js/search-system/search-modules/discovery.js`
+>
+> **ไฟล์ที่แก้:** `config.js`, `types.js`, `state.js`, `utils.js`, `engine.js`, `suggestions.js`, `rendering.js`, `search.js`, `search-system.css`
+
+### 19.1 Discovery System — แนวคิด
+
+ระบบ Search ของ Fantrove ก่อน v4.0 แสดงผลลัพธ์ค้นหาเท่านั้น — เมื่อผลลัพธ์หมด หน้าจอก็ว่างเปล่า (หรือแสดง 5 random suggestions กรณี empty state) ผู้ใช้ไม่สามารถ "ค้นพบ" สิ่งใหม่ๆ ได้หลังจากผลลัพธ์หลักหมด
+
+v4.0 เพิ่ม **Discovery Section** — section ใหม่ที่ปรากฏใต้ผลลัพธ์หลัก แสดง related content ที่คาดว่าน่าจะเกี่ยวข้องกับสิ่งที่ผู้ใช้ค้นหา โดยอ้างอิงจากแพลตฟอร์มใหญ่ๆ เช่น YouTube ที่ผู้ใช้เห็นสิ่งที่ค้นหาก่อน แล้วเมื่อหมดก็ยังมีอันอื่นเพิ่มเติมเข้ามาให้สำรวจต่อ
+
+### 19.2 Discovery System — สถาปัตยกรรม
+
+```
+SearchService.doSearch()
+  ↓
+RenderingService.renderResults(primaryResults)
+  ├── URE.mount() บน #searchResults (primary)
+  └── _triggerDiscovery(query)
+       ↓
+       DiscoveryService.renderDiscovery(query, primaryResults)
+       ├── SearchEngine.queryRelated(query, primaryResults, maxItems)
+       │     → DiscoveryItem[]  (deterministic, scored, deduped)
+       ├── Build #searchDiscovery DOM (header + .discovery-list)
+       └── URE.mount() บน .discovery-list (discovery)
+```
+
+Discovery section เป็น sibling ของ `#searchResults` ใน scroll container เดียวกัน ทำให้ผู้ใช้ scroll จากผลลัพธ์หลัก → discovery section ได้ต่อเนื่อง URE จัดการ virtual scroll ทั้งสอง list แยกกัน
+
+### 19.3 Discovery System — อัลกอริทึม queryRelated()
+
+`SearchEngine.queryRelated(query, primaryResults, maxCount)` ใช้ weighted scoring:
+
+| Signal | Weight | คำอธิบาย |
+|--------|--------|---------|
+| sameCategory | 1.5 | item อยู่ใน category เดียวกับ dominant category ของ top-N primary results |
+| sameType | 1.0 | item อยู่ใน type เดียวกับ dominant type |
+| tokenOverlap | 0.5 | ชื่อ item มี token ตรงกับ query |
+
+**ขั้นตอน:**
+1. หา dominant type และ category จาก top-N (default 8) primary results
+2. สแกน `_docs` (bounded ที่ `limit * 3`) และ score ทุก candidate ที่ไม่ได้อยู่ใน primary results
+3. Sort ตาม score desc, tiebreak ด้วย original index (deterministic)
+4. Slice ถึง maxCount
+
+**Empty-state mode:** เมื่อ primary results ว่าง DiscoveryService แสดง first N items จาก dataset (default 12) แทน random 5 suggestions แบบเดิม
+
+### 19.4 Discovery System — มาตรฐาน Aerospace
+
+| หลักการ | การ Implement |
+|---------|---------------|
+| **Deterministic output** | Same query + same data → same discovery list (no randomness) |
+| **Bounded resource usage** | `maxRelatedItems` cap (default 60), `sampleTopN` (default 8), `limit * 3` candidate cap |
+| **Fail-safe defaults** | ทุก error path log + return [] (ไม่ throw) |
+| **No silent failure** | ทุก error log ด้วย prefix `[Discovery]` |
+| **Single responsibility** | DiscoveryService เป็นเจ้าของ discovery DOM + URE handle ของมัน |
+| **Layered architecture** | Engine compute → DiscoveryService render → RenderingService เรียก |
+
+### 19.5 Smart Language Detection — ปัญหา
+
+ก่อน v4.0 SuggestionService ส่งคำแนะนำจาก engine ที่ return matches ในทุกภาษาโดยไม่พิจารณาว่าผู้ใช้พิมพ์ภาษาอะไร ทำให้:
+- พิมพ์ภาษาอังกฤษ → บางครั้งได้คำแนะนำภาษาไทย
+- พิมพ์ภาษาไทย → บางครั้งได้คำแนะนำภาษาอังกฤษ
+
+v4.0 แก้โดยเพิ่ม `LanguageService.detectQueryLanguage(query)` ที่ตรวจจับภาษาหลักของ query และ SuggestionService ใช้ผลลัพธ์เพื่อ re-rank suggestions
+
+### 19.6 Smart Language Detection — อัลกอริทึม
+
+```
+1. นับ Thai chars (U+0E00–U+0E7F) และ Latin chars (A-Z, a-z) ใน query
+2. ถ้าทั้งคู่ < minCharsForDominance (default 2) → fallback ไป UI lang
+3. ถ้ามีแค่ภาษาเดียวที่ ≥ minCharsForDominance → ภาษานั้นชนะ
+4. ถ้าทั้งคู่ ≥ minCharsForDominance → คำนวณ ratio (max/min)
+   - ถ้า ratio ≥ dominanceRatio (default 1.5) → ภาษาที่มากกว่าชนะ
+   - ถ้าไม่ → fallback ไป UI lang (close to 50/50)
+```
+
+**Key property:** ตัวอักษรเดียวในอีกภาษา (เช่น "helloอี") จะ **ไม่** flip ภาษาที่ตรวจจับ เพราะ ratio 5/2 = 2.5 ≥ 1.5 → Latin ชนะ
+
+### 19.7 Smart Language Detection — Configuration
+
+```javascript
+// config.js
+LANG_WEIGHT: Object.freeze({
+  dominanceRatio: 1.5,        // min ratio (max/min) to call dominant
+  minCharsForDominance: 2,    // min absolute chars before a lang can dominate
+  fallback: 'auto',           // 'auto' = use UI lang, or 'th'/'en'
+}),
+```
+
+ปรับค่าเหล่านี้ใน `config.js` เพื่อเปลี่ยนพฤติกรรมการตรวจจับภาษา
+
+### 19.8 Smart Language Detection — Re-ranking
+
+`SuggestionService.renderQuerySuggestions()` ทำ re-ranking:
+
+1. ดึง candidate pool จาก engine (2× maxCount สำหรับ headroom)
+2. แยกเป็น same-lang bucket และ other-lang bucket
+3. Concatenate: same-lang ก่อน, แล้ว other-lang
+4. Slice ถึง maxCount
+
+**สำคัญ:** engine's priority ordering ภายในแต่ละ bucket ถูก preserve (prefix matches ยังมาก่อน fuzzy matches ในภาษาเดียวกัน) ดังนั้นผู้ใช้ยังได้ best matches ก่อน — แค่ไม่ต้องเลื่อนผ่าน cross-language suggestions อีกต่อไป
+
+### 19.9 Friendlier UI Copy
+
+v4.0 ปรับข้อความ UI ทั้งหมดให้เป็นมิตรขึ้น คล้ายแพลตฟอร์มใหญ่ๆ (Google, YouTube):
+
+| Key | เดิม (v3.0) | ใหม่ (v4.0) |
+|-----|------------|-------------|
+| `not_found` (th) | ไม่พบข้อมูลที่ตรงหรือใกล้เคียง | ไม่พบผลลัพธ์สำหรับคำค้นนี้ |
+| `not_found` (en) | No data found related to your keyword. | No results for this search |
+| `not_found_hint` (th) | — (ไม่มี) | ลองดูสิ่งเหล่านี้แทน |
+| `not_found_hint` (en) | — (ไม่มี) | Try these instead |
+| `suggestion_label` (th) | คำแนะนำ | คำค้นที่เกี่ยวข้อง |
+| `suggestion_label` (en) | Suggestions | Related searches |
+| `trending` (th) | ยอดนิยม | กำลังได้รับความนิยม |
+| `trending` (en) | Trending | Trending now |
+| `discovery_label` (th) | — (ไม่มี) | คุณอาจสนใจ |
+| `discovery_label` (en) | — (ไม่มี) | You might also like |
+| `discovery_more` (th) | — (ไม่มี) | ยังมีให้สำรวจอีก |
+| `discovery_more` (en) | — (ไม่มี) | More to explore |
+| `discovery_hint` (th) | — (ไม่มี) | เลื่อนลงเพื่อดูสิ่งอื่นๆ ต่อ |
+| `discovery_hint` (en) | — (ไม่มี) | Scroll down for more |
+
+### 19.10 Empty State — การเปลี่ยนแปลง
+
+เดิม (v3.0):
+```
+[ข้อความใหญ่: "ไม่พบข้อมูลที่ตรงหรือใกล้เคียง"]
+[5 random suggestions จาก type[0].category[0].data]
+```
+
+ใหม่ (v4.0):
+```
+[ข้อความเล็ก: "ไม่พบผลลัพธ์สำหรับคำค้นนี้ — ลองดูสิ่งเหล่านี้แทน"]
+[#searchDiscovery section แสดง 12 items แรกจาก dataset แบบ scroll ต่อเนื่อง]
+```
+
+การเปลี่ยนแปลงนี้ทำให้ empty state เล็กลง เป็นมิตรขึ้น และให้ผู้ใช้มีอะไรสำรวจมากขึ้น
+
+### 19.11 ไฟล์ใหม่ใน v4.0
+
+| ไฟล์ | บทบาท |
+|------|--------|
+| `assets/js/search-system/search-modules/discovery.js` | DiscoveryService — render related content section |
+
+### 19.12 ไฟล์ที่แก้ใน v4.0
+
+| ไฟล์ | การเปลี่ยนแปลง |
+|------|-----------------|
+| `config.js` | เพิ่ม `DISCOVERY` config block, `LANG_WEIGHT` config block, TEXTS ใหม่ (not_found_hint, discovery_label, discovery_more, discovery_hint), DISCOVERY DOM IDs |
+| `types.js` | เพิ่ม `DiscoveryConfig`, `LangWeightConfig`, `DiscoveryItem`, `QueryLanguageInfo` typedefs; ขยาย `SearchState` ด้วย discovery fields; เพิ่ม `discoveryScroll` ใน `SearchHandlers` |
+| `state.js` | เพิ่ม `currentDiscovery`, `discoveryActive`, `discoveryHandle` fields; เพิ่ม `discoveryScroll` handler ref |
+| `utils.js` | เพิ่ม `LanguageService.detectQueryLanguage()` และ `LanguageService.hasThaiChars()` |
+| `engine.js` | เพิ่ม `queryRelated()` method + `_tokenizeQuery()` helper; export ผ่าน `SearchEngine.queryRelated` และ `_internals.tokenizeQuery` |
+| `suggestions.js` | เพิ่ม smart language re-ranking ใน `renderQuerySuggestions()`; ปรับ `ReadyModeService.extractSmartNames()` ให้ re-rank ตาม UI language |
+| `rendering.js` | ปรับ `renderResults()` ให้เรียก `_triggerDiscovery()` หลัง render; ปรับ `_renderEmpty()` ให้ใช้ compact message; เพิ่ม `_currentQuery()` และ `_triggerDiscovery()` helpers; ปรับ `disconnectRenderObserver()` ให้ clear discovery |
+| `search.js` | เพิ่ม `discovery.js` ใน Phase 4 load; ปรับ `destroy()` ให้ teardown DiscoveryService; bump version เป็น 4.0.0 |
+| `search-system.css` | เพิ่ม styles สำหรับ `.discovery-section`, `.discovery-header`, `.discovery-title`, `.discovery-hint`, `.discovery-list`, `.no-result--compact`, `.no-result__title`, `.no-result__hint` |
+
+### 19.13 Public API — สิ่งที่เพิ่มใน v4.0
+
+```javascript
+// SearchEngine (engine.js)
+window.SearchEngine.queryRelated(q, primaryResults, maxCount)
+// → DiscoveryItem[]  (deterministic, scored, deduped)
+
+window.SearchEngine._internals.tokenizeQuery(q)
+// → Set<string>  (exposed for unit testing)
+
+// LanguageService (utils.js)
+window.SearchModules.LanguageService.detectQueryLanguage(query)
+// → QueryLanguageInfo { language, thaiChars, latinChars, reason, confident }
+
+window.SearchModules.LanguageService.hasThaiChars(s)
+// → boolean
+
+// DiscoveryService (discovery.js)
+window.SearchModules.DiscoveryService.renderDiscovery(query, primaryResults)
+window.SearchModules.DiscoveryService.clearDiscovery()
+window.SearchModules.DiscoveryService.refreshDiscovery()
+window.SearchModules.DiscoveryService.destroy()
+window.SearchModules.DiscoveryService.isActive()  // → boolean
+window.SearchModules.DiscoveryService.getItems()  // → DiscoveryItem[]
+```
+
+### 19.14 Backward Compatibility
+
+v4.0 เป็น **drop-in replacement** สำหรับ v3.0 — public API เดิมทั้งหมดยังทำงานเหมือนเดิม:
+- `window.__searchUI` API — เหมือนเดิม
+- `window.SearchEngine.search()`, `querySuggestions()`, `generateAllKeywords()` — เหมือนเดิม
+- IIFE pattern, 2-space indent, single quotes — เหมือนเดิม
+- 5-phase parallel module loading — เหมือนเดิม (Phase 4 มี 2 ไฟล์แทน 1)
+- Two-tier search (immediate + Fuse upgrade) — เหมือนเดิม
+- Two-stack history model — เหมือนเดิม
+- ConDataService + URE integration — เหมือนเดิม
+
+**สิ่งที่เปลี่ยน:**
+- `renderResults()` ตอนนี้เรียก DiscoveryService หลัง render primary results (auto)
+- `_renderEmpty()` ไม่แสดง random 5 suggestions แล้ว — DiscoveryService จัดการแทน
+- Phase 4 โหลด 2 ไฟล์ (overlay.js + discovery.js) แทน 1 ไฟล์
+
+### 19.15 การทดสอบ
+
+Logic test สำหรับ `detectQueryLanguage` และ `_tokenizeQuery` อยู่ที่ `/home/z/my-project/scripts/test-discovery-logic.js`:
+
+```
+detectQueryLanguage: 11/11 pass
+hasThaiChars:        5/5 pass
+_tokenizeQuery:      6/6 pass
+```
+
+Test cases ครอบคลุม:
+- Pure English / Pure Thai queries
+- Mixed-language queries (English with stray Thai char, vice versa)
+- Edge cases (empty query, single char, equal counts)
+- Dominance ratio boundary (3:2 = 1.5, exactly at threshold)
+
+### 19.16 Cross-references เพิ่มเติม
+
+- [`AI_CODING_GUIDE.md`](./AI_CODING_GUIDE.md) — มาตรฐานโค้ดที่ยึดใน v4.0 (IIFE, 2-space, single quotes)
+- [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) — กฎเหล็กที่ v4.0 ปฏิบัติตาม (no ES modules, no jQuery, no innerHTML with user input)
+- [`13-Documentation-Standard.md`](./13-Documentation-Standard.md) — มาตรฐานเอกสารที่ section นี้ปฏิบัติตาม

@@ -15,15 +15,25 @@
 //   Phase 2 (parallel): utils, virtual-scroll          — need phase 1
 //   Phase 3 (parallel): url-history, keyboard,         — need phase 2
 //                       rendering, suggestions, input-bar
-//   Phase 4:            overlay                        — needs phase 3
+//   Phase 4 (parallel): overlay, discovery             — need phase 3
 //   Phase 5 (parallel): engine, search-service         — need everything
 //
 // ARCHITECTURE (aerospace-grade, SpaceX/NASA-inspired):
 //   Layer 1: Data ingestion    (ConDataService → engine.init)
 //   Layer 2: Index             (engine builds docs + keywords + type/cat indexes + Fuse)
-//   Layer 3: Search            (engine.search + engine.querySuggestions)
+//   Layer 3: Search            (engine.search + engine.querySuggestions + engine.queryRelated)
 //   Layer 4: Service           (search-service orchestrates search + history + render)
-//   Layer 5: UI                (overlay, input-bar, suggestions, rendering)
+//   Layer 5: UI                (overlay, input-bar, suggestions, rendering, discovery)
+//
+// v4.0 — Discovery system + smart language detection
+//   • Added discovery.js to Phase 4 — surfaces related content after
+//     primary search results (YouTube-style discovery experience).
+//   • LanguageService.detectQueryLanguage() powers smart suggestion
+//     re-ranking so suggestions stay in the same language as the query.
+//   • DiscoveryService is called from RenderingService.renderResults()
+//     after primary results are rendered.
+//   • Engine gains queryRelated() — deterministic, bounded, scored
+//     related-content query (aerospace: no randomness, no unbounded loops).
 //
 // Public API:
 //   window.SearchEngine  — search engine (init, search, querySuggestions, _internals)
@@ -61,8 +71,11 @@
     ['utils.js', 'virtual-scroll.js'],
     // Phase 3: Feature modules — depend on Phase 2
     ['url-history.js', 'keyboard.js', 'rendering.js', 'suggestions.js', 'input-bar.js'],
-    // Phase 4: Overlay — depends on suggestions + input-bar (Phase 3)
-    ['overlay.js'],
+    // Phase 4: Overlay + Discovery — depend on Phase 3
+    //   v4.0: discovery.js added here. It uses lazy lookups for
+    //   RenderingService and SearchEngine so it can safely load before
+    //   engine.js (Phase 5) — those references are resolved at runtime.
+    ['overlay.js', 'discovery.js'],
     // Phase 5: Engine + Search service — depend on everything above
     ['engine.js', 'search-service.js'],
   ];
@@ -428,6 +441,11 @@
     function destroy() {
       try {
         if (State.overlayOpen) OverlayService.close('manual');
+        // v4.0 — Tear down discovery section before the rest so URE
+        // handles inside discovery get a clean shutdown.
+        if (M.DiscoveryService?.destroy) {
+          try { M.DiscoveryService.destroy(); } catch (_) {}
+        }
         VirtualScrollEngine.destroy();
         KeyboardAutoToggleService.disableAutoToggle();
 
@@ -452,6 +470,8 @@
         DOMService.remove(DOMService.get(CONFIG.DOM.suggestionContainerId));
         DOMService.remove(DOMService.get(CONFIG.DOM.overlayContainerId));
         DOMService.remove(DOMService.get(CONFIG.DOM.sentinelId));
+        // v4.0 — Also remove discovery container if it still exists.
+        DOMService.remove(DOMService.get(CONFIG.DOM.discoveryContainerId));
 
         window.__pendingSearch = null;
         _earlyDataPromise      = null;
@@ -460,6 +480,10 @@
         State.allKeywordsCache          = [];
         State.currentResults            = [];
         State.currentFilteredResults    = [];
+        // v4.0 — Clear discovery state
+        State.currentDiscovery          = [];
+        State.discoveryActive           = false;
+        State.discoveryHandle           = null;
         State.lastCommittedSearchState  = null;
         State._handlersAttached         = false;
         State.keyboardAutoToggleEnabled = false;
@@ -503,7 +527,7 @@
 
     // Dispatch ready event for any listeners (matches URE pattern)
     try {
-      window.dispatchEvent(new CustomEvent('search:ready', { detail: { version: '3.0.0' } }));
+      window.dispatchEvent(new CustomEvent('search:ready', { detail: { version: '4.0.0' } }));
     } catch (_) {}
   }
 

@@ -119,6 +119,9 @@
     /**
      * Destroy the active URE instance.
      * Called before a full reset (empty query, destroy lifecycle).
+     *
+     * v4.0 — Also tears down the DiscoveryService URE handle so that
+     *        a full reset cleans up both primary results and discovery.
      */
     disconnectRenderObserver() {
       if (_searchHandle) {
@@ -126,6 +129,10 @@
         _searchHandle = null;
       }
       DOMService.remove(DOMService.get(CONFIG.DOM.sentinelId));
+      // v4.0 — Tear down discovery section too so it doesn't leak.
+      if (M.DiscoveryService?.clearDiscovery) {
+        try { M.DiscoveryService.clearDiscovery(); } catch (_) {}
+      }
     },
 
     /**
@@ -152,6 +159,12 @@
      * Subsequent calls: handle.setData() — diff-aware, only changed nodes repaint.
      * Empty results: destroy URE instance, show plain empty state HTML.
      *
+     * v4.0 — After rendering primary results, also triggers DiscoveryService
+     *        to render the discovery section below. The discovery section
+     *        shows related items so the user can keep exploring after the
+     *        primary results. On empty results, discovery replaces the old
+     *        random-5-suggestions block with a larger scrollable list.
+     *
      * @param {SearchResult[]} results
      * @param {boolean}        [showSuggestionsIfNoResult=false]
      */
@@ -177,6 +190,11 @@
             window.scrollTo({ top: 0, behavior: 'instant' });
             if (window._showStickyHeader) window._showStickyHeader();
           }
+          // v4.0 — Empty-state discovery: surface related items so the
+          // user has something to explore even when search returns nothing.
+          // DiscoveryService.renderDiscovery handles the empty-state case
+          // by showing the first N items from the dataset.
+          this._triggerDiscovery('');
           return;
         }
 
@@ -208,29 +226,76 @@
           if (window._showStickyHeader) window._showStickyHeader();
         }
 
+        // v4.0 — Trigger discovery rendering after primary results.
+        // Reads the query from the input so we don't need an extra param.
+        this._triggerDiscovery(this._currentQuery());
+
         M.UIService.updateUILanguage();
       } catch (e) {
         console.error('[RenderingService] renderResults failed', e);
       }
     },
 
-    /** @private */
-    _renderEmpty(container, lang, showSuggestions) {
-      let html = `<div class="no-result">${LanguageService.t('not_found')}</div>`;
-      if (showSuggestions) {
-        html += `<div class="suggestions-title-main">${LanguageService.t('suggestions_for_you')}</div><div class="suggestions-block-list">`;
-        const t0 = State.apiData?.type?.[0];
-        const c0 = t0?.category?.[0];
-        for (const it of (c0?.data?.slice(0, 5) || [])) {
-          html += this.renderResultItem({
-            item: it, typeObj: t0, category: c0,
-            itemName: it.name?.[lang] || it.name?.en || '',
-            typeName: t0?.name?.[lang] || t0?.name?.en || '',
-            catName:  c0?.name?.[lang] || c0?.name?.en || '',
-          }, lang);
-        }
-        html += '</div>';
+    /**
+     * Read the current query from the search input.
+     * Used by renderResults() to pass the query to DiscoveryService
+     * without changing the public method signature.
+     * @returns {string}
+     * @private
+     */
+    _currentQuery() {
+      try {
+        const inp = DOMService.get(CONFIG.DOM.searchInputId);
+        return inp?.value || '';
+      } catch { return ''; }
+    },
+
+    /**
+     * Trigger discovery rendering via DiscoveryService.
+     *
+     * This is a thin wrapper that defends against DiscoveryService not
+     * being loaded yet (e.g., during early boot). If DiscoveryService
+     * is unavailable, the call is silently skipped — primary results
+     * still render normally.
+     *
+     * @param {string} query
+     * @private
+     */
+    _triggerDiscovery(query) {
+      try {
+        if (!M.DiscoveryService?.renderDiscovery) return;
+        M.DiscoveryService.renderDiscovery(query, State.currentResults || []);
+      } catch (e) {
+        console.warn('[RenderingService] _triggerDiscovery failed:', e);
       }
+    },
+
+    /**
+     * Render the empty-state UI.
+     *
+     * v4.0 — Friendlier, smaller copy. The old empty state showed a
+     *        large "ไม่พบข้อมูลที่ตรงหรือใกล้เคียง" message followed by
+     *        5 random suggestions. The new empty state shows a smaller,
+     *        friendlier message ("ไม่พบผลลัพธ์สำหรับคำค้นนี้ — ลองดูสิ่งเหล่านี้แทน")
+     *        and lets DiscoveryService handle the suggestion list below.
+     *
+     *        The random 5 suggestions were removed because DiscoveryService
+     *        now renders a larger, scrollable discovery list (12 items in
+     *        empty state, 60 items in normal state) that gives the user
+     *        more to explore.
+     *
+     * @private
+     */
+    _renderEmpty(container, lang, showSuggestions) {
+      // v4.0 — Smaller, friendlier empty-state message.
+      // The discovery section below (rendered by DiscoveryService) shows
+      // related items the user can explore, so we keep this header minimal.
+      const notFound = LanguageService.t('not_found');
+      const hint     = LanguageService.t('not_found_hint');
+      let html = '<div class="no-result no-result--compact">';
+      html += `<div class="no-result__title">${notFound}</div>`;
+      html += `<div class="no-result__hint">${hint}</div>`;
+      html += '</div>';
       DOMService.setHTML(container, html);
       const cfEl = DOMService.get(CONFIG.DOM.categoryFilterId);
       if (cfEl) cfEl.style.display = '';

@@ -839,6 +839,202 @@
     return immediateSearch(qRaw, typeFilter);
   }
 
+  // ── Discovery: related-content query (v4.0) ──────────────────────────────
+  //
+  // WHY this exists:
+  //   The user wanted a YouTube-style discovery experience: after showing
+  //   the primary search results, keep surfacing related items so the
+  //   user can discover new content continuously — instead of just a
+  //   short random recommendation block at the bottom of empty states.
+  //
+  // Design (aerospace: deterministic, bounded, fail-safe):
+  //   1. Inspect the top-N primary results to find the dominant type
+  //      and category. These form the "signal" for relatedness.
+  //   2. Walk the full _docs index (bounded by maxRelatedItems + headroom)
+  //      and score every candidate that isn't already in the primary
+  //      results. Score = weighted sum of:
+  //        • sameCategory weight (highest signal)
+  //        • sameType weight
+  //        • tokenOverlap weight (item name shares tokens with query)
+  //   3. Sort by score descending, then by original index for stable
+  //      tie-breaking (deterministic output).
+  //   4. Return up to maxCount items.
+  //
+  //   The result is a deterministic, bounded, type/category-driven
+  //   recommendation list that doesn't depend on randomness. Same
+  //   query + same data → same discovery list, every time.
+
+  /**
+   * Tokenise a query into lowercase word tokens for overlap scoring.
+   * Splits on whitespace and punctuation. Returns at most 8 tokens
+   * (bounded — most queries have ≤ 4 tokens anyway).
+   *
+   * @param {string} q
+   * @returns {Set<string>}
+   */
+  function _tokenizeQuery(q) {
+    const out = new Set();
+    const str = String(q || '').toLowerCase();
+    let cur = '';
+    for (let i = 0; i < str.length; i++) {
+      const c = str.charCodeAt(i);
+      // Latin letter, digit, or Thai char → part of token
+      const isWord = (c >= 0x61 && c <= 0x7A)   // a-z
+                  || (c >= 0x30 && c <= 0x39)   // 0-9
+                  || (c >= 0x0E00 && c <= 0x0E7F); // Thai
+      if (isWord) {
+        cur += str[i];
+      } else if (cur) {
+        if (out.size < 8) out.add(cur);
+        cur = '';
+      }
+    }
+    if (cur && out.size < 8) out.add(cur);
+    return out;
+  }
+
+  /**
+   * Compute related items for the discovery section.
+   *
+   * @param {string}        q               The original query (for token overlap)
+   * @param {SearchResult[]} primaryResults The primary search results (for signal)
+   * @param {number}        [maxCount]      Max items to return
+   * @returns {DiscoveryItem[]}
+   */
+  function queryRelated(q, primaryResults, maxCount) {
+    try {
+      const cfg = (M.CONFIG && M.CONFIG.DISCOVERY) || {
+        maxRelatedItems: 60, sampleTopN: 8,
+        minResultsForDiscovery: 1, emptyStateMaxItems: 12,
+        weights: { sameType: 1.0, sameCategory: 1.5, tokenOverlap: 0.5 },
+      };
+      const limit = Math.min(maxCount || cfg.maxRelatedItems, cfg.maxRelatedItems);
+      const sampleN = cfg.sampleTopN || 8;
+      const weights = cfg.weights || { sameType: 1.0, sameCategory: 1.5, tokenOverlap: 0.5 };
+
+      if (!_docs.length) return [];
+
+      // Build a Set of primary result item apis for fast dedup.
+      // We dedup by api (the canonical item key, same as URE keyField).
+      const primaryApis = new Set();
+      const pr = Array.isArray(primaryResults) ? primaryResults : [];
+      for (let i = 0; i < pr.length; i++) {
+        const it = pr[i]?.item || pr[i];
+        const api = it?.api || '';
+        if (api) primaryApis.add(api);
+      }
+
+      // Find dominant type and category from top-N primary results.
+      // We use a simple frequency count — O(N) bounded by sampleN.
+      const typeCount = Object.create(null);
+      const catCount  = Object.create(null);
+      const sampleEnd = Math.min(pr.length, sampleN);
+      for (let i = 0; i < sampleEnd; i++) {
+        const tk = pr[i]?.typeName || pr[i]?.typeObj?.name?.en || '';
+        const ck = pr[i]?.catName  || pr[i]?.category?.name?.en || '';
+        if (tk) typeCount[tk] = (typeCount[tk] || 0) + 1;
+        if (ck) catCount[ck]  = (catCount[ck]  || 0) + 1;
+      }
+      let dominantType = '';
+      let dominantTypeN = 0;
+      for (const k in typeCount) {
+        if (typeCount[k] > dominantTypeN) { dominantType = k; dominantTypeN = typeCount[k]; }
+      }
+      let dominantCat = '';
+      let dominantCatN = 0;
+      for (const k in catCount) {
+        if (catCount[k] > dominantCatN) { dominantCat = k; dominantCatN = catCount[k]; }
+      }
+
+      // Tokenise the query once for overlap scoring.
+      const queryTokens = _tokenizeQuery(q);
+
+      // Score every doc that isn't in the primary results.
+      // Bounded: we cap candidates at limit * 3 to keep worst-case
+      // latency predictable on very large datasets.
+      const scored = [];
+      const cap = Math.min(_docs.length, Math.max(limit * 3, 30));
+      for (let i = 0; i < cap; i++) {
+        const d = _docs[i];
+        if (!d) continue;
+        // Dedup against primary results
+        if (primaryApis.has(d.api || '')) continue;
+
+        let score = 0;
+        let reason = '';
+
+        // Same category as dominant → strongest signal
+        if (dominantCat && (d.categoryKey || '') === dominantCat) {
+          score += weights.sameCategory;
+          reason = 'same-category';
+        }
+        // Same type as dominant
+        if (dominantType && (d.typeKey || '') === dominantType) {
+          score += weights.sameType;
+          if (!reason) reason = 'same-type';
+        }
+        // Token overlap: does the item name share any token with the query?
+        if (queryTokens.size && d.name) {
+          const nameLower = String(d.name).toLowerCase();
+          // Simple substring check per token — bounded by queryTokens.size (≤ 8)
+          let overlap = false;
+          for (const tok of queryTokens) {
+            if (tok.length >= 2 && nameLower.indexOf(tok) >= 0) { overlap = true; break; }
+          }
+          if (overlap) {
+            score += weights.tokenOverlap;
+            if (!reason) reason = 'token-overlap';
+          }
+        }
+
+        // Only keep candidates with score > 0 OR if we have no signal
+        // (no dominant type/category), keep everything so the user sees
+        // some discovery content rather than nothing.
+        if (score > 0 || (!dominantType && !dominantCat)) {
+          scored.push({
+            item    : d.rawItem,
+            typeObj : d.typeObj,
+            category: d.category,
+            typeName: d.typeKey,
+            catName : d.categoryKey,
+            itemName: d.name || '',
+            score   : score,
+            reason  : reason || 'fallback',
+            // Stable tiebreaker: original index (lower = earlier in dataset)
+            _idx    : i,
+          });
+        }
+      }
+
+      // Sort by score desc, then by original index asc (stable).
+      scored.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return a._idx - b._idx;
+      });
+
+      // Slice to limit and strip internal _idx field.
+      const out = [];
+      for (let i = 0; i < scored.length && out.length < limit; i++) {
+        const s = scored[i];
+        out.push({
+          item    : s.item,
+          typeObj : s.typeObj,
+          category: s.category,
+          typeName: s.typeName,
+          catName : s.catName,
+          itemName: s.itemName,
+          score   : s.score,
+          reason  : s.reason,
+        });
+      }
+      return out;
+    } catch (e) {
+      // Fail-safe: never throw from discovery — log and return []
+      console.error('[SearchEngine] queryRelated failed:', e);
+      return [];
+    }
+  }
+
   // ── Fuse build scheduler ─────────────────────────────────────────────────
 
   /**
@@ -978,6 +1174,10 @@
     generateAllKeywords: function () { return generateAllKeywords(); },
     querySuggestions: function (q, maxCount) { return querySuggestions(q, maxCount); },
     search: function (q, typeFilter) { return search(q, typeFilter); },
+    // v4.0 — Discovery: related-content query
+    queryRelated: function (q, primaryResults, maxCount) {
+      return queryRelated(q, primaryResults, maxCount);
+    },
 
     /**
      * Internal accessors — used by suggestion service and tests.
@@ -997,6 +1197,8 @@
       getLangs: () => _langs.slice(),
       options: () => Object.assign({}, _options),
       pickFuseThreshold,
+      // v4.0 — Exposed for unit testing discovery
+      tokenizeQuery: _tokenizeQuery,
     },
   };
 

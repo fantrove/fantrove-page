@@ -8,6 +8,11 @@
  *  • Each field is owned by ONE service (noted in types.js).
  *  • Handlers is a bag of removable listener references for destroy().
  *
+ * v4.0 — Added discovery state fields (currentDiscovery, discoveryActive,
+ *        discoveryHandle) and discoveryScroll handler reference. These
+ *        power the new Discovery system that surfaces related content
+ *        after primary search results.
+ *
  * @module state
  * @depends {types.js}
  */
@@ -26,6 +31,15 @@
     selectedType             : 'all',
     selectedCategory         : 'all',
     lastCommittedSearchState : null,
+
+    // ── Discovery state — owned by [DiscoveryService] (v4.0) ────────────────
+    // Related content surfaced after primary search results.
+    // currentDiscovery holds the DiscoveryItem[] currently rendered.
+    // discoveryActive is true whenever the discovery section is visible.
+    // discoveryHandle is the URE handle for the discovery list (internal).
+    currentDiscovery         : [],
+    discoveryActive          : false,
+    discoveryHandle          : null,
 
     // ── Overlay state ────────────────────────────────────────────────────────
     overlayOpen              : false,
@@ -78,6 +92,8 @@
     documentKeydownOverlay  : null,
     popstate                : null,
     copyClick               : null,
+    // v4.0 — Discovery infinite-scroll handler (attached to window)
+    discoveryScroll         : null,
   };
 
   M.State    = State;

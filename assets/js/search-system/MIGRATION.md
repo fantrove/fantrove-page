@@ -321,8 +321,131 @@ single-character queries ทุกตัวได้อย่างน้อย 
 
 ## 10. อ้างอิงข้ามเอกสาร
 
-- [`02-Search-System.md`](../fantrove-docs/02-Search-System.md) — เอกสารระบบ Search (จะถูกอัปเดต)
+- [`02-Search-System.md`](../fantrove-docs/02-Search-System.md) — เอกสารระบบ Search (section 19 ครอบคลุม v4.0)
 - [`00-System-Architecture.md`](../fantrove-docs/00-System-Architecture.md) — ภาพรวมสถาปัตยกรรม
 - [`01-Virtual-Scroll-Rendering.md`](../fantrove-docs/01-Virtual-Scroll-Rendering.md) — URE ที่ใช้ render ผลลัพธ์
 - [`AI_CODING_GUIDE.md`](../fantrove-docs/AI_CODING_GUIDE.md) — มาตรฐานโค้ดที่ยึด
 - [`AI_FORBIDDEN.md`](../fantrove-docs/AI_FORBIDDEN.md) — กฎเหล็กก่อนแตะ Search
+
+---
+
+## 11. v4.0 — Discovery System & Smart Language Detection
+
+> v4.0 เป็น **drop-in replacement** สำหรับ v3.0 — ไม่ต้องแก้ HTML หรือ JavaScript อื่น การเปลี่ยนแปลงทั้งหมดอยู่ภายใน `search-system/` folder
+
+### 11.1 ภาพรวมการเปลี่ยนแปลง
+
+v4.0 เพิ่ม 4 ฟีเจอร์หลัก:
+
+1. **Discovery System** — YouTube-style related content section ที่ปรากฏใต้ผลลัพธ์หลัก ช่วยให้ผู้ใช้ค้นพบสิ่งใหม่ๆ ได้ตลอดเวลา
+2. **Smart Language Detection** — ตรวจจับภาษาหลักของ query และ re-rank suggestions ให้ภาษาเดียวกับ query ขึ้นก่อน (แก้ปัญหา "พิมพ์อังกฤษแต่ได้คำแนะนำไทย")
+3. **Friendlier UI Copy** — ปรับข้อความ UI ทั้งหมดให้เป็นมิตรขึ้น คล้าย Google/YouTube
+4. **Aerospace Architecture Tightening** — เพิ่ม deterministic bounded loops, fail-safe defaults, single-responsibility modules
+
+### 11.2 ไฟล์ใหม่
+
+| ไฟล์ | บทบาท |
+|------|--------|
+| `assets/js/search-system/search-modules/discovery.js` | DiscoveryService — render related content section |
+
+### 11.3 ไฟล์ที่แก้
+
+| ไฟล์ | การเปลี่ยนแปลง |
+|------|-----------------|
+| `config.js` | เพิ่ม `DISCOVERY` config + `LANG_WEIGHT` config + TEXTS ใหม่ (not_found_hint, discovery_label, discovery_more, discovery_hint) + DISCOVERY DOM IDs |
+| `types.js` | เพิ่ม `DiscoveryConfig`, `LangWeightConfig`, `DiscoveryItem`, `QueryLanguageInfo` typedefs; ขยาย `SearchState` ด้วย discovery fields |
+| `state.js` | เพิ่ม `currentDiscovery`, `discoveryActive`, `discoveryHandle` fields; เพิ่ม `discoveryScroll` handler ref |
+| `utils.js` | เพิ่ม `LanguageService.detectQueryLanguage()` + `LanguageService.hasThaiChars()` |
+| `engine.js` | เพิ่ม `queryRelated()` method + `_tokenizeQuery()` helper |
+| `suggestions.js` | เพิ่ม smart language re-ranking; ปรับ ReadyModeService ให้ re-rank ตาม UI language |
+| `rendering.js` | ปรับ `renderResults()` ให้ trigger DiscoveryService; ปรับ `_renderEmpty()` ให้ compact; ปรับ `disconnectRenderObserver()` ให้ clear discovery |
+| `search.js` | เพิ่ม `discovery.js` ใน Phase 4; ปรับ `destroy()` ให้ teardown DiscoveryService; bump version เป็น 4.0.0 |
+| `search-system.css` | เพิ่ม styles สำหรับ `.discovery-section`, `.discovery-header`, `.discovery-title`, `.discovery-hint`, `.discovery-list`, `.no-result--compact`, `.no-result__title`, `.no-result__hint` |
+
+### 11.4 Backward Compatibility
+
+v4.0 **ไม่ทำลาย** API เดิมใดๆ:
+
+| API | v3.0 | v4.0 |
+|-----|------|------|
+| `window.__searchUI.init()` | ✓ | ✓ |
+| `window.__searchUI.destroy()` | ✓ | ✓ (เพิ่ม teardown discovery) |
+| `window.__searchUI.querySuggestions(q)` | ✓ | ✓ (re-ranked ตามภาษา) |
+| `window.SearchEngine.search(q, type)` | ✓ | ✓ |
+| `window.SearchEngine.querySuggestions(q, n)` | ✓ | ✓ |
+| `window.SearchEngine.generateAllKeywords()` | ✓ | ✓ |
+| `window.SearchEngine._internals.*` | ✓ | ✓ (เพิ่ม `tokenizeQuery`) |
+| HTML `<script>` tag | เดิม | เดิม (ไม่ต้องแก้) |
+| CSS files | เดิม | เดิม + `search-system.css` auto-inject |
+
+### 11.5 Public API ใหม่
+
+```javascript
+// SearchEngine (engine.js)
+window.SearchEngine.queryRelated(q, primaryResults, maxCount)
+// → DiscoveryItem[]  (deterministic, scored, deduped)
+
+// LanguageService (utils.js)
+window.SearchModules.LanguageService.detectQueryLanguage(query)
+// → QueryLanguageInfo { language, thaiChars, latinChars, reason, confident }
+
+window.SearchModules.LanguageService.hasThaiChars(s)
+// → boolean
+
+// DiscoveryService (discovery.js) — module ใหม่
+window.SearchModules.DiscoveryService.renderDiscovery(query, primaryResults)
+window.SearchModules.DiscoveryService.clearDiscovery()
+window.SearchModules.DiscoveryService.refreshDiscovery()
+window.SearchModules.DiscoveryService.destroy()
+window.SearchModules.DiscoveryService.isActive()  // → boolean
+window.SearchModules.DiscoveryService.getItems()  // → DiscoveryItem[]
+```
+
+### 11.6 การ Migrate จาก v3.0 → v4.0
+
+**ไม่ต้องทำอะไร** — v4.0 เป็น drop-in replacement:
+
+1. HTML ยังโหลดไฟล์เดิม 1 ไฟล์:
+   ```html
+   <script defer src="/assets/js/search-system/search.js?v=..."></script>
+   ```
+
+2. ไม่ต้องแก้ JavaScript อื่น — public API เหมือนเดิม
+
+3. ไม่ต้องแก้ CSS — `search-system.css` auto-inject โดย `search.js`
+
+4. ถ้าเคยใช้ `window.__searchUI.querySuggestions(q)` จะได้ผลลัพธ์ re-ranked ตามภาษาอัตโนมัติ
+
+### 11.7 Rollback Plan (v4.0 → v3.0)
+
+ถ้า v4.0 มีปัญหา สามารถ rollback กลับเป็น v3.0 ได้โดย:
+
+1. Restore ไฟล์ v3.0 จาก git:
+   ```bash
+   git checkout HEAD~1 -- assets/js/search-system/
+   ```
+
+2. ไม่ต้องแก้ HTML — ไฟล์ v3.0 ใช้ path เดียวกัน
+
+3. Discovery section จะหายไป แต่ primary results ยังทำงานปกติ
+
+### 11.8 การทดสอบ
+
+Logic test สำหรับ `detectQueryLanguage` และ `_tokenizeQuery`:
+
+```bash
+node /home/z/my-project/scripts/test-discovery-logic.js
+# Expected: 22/22 pass
+```
+
+Test cases ครอบคลุม:
+- Pure English / Pure Thai queries
+- Mixed-language queries (English with stray Thai char, vice versa)
+- Edge cases (empty query, single char, equal counts)
+- Dominance ratio boundary (3:2 = 1.5, exactly at threshold)
+
+### 11.9 อ้างอิงเพิ่มเติม
+
+- [`02-Search-System.md` section 19](../fantrove-docs/02-Search-System.md#19-v40--discovery-system--smart-language-detection) — เอกสาร v4.0 ฉบับเต็ม
+- [`AI_CODING_GUIDE.md`](../fantrove-docs/AI_CODING_GUIDE.md) — มาตรฐานโค้ดที่ยึด
+- [`AI_FORBIDDEN.md`](../fantrove-docs/AI_FORBIDDEN.md) — กฎเหล็กที่ปฏิบัติตาม
