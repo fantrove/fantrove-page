@@ -56,6 +56,25 @@ function buildUrlEntries(htmlFiles, langs) {
   const entries = [];
   const today = new Date().toISOString().slice(0, 10);
 
+  // ── [FIX 2026-07-28] เพิ่ม root URL '/' entry ละบ้านสุด ────────────────
+  // เหตุผล: _redirects ใช้ rewrite 200 ส่ง home content มาที่ URL / ตรงๆ
+  // (ไม่ใช่ redirect 302 แล้ว) → URL / กลายเป็น indexable หน้าหนึ่ง
+  // ต้องมี entry ใน sitemap เพื่อให้ Google รู้ว่ามีหน้านี้อยู่และควร crawl
+  // priority 1.0 เท่ากับ home page (เพราะ content เดียวกัน)
+  // canonical ในหน้า / ชี้ไป /{defaultLang}/home/ → Google จะ index canonical
+  // แต่ยังคง crawl / และเข้าใจว่าเป็น duplicate (ไม่ใช่ redirect อีกต่อไป)
+  const rootAlternates = langs.map(l => ({
+    lang: l,
+    href: `${CONFIG.baseUrl}/${l}${ROOT_PAGE_PATH}`
+  }));
+  entries.push({
+    loc: `${CONFIG.baseUrl}/`,
+    lastmod: today,
+    changefreq: 'weekly',
+    priority: '1.0',
+    alternates: rootAlternates
+  });
+
   for (const file of htmlFiles) {
     // compute relative path from root
     let rel = path.relative(CONFIG.srcDir, file).replace(/\\/g, '/');
@@ -140,7 +159,9 @@ function main() {
     process.exit(1);
   }
 
-  const htmlFiles = findHtmlFiles(CONFIG.srcDir, ['dist', 'node_modules', '.git', 'scripts', '.cloudflare']);
+  // [FIX 2026-07-28] sync exclude list กับ build.js เพื่อไม่ให้ google verification
+  // file รั่วเข้า sitemap (มันคือ google site verification file ไม่ใช่ content page)
+  const htmlFiles = findHtmlFiles(CONFIG.srcDir, ['dist', 'node_modules', '.git', 'scripts', '.cloudflare', 'google6b646fa60e0f9f2f.html']);
   console.log(`[sitemap] Found ${htmlFiles.length} HTML files`);
 
   const entries = buildUrlEntries(htmlFiles, langs);

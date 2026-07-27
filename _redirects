@@ -6,6 +6,13 @@
 #          (including /sitemap.xml, /robots.txt, /assets/*) and serves the
 #          404 page's HTML for everything — including to search engine bots.
 # Used by: Cloudflare Pages build system (only when build output = repo root)
+#
+# [FIX 2026-07-28] เปลี่ยน root + lang-root rules จาก 302 redirect เป็น
+# 200 rewrite ทั้งหมด เพื่อให้ Googlebot crawl /, /en, /th ได้ตรงๆ โดยไม่
+# ติด "Page with redirect" ใน GSC. URL ใน address bar คงเดิม แต่ server
+# ส่ง content จาก home page มาแสดง → หน้า / กลายเป็น indexable และ
+# canonical ชี้ไป /en/home/ (อยู่ใน source HTML อยู่แล้ว) → Google index
+# canonical URL ส่วน / ไม่ใช่ redirect อีกต่อไป
 
 # ── Static files (passthrough) ─────────────────────────────────────────────
 /assets/* /assets/:splat 200
@@ -14,7 +21,20 @@
 /favicon.ico /assets/images/fantrove-verse360.ico 200
 /sw.js /sw.js 200
 
+# ── Root → home page (REWRITE, not redirect) ───────────────────────────────
+# URL ใน address bar คงเดิม แต่ content มาจาก /home/index.html
+# ทำให้ / ตอบ 200 OK พร้อม content ของ home → indexable โดย Google
+/ /home/index.html 200
+/index.html /home/index.html 200
+
+# ── Language root → home (REWRITE, not redirect) ───────────────────────────
+/en  /home/index.html 200
+/en/ /home/index.html 200
+/th  /home/index.html 200
+/th/ /home/index.html 200
+
 # ── Explicitly route language pages ────────────────────────────────────────
+# ลบ prefix ภาษาออก แล้วส่งต่อไปยัง static file ที่อยู่จริง
 /en/* /:splat 200
 /th/* /:splat 200
 

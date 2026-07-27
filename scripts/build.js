@@ -357,22 +357,23 @@ async function build() {
 /**
  * สร้าง _redirects สำหรับ Cloudflare Pages (production build)
  *
- * โครงสร้างแยก root redirect ออกจาก lang page rewrites ชัดเจน
+ * โครงสร้างแยก root rewrite ออกจาก lang page rewrites ชัดเจน
  * (เหมือนโครงสร้างของ _redirects dev ที่ใช้อยู่)
  *
  * [FIX 2026-07-28] redirect targets ทั้งหมดต้อง "มี" trailing slash เสมอ
  * (เช่น `/en/home/` ไม่ใช่ `/en/home`) ต้องตรงกับ _deriveCanonicalPath()
  * ใน html-transformer.js และ ROOT_PAGE_PATH ใน generate-sitemap.js เป๊ะ
  *
- * เหตุผลที่เปลี่ยนจาก "ไม่มี slash" (เวอร์ชันก่อนหน้า) มาเป็น "มี slash":
- * output ของ build นี้เป็น dist/{lang}/{path}/index.html (ไฟล์อยู่ใน
- * directory) ซึ่ง Cloudflare Pages จะ 308-redirect คำขอที่ไม่มี trailing
- * slash ไปยัง URL ที่มี slash เองโดยอัตโนมัติ (พฤติกรรมนี้เกิดที่ชั้น asset
- * server ของ Cloudflare ไม่ใช่จาก _redirects rule ในไฟล์นี้) ถ้า target ที่
- * เรากำหนดไม่มี slash → ตัว target เองจะโดน redirect ซ้ำอีกชั้น ทำให้ URL ที่
- * ประกาศเป็น canonical/sitemap ไม่ตอบ 200 ตรงๆ → GSC ขึ้น
- * "Page with redirect" และไม่ index หน้านั้น (เจอปัญหานี้จริงกับ /en/home,
- * /th/home, /home/, / เมื่อ 2026-07)
+ * [FIX 2026-07-28 v2] เปลี่ยน root + lang-root rules จาก 302 redirect
+ * เป็น 200 rewrite (URL เดิม, content จากอีก path) เพื่อแก้ปัญหา GSC
+ * "Page with redirect" ที่ทำให้ Google ไม่ index หน้า /, /en, /th
+ * เพราะ Googlebot เจอ redirect chain (server 302 + lang-proxy.js JS
+ * redirect) และทิ้งงาน indexing. ตอนนี้ใช้ rewrite 200 หมด → URL คงเดิม
+ * ใน address bar แต่ได้ content ของ home page → Googlebot crawl ได้
+ * ตรงๆ ไม่มี redirect. ในหน้ามี canonical ชี้ไป /{lang}/home/ อยู่แล้ว
+ * → Google จะ index canonical URL ส่วน / เองจะถูกมองเป็น duplicate
+ * (indexable แต่ canonical อยู่ที่อื่น) แทนที่จะเป็น "Page with redirect"
+ * (ไม่ index) — ดีกว่ากันมาก
  *
  * ต้องแก้ 3 ไฟล์นี้พร้อมกันเสมอ ห้ามแก้ไฟล์เดียว:
  *   - scripts/lib/html-transformer.js (_deriveCanonicalPath)
@@ -397,16 +398,19 @@ function _generateRedirects(langs, defaultLang) {
 
   lines.push(
     '',
-    '# ── Root → default language ──────────────────────────────────────────',
-    `/ /${defaultLang}/home/ 302`,
-    `/index.html /${defaultLang}/home/ 302`,
+    '# ── Root → default language home (REWRITE, not redirect) ───────────',
+    '# URL ใน address bar คงเดิม (/, /index.html) แต่ content มาจาก home page',
+    '# หน้า home มี canonical ชี้ไป /{defaultLang}/home/ อยู่แล้ว → Google',
+    '# จะ index canonical URL ไม่ใช่ / แต่ / ไม่ใช่ "Page with redirect"',
+    `/ /${defaultLang}/home/ 200`,
+    `/index.html /${defaultLang}/home/ 200`,
     '',
-    '# ── Language root → home ────────────────────────────────────────────',
+    '# ── Language root → home (REWRITE, not redirect) ───────────────────',
   );
 
   for (const lang of langs) {
-    lines.push(`/${lang}  /${lang}/home/ 302`);
-    lines.push(`/${lang}/ /${lang}/home/ 302`);
+    lines.push(`/${lang}  /${lang}/home/ 200`);
+    lines.push(`/${lang}/ /${lang}/home/ 200`);
   }
 
   lines.push(
@@ -427,6 +431,7 @@ function _generateRedirects(langs, defaultLang) {
     '/favicon.ico /assets/images/fantrove-hub360.ico 200',
     '',
     '# ── Fallback ─────────────────────────────────────────────────────────',
+    '# 404 status ส่ง home page content (ดีกว่าส่ง 404 page เปล่าๆ)',
     `/* /${defaultLang}/home/ 404`,
     '',
   );

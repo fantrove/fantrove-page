@@ -11,6 +11,17 @@ const path = require('path');
 /**
  * Recursively find all .html files under `dir`, excluding specified folders.
  *
+ * [FIX 2026-07-28] แก้ bug ใน exclude check:
+ *   เดิมใช้ `rel = fullPath` (absolute path) เทียบกับ `ex` (relative pattern
+ *   เช่น 'dist') ทำให้ exclude ไม่ทำงานเลย เพราะ absolute path ไม่มีทาง
+ *   `=== 'dist'` หรือ `startsWith('dist/')`. ผลที่ตามมา: build script สแกน
+ *   HTML ใน `dist/` จากการ build ครั้งก่อน → ปรากฏใน sitemap เป็น
+ *   `/en/dist/...` (รั่วเข้า sitemap จริงใน production)
+ *
+ *   วิธีแก้: เทียบ `entry` (ชื่อ directory ตรงๆ) กับแต่ละ exclude pattern
+ *   แทน และเพิ่มเทียบ relative path (เทียบกับ root `dir`) ด้วยเพื่อรองรับ
+ *   exclude pattern แบบ path prefix เช่น 'scripts/hooks'
+ *
  * @param {string}   dir      — root directory to search
  * @param {string[]} exclude  — directory names / path prefixes to skip
  * @param {string[]} [files]  — accumulator (internal)
@@ -23,26 +34,39 @@ function findHtmlFiles(dir, exclude = [], files = []) {
   } catch (e) {
     return files;
   }
-  
+
   for (const entry of entries) {
     const fullPath = path.join(dir, entry);
-    const rel = fullPath.replace(/\\/g, '/').replace(/^\.\//, '');
-    
-    // Skip excluded paths
-    if (exclude.some(ex => rel === ex || rel.startsWith(ex + '/'))) continue;
+    // relative path from the ORIGINAL root (passed in as `dir` on first call)
+    // — แต่ recursion ส่ง fullPath เข้ามา จึงต้องใช้ entry สำหรับ top-level
+    //   exclude check และ relative path สำหรับ nested exclude check
+    const relFromRoot = path.relative(dir, fullPath).replace(/\\/g, '/');
+
+    // Skip excluded paths — แก้ bug ใหม่: เทียบทั้ง entry name และ relFromRoot
+    const isExcluded = exclude.some(ex => {
+      if (!ex) return false;
+      // 1) exact match on entry name (e.g. ex='dist', entry='dist')
+      if (entry === ex) return true;
+      // 2) exact match on relative path from root (e.g. ex='scripts/hooks')
+      if (relFromRoot === ex) return true;
+      // 3) relFromRoot starts with ex + '/' (e.g. ex='scripts', rel='scripts/hooks')
+      if (relFromRoot.startsWith(ex + '/')) return true;
+      return false;
+    });
+    if (isExcluded) continue;
     // Skip hidden directories
     if (entry.startsWith('.')) continue;
-    
+
     let stat;
     try { stat = fs.statSync(fullPath); } catch { continue; }
-    
+
     if (stat.isDirectory()) {
       findHtmlFiles(fullPath, exclude, files);
     } else if (entry.endsWith('.html')) {
       files.push(fullPath.replace(/\\/g, '/'));
     }
   }
-  
+
   return files;
 }
 
