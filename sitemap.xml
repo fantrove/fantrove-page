@@ -1,11 +1,519 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://fantrove.pages.dev/en/assets/template-html/footer-template/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/assets/template-html/footer-template/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/assets/template-html/footer-template/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/assets/template-html/footer-template/"/>
+  </url>
 
-  <!-- Home -->
+  <url>
+    <loc>https://fantrove.pages.dev/en/assets/template-html/home-templates/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/assets/template-html/home-templates/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/assets/template-html/home-templates/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/assets/template-html/home-templates/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/assets/template-html/intro-template/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/assets/template-html/intro-template/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/assets/template-html/intro-template/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/assets/template-html/intro-template/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/beta/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/beta/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/beta/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/beta/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/cn/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/cn/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/cn/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/cn/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/community/contact/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/community/contact/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/community/contact/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/community/contact/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/community/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/community/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/community/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/community/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/community/report/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/community/report/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/community/report/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/community/report/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/data/verse/discover/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/data/verse/discover/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/data/verse/discover/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/data/verse/discover/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/data/verse/scope/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/data/verse/scope/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/data/verse/scope/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/data/verse/scope/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/assets/template-html/footer-template/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/assets/template-html/footer-template/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/assets/template-html/footer-template/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/assets/template-html/footer-template/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/assets/template-html/home-templates/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/assets/template-html/home-templates/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/assets/template-html/home-templates/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/assets/template-html/home-templates/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/assets/template-html/intro-template/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/assets/template-html/intro-template/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/assets/template-html/intro-template/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/assets/template-html/intro-template/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/en/assets/template-html/footer-template/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/en/assets/template-html/footer-template/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/en/assets/template-html/footer-template/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/en/assets/template-html/footer-template/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/en/assets/template-html/home-templates/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/en/assets/template-html/home-templates/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/en/assets/template-html/home-templates/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/en/assets/template-html/home-templates/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/en/assets/template-html/intro-template/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/en/assets/template-html/intro-template/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/en/assets/template-html/intro-template/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/en/assets/template-html/intro-template/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/en/beta/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/en/beta/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/en/beta/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/en/beta/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/en/cn/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/en/cn/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/en/cn/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/en/cn/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/en/community/contact/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/en/community/contact/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/en/community/contact/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/en/community/contact/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/en/community/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/en/community/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/en/community/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/en/community/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/en/community/report/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/en/community/report/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/en/community/report/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/en/community/report/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/en/data/verse/discover/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/en/data/verse/discover/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/en/data/verse/discover/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/en/data/verse/discover/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/en/data/verse/scope/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/en/data/verse/scope/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/en/data/verse/scope/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/en/data/verse/scope/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/en/home/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/en/home/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/en/home/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/en/home/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/en/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/en/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/en/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/en/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/en/n/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/en/n/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/en/n/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/en/n/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/en/platform/about/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/en/platform/about/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/en/platform/about/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/en/platform/about/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/en/platform/roadmap/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/en/platform/roadmap/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/en/platform/roadmap/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/en/platform/roadmap/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/en/platform/whats_new/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/en/platform/whats_new/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/en/platform/whats_new/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/en/platform/whats_new/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/en/search/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/en/search/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/en/search/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/en/search/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/en/setting/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/en/setting/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/en/setting/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/en/setting/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/google6b646fa60e0f9f2f/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/google6b646fa60e0f9f2f/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/google6b646fa60e0f9f2f/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/google6b646fa60e0f9f2f/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/th/assets/template-html/footer-template/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/th/assets/template-html/footer-template/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/th/assets/template-html/footer-template/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/th/assets/template-html/footer-template/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/th/assets/template-html/home-templates/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/th/assets/template-html/home-templates/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/th/assets/template-html/home-templates/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/th/assets/template-html/home-templates/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/th/assets/template-html/intro-template/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/th/assets/template-html/intro-template/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/th/assets/template-html/intro-template/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/th/assets/template-html/intro-template/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/th/beta/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/th/beta/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/th/beta/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/th/beta/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/th/cn/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/th/cn/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/th/cn/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/th/cn/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/th/community/contact/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/th/community/contact/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/th/community/contact/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/th/community/contact/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/th/community/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/th/community/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/th/community/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/th/community/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/th/community/report/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/th/community/report/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/th/community/report/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/th/community/report/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/th/data/verse/discover/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/th/data/verse/discover/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/th/data/verse/discover/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/th/data/verse/discover/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/th/data/verse/scope/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/th/data/verse/scope/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/th/data/verse/scope/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/th/data/verse/scope/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/th/home/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/th/home/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/th/home/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/th/home/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/th/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/th/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/th/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/th/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/th/n/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/th/n/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/th/n/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/th/n/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/th/platform/about/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/th/platform/about/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/th/platform/about/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/th/platform/about/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/th/platform/roadmap/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/th/platform/roadmap/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/th/platform/roadmap/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/th/platform/roadmap/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/th/platform/whats_new/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/th/platform/whats_new/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/th/platform/whats_new/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/th/platform/whats_new/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/th/search/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/th/search/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/th/search/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/th/search/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/dist/th/setting/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/dist/th/setting/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/dist/th/setting/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/dist/th/setting/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/google6b646fa60e0f9f2f/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/google6b646fa60e0f9f2f/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/google6b646fa60e0f9f2f/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/google6b646fa60e0f9f2f/"/>
+  </url>
+
   <url>
     <loc>https://fantrove.pages.dev/en/home/</loc>
-    <lastmod>2025-06-08</lastmod>
+    <lastmod>2026-07-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/home/"/>
@@ -13,125 +521,63 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/home/"/>
   </url>
 
-  <!-- Search -->
+  <url>
+    <loc>https://fantrove.pages.dev/en/n/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/n/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/n/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/n/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/platform/about/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/platform/about/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/platform/about/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/platform/about/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/platform/roadmap/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/platform/roadmap/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/platform/roadmap/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/platform/roadmap/"/>
+  </url>
+
+  <url>
+    <loc>https://fantrove.pages.dev/en/platform/whats_new/</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/platform/whats_new/"/>
+    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/platform/whats_new/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/platform/whats_new/"/>
+  </url>
+
   <url>
     <loc>https://fantrove.pages.dev/en/search/</loc>
-    <lastmod>2025-06-08</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.9</priority>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/search/"/>
     <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/search/"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/search/"/>
   </url>
 
-  <!-- Discover -->
-  <url>
-    <loc>https://fantrove.pages.dev/en/data/verse/discover/</loc>
-    <lastmod>2025-06-08</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/data/verse/discover/"/>
-    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/data/verse/discover/"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/data/verse/discover/"/>
-  </url>
-
-  <!-- Emojis -->
-  <url>
-    <loc>https://fantrove.pages.dev/en/data/verse/discover/?type=emojis__&amp;page=1</loc>
-    <lastmod>2025-06-08</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/data/verse/discover/?type=emojis__&amp;page=1"/>
-    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/data/verse/discover/?type=emojis__&amp;page=1"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/data/verse/discover/?type=emojis__&amp;page=1"/>
-  </url>
-
-  <!-- Symbols -->
-  <url>
-    <loc>https://fantrove.pages.dev/en/data/verse/discover/?type=symbols__&amp;page=1</loc>
-    <lastmod>2025-06-08</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/data/verse/discover/?type=symbols__&amp;page=1"/>
-    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/data/verse/discover/?type=symbols__&amp;page=1"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/data/verse/discover/?type=symbols__&amp;page=1"/>
-  </url>
-
-  <!-- Special Characters / Fancy Text -->
-  <url>
-    <loc>https://fantrove.pages.dev/en/data/verse/discover/?type=special-characters__&amp;page=1</loc>
-    <lastmod>2025-06-08</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/data/verse/discover/?type=special-characters__&amp;page=1"/>
-    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/data/verse/discover/?type=special-characters__&amp;page=1"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/data/verse/discover/?type=special-characters__&amp;page=1"/>
-  </url>
-
-  <!-- About -->
-  <url>
-    <loc>https://fantrove.pages.dev/en/info/about/</loc>
-    <lastmod>2025-06-08</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/info/about/"/>
-    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/info/about/"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/info/about/"/>
-  </url>
-
-  <!-- What's New -->
-  <url>
-    <loc>https://fantrove.pages.dev/en/info/whats_new/</loc>
-    <lastmod>2025-06-08</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.4</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/info/whats_new/"/>
-    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/info/whats_new/"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/info/whats_new/"/>
-  </url>
-
-  <!-- Roadmap -->
-  <url>
-    <loc>https://fantrove.pages.dev/en/info/roadmap/</loc>
-    <lastmod>2025-06-08</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/info/roadmap/"/>
-    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/info/roadmap/"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/info/roadmap/"/>
-  </url>
-
-  <!-- Contact -->
-  <url>
-    <loc>https://fantrove.pages.dev/en/us/</loc>
-    <lastmod>2025-06-08</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/us/"/>
-    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/us/"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/us/"/>
-  </url>
-
-  <!-- Report -->
-  <url>
-    <loc>https://fantrove.pages.dev/en/us/report/</loc>
-    <lastmod>2025-06-08</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.2</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/us/report/"/>
-    <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/us/report/"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/us/report/"/>
-  </url>
-
-  <!-- Settings -->
   <url>
     <loc>https://fantrove.pages.dev/en/setting/</loc>
-    <lastmod>2025-06-08</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.2</priority>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/setting/"/>
     <xhtml:link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/setting/"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/setting/"/>
   </url>
-
 </urlset>

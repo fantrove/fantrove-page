@@ -360,13 +360,24 @@ async function build() {
  * โครงสร้างแยก root redirect ออกจาก lang page rewrites ชัดเจน
  * (เหมือนโครงสร้างของ _redirects dev ที่ใช้อยู่)
  *
- * สำคัญ: redirect targets ทั้งหมดต้อง "ไม่มี" trailing slash (เช่น
- * `/en/home` ไม่ใช่ `/en/home/`) เพราะต้องตรงกับ _deriveCanonicalPath()
+ * [FIX 2026-07-28] redirect targets ทั้งหมดต้อง "มี" trailing slash เสมอ
+ * (เช่น `/en/home/` ไม่ใช่ `/en/home`) ต้องตรงกับ _deriveCanonicalPath()
  * ใน html-transformer.js และ ROOT_PAGE_PATH ใน generate-sitemap.js เป๊ะ
- * ถ้าไม่ตรงกัน หน้าเว็บจะ redirect ไป URL หนึ่ง แต่ canonical tag บนหน้านั้น
- * ประกาศว่าตัวเองเป็นอีก URL หนึ่ง — Google จะมองว่าเป็นหน้าซ้ำ/สำรอง
- * และไม่ index URL ที่ submit ไป (สาเหตุของ GSC error
- * "Alternate page with proper canonical tag" ที่เจอปัญหานี้มาก่อน)
+ *
+ * เหตุผลที่เปลี่ยนจาก "ไม่มี slash" (เวอร์ชันก่อนหน้า) มาเป็น "มี slash":
+ * output ของ build นี้เป็น dist/{lang}/{path}/index.html (ไฟล์อยู่ใน
+ * directory) ซึ่ง Cloudflare Pages จะ 308-redirect คำขอที่ไม่มี trailing
+ * slash ไปยัง URL ที่มี slash เองโดยอัตโนมัติ (พฤติกรรมนี้เกิดที่ชั้น asset
+ * server ของ Cloudflare ไม่ใช่จาก _redirects rule ในไฟล์นี้) ถ้า target ที่
+ * เรากำหนดไม่มี slash → ตัว target เองจะโดน redirect ซ้ำอีกชั้น ทำให้ URL ที่
+ * ประกาศเป็น canonical/sitemap ไม่ตอบ 200 ตรงๆ → GSC ขึ้น
+ * "Page with redirect" และไม่ index หน้านั้น (เจอปัญหานี้จริงกับ /en/home,
+ * /th/home, /home/, / เมื่อ 2026-07)
+ *
+ * ต้องแก้ 3 ไฟล์นี้พร้อมกันเสมอ ห้ามแก้ไฟล์เดียว:
+ *   - scripts/lib/html-transformer.js (_deriveCanonicalPath)
+ *   - scripts/generate-sitemap.js     (ROOT_PAGE_PATH + buildUrlEntries)
+ *   - scripts/build.js                (_generateRedirects — ไฟล์นี้)
  *
  * @param {string[]} langs
  * @param {string}   defaultLang
@@ -387,15 +398,15 @@ function _generateRedirects(langs, defaultLang) {
   lines.push(
     '',
     '# ── Root → default language ──────────────────────────────────────────',
-    `/ /${defaultLang}/home 302`,
-    `/index.html /${defaultLang}/home 302`,
+    `/ /${defaultLang}/home/ 302`,
+    `/index.html /${defaultLang}/home/ 302`,
     '',
     '# ── Language root → home ────────────────────────────────────────────',
   );
 
   for (const lang of langs) {
-    lines.push(`/${lang}  /${lang}/home 302`);
-    lines.push(`/${lang}/ /${lang}/home 302`);
+    lines.push(`/${lang}  /${lang}/home/ 302`);
+    lines.push(`/${lang}/ /${lang}/home/ 302`);
   }
 
   lines.push(
@@ -416,7 +427,7 @@ function _generateRedirects(langs, defaultLang) {
     '/favicon.ico /assets/images/fantrove-hub360.ico 200',
     '',
     '# ── Fallback ─────────────────────────────────────────────────────────',
-    `/* /${defaultLang}/home 404`,
+    `/* /${defaultLang}/home/ 404`,
     '',
   );
 

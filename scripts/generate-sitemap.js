@@ -4,10 +4,13 @@
 // Path:    scripts/generate-sitemap.js
 // Purpose: Generate sitemap.xml with hreflang alternates for every discovered
 //          HTML file. URL path format MUST match _deriveCanonicalPath() in
-//          scripts/lib/html-transformer.js (no trailing slash) — otherwise
-//          sitemap <loc> entries contradict each page's own canonical tag,
-//          which Google Search Console flags as
-//          "Alternate page with proper canonical tag" (non-indexed).
+//          scripts/lib/html-transformer.js (WITH trailing slash) — otherwise
+//          sitemap <loc> entries point to a URL that Cloudflare Pages 308-
+//          redirects (directory/index.html requires trailing slash), which
+//          Google Search Console flags as "Page with redirect" (non-indexed).
+//          [FIX 2026-07-28] เดิม path นี้ตัด trailing slash ทิ้ง (แก้ปัญหาคนละ
+//          เคสตอนนั้น) แต่กลายเป็นชี้ไป URL ที่ Cloudflare redirect เอง — ดู
+//          WHY-comment เต็มใน html-transformer.js._deriveCanonicalPath()
 // Used by: npm run generate-sitemap ; npm run postbuild (after `npm run build`)
 
 /**
@@ -30,8 +33,9 @@ const { findHtmlFiles, loadDbJson } = require('./lib/file-utils');
 const ROOT = path.resolve(__dirname, '..');
 
 // Path that root index.html (/) maps to. Must match the home page's own
-// canonical path exactly — see _deriveCanonicalPath() in html-transformer.js.
-const ROOT_PAGE_PATH = '/home';
+// canonical path exactly (WITH trailing slash) — see _deriveCanonicalPath()
+// in html-transformer.js.
+const ROOT_PAGE_PATH = '/home/';
 
 const CONFIG = {
   srcDir: ROOT,
@@ -66,24 +70,26 @@ function buildUrlEntries(htmlFiles, langs) {
     }
 
     if (!rel.startsWith('/')) rel = '/' + rel;
-    // ต้อง match กับ _deriveCanonicalPath() ใน html-transformer.js เป๊ะ
-    // (ตัด trailing slash ทิ้ง) ไม่งั้น sitemap ชี้ไปคนละ URL กับ canonical tag จริง
-    rel = rel === '/' ? ROOT_PAGE_PATH : rel.replace(/\/$/, '');
-    const pathNoSlash = rel || ROOT_PAGE_PATH;
+    // [FIX 2026-07-28] เก็บ trailing slash ไว้ (ห้ามตัดทิ้ง) ให้ match กับ
+    // _deriveCanonicalPath() ใน html-transformer.js เป๊ะ — ไม่งั้น sitemap
+    // ชี้ไป URL ที่ Cloudflare Pages เองจะ 308 redirect (เพราะ output เป็น
+    // directory/index.html ซึ่งบังคับต้องมี / ปิดท้ายเสมอ)
+    rel = rel === '/' ? ROOT_PAGE_PATH : rel;
+    const pagePath = rel || ROOT_PAGE_PATH;
 
     const alternates = langs.map(l => {
       // ensure double slash not created
       return {
         lang: l,
-        href: `${CONFIG.baseUrl}/${l}${pathNoSlash.startsWith('/') ? pathNoSlash : '/' + pathNoSlash}`
+        href: `${CONFIG.baseUrl}/${l}${pagePath.startsWith('/') ? pagePath : '/' + pagePath}`
       };
     });
 
     entries.push({
-      loc: `${CONFIG.baseUrl}/${langs[0]}${pathNoSlash}`, // default loc points to first lang
+      loc: `${CONFIG.baseUrl}/${langs[0]}${pagePath}`, // default loc points to first lang
       lastmod: today,
       changefreq: 'weekly',
-      priority: pathNoSlash === ROOT_PAGE_PATH ? '1.0' : '0.6',
+      priority: pagePath === ROOT_PAGE_PATH ? '1.0' : '0.6',
       alternates
     });
   }
