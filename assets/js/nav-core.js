@@ -27,9 +27,9 @@
   
   const PHASES = [
     ['types.js', 'config.js', 'state.js'],
-    ['utils.js', 'data.js', 'route-cache.js'], // route-cache.js ไม่มี dependency อื่น
+    ['utils.js', 'data.js', 'route-cache.js', 'feed-cache.js'], // feed-cache.js ไม่มี dependency อื่น
     ['loading.js', 'feed.js', 'paginator.js', 'content.js', 'performance.js'],
-    // feed.js ต้องอยู่หลัง data.js (Phase 2)
+    // feed.js ต้องอยู่หลัง data.js (Phase 2) + feed-cache.js (Phase 2 — ใช้ใน reset/restore)
     // paginator.js ต้องอยู่หลัง data.js (Phase 2) — ใช้ DataService.getTypeCategories
     // content.js ต้องอยู่หลัง feed.js + paginator.js + route-cache.js (Phase 2) — ใช้ทั้ง 3
     ['buttons.js', 'router.js', 'copy.js'],
