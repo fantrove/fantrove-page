@@ -1,0 +1,86 @@
+/* ════════════════════════════════════════════════════════════════════════
+ *  search-system.css
+ *  Supplemental styles for the new unified search system (search-system/).
+ *
+ *  Loaded by search-system/search.js when the new entry point boots.
+ *  These styles are ADDITIVE to the legacy /assets/css/search.css and
+ *  /assets/css/search-compact-overrides.css — they do not replace them.
+ *
+ *  Scope:
+ *    • Suggestion source badges (type / category indicators)
+ *    • Engine-side enhancements (none today, reserved for future)
+ *
+ *  Why a separate file:
+ *    The legacy search CSS is shared across built HTML pages and is
+ *    outside the scope of this refactor. Keeping new styles here keeps
+ *    the search-system/ folder self-contained and makes the diff
+ *    reviewable in isolation.
+ * ════════════════════════════════════════════════════════════════════════ */
+
+/* ── Suggestion badges ────────────────────────────────────────────────────
+ * Small inline labels that appear at the end of a suggestion row to
+ * indicate the source: "Type" or "Category". Item-name matches render
+ * without a badge (the default).
+ *
+ * Layout: the suggestion item is a flex row (.suggestion-body takes
+ * flex:1). The badge sits at the end with shrink:0 so long suggestion
+ * text wraps inside .suggestion-body and never pushes the badge off-screen.
+ * ───────────────────────────────────────────────────────────────────────── */
+
+.suggestion-badge {
+  flex-shrink: 0;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  line-height: 1.4;
+  white-space: nowrap;
+  user-select: none;
+  /* Subtle, neutral default — overridden by --type / --category modifiers */
+  background: rgba(103, 115, 135, 0.10);
+  color: var(--fv-text-secondary, #52638A);
+}
+
+.suggestion-badge--type {
+  /* Teal tint — matches the Fantrove brand accent */
+  background: rgba(19, 180, 127, 0.12);
+  color: #0f7a55;
+}
+
+.suggestion-badge--category {
+  /* Blue tint — distinct from type badge */
+  background: rgba(14, 95, 153, 0.10);
+  color: #1a5276;
+}
+
+/* Dark-mode adjustments — Fantrove uses light theme by default but the
+ * tokens flip on prefers-color-scheme. Make sure badges stay readable. */
+@media (prefers-color-scheme: dark) {
+  .suggestion-badge {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.65);
+  }
+  .suggestion-badge--type {
+    background: rgba(19, 180, 127, 0.18);
+    color: #6ce0b1;
+  }
+  .suggestion-badge--category {
+    background: rgba(96, 165, 250, 0.16);
+    color: #93c5fd;
+  }
+}
+
+/* Compact screens (≤ 480px) — slightly smaller badge to save horizontal
+ * space for the suggestion text on narrow phones. */
+@media (max-width: 480px) {
+  .suggestion-badge {
+    font-size: 0.62rem;
+    padding: 2px 6px;
+    border-radius: 5px;
+  }
+}

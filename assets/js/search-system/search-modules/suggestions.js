@@ -6,8 +6,14 @@
  *
  * Both render into #searchSuggestions inside the overlay.
  *
+ * v2.0 — Comprehensive suggestion diversity
+ *   Now renders suggestion "type" badges so users can distinguish item
+ *   matches from type matches (e.g., "อีโมจิ") and category matches
+ *   (e.g., "Arrows"). The underlying engine returns a `source` field
+ *   that drives the badge label.
+ *
  * @module suggestions
- * @depends {config.js, state.js, utils.js}
+ * @depends {config.js, state.js, utils.js, engine.js}
  */
 (function (M) {
   'use strict';
@@ -124,6 +130,11 @@
     /**
      * Render query-based suggestions as the user types.
      * Falls back to ReadyModeService if no suggestions found.
+     *
+     * Each suggestion may come from a different source (item name, type
+     * name, category name, fuzzy match). We render a small badge next to
+     * non-item suggestions so the user understands what they're selecting.
+     *
      * @param {string} query
      */
     renderQuerySuggestions(query) {
@@ -137,7 +148,10 @@
           return;
         }
 
-        const sgs = window.SearchEngine?.querySuggestions?.(query, CONFIG.RENDER.suggestionsFullscreenMax) || [];
+        // Use SearchEngine from the module namespace; falls back to
+        // window.SearchEngine for any legacy code paths.
+        const engine = M.SearchEngine || window.SearchEngine;
+        const sgs = engine?.querySuggestions?.(query, CONFIG.RENDER.suggestionsFullscreenMax) || [];
         if (!sgs.length) {
           ReadyModeService.renderReadyModeSuggestions();
           return;
@@ -145,8 +159,9 @@
 
         let html = `<div class="suggestions-head">${LanguageService.t('suggestion_label')}</div>`;
         for (const s of sgs) {
+          const badge = _sourceBadge(s.source);
           html += `<div class="suggestion-item" role="option" tabindex="0" data-val="${StringService.encodeUrl(s.raw)}">
-  <div class="suggestion-body">${HighlightService.highlight(s.raw, query)}</div>
+  <div class="suggestion-body">${HighlightService.highlight(s.raw, query)}</div>${badge}
 </div>`;
         }
         container.innerHTML     = html;
@@ -165,6 +180,33 @@
       } catch {}
     },
   };
+
+  // ── Source badge helper ─────────────────────────────────────────────────
+  /**
+   * Build a small badge HTML string indicating the suggestion's source.
+   * Returns '' for item-name matches (the default — no badge needed).
+   *
+   * @param {string} source
+   * @returns {string}
+   */
+  function _sourceBadge(source) {
+    if (!source) return '';
+    let label = '';
+    let cls   = 'suggestion-badge';
+    if (source === 'type') {
+      label = LanguageService.t('type');
+      cls  += ' suggestion-badge--type';
+    } else if (source === 'category') {
+      label = LanguageService.t('category');
+      cls  += ' suggestion-badge--category';
+    } else if (source === 'fuse' || source === 'immediate' || source === 'keyword-contains') {
+      // No badge for fuzzy / fallback matches — keeps the UI clean
+      return '';
+    }
+    // Default: item match — no badge
+    if (!label) return '';
+    return `<span class="${cls}" aria-hidden="true">${StringService.escapeHtml(label)}</span>`;
+  }
 
   // ── Exports ───────────────────────────────────────────────────────────────
   M.ReadyModeService  = ReadyModeService;

@@ -1,4 +1,21 @@
 <!DOCTYPE html>
+<!--
+  search-v3.html — Example page using the new unified search system (v3.0).
+
+  This is a reference implementation showing how to migrate from the legacy
+  2-script setup (search-engine.js + search-ui.js) to the new 1-script setup
+  (search-system/search.js).
+
+  DIFFERENCE FROM search/index.html (legacy):
+    • Removed: <script defer src="/assets/js/render-engine.js"> (dead reference)
+    • Removed: <script defer src="/assets/js/search-engine.js">
+    • Removed: <script defer src="/assets/js/search-ui.js">
+    • Added:   <script defer src="/assets/js/search-system/search.js">
+    • URE script order preserved (must load before search-system/search.js)
+
+  The rest of the HTML (DOM structure, CSS, sticky header script) is
+  identical to the legacy search/index.html — no other changes needed.
+-->
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -17,7 +34,7 @@
   <link rel="preload" href="/assets/css/tokens.css" as="style">
   <link rel="stylesheet" href="/assets/css/tokens.css">
 
-  <!-- 2. CSS -->
+  <!-- 2. CSS (legacy CSS kept — search-system.css is auto-injected by search.js) -->
   <link rel="preload" href="/assets/css/search.css?v=1.0.0-20250322" as="style" onload="this.rel='stylesheet'" />
   <noscript><link rel="stylesheet" href="/assets/css/search.css?v=1.0.0-20250322" /></noscript>
   <link rel="preload" href="/assets/css/bg.css?v=1.0.0-20250322" as="style" onload="this.rel='stylesheet'" />
@@ -25,10 +42,6 @@
   <link rel="stylesheet" href="/assets/css/search-compact-overrides.css?v=1.0.0-20250322" />
   <link rel="stylesheet" href="/assets/css/back-to-top.css?v=1.0.0-20250322">
 
-  <!--
-    PERF: Preload the 5 search-module phases so the browser starts fetching them
-    before search-ui.js even runs. With HTTP/2 these all download in parallel.
-  -->
   <link rel="modulepreload" href="/assets/js/con-data-service/con-data-registry.js?v=1.0.0-20250322" />
   <link rel="modulepreload" href="/assets/js/con-data-service/con-data-service.js?v=1.0.0-20250322" />
 </head>
@@ -87,21 +100,18 @@
   </div><!-- /#fv-app -->
 
   <!--
-    PERF CHANGE: con-data-service modules are type="module" → deferred by spec.
-    render-engine, search-engine, ure, search-ui: were blocking the HTML parser.
-    Adding defer means:
-      • HTML parses fully → user sees input field immediately, can start typing
-      • Scripts execute in document order after parse (order is preserved with defer)
-      • search-ui.js still finds window.SearchEngine + window.URE ready
-        because they execute before it (earlier in document order)
+    v3.0 SCRIPT LOADING — only 1 search script instead of 2.
+
+    con-data-service modules are type="module" → deferred by spec.
+    URE must execute before search-system/search.js (same defer order = document order).
+    search-system/search.js auto-loads its 13 modules + injects search-system.css.
   -->
   <script type="module" src="/assets/js/con-data-service/con-data-registry.js?v=1.0.0-20250322"></script>
   <script type="module" src="/assets/js/con-data-service/con-data-service.js?v=1.0.0-20250322"></script>
-  <script defer src="/assets/js/render-engine.js?v=1.0.0-20250322"></script>
-  <script defer src="/assets/js/search-engine.js?v=1.0.0-20250322"></script>
-  <!-- URE must execute before search-ui.js (same defer order = document order) -->
+  <!-- URE must execute before search-system/search.js (same defer order = document order) -->
   <script defer src="/assets/js/ure/ure.js?v=1.0.0-20250322"></script>
-  <script defer src="/assets/js/search-ui.js?v=1.0.0-20250322"></script>
+  <!-- v3.0: Single unified entry point (replaces search-engine.js + search-ui.js) -->
+  <script defer src="/assets/js/search-system/search.js?v=1.0.0-20250322"></script>
   <script defer src="/assets/js/copyNotification.js?v=1.0.0-20250322"></script>
   <script defer src="/assets/js/modern-navigation.js?v=1.0.0-20250322"></script>
   <script defer src="/assets/js/back-to-top.js?v=1.0.0-20250322"></script>

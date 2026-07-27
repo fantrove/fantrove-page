@@ -1,9 +1,13 @@
 // @ts-check
 /**
- * @file search.js
+ * @file search-service.js
  * SearchService — executes searches and manages history commits.
  *
- * PATCH v2 — performance + reliability
+ * Renamed from legacy `search.js` to avoid collision with the new unified
+ * entry point `search-system/search.js`. Behaviour is preserved; only the
+ * file name and the way SearchEngine is referenced changed.
+ *
+ * PATCH v2 — performance + reliability (preserved from legacy)
  *
  * BUG 1 FIXED (speed):
  *   doSearchFromURL used to wait up to 15 × 120ms = 1800ms for Fuse before
@@ -17,7 +21,7 @@
  *   loadData() resolves. If the user submits while docs are still loading,
  *   search() returns [] silently — nothing rendered, no retry.
  *   FIX: when docs aren't ready, stash the query in window.__pendingSearch
- *   and bail. search-ui.js drains __pendingSearch after init completes.
+ *   and bail. search-system/search.js drains __pendingSearch after init completes.
  *
  * BUG 3 FIXED (placeholder clipped when browser nav bar hides):
  *   _showPlaceholder() was calling _syncPlaceholderHeight() which sets
@@ -28,9 +32,10 @@
  *   CSS already handles .search-result-here height correctly without any JS.
  *   JS does not set --placeholder-h at all.
  *
- * @module search
+ * @module search-service
  * @depends {config.js, state.js, utils.js, url-history.js,
- *           rendering.js, suggestions.js, overlay.js, input-bar.js}
+ *           rendering.js, suggestions.js, overlay.js, input-bar.js,
+ *           engine.js}
  */
 (function (M) {
   'use strict';
@@ -43,6 +48,14 @@
     UIService, IconSlotService, ClearBtnService,
     VirtualScrollEngine,
   } = M;
+
+  // ── SearchEngine reference ────────────────────────────────────────────────
+  // Resolve SearchEngine lazily so this module doesn't break if engine.js
+  // loads after search-service.js (defensive coding — in practice both load
+  // in Phase 5 in parallel, so SearchEngine is available by boot time).
+  function _engine() {
+    return M.SearchEngine || window.SearchEngine;
+  }
 
   // ── Fuse upgrade scheduler ────────────────────────────────────────────────
   // After we show immediate (substring) results, schedule one silent upgrade
@@ -59,13 +72,13 @@
 
     (function checkFuse() {
       try {
-        const ready = window.SearchEngine?._internals?.getFuse?.() != null;
+        const ready = _engine()?._internals?.getFuse?.() != null;
         const inp   = DOMService.get(CONFIG.DOM.searchInputId);
         const still = inp?.value?.trim() === q;
 
         if (ready && still) {
           let out = { results: [], keywords: [] };
-          try { out = window.SearchEngine.search(q, type) || out; } catch {}
+          try { out = _engine().search(q, type) || out; } catch {}
           if (out.results.length) {
             State.currentResults = out.results;
             FilterService.setupCategoryFilter(
@@ -112,7 +125,7 @@
 
         // ── Guard: docs not ready yet ──────────────────────────────────────
         if (q.trim() && !preventPush) {
-          const docsReady = (window.SearchEngine?._internals?.getDocs?.()?.length ?? 0) > 0;
+          const docsReady = (_engine()?._internals?.getDocs?.()?.length ?? 0) > 0;
           if (!docsReady) {
             window.__pendingSearch = { q: q.trim(), type: State.selectedType || 'all' };
             const rc = DOMService.get(CONFIG.DOM.searchResultsId);
@@ -146,7 +159,7 @@
         // ── Execute search ─────────────────────────────────────────────────
         let out = { results: [], keywords: [] };
         try {
-          if (window.SearchEngine?.search) out = window.SearchEngine.search(q, State.selectedType) || out;
+          if (_engine()?.search) out = _engine().search(q, State.selectedType) || out;
         } catch {}
 
         State.currentResults   = out.results  || [];
@@ -204,7 +217,7 @@
       };
 
       try {
-        const se = window.SearchEngine;
+        const se = _engine();
         if (!se?.search) { scheduleRetry(); return; }
 
         const internals = se._internals;

@@ -4,9 +4,11 @@
 >
 > **สำหรับ:** AI และนักพัฒนาที่จะแก้/ขยายระบบ Search
 >
-> **ไฟล์หลัก:** `assets/js/search-engine.js` (Fuse engine singleton) + `assets/js/search-ui.js` (orchestrator, public API `window.__searchUI`) + `assets/js/search-modules/` (12 modules)
+> **ไฟล์หลัก (v3.0):** `assets/js/search-system/search.js` (entry point หลัก ที่โหลดทุก module) + `assets/js/search-system/search-modules/` (13 modules รวม `engine.js`)
 >
-> **ครอบคลุม:** สถาปัตยกรรม, อัลกอริทึม, โมดูลทั้งหมด, การผสานรวมกับ URE, URL/History, performance
+> **ไฟล์ legacy (ยังคงอยู่ชั่วคราว):** `assets/js/search-engine.js` + `assets/js/search-ui.js` + `assets/js/search-modules/` — ดู [`assets/js/search-system/MIGRATION.md`](../assets/js/search-system/MIGRATION.md) สำหรับการ migrate
+>
+> **ครอบคลุม:** สถาปัตยกรรม, อัลกอริทึม, โมดูลทั้งหมด, การผสานรวมกับ URE, URL/History, performance, aerospace software standards
 
 ---
 
@@ -33,11 +35,13 @@
 
 ## 1. ภาพรวมสถาปัตยกรรม
 
+> **v3.0 การปรับปรุงครั้งใหญ่:** ระบบ Search ถูกรวมไฟล์หลัก 2 ไฟล์ (`search-engine.js` + `search-ui.js`) เข้าเป็นไฟล์เดียว (`search.js`) และย้าย modules เข้าไปอยู่ในโฟลเดอร์ `search-system/` เพื่อให้เป็นระบบ modular เช่นเดียวกับ URE ดู [`assets/js/search-system/MIGRATION.md`](../assets/js/search-system/MIGRATION.md) สำหรับรายละเอียดเต็ม
+
 ระบบ Search ของ Fantrove ถูกออกแบบแบบ **modular architecture** ประกอบด้วย:
 
-- **`search-engine.js`** — เอนจินค้นหาหลัก (IIFE, ไม่มี dependency) ใช้ **substring search** แบบเบาสำหรับผลลัพธ์ทันที และ **Fuse.js** สำหรับ fuzzy search ที่แม่นยำกว่า
-- **`search-ui.js`** — Orchestrator ที่โหลดโมดูลทั้งหมดแบบ parallel phases, จัดการข้อมูล และบูตระบบ
-- **`search-modules/`** — กลุ่มโมดูล 12 ไฟล์ แบ่งเป็น 5 phases ตาม dependency
+- **`search-system/search.js`** — Entry point หลัก (IIFE, ไม่มี dependency) ที่โหลด modules ทั้งหมดแบบ 5-phase parallel, จัดการ data prefetch, และบูตระบบ — เหมือน `ure.js` ของระบบ URE
+- **`search-system/search-modules/engine.js`** — เอนจินค้นหา (IIFE module) ใช้ **substring search** แบบเบาสำหรับผลลัพธ์ทันที และ **Fuse.js** สำหรับ fuzzy search ที่แม่นยำกว่า — แทนที่ `search-engine.js` แบบ standalone เดิม
+- **`search-system/search-modules/`** — กลุ่มโมดูล 13 ไฟล์ แบ่งเป็น 5 phases ตาม dependency
 
 ### โครงสร้างข้อมูล (Data Shape)
 
@@ -68,12 +72,12 @@
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  HTML: <script defer src="search-ui.js">                     │
+│  HTML: <script defer src="search-system/search.js">         │
 └────────────────────────┬─────────────────────────────────────┘
                          │
                          ▼
 ┌──────────────────────────────────────────────────────────────┐
-│  search-ui.js (Orchestrator)                                 │
+│  search.js (Entry point + Orchestrator)                     │
 │  • Early data prefetch (_earlyDataPromise)                   │
 │  • 5-phase parallel module loader                            │
 │  • _boot() → init() → loadData() → SearchEngine.init()      │
@@ -109,14 +113,25 @@
 
 ## 2. ไฟล์และโครงสร้างโมดูล
 
-### ไฟล์หลัก
+### ไฟล์หลัก (v3.0 — unified)
 
 | ไฟล์ | บทบาท | Global API |
 |------|--------|------------|
-| `assets/js/search-engine.js` | เอนจินค้นหา (IIFE) | `window.SearchEngine` |
-| `assets/js/search-ui.js` | Orchestrator/entry point | `window.__searchUI` |
+| `assets/js/search-system/search.js` | Entry point หลัก (load ทุก module + boot) | `window.__searchUI` |
+| `assets/js/search-system/search-modules/engine.js` | เอนจินค้นหา (modular IIFE) | `window.SearchModules.SearchEngine` + `window.SearchEngine` |
+| `assets/js/search-system/search-system.css` | CSS เสริม (auto-inject โดย search.js) | — |
 
-### โมดูลย่อย (`search-modules/`)
+### ไฟล์ legacy (ยังคงอยู่ชั่วคราว — จะลบหลัง migration เสร็จ)
+
+| ไฟล์ | สถานะ |
+|------|-------|
+| `assets/js/search-engine.js` | เก็บไว้ชั่วคราว — ใช้กับหน้าเว็บที่ยังไม่ migrate |
+| `assets/js/search-ui.js` | เก็บไว้ชั่วคราว — ใช้กับหน้าเว็บที่ยังไม่ migrate |
+| `assets/js/search-modules/` | เก็บไว้ชั่วคราว — ใช้กับ legacy entry point |
+
+> ⚠️ ดู [`assets/js/search-system/MIGRATION.md`](../assets/js/search-system/MIGRATION.md) สำหรับวิธี migrate หน้าเว็บจาก legacy ไป v3.0
+
+### โมดูลย่อย (`search-system/search-modules/`)
 
 | Phase | ไฟล์ | Service | หน้าที่ |
 |-------|------|---------|---------|
@@ -128,10 +143,11 @@
 | 3 | `url-history.js` | `URLService` | จัดการ browser history แบบ two-stack model |
 | 3 | `keyboard.js` | `KeyboardService`, `GapBasedKeyboardService`, `KeyboardAutoToggleService` | ตรวจจับ/จัดการ virtual keyboard บนมือถือ |
 | 3 | `rendering.js` | `RenderingService`, `FilterService` | เรนเดอร์ผลลัพธ์ผ่าน URE + ตัวกรองประเภท/หมวดหมู่ |
-| 3 | `suggestions.js` | `SuggestionService`, `ReadyModeService` | ข้อเสนอแนะระหว่างพิมพ์ + trending เมื่อ input ว่าง |
+| 3 | `suggestions.js` | `SuggestionService`, `ReadyModeService` | ข้อเสนอแนะระหว่างพิมพ์ + trending เมื่อ input ว่าง (v2.0: multi-source + badges) |
 | 3 | `input-bar.js` | `UIService`, `IconSlotService`, `ClearBtnService` | จัดการ input bar, ปุ่มล้าง, ไอคอน search/back |
 | 4 | `overlay.js` | `OverlayService` | จัดการ fullscreen search overlay |
-| 5 | `search.js` | `SearchService` | ดำเนินการค้นหา จัดการ history commit, Fuse upgrade |
+| 5 | `engine.js` | `SearchEngine` | ★ v3.0 — comprehensive search engine (modular IIFE) |
+| 5 | `search-service.js` | `SearchService` | ดำเนินการค้นหา จัดการ history commit, Fuse upgrade (rename จาก `search.js` เดิม) |
 
 ### Namespace
 
@@ -147,6 +163,7 @@ window.SearchModules = {
   SuggestionService, ReadyModeService, UIService,
   IconSlotService, ClearBtnService, OverlayService,
   SearchService, VirtualScrollEngine,
+  SearchEngine,  // ★ v3.0 — engine อยู่ใน namespace เดียวกับ modules อื่น
 };
 ```
 
@@ -156,7 +173,7 @@ window.SearchModules = {
 
 ### 3.1 Parallel Phase Loading
 
-`search-ui.js` โหลดโมดูลแบบ **5 phases** เพื่อลด HTTP round trips จาก 12 ครั้ง (sequential) เหลือ 5 ครั้ง:
+`search-system/search.js` โหลดโมดูลแบบ **5 phases** เพื่อลด HTTP round trips จาก 13 ครั้ง (sequential) เหลือ 5 ครั้ง:
 
 ```javascript
 const LOAD_PHASES = [
@@ -168,8 +185,8 @@ const LOAD_PHASES = [
   ['url-history.js', 'keyboard.js', 'rendering.js', 'suggestions.js', 'input-bar.js'],
   // Phase 4: Overlay — โหลด 1 ไฟล์
   ['overlay.js'],
-  // Phase 5: Search service — โหลด 1 ไฟล์
-  ['search.js'],
+  // Phase 5: Engine + Search service — โหลดพร้อมกัน 2 ไฟล์
+  ['engine.js', 'search-service.js'],
 ];
 ```
 
@@ -186,7 +203,7 @@ function loadPhases(phases, base) {
 
 ### 3.2 Early Data Prefetch
 
-ข้อมูลเริ่มโหลด **ทันที** ที่ `search-ui.js` รัน — ก่อนที่โมดูลใดๆ จะโหลดเสร็จ:
+ข้อมูลเริ่มโหลด **ทันที** ที่ `search.js` รัน — ก่อนที่โมดูลใดๆ จะโหลดเสร็จ:
 
 ```javascript
 let _earlyDataPromise = (function () {
@@ -214,22 +231,43 @@ let _earlyDataPromise = (function () {
 - Poll `ConDataService` ทุก 20ms สูงสุด 40 ครั้ง (800ms)
 - ถ้า `ConDataService` ไม่พร้อม ให้ `loadData()` fallback ไป fetch `db.min.json` โดยตรง
 
-### 3.3 ลำดับ Boot สมบูรณ์
+### 3.3 CSS Auto-inject (v3.0 ใหม่)
+
+`search.js` แทรก `<link>` สำหรับ `search-system.css` อัตโนมัติ (เหมือน `ure.js` แทรก `ure.css`):
+
+```javascript
+function _injectCSS(basePath) {
+  const cssUrl = basePath + '/search-system.css' + _v();
+  if (document.querySelector('link[data-search-system-css]')) return;
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = cssUrl;
+  link.setAttribute('data-search-system-css', 'true');
+  document.head.appendChild(link);
+}
+```
+
+CSS นี้เป็น **ส่วนเติม** (additive) — ไม่ทับซ้อนกับ `search.css` หรือ `search-compact-overrides.css` เดิม ปัจจุบันมีเฉพาะ style สำหรับ `.suggestion-badge` (type/category badges ใน suggestion list)
+
+### 3.4 ลำดับ Boot สมบูรณ์
 
 ```
-search-ui.js รัน
+search.js รัน
   ├── _earlyDataPromise เริ่ม poll ConDataService (parallel)
+  ├── _injectCSS(base)                  ← v3.0 ใหม่
   ├── loadPhase(1) → types, config, state
   ├── loadPhase(2) → utils, virtual-scroll
   ├── loadPhase(3) → url-history, keyboard, rendering, suggestions, input-bar
   ├── loadPhase(4) → overlay
-  ├── loadPhase(5) → search
+  ├── loadPhase(5) → engine, search-service    ← v3.0 เพิ่ม engine.js
   └── _boot()
        ├── KeyboardService.initKeyboardDetection()
        ├── loadData() → ใช้ _earlyDataPromise (อาจเรียบร้อยแล้ว)
        │    └── fallback → fetch('/assets/db/db.min.json')
-       ├── SearchEngine.init(data)
-       │    ├── buildImmediateDocs() → พร้อมใช้ทันที
+       ├── SearchEngine.init(data)             ← จาก module ไม่ใช่ window ตรงๆ
+       │    ├── detectLangs()                  ← v3.0 ใหม่
+       │    ├── buildImmediateDocs() → _docs, _keywords, _typeIndex, _categoryIndex
+       │    │                                    ← v3.0 เพิ่ม type/category index
        │    └── scheduleBuildFuse() → สร้าง Fuse index ใน idle time
        ├── generateAllKeywords() → cache keywords
        ├── UIService.buildWrapper()
@@ -247,27 +285,36 @@ search-ui.js รัน
 
 ## 4. Search Engine — อัลกอริทึมค้นหา
 
-`search-engine.js` เป็น IIFE ที่ไม่มี dependency เลย โหลดอย่างอิสระ ผ่าน `<script>` tag แยก
+> **v3.0:** `search-engine.js` (standalone IIFE) ถูกย้ายมาเป็น `search-modules/engine.js` (modular IIFE) ในโฟลเดอร์ `search-system/` โหลดผ่าน `search.js` แทน `<script>` tag แยก Public API เหมือนเดิมทุกประการ (drop-in replacement)
 
-### 4.1 โครงสร้างภายใน
+### 4.1 โครงสร้างภายใน (v3.0)
 
 ```javascript
 const SearchEngine = {
   // State ภายใน (private ผ่าน closure)
-  _data,        // ข้อมูลดิบจาก ConDataService
-  _docs,        // immediate docs (สำหรับ substring search)
-  _keywords,    // keyword list (สำหรับ suggestions)
-  _fuse,        // Fuse instance (สร้าง async ภายหลัง)
-  _normalize,   // ฟังก์ชัน normalize text
-  _options,     // configuration options
-  _fuseBuilding,// flag ป้องกัน build ซ้ำ
+  _data,            // ข้อมูลดิบจาก ConDataService
+  _docs,            // immediate docs (สำหรับ substring search)
+  _keywords,        // keyword list (สำหรับ suggestions)
+  _typeIndex,       // ★ v3.0: type name index (สำหรับ type-name suggestions)
+  _categoryIndex,   // ★ v3.0: category name index (สำหรับ category-name suggestions)
+  _fuse,            // Fuse instance (สร้าง async ภายหลัง)
+  _normalize,       // ฟังก์ชัน normalize text
+  _options,         // configuration options
+  _fuseBuilding,    // flag ป้องกัน build ซ้ำ
+  _langs,           // ★ v3.0: ภาษาที่ detect จากข้อมูล
 
   // Public API
   init(data, options),
   search(q, typeFilter),
   querySuggestions(q, maxCount),
   generateAllKeywords(),
-  _internals: { normalizeText, flattenDataToDocs, buildImmediateDocs, getDocs, getFuse, options }
+  _internals: {
+    normalizeText, flattenDataToDocs, buildImmediateDocs,
+    getDocs, getKeywords, getTypeIndex, getCategoryIndex, // ★ v3.0
+    getFuse, isFuseReady, isFuseBuilding,                 // ★ v3.0
+    getLangs, pickFuseThreshold,                          // ★ v3.0
+    options,
+  }
 };
 ```
 
@@ -295,14 +342,19 @@ function defaultNormalizeText(s) {
 }
 ```
 
-### 4.3 การ Build Documents
+### 4.3 การ Build Documents (v3.0 — Comprehensive Index)
 
 มีสองฟังก์ชัน build documents:
 
 **`buildImmediateDocs(data)`** — เบา ใช้สำหรับ substring search ทันที:
 - ไม่ทำ normalization หนัก
 - รวม name + api + text + typeNames + catNames เป็น `combined` string
+- ★ v3.0: รวม `*_name` fields (เช่น `short_name`, `official_name`)
+- ★ v3.0: รวม `description` fields (ถ้ามี)
+- ★ v3.0: precompute `combinedLower` สำหรับค้นหาเร็วขึ้น
 - สร้าง `doc` object และ `keyword` entry สำหรับแต่ละ item
+- ★ v3.0: สร้าง `_typeIndex` (entry สำหรับ type names ทุกภาษา)
+- ★ v3.0: สร้าง `_categoryIndex` (entry สำหรับ category names ทุกภาษา)
 
 **`flattenDataToDocs(data, normalizeFn)`** — เต็มรูปแบบ ใช้สำหรับ Fuse.js:
 - ทำ normalization ผ่าน `normalizeFn` ที่ส่งเข้ามา
@@ -320,6 +372,7 @@ for (let i=0; i<data.type.length; i++){
   const t = data.type[i];
   if (typeof t.name === 'object') for (const k in t.name) langsSet[k]=1;
   // ... เดียวกันสำหรับ category และ item names
+  // ★ v3.0: รวม *_name fields ด้วย
 }
 const langs = Object.keys(langsSet).length ? Object.keys(langsSet) : ['en'];
 ```
@@ -333,25 +386,33 @@ Fuse.js โหลดจาก CDN แบบ lazy:
 ```javascript
 function ensureFuseLoaded() {
   return new Promise((resolve, reject) => {
-    if (global.Fuse) return resolve(global.Fuse);
+    if (globalThis.Fuse) return resolve(globalThis.Fuse);
     const src = 'https://unpkg.com/fuse.js@6.6.2/dist/fuse.min.js';
     const s = document.createElement('script');
     s.src = src; s.async = true;
-    s.onload = () => resolve(global.Fuse);
+    s.onload = () => resolve(globalThis.Fuse);
     s.onerror = () => reject(new Error('Failed to load Fuse.js'));
     document.head.appendChild(s);
   });
 }
 ```
 
-ค่า Fuse options ที่ใช้:
+ค่า Fuse options ที่ใช้ (v3.0 — adaptive threshold + minMatch 1):
 
 ```javascript
+// ★ v3.0: Adaptive threshold ปรับตาม query length
+const FUSE_THRESHOLDS = Object.freeze({
+  veryShort: 0.55, // 1-2 chars
+  short:     0.45, // 3-4 chars
+  medium:    0.38, // 5-8 chars (legacy default)
+  long:      0.30, // 9+ chars (tighter — long queries should be precise)
+});
+
 const defaultFuseOpts = {
   includeScore: true,
-  threshold: 0.38,          // ความเข้มงวด (ยิ่งต่ำยิ่งเข้มงวด)
+  threshold: 0.38,          // default; runtime override ผ่าน pickFuseThreshold()
   ignoreLocation: true,     // ไม่สนตำแหน่ง match
-  minMatchCharLength: 2,    // ต้อง match อย่างน้อย 2 ตัวอักษร
+  minMatchCharLength: 1,    // ★ v3.0: ลดจาก 2 → 1 รองรับ single-char queries
   useExtendedSearch: false,
   keys: [
     { name: 'name',     weight: 0.6 },  // ชื่อ item
@@ -361,6 +422,9 @@ const defaultFuseOpts = {
   ]
 };
 ```
+
+> **ทำไม threshold ต้อง adaptive?**
+> Fuse.js  penalises position หนักมาก — query 2 ตัวที่ threshold 0.38 อาจ return 0 ผลลัพธ์แม้ match จริง เราจึงคลาย threshold สำหรับ short queries และเข้มงวดขึ้นสำหรับ long queries
 
 ### 4.6 กำหนดการสร้าง Fuse Index
 
@@ -505,50 +569,75 @@ function _scheduleFuseUpgrade(q, type) {
 
 ## 6. ระบบ Suggestion (ข้อเสนอแนะ)
 
-### 6.1 querySuggestions() — Search Engine ระดับ
+> **v3.0:** Suggestion engine ถูกปรับปรุงจาก 3 ชั้น fallback เป็น **6 ชั้น multi-source** ที่ครอบคลุม type names, category names, และ sub-name fields ที่ legacy พลาด
 
-ฟังก์ชัน `querySuggestions(rawQuery, maxCount)` ใช้ **3 ชั้น fallback**:
+### 6.1 querySuggestions() — v3.0 Multi-Source (6 ชั้น)
+
+ฟังก์ชัน `querySuggestions(rawQuery, maxCount)` ใช้ **6 ชั้น** ตาม priority:
 
 ```javascript
+// Suggestion sources, in priority order (lower = higher priority)
+const SUGGESTION_SOURCE = Object.freeze({
+  KEYWORD_EXACT:    1,  // 1. Exact prefix match on item name
+  TYPE_NAME:        2,  // 2. Match on type name (e.g., "อี" → "อีโมจิ")
+  CATEGORY_NAME:    3,  // 3. Match on category name (e.g., "arr" → "Arrows")
+  KEYWORD_CONTAINS: 4,  // 4. Substring (non-prefix) match on item name
+  FUSE:             5,  // 5. Fuse fuzzy match (typo-tolerant)
+  IMMEDIATE:        6,  // 6. Immediate doc scan (last-resort fallback)
+});
+
 function querySuggestions(rawQuery, maxCount) {
-  maxCount = maxCount || 8;
-  const nq = _normalize ? _normalize(q) : q.toLowerCase();
-  const out = [];
-  const seen = new Set();
-
-  // ชั้น 1: Keyword prefix match (จาก immediate keywords)
-  for (const k of _keywords) {
-    if (String(k.key).indexOf(nq) === 0) {  // prefix match
-      if (seen.has(k.key)) continue;
-      seen.add(k.key);
-      out.push({ display: k.raw, source: 'keyword' });
-    }
-  }
-  if (out.length >= maxCount) return out;
-
-  // ชั้น 2: Fuse suggestions (ถ้าพร้อม)
-  if (_fuse && q.length >= 1) {
-    const fuseRes = _fuse.search(q, { limit: 12 });
-    for (const r of fuseRes) {
-      // ... เพิ่มจากผลลัพธ์ Fuse
-      out.push({ display, source: 'fuse', score: r.score });
-    }
-  }
-
-  // ชั้น 3: Immediate doc scan fallback
-  else {
-    for (const d of _docs) {
-      const norm = String(d.name).toLowerCase();
-      if (norm.indexOf(nqSimple) === 0 && !seen.has(norm)) {
-        out.push({ display: d.name, source: 'immediate' });
-      }
-    }
-  }
-  return out;
+  // 1. Item name prefix matches — direct hits
+  // 2. Type name matches — typing "อี" suggests "อีโมจิ" (the type)
+  // 3. Category name matches — typing "arr" suggests "Arrows" (the category)
+  // 4. Item name contains matches (non-prefix)
+  // 5. Fuse fuzzy match (typo-tolerant)
+  // 6. Immediate doc scan (last-resort fallback when Fuse not ready)
 }
 ```
 
-### 6.2 ReadyModeService — Trending แบบ Smart
+### 6.2 ทำไม legacy พลาด type/category suggestions?
+
+Legacy engine สร้าง keyword entries เฉพาะ item names — type names และ category names ไม่ถูก index แยก ดังนั้น:
+
+- พิมพ์ "อี" (Thai for "อีโมจิ") → legacy ค้นหาใน item names เท่านั้น → 0 ผล
+- พิมพ์ "arr" (start of "Arrows") → legacy ค้นหาใน item names เท่านั้น → 0 ผล
+
+v3.0 แก้โดยสร้าง `_typeIndex` และ `_categoryIndex` แยกต่างหาก ทำให้ type/category names สามารถ suggest ได้โดยตรง
+
+### 6.3 Source Badges in UI
+
+แต่ละ suggestion มี `source` field ที่บอกว่ามาจากไหน UI layer (`SuggestionService`) แสดง badge เล็กๆ ข้างหน้า suggestion:
+
+| Source | Badge | CSS class |
+|--------|-------|-----------|
+| `keyword` (item name) | (ไม่มี badge) | — |
+| `type` | `[TYPE]` | `.suggestion-badge--type` |
+| `category` | `[CATEGORY]` | `.suggestion-badge--category` |
+| `keyword-contains`, `fuse`, `immediate` | (ไม่มี badge) | — |
+
+```javascript
+// suggestions.js
+function _sourceBadge(source) {
+  if (source === 'type') {
+    return `<span class="suggestion-badge suggestion-badge--type">${t('type')}</span>`;
+  }
+  if (source === 'category') {
+    return `<span class="suggestion-badge suggestion-badge--category">${t('category')}</span>`;
+  }
+  return '';  // no badge for item matches
+}
+```
+
+### 6.4 Robust Short Query Handling
+
+Legacy: prefix-match เท่านั้น — short queries มักได้ 0 ผล
+v3.0: ใช้หลายชั้นร่วมกัน:
+
+- ชั้น 1 (prefix) → ถ้าไม่เต็ม maxCount → ชั้น 2 (type) → ชั้น 3 (category) → ชั้น 4 (contains) → ชั้น 5 (Fuse) → ชั้น 6 (immediate scan)
+- Single-char queries ได้อย่างน้อย top-N matches เสมอ
+
+### 6.5 ReadyModeService — Trending แบบ Smart
 
 เมื่อ overlay เปิดและ input ว่าง ระบบแสดง "trending" suggestions:
 
@@ -565,22 +654,24 @@ extractSmartNames() {
 }
 ```
 
-### 6.3 SuggestionService — UI Layer
+### 6.6 SuggestionService — UI Layer
 
 รับผิดชอบ:
-- `renderQuerySuggestions(query)` — เรนเดอร์ข้อเสนอแนะขณะพิมพ์ พร้อม highlight ตัวอักษรที่ match
+- `renderQuerySuggestions(query)` — เรนเดอร์ข้อเสนอแนะขณะพิมพ์ พร้อม highlight + source badges
 - `handleKeydown(ev, container)` — นำทางด้วย Arrow keys, Enter, Escape
 - `handleClick(ev)` — เลือก suggestion → เติมใน input → ค้นหาทันที
 
 ข้อความที่แสดงใช้ `HighlightService.highlight()` เพื่อ highlight ตัวอักษรที่ match:
 
 ```javascript
+// v3.0 — เพิ่ม source badge
+const badge = _sourceBadge(s.source);
 html += `<div class="suggestion-item" data-val="${encodeUrl(s.raw)}">
-  <div class="suggestion-body">${HighlightService.highlight(s.raw, query)}</div>
+  <div class="suggestion-body">${HighlightService.highlight(s.raw, query)}</div>${badge}
 </div>`;
 ```
 
-### 6.4 HighlightService — Thai Grapheme Cluster Support
+### 6.7 HighlightService — Thai Grapheme Cluster Support
 
 ระบบ highlight จัดการ **Thai diacritics** อย่างถูกต้อง:
 
@@ -1362,7 +1453,7 @@ CONFIG = {
 
 ```javascript
 State = {
-  // Data (owned by search-ui.js)
+  // Data (owned by search.js entry point)
   apiData: null,                    // ข้อมูลจาก ConDataService
   allKeywordsCache: [],             // cache ของ keywords ทั้งหมด
   currentResults: [],               // ผลลัพธ์ค้นหาปัจจุบัน
@@ -1445,9 +1536,9 @@ Handlers = {
 
 | ตัวแปร | Type | จุดสร้าง | หน้าที่ |
 |--------|------|----------|---------|
-| `window.SearchEngine` | Object | `search-engine.js` | เอนจินค้นหาหลัก |
+| `window.SearchEngine` | Object | `search-modules/engine.js` (v3.0) | เอนจินค้นหาหลัก |
 | `window.SearchModules` | Object | ทุกโมดูล | Namespace ของทุก service |
-| `window.__searchUI` | Object | `search-ui.js` | Public API ของระบบ (init, destroy, getState) |
+| `window.__searchUI` | Object | `search-system/search.js` | Public API ของระบบ (init, destroy, getState) |
 | `window.__pendingSearch` | Object\|null | `search.js` | Stash query เมื่อ docs ยังไม่พร้อม |
 | `window.__renderIsRestore` | boolean | `search.js` | Flag ป้องกัน scroll-to-top ตอน restore |
 | `window.__overlayDidSearch` | boolean | `rendering.js` | Flag บอกว่าค้นหาจาก overlay |
@@ -1577,7 +1668,7 @@ urlSearchRetryMs: 200 → 120ms         (retry เร็วขึ้น)
 ```
 ปัญหา: ผู้ใช้กด Enter ก่อน docs โหลดเสร็จ → search() คืน [] เงียบๆ
 แก้:  stash query ใน window.__pendingSearch
-      search-ui.js drain หลัง init() เสร็จ
+      search.js drain หลัง init() เสร็จ
 ```
 
 ---
@@ -1587,10 +1678,10 @@ urlSearchRetryMs: 200 → 120ms         (retry เร็วขึ้น)
 ### 16.1 Init Flow
 
 ```
-HTML: <script defer src="search-ui.js">
+HTML: <script defer src="search-system/search.js">
   │
   ▼
-search-ui.js IIFE รัน
+search.js IIFE รัน
   ├── ตรวจ window.__searchUI._initialized → ถ้า true, return
   ├── เริ่ม _earlyDataPromise (poll ConDataService)
   ├── loadPhases(LOAD_PHASES, base)
@@ -1686,7 +1777,7 @@ destroy() {
 ### กับ ConDataService
 
 ```
-search-ui.js → poll ConDataService.getAssembled() → ข้อมูลแบบ assembled
+search.js → poll ConDataService.getAssembled() → ข้อมูลแบบ assembled
 fallback → fetch('/assets/db/db.min.json')
 ```
 
@@ -1712,31 +1803,48 @@ OverlayService.close() → window.modernNav.showNav('search-overlay-closed')
 NotificationService.copyText(text, name)
   → navigator.clipboard.writeText(text)
   → window.showCopyNotification({ text, name, lang })
-```esults = [];
-  window.__pendingSearch = null;
-  window.__searchUI._initialized = false;
-}
 ```
 
 ---
 
-## Appendix: การทำงานร่วมกับระบบอื่น
+## 18. v3.0 Migration Notes
 
-### กับ ConDataService
+> สรุปการปรับปรุงครั้งใหญ่ v3.0 — ดู [`assets/js/search-system/MIGRATION.md`](../assets/js/search-system/MIGRATION.md) สำหรับรายละเอียดเต็ม
 
-```
-search-ui.js → poll ConDataService.getAssembled() → ข้อมูลแบบ assembled
-fallback → fetch('/assets/db/db.min.json')
+### สิ่งที่เปลี่ยน
+
+1. **โครงสร้างไฟล์** — `search-engine.js` + `search-ui.js` → `search-system/search.js` (entry point เดียว) + `search-system/search-modules/` (13 modules)
+2. **Engine เป็น module** — `search-engine.js` (standalone) → `search-modules/engine.js` (module ใน namespace เดียวกับ modules อื่น)
+3. **Comprehensive index** — เพิ่ม `*_name` fields, `description` fields, type index, category index
+4. **Multi-source suggestions** — 6 ชั้นแทน 3 ชั้น ครอบคลุม type names และ category names
+5. **Source badges in UI** — แสดง badge บอก source ของ suggestion (TYPE/CATEGORY)
+6. **Adaptive Fuse threshold** — ปรับตาม query length (1-2 chars: 0.55, 3-4: 0.45, 5-8: 0.38, 9+: 0.30)
+7. **minMatchCharLength = 1** — รองรับ single-char queries (เดิม = 2)
+8. **CSS auto-inject** — `search-system.css` แทรกอัตโนมัติเหมือน `ure.css`
+9. **Aerospace standards** — fail-safe defaults, no silent failure, bounded loops, layered architecture
+
+### สิ่งที่ยังเหมือนเดิม (Backward Compatible)
+
+- Public API: `window.__searchUI`, `window.SearchEngine`, `window.SearchModules`
+- IIFE pattern, `'use strict'`, 2-space indent, single quotes
+- 5-phase parallel module loading
+- Two-tier search (immediate + Fuse upgrade)
+- Two-stack history model
+- ConDataService + URE integration
+
+### การ Migrate หน้าเว็บ
+
+```html
+<!-- เดิม (2 ไฟล์) -->
+<script defer src="/assets/js/search-engine.js?v=..."></script>
+<script defer src="/assets/js/search-ui.js?v=..."></script>
+
+<!-- ใหม่ (1 ไฟล์) -->
+<script defer src="/assets/js/ure/ure.js?v=..."></script>
+<script defer src="/assets/js/search-system/search.js?v=..."></script>
 ```
 
-### กับ URE
-
-```
-RenderingService.renderResults()
-  → URE.mount({ container, data, template, lang, buffer, recycling, keyField })
-  → URE จัดการ virtual scroll + DOM pool + diff
-  → ครั้งต่อไป: URE ใช้ instance เดิม (single instance reuse, rendering.js v6.0)
-```
+ไม่ต้องแก้ JavaScript อื่น — public API เหมือนเดิมทั้งหมด
 
 ---
 
@@ -1749,3 +1857,4 @@ RenderingService.renderResults()
 - [`AI_CODING_GUIDE.md`](./AI_CODING_GUIDE.md) — มาตรฐานโค้ดที่ต้องยึดเมื่อแก้ Search
 - [`AI_FORBIDDEN.md`](./AI_FORBIDDEN.md) — กฎเหล็กก่อนแตะ Search
 - [`12-SEO-Guide.md`](./12-SEO-Guide.md) — ⭐ SEO considerations (priority สูงสุด) ที่เกี่ยวข้องกับระบบนี้
+- [`assets/js/search-system/MIGRATION.md`](../assets/js/search-system/MIGRATION.md) — ★ v3.0 คู่มือ migration จาก v2.x
