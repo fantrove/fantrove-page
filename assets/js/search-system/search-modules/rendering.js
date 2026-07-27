@@ -391,18 +391,20 @@
 
     setupCategoryFilter(cats, selected = 'all') {
       try {
-        const el   = DOMService.get(CONFIG.DOM.categoryFilterId);
-        const btn  = document.getElementById('filterCatToggle');
-        const wrap = document.getElementById('filterCatWrap');
+        const el = DOMService.get(CONFIG.DOM.categoryFilterId);
         if (!el) return;
 
+        // v6.1 — Category row is always present in the DOM (sibling of
+        // #search-sticky, not inside it). When there are no categories,
+        // we just clear its contents; the CSS rule
+        // `.filter-pills-row--cat:empty { display: none }` collapses
+        // the row automatically so there's no leftover gap.
+        //
+        // The old filterCatToggle / filterCatWrap / cat-open / cat-spacer
+        // machinery has been removed entirely — categories are always
+        // visible when they exist (Google-like UX).
         if (!cats || cats.length === 0) {
           el.innerHTML = '';
-          if (btn)  { btn.style.visibility = 'hidden'; btn.classList.remove('active'); btn.setAttribute('aria-expanded', 'false'); }
-          if (wrap) { wrap.classList.remove('open'); wrap.setAttribute('aria-hidden', 'true'); }
-          const sticky = document.getElementById('search-sticky');
-          if (sticky) sticky.classList.remove('cat-open');
-          if (window._closeCatBar) window._closeCatBar();
           return;
         }
 
@@ -427,8 +429,6 @@
         }
 
         el.innerHTML = pills.join('');
-        if (btn) btn.style.visibility = '';
-        if (window._updateCatBarHeight) requestAnimationFrame(window._updateCatBarHeight);
 
         el._pillHandler && el.removeEventListener('click', el._pillHandler);
         el._pillHandler = (e) => {

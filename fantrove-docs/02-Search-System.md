@@ -1386,14 +1386,23 @@ setupTypeFilter(selected = 'all') {
 
 ```javascript
 setupCategoryFilter(cats, selected = 'all') {
-  // ถ้าไม่มี categories → ซ่อน filter
-  // ถ้ามี → สร้าง pill buttons
+  // v6.1 — ถ้าไม่มี categories → ล้าง innerHTML (CSS rule
+  // `.filter-pills-row--cat:empty { display:none }` จะ collapse row
+  // อัตโนมัติ) ไม่มี toggle button ให้ซ่อน/แสดงอีกต่อไป
+  // ถ้ามี → สร้าง pill buttons ใน row เดียวกับที่ scroll ได้
   el._pillHandler = (e) => {
     State.selectedCategory = val;
     RenderingService.renderResults(State.currentResults);  // กรองใหม่ (ไม่ค้นหาใหม่)
   };
 }
 ```
+
+> **v6.1 — Google-like non-sticky filters:** Filter pills (type + category)
+> ถูกย้ายออกจาก `#search-sticky` มาเป็น sibling `.search-filters-panel`
+> ที่อยู่ใน normal document flow → scroll ไปพร้อมเนื้อหา เหมือนแถบ filter
+> ของ Google Search ตัว toggle arrow (`#filterCatToggle`) และ overlay
+> (`.filter-cat-wrap`) ถูกลบออกทั้งหมด Category row จะแสดงทันทีที่มี
+> categories ให้เลือก และ collapse อัตโนมัติเมื่อว่าง (CSS `:empty`)
 
 ---
 

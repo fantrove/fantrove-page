@@ -1,5 +1,17 @@
-/* search-compact-overrides.css  v6.0
+/* search-compact-overrides.css  v6.1
    ═══════════════════════════════════════════════════════════════
+   v6.1 changes vs v6.0  (Google-like non-sticky filters)
+   ─────────────────────────────────────────────────────────────
+   STRUCTURE
+   • Filter pills (type + category) moved OUT of #search-sticky →
+     they now live in a sibling .search-filters-panel that scrolls
+     with the page, exactly like Google's search filter row.
+   • Only the search box + nav bar background sticks to the screen.
+   • Category filter row is always visible when populated; collapses
+     automatically via `.filter-pills-row--cat:empty { display:none }`
+   • Toggle arrow button (#filterCatToggle), .filter-cat-wrap overlay,
+     .filter-row-end, .filter-row-wrapper, #cat-spacer all removed.
+   ─────────────────────────────────────────────────────────────
    v6.0 changes vs v5.1
    ─────────────────────────────────────────────────────────────
    COLOR SYSTEM
@@ -89,7 +101,9 @@
   }
 
   .search-header {
-    padding: 14px 0 0;
+    /* v6.1 — added bottom padding now that filter pills are no longer
+       inside the header. Keeps the search input visually balanced. */
+    padding: 14px 0 12px;
     /* Slight blue-white wash instead of flat white */
     background: rgba(255,255,255,.98);
     border-bottom: 1px solid rgba(14,95,153,.07);
@@ -101,10 +115,6 @@
     contain: style;
     overflow: hidden;
   }
-
-  #search-sticky.cat-open .search-header { box-shadow: none; }
-
-  #cat-spacer { height: 0; overflow: hidden; }
 
   #searchForm {
     display: flex;
@@ -551,21 +561,22 @@
   .vs-container { contain: layout style; }
   .vs-item      { contain: layout style paint; top: 0 !important; padding-bottom: 10px; box-sizing: border-box; }
 
-  /* ── Filter bar ──────────────────────────────────────────── */
+  /* ── Filter bar (v6.1 — non-sticky, Google-like) ─────────────
+     .search-filters-panel is now a SIBLING of #search-sticky, not
+     a child. It scrolls with the page. Both pill rows are full-width
+     with horizontal padding matching the search input. The category
+     row auto-collapses when empty so there's no leftover gap. */
   .search-filters-panel {
     width: 100%; max-width: none;
     padding: 0; background: transparent;
     border: none; border-radius: 0; box-shadow: none;
-    position: static; margin-top: 8px;
-  }
-
-  .filter-row-wrapper {
-    display: flex; align-items: center; overflow: hidden;
-    border-top: 1px solid rgba(14,95,153,.06);   /* blue-tinted separator */
+    position: static;
+    /* Tiny top margin so pills don't kiss the sticky header's
+       bottom border. Kept small for compactness. */
+    margin-top: 2px;
   }
 
   .filter-pills-row {
-    flex: 1 1 0;
     display: flex; align-items: center;
     gap: 4px;                                     /* tighter for Modern SaaS */
     padding-block: 10px;
@@ -578,97 +589,14 @@
     &::-webkit-scrollbar { display: none; }
   }
 
-  .filter-pills-row--cat { padding-block: 9px 12px; }
-
-  .filter-row-end {
-    flex-shrink: 0;
-    display: flex; align-items: center;
-    padding-inline-end: 12px;
-    padding-inline-start: 36px;
-    margin-inline-start: -36px;
-    background: linear-gradient(to right, transparent 0%, var(--surf) 40%);
-    pointer-events: none;
-
-    & > * { pointer-events: auto; }
+  /* Category row: slightly different vertical rhythm + auto-collapse
+     when FilterService has no categories to show. */
+  .filter-pills-row--cat {
+    padding-block: 4px 12px;
   }
-
-  /* ── Category toggle button ───────────────────────────── */
-  .filter-cat-toggle {
-    display: flex; align-items: center; justify-content: center;
-    width: 32px; height: 32px;
-    border-radius: 50%;
-    /* Blue-tinted inactive state */
-    border: 1px solid rgba(14,95,153,.09);
-    background: rgba(248,250,255,.8);
-    color: var(--tlo);
-    cursor: pointer;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-    outline: none; flex-shrink: 0;
-    transition: opacity 140ms ease, background-color 140ms ease,
-                border-color 140ms ease;
-
-    & svg {
-      display: block; pointer-events: none;
-      transition: transform 260ms cubic-bezier(0.16,1,0.3,1);
-    }
-
-    &.active {
-      background: rgba(0,206,176,.10);
-      border-color: rgba(0,206,176,.40);
-      color: var(--g5);
-      opacity: 1;
-      & svg { transform: rotate(180deg); }
-    }
-
-    &:active { opacity: .55; }
+  .filter-pills-row--cat:empty {
+    display: none;
   }
-
-  .search-filters-panel { position: relative; }
-
-  .filter-cat-wrap {
-    position: absolute;
-    left: 0; right: 0;
-    top: 100%;
-    padding-top: 0;
-    z-index: 1;
-    background: var(--surf);
-    border-bottom: 1px solid rgba(14,95,153,.07);
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
-    opacity: 0;
-    transform: translateY(-100%);
-    pointer-events: none;
-    visibility: hidden;
-    contain: layout style;
-    transition: opacity 220ms cubic-bezier(0.16,1,0.3,1),
-                transform 280ms cubic-bezier(0.16,1,0.3,1),
-                visibility 0ms 280ms;
-  }
-
-  .filter-cat-wrap::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: 0;
-    box-shadow: none;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 220ms cubic-bezier(0.16,1,0.3,1);
-  }
-
-  .filter-cat-wrap.open {
-    opacity: 1;
-    transform: translateY(0);
-    pointer-events: auto;
-    visibility: visible;
-    contain: layout style paint;
-    transition: opacity 220ms cubic-bezier(0.16,1,0.3,1),
-                transform 280ms cubic-bezier(0.16,1,0.3,1),
-                visibility 0ms 0ms;
-  }
-
-  .filter-cat-wrap.open::after { opacity: 1; }
 
   /* ── Type filter pills ───────────────────────────────────── */
   .filter-pill {
@@ -768,7 +696,6 @@
 
     .filter-pill:not(.active):hover         { opacity: .75; }
     .filter-pill--cat:not(.active):hover    { opacity: .75; background: rgba(14,95,153,.03); }
-    .filter-cat-toggle:not(.active):hover   { opacity: .75; background: rgba(14,95,153,.05); }
   }
 
 }
@@ -777,7 +704,9 @@
 @layer responsive {
 
   @media (max-width: 768px) {
-    .search-header { padding: 10px 0 0; }
+    /* v6.1 — preserve balanced top/bottom padding now that filter
+       pills live outside the header. */
+    .search-header { padding: 10px 0 9px; }
 
     #searchForm { padding: 0 12px; }
 
@@ -798,8 +727,6 @@
     .filter-pills-row  { padding-block: 7px; padding-inline: 12px; gap: 4px; }
     .filter-pill       { font-size: .89rem;  padding-block: 1.0em; padding-inline: 0.86em; }
     .filter-pill--cat  { font-size: .83rem;  padding-block: 0.68em; padding-inline: 0.86em; }
-    .filter-cat-toggle { width: 31px; height: 31px; }
-    .filter-row-end    { padding-inline-end: 10px; }
 
     .sc {
       padding: 13px 14px; gap: 12px;
@@ -817,7 +744,7 @@
   }
 
   @media (max-width: 480px) {
-    .search-header { padding: 8px 0 0; }
+    .search-header { padding: 8px 0 7px; }
 
     #searchForm { padding: 0 10px; }
 
@@ -833,7 +760,6 @@
     .filter-pills-row  { padding-block: 6px; padding-inline: 10px; gap: 3px; }
     .filter-pill       { font-size: .9rem;  padding-block: 1em;  padding-inline: 0.85em; }
     .filter-pill--cat  { font-size: .8rem;  padding-block: 0.64em; padding-inline: 0.80em; }
-    .filter-cat-toggle { width: 30px; height: 30px; }
 
     .sc  { padding: 12px 13px; gap: 10px; }
     .scc { flex: 0 0 48px; height: 48px; font-size: 20px; }
