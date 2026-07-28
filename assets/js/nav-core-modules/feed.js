@@ -251,6 +251,13 @@
       for (const typeObj of (db?.type || [])) {
         this._collectTypeSegments(typeObj);
       }
+
+      // v2.3: เพิ่ม collection segments ลงใน card pool
+      //   แต่ละ collection = 1 card segment (1 collection = 1 card)
+      //   WHY: ทำให้ collection cards ปรากฏใน feed ตาม scoring algorithm
+      //   ไม่ต้องเปลี่ยนโครงสร้าง feed — collection segments ใช้ path เดียวกับ card segments
+      this._collectCollectionSegments(db);
+
       // WHY cards first in masterPool: helps cold-start card placement
       //   even before scoring kicks in at slot 0
       this._masterPool = [...this._cardSegs, ...this._buttonSegs];
@@ -258,13 +265,63 @@
 
     // Extracted to keep _buildPools ≤ 2 nesting levels
     _collectTypeSegments(typeObj) {
-      const isCopyable = this._copyableIds.has(typeObj.id);
+      // v2.3: ใช้ _isTypeCopyable() ที่รองรับ kind field
+      //   แทนที่จะดูแค่ _copyableIds — ตรวจ kind จาก typeObj ด้วย
+      const isCopyable = this._isTypeCopyable(typeObj);
       const target     = isCopyable ? this._buttonSegs : this._cardSegs;
       for (const cat of (typeObj.category || [])) {
         if (!cat.data?.length) continue;
+        // v2.3: collection type ข้าม — _collectCollectionSegments จะจัดการแยก
+        //   WHY: collection category แตกต่าง — 1 collection = 1 card, ไม่ chunk เหมือน copyable
+        if (!isCopyable && typeObj.kind === 'collection') continue;
         for (const seg of this._sliceCatIntoSegments(typeObj, cat, isCopyable)) {
           target.push(seg);
         }
+      }
+    },
+
+    // v2.3: Collect collection segments — each collection = 1 card segment
+    //   WHY: แยกจาก _collectTypeSegments เพราะ collection มี data model ต่างกัน
+    //   collection items มี api/text/name เหมือน copyable items
+    //   แต่ต้องแสดงเป็น card (ไม่ใช่ button) เพราะ 1 collection = 1 card
+    //   collection card แสดง: ชื่อ, คำอธิบาย, cover preview, จำนวน items
+    _collectCollectionSegments(db) {
+      // หา type ที่เป็น collection
+      const collectionType = (db?.type || []).find(t =>
+        t.kind === 'collection' || t.id === 'collections'
+      );
+      if (!collectionType) return;
+
+      // แต่ละ category ใน collection type = 1 collection = 1 card segment
+      for (const cat of (collectionType.category || [])) {
+        if (!cat.data?.length) continue;
+
+        // สร้าง collection card item จาก category data
+        // collection card = 1 card ที่แสดงข้อมูลของ collection ทั้งหมด
+        const collectionCard = {
+          _type:         'collection-card',
+          id:            cat.id,
+          name:          cat.name || {},
+          description:   cat.description || '',  // v2.3: ใช้ description จาก collection data
+          cover:         cat.cover || null,       // v2.3: ใช้ cover จาก collection data
+          items:         cat.data,
+          itemCount:     cat.data.length,
+          typeId:        collectionType.id,
+          typeName:      collectionType.name || {},
+        };
+
+        // 1 collection = 1 segment containing 1 card
+        this._cardSegs.push(Object.freeze({
+          id:            `collections:${cat.id}:0`,
+          groupType:     'card',
+          typeId:        collectionType.id,
+          typeName:      collectionType.name || {},
+          catId:         cat.id,
+          catName:       cat.name || {},
+          catTotalItems: 1,  // 1 collection = 1 card
+          chunkIndex:    0,
+          items:         [collectionCard],  // card item ไม่ใช่ raw copyable items
+        }));
       }
     },
 
@@ -469,6 +526,72 @@
 
     _buildGroup(seg, lang) {
       if (!seg?.items?.length) return null;
+
+      // v2.3: ถ้า segment เป็น collection card → แสดงเป็น card พิเศษ
+      //   collection card มี _type='collection-card' และข้อมูลคอลเลกชัน
+      //   แสดง: ชื่อ, คำอธิบาย, cover preview (ตัวอักษรตัวอย่าง), จำนวน items
+      const isCollectionCard = seg.typeId === 'collections'
+        || (seg.items[0] && seg.items[0]._type === 'collection-card');
+
+      if (isCollectionCard) {
+        const col = seg.items[0]; // 1 collection = 1 card
+        if (!col) return null;
+
+        // สร้าง cover preview จาก items ตัวแรก
+        //   v2.3: ถ้ามี cover.items → ใช้ตัวอักษรจาก cover items ก่อน
+        //   ถ้าไม่มี → ใช้ items ตัวแรก
+        let previewItems;
+        if (col.cover && Array.isArray(col.cover.items) && col.cover.items.length) {
+          // cover.items เป็น api codes เช่น ["U+2764", "U+1FA77", ...]
+          // ต้องแปลงเป็นตัวอักษร
+          previewItems = col.cover.items.slice(0, 4).map(apiCode => {
+            if (apiCode.startsWith('U+')) {
+              // แปลง api code เป็นตัวอักษร
+              const cleaned = apiCode.replace(/^U\+/i, '').replace(/\s+FE0F$/i, '');
+              try { return String.fromCodePoint(parseInt(cleaned, 16)); } catch (_) { return ''; }
+            }
+            // ถ้าเป็นตัวอักษรอยู่แล้ว → ใช้เลย
+            return apiCode;
+          }).filter(Boolean);
+        } else {
+          // ใช้ items ตัวแรก
+          previewItems = (col.items || []).slice(0, 4);
+        }
+        const coverPreview = previewItems
+          .map(item => typeof item === 'object' ? (item.text || '') : item)
+          .filter(Boolean)
+          .join(' ');
+
+        // สร้าง description จากข้อมูลที่มี
+        //   ถ้า collection มี description field (i18n) → ใช้
+        //   ถ้าไม่มี → สร้างจาก item count + type name
+        const desc = col.description
+          ? _resolveName(col.description, lang)
+          : `${_resolveName(seg.typeName, lang)} · ${col.itemCount || (col.items || []).length} items`;
+
+        return {
+          group: {
+            type:   'card',
+            header: {
+              title:       _resolveName(seg.catName,  lang),
+              description: _resolveName(seg.typeName, lang),
+              className:   'auto-category-header collection-header',
+            },
+            items: [{
+              _type:         'card',
+              title:         col.name || {},
+              description:   desc,
+              image:         null,
+              coverPreview:  coverPreview,
+              link:          `/collections/${seg.catId}`,
+              className:     'collection-card',
+              _collectionId: seg.catId,
+              _itemCount:    col.itemCount || (col.items || []).length,
+            }],
+          },
+        };
+      }
+
       return {
         group: {
           type:   seg.groupType,

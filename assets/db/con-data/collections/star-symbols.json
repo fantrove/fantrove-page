@@ -1,0 +1,36 @@
+{
+  "id": "star-symbols",
+  "name": {
+    "th": "สัญลักษณ์ดาว",
+    "en": "Star Symbols"
+  },
+  "description": {
+    "th": "รวมสัญลักษณ์ดาวทุกชนิด ดาวห้าแฉก ดาวหกแฉก ดาวเรืองแสง",
+    "en": "All kinds of star symbols — five-pointed, six-pointed, sparkling."
+  },
+  "cover": {
+    "type": "auto",
+    "items": ["U+2605", "U+2729", "U+2736", "U+2B50"]
+  },
+  "items": [
+    { "api": "U+2605", "text": "★", "name": { "th": "ดาวดำ", "en": "Black Star" } },
+    { "api": "U+2606", "text": "☆", "name": { "th": "ดาวขาว", "en": "White Star" } },
+    { "api": "U+2729", "text": "✩", "name": { "th": "ดาวเรืองแสง", "en": "Stress Outlined Star" } },
+    { "api": "U+272A", "text": "✪", "name": { "th": "ดาววงกลม", "en": "Circled White Star" } },
+    { "api": "U+272B", "text": "✫", "name": { "th": "ดาวเปิด", "en": "Open Center Star" } },
+    { "api": "U+272C", "text": "✬", "name": { "th": "ดาวดำเปิด", "en": "Black Center Star" } },
+    { "api": "U+272D", "text": "✭", "name": { "th": "ดาวเรืองแสงเปิด", "en": "Outlined Black Star" } },
+    { "api": "U+272E", "text": "✮", "name": { "th": "ดาวหนักเปิด", "en": "Heavy Outlined Star" } },
+    { "api": "U+272F", "text": "✯", "name": { "th": "ดาวหมุน", "en": "Pinwheel Star" } },
+    { "api": "U+2730", "text": "✰", "name": { "th": "ดาวแฉกขาว", "en": "Shadowed White Star" } },
+    { "api": "U+2731", "text": "✱", "name": { "th": "ดาวหนัก", "en": "Heavy Asterisk" } },
+    { "api": "U+2732", "text": "✲", "name": { "th": "ดาวเปิดกลาง", "en": "Open Center Asterisk" } },
+    { "api": "U+2733", "text": "✳", "name": { "th": "ดาวแฉก", "en": "Eight Spoked Asterisk" } },
+    { "api": "U+2734", "text": "✴", "name": { "th": "ดาวแฉกแปด", "en": "Eight Pointed Star" } },
+    { "api": "U+2735", "text": "✵", "name": { "th": "ดาวแฉกขาวแปด", "en": "Eight Pointed Black Star" } },
+    { "api": "U+2736", "text": "✶", "name": { "th": "ดาวหกแฉกดำ", "en": "Six Pointed Black Star" } },
+    { "api": "U+2B50", "text": "⭐", "name": { "th": "ดาวเหลือง", "en": "Star" } },
+    { "api": "U+1F31F", "text": "🌟", "name": { "th": "ดาวเรืองแสงเหลือง", "en": "Glowing Star" } },
+    { "api": "U+1F320", "text": "🌠", "name": { "th": "ดาวตก", "en": "Shooting Star" } }
+  ]
+}

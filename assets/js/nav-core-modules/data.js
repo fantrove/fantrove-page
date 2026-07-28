@@ -284,8 +284,9 @@
           if (!typeObj || typeof typeObj !== 'object') continue;
           if (typeObj.id) idMap.set(typeObj.id, typeObj);
 
-          // WHY: ข้าม type ที่เป็น collection (เช่น cards) — items ของมันไม่ใช่ตัวอักขระ copy ได้
+          // WHY: ข้าม type ที่เป็น collection (เช่น collections) — items ของมันไม่ใช่ตัวอักขระ copy ได้
           //      การนำเข้า apiMap/textMap จะทำให้ระบบ copy และ search ทำงานผิดพลาด
+          // v2.3: รองรับ kind='collection' สำหรับระบบคอลเลกชันใหม่
           if (typeObj.kind && typeObj.kind !== 'copyable') continue;
 
           for (const cat of (typeObj.category || [])) {
@@ -381,11 +382,13 @@
     //
     // WHY แยกจาก fetchCategoryGroup:
     //   fetchCategoryGroup ค้นหาผ่าน assembled DB — ใช้กับ emoji/symbol ที่อยู่ใน index.json
-    //   fetchCategoryDirect fetch จาก file path โดยตรง — ใช้กับ collection types (cards)
+    //   fetchCategoryDirect fetch จาก file path โดยตรง — ใช้กับ collection types (collections)
     //   ที่ไม่ควรอยู่ใน index.json เพราะจะทำให้ระบบอื่นดึงไปประมวลผลเป็นปุ่มโดยไม่ตั้งใจ
     //
-    // @param {string} typeId     — เช่น 'cards'
-    // @param {string} categoryId — เช่น 'ai_tools'
+    // v2.3: อัพเดทชื่อตัวแปรให้ชัดเจน — typeId='collections' ไม่ใช่ 'cards'
+    //
+    // @param {string} typeId     — เช่น 'collections'
+    // @param {string} categoryId — เช่น 'cute-hearts'
     // @returns {Promise<{id, name, data, header}>}
 
     async fetchCategoryDirect(typeId, categoryId) {

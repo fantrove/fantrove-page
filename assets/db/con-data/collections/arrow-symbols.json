@@ -1,0 +1,37 @@
+{
+  "id": "arrow-symbols",
+  "name": {
+    "th": "สัญลักษณ์ลูกศร",
+    "en": "Arrow Symbols"
+  },
+  "description": {
+    "th": "รวมสัญลักษณ์ลูกศรทุกทิศทาง ลูกศรขึ้น ลง ซ้าย ขวา และทแยงมุม",
+    "en": "Arrow symbols in every direction — up, down, left, right, and diagonal."
+  },
+  "cover": {
+    "type": "auto",
+    "items": ["U+2190", "U+2191", "U+2192", "U+2193"]
+  },
+  "items": [
+    { "api": "U+2190", "text": "←", "name": { "th": "ลูกศรซ้าย", "en": "Left Arrow" } },
+    { "api": "U+2191", "text": "↑", "name": { "th": "ลูกศรขึ้น", "en": "Up Arrow" } },
+    { "api": "U+2192", "text": "→", "name": { "th": "ลูกศรขวา", "en": "Right Arrow" } },
+    { "api": "U+2193", "text": "↓", "name": { "th": "ลูกศรลง", "en": "Down Arrow" } },
+    { "api": "U+2194", "text": "↔", "name": { "th": "ลูกศรซ้ายขวา", "en": "Left Right Arrow" } },
+    { "api": "U+2195", "text": "↕", "name": { "th": "ลูกศรขึ้นลง", "en": "Up Down Arrow" } },
+    { "api": "U+2196", "text": "↖", "name": { "th": "ลูกศรซ้ายบน", "en": "Upper Left Arrow" } },
+    { "api": "U+2197", "text": "↗", "name": { "th": "ลูกศรขวาบน", "en": "Upper Right Arrow" } },
+    { "api": "U+2198", "text": "↘", "name": { "th": "ลูกศรขวาล่าง", "en": "Lower Right Arrow" } },
+    { "api": "U+2199", "text": "↙", "name": { "th": "ลูกศรซ้ายล่าง", "en": "Lower Left Arrow" } },
+    { "api": "U+21A9", "text": "↩", "name": { "th": "ลูกศรหันซ้าย", "en": "Left Arrow with Hook" } },
+    { "api": "U+21AA", "text": "↪", "name": { "th": "ลูกศรหันขวา", "en": "Right Arrow with Hook" } },
+    { "api": "U+21E6", "text": "⇆", "name": { "th": "ลูกศรซ้ายขวาเต็ม", "en": "Left Right Triangle Arrows" } },
+    { "api": "U+21E7", "text": "⇧", "name": { "th": "ลูกศรขึ้นเต็ม", "en": "Up White Arrow" } },
+    { "api": "U+21E8", "text": "⇨", "name": { "th": "ลูกศรขวาเต็ม", "en": "Right White Arrow" } },
+    { "api": "U+21E9", "text": "⇩", "name": { "th": "ลูกศรลงเต็ม", "en": "Down White Arrow" } },
+    { "api": "U+27A4", "text": "➤", "name": { "th": "ลูกศรชี้ขวา", "en": "Right Arrowhead" } },
+    { "api": "U+279C", "text": "➜", "name": { "th": "ลูกศรหนาขวา", "en": "Heavy Right Arrow" } },
+    { "api": "U+2794", "text": "➔", "name": { "th": "ลูกศรขวากว้าง", "en": "Wide Right Arrow" } },
+    { "api": "U+2795", "text": "➕", "name": { "th": "บวกหนา", "en": "Heavy Plus" } }
+  ]
+}

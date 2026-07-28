@@ -243,6 +243,12 @@ const _loader = {
         })
       );
 
+      // v2.3: preserve kind from index.json (เช่น 'collection' สำหรับ collections type)
+      const kindMap = {};
+      for (const catEntry of topIndex.categories) {
+        if (catEntry.kind) kindMap[catEntry.id] = catEntry.kind;
+      }
+
       const typeObjs = [];
       await Promise.all(
         typeResults.filter(Boolean).map(async ({ id: typeId, name: typeName, typeData }) => {
@@ -255,11 +261,25 @@ const _loader = {
                 const raw = await _fetcher.fetch(filePath);
                 if (!ConDataRegistry.validate.dataFile(raw)) return null;
                 const normalized = ConDataRegistry.normalize.dataFile(raw);
-                return { id: catEntry.id, name: catEntry.name || normalized.name || {}, data: normalized.data };
+                // v2.3: preserve collection-specific fields (description, cover)
+                //   WHY: FeedService needs description/cover to build collection cards
+                const catData = { id: catEntry.id, name: catEntry.name || normalized.name || {}, data: normalized.data };
+                if (normalized.description) catData.description = normalized.description;
+                if (normalized.cover) catData.cover = normalized.cover;
+                if (normalized.items) catData.items = normalized.items;
+                return catData;
               } catch (e) { return null; }
             })
           );
-          typeObjs.push({ id: typeId, name: typeName || typeData.name || {}, category: loadedCats.filter(Boolean) });
+          // v2.3: include kind in typeObj for proper pool classification
+          const typeObj = { id: typeId, name: typeName || typeData.name || {}, category: loadedCats.filter(Boolean) };
+          if (kindMap[typeId]) typeObj.kind = kindMap[typeId];
+          // also check kind from raw type data (e.g., collections.json has kind:"collection")
+          const rawKind = typeResults.find(r => r.id === typeId)?.typeData?.kind;
+          if (rawKind) typeObj.kind = rawKind;
+          // fallback: check if id matches known collection type
+          if (!typeObj.kind && typeId === 'collections') typeObj.kind = 'collection';
+          typeObjs.push(typeObj);
         })
       );
 

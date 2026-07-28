@@ -16,9 +16,10 @@
       "file": "fancy.json"
     },
     {
-      "id": "cards",
+      "id": "collections",
+      "kind": "collection",
       "name": { "th": "คอลเลกชัน", "en": "Collections" },
-      "file": "cards.json"
+      "file": "collections.json"
     }
   ]
 }

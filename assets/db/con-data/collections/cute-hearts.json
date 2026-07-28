@@ -1,0 +1,37 @@
+{
+  "id": "cute-hearts",
+  "name": {
+    "th": "หัวใจน่ารัก",
+    "en": "Cute Hearts"
+  },
+  "description": {
+    "th": "รวมอักษรพิเศษรูปหัวใจน่ารักหลากหลายสไตล์ คัดลอกได้ทันที",
+    "en": "A collection of heart symbols in various cute styles. Copy instantly."
+  },
+  "cover": {
+    "type": "auto",
+    "items": ["U+2764", "U+1FA77", "U+2661", "U+1F49E"]
+  },
+  "items": [
+    { "api": "U+2764", "text": "❤", "name": { "th": "หัวใจแดง", "en": "Red Heart" } },
+    { "api": "U+1FA77", "text": "🩷", "name": { "th": "หัวใจชมพู", "en": "Pink Heart" } },
+    { "api": "U+2661", "text": "♡", "name": { "th": "หัวใจกลวง", "en": "White Heart Suit" } },
+    { "api": "U+1F49E", "text": "💞", "name": { "th": "หัวใจหมุน", "en": "Revolving Hearts" } },
+    { "api": "U+1F495", "text": "💕", "name": { "th": "สองหัวใจ", "en": "Two Hearts" } },
+    { "api": "U+1F493", "text": "💓", "name": { "th": "หัวใจเต้น", "en": "Beating Heart" } },
+    { "api": "U+1F497", "text": "💗", "name": { "th": "หัวใจเติบโต", "en": "Growing Heart" } },
+    { "api": "U+1F496", "text": "💖", "name": { "th": "หัวใจเรืองแสง", "en": "Sparkling Heart" } },
+    { "api": "U+1F49D", "text": "💝", "name": { "th": "หัวใจริบบิ้น", "en": "Heart with Ribbon" } },
+    { "api": "U+1F49B", "text": "💛", "name": { "th": "หัวใจเหลือง", "en": "Yellow Heart" } },
+    { "api": "U+1F49A", "text": "💚", "name": { "th": "หัวใจเขียว", "en": "Green Heart" } },
+    { "api": "U+1F499", "text": "💙", "name": { "th": "หัวใจน้ำเงิน", "en": "Blue Heart" } },
+    { "api": "U+1F49C", "text": "💜", "name": { "th": "หัวใจม่วง", "en": "Purple Heart" } },
+    { "api": "U+1F90E", "text": "🤎", "name": { "th": "หัวใจน้ำตาล", "en": "Brown Heart" } },
+    { "api": "U+1F5A4", "text": "🖤", "name": { "th": "หัวใจดำ", "en": "Black Heart" } },
+    { "api": "U+1FA75", "text": "🩵", "name": { "th": "หัวใจฟ้า", "en": "Light Blue Heart" } },
+    { "api": "U+1FA76", "text": "🩶", "name": { "th": "หัวใจเทา", "en": "Grey Heart" } },
+    { "api": "U+2763", "text": "❣", "name": { "th": "เครื่องหมายหัวใจ", "en": "Heart Exclamation" } },
+    { "api": "U+2764\uFE0F", "text": "❤️", "name": { "th": "หัวใจแดงเข้ม", "en": "Heavy Red Heart" } },
+    { "api": "U+1F494", "text": "💔", "name": { "th": "หัวใจแตก", "en": "Broken Heart" } }
+  ]
+}

@@ -89,7 +89,29 @@
   touch-action:pan-x;
 }
 .card-content-container--h::-webkit-scrollbar{display:none;}
-.card-content-container--h .card{flex-shrink:0;width:160px;}`;
+.card-content-container--h .card{flex-shrink:0;width:160px;}
+
+.card-cover-preview{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:2.5rem;
+  line-height:1.2;
+  min-height:80px;
+  padding:0.75rem;
+  background:var(--fv-surface-card,#f0f7f4);
+  border-radius:12px 12px 0 0;
+  letter-spacing:0.3rem;
+  contain:layout style;
+}
+
+.collection-card{
+  cursor:pointer;
+  transition:transform 150ms ease;
+}
+.collection-card:hover{
+  transform:translateY(-2px);
+}`;
     document.head.appendChild(s);
   }
 
@@ -767,6 +789,23 @@
 
     async _resolveItem(item, lang, forceCard = false) {
       if (forceCard || this._isCard(item)) {
+        // v2.3: รองรับ collection card — ถ้า item เป็น collection card ให้ส่งต่อทุก field
+        //   collection card มี title, description, coverPreview, link, className
+        //   ไม่ต้องแปลง — ส่งตรงไปที่ _tplCard
+        if (item._type === 'collection-card' || item.className === 'collection-card') {
+          return {
+            _type:         'card',
+            image:         item.image      || null,
+            imageAlt:      item.imageAlt,
+            title:         item.title      || item.name,
+            description:   item.description,
+            link:          item.link       || null,
+            className:     item.className  || null,
+            coverPreview:  item.coverPreview || null,
+            _collectionId: item._collectionId || null,
+            _itemCount:    item._itemCount || null,
+          };
+        }
         return {
           _type      : 'card',
           image      : item.image      || null,
@@ -791,8 +830,9 @@
     // WHY: card item จาก collection มี api field (เช่น 'card-openai')
     //   แต่ก็มี image field ด้วย — ตรวจ group type ก่อน (forceCard จาก caller)
     //   ตรงนี้ใช้เป็น fallback สำหรับ item เดี่ยวที่ไม่มี group context
+    // v2.3: เพิ่มการตรวจ _type='collection-card' สำหรับ collection card
     _isCard: item =>
-      item.type === 'card' || item.group?.type === 'card' || (!!item.image && !item.api),
+      item.type === 'card' || item.group?.type === 'card' || item._type === 'collection-card' || (!!item.image && !item.api),
 
     // ── Emit ──────────────────────────────────────────────────────────────────────
 
@@ -869,8 +909,18 @@
       const img  = item.image
         ? `<img class="card-image" src="${_esc(item.image)}" loading="lazy" decoding="async" fetchpriority="low" alt="${_esc(_txt(item.imageAlt, lang))}">`
         : '';
+
+      // v2.3: รองรับ collection card — แสดง cover preview แทนรูปภาพ
+      //   collection card มี coverPreview (ตัวอักษรตัวอย่าง) แทน image
+      //   ถ้าไม่มี image และมี coverPreview → แสดง cover preview
+      const coverPreview = item.coverPreview
+        ? `<div class="card-cover-preview">${_esc(item.coverPreview)}</div>`
+        : '';
+
+      const visualContent = img || coverPreview;
+
       return (
-        `<div class="card${cls}"${link}>${img}` +
+        `<div class="card${cls}"${link}>${visualContent}` +
         `<div class="card-content">` +
           `<div class="card-title">${_esc(_txt(item.title, lang))}</div>` +
           `<div class="card-description">${_esc(_txt(item.description, lang))}</div>` +
@@ -894,7 +944,22 @@
         return;
       }
       const card = e.target.closest('.card[data-link]');
-      if (card) window.open(card.dataset.link, '_blank', 'noopener,noreferrer');
+      if (card) {
+        // v2.3: ถ้าเป็น collection card → นำทางไปหน้าคอลเลกชัน (SPA navigation)
+        //   ถ้าไม่ใช่ → เปิดลิงก์ภายนอก (เหมือนเดิม)
+        const isCollection = card.classList.contains('collection-card');
+        if (isCollection && card.dataset.link) {
+          // SPA navigation ไปหน้าคอลเลกชัน
+          try {
+            M.RouterService?.navigateTo?.(card.dataset.link) ||
+            (window.location.href = card.dataset.link);
+          } catch (_) {
+            window.location.href = card.dataset.link;
+          }
+        } else {
+          window.open(card.dataset.link, '_blank', 'noopener,noreferrer');
+        }
+      }
     },
 
     updateCardsLanguage(lang) {

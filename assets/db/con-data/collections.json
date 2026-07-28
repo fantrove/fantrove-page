@@ -1,0 +1,40 @@
+{
+  "id": "collections",
+  "kind": "collection",
+  "name": {
+    "th": "คอลเลกชัน",
+    "en": "Collections"
+  },
+  "categories": [
+    {
+      "id": "cute-hearts",
+      "name": { "th": "หัวใจน่ารัก", "en": "Cute Hearts" },
+      "file": "/assets/db/con-data/collections/cute-hearts.json"
+    },
+    {
+      "id": "weather-symbols",
+      "name": { "th": "สัญลักษณ์อากาศ", "en": "Weather Symbols" },
+      "file": "/assets/db/con-data/collections/weather-symbols.json"
+    },
+    {
+      "id": "math-operators",
+      "name": { "th": "ตัวดำเนินการคณิตศาสตร์", "en": "Math Operators" },
+      "file": "/assets/db/con-data/collections/math-operators.json"
+    },
+    {
+      "id": "currency-symbols",
+      "name": { "th": "สัญลักษณ์สกุลเงิน", "en": "Currency Symbols" },
+      "file": "/assets/db/con-data/collections/currency-symbols.json"
+    },
+    {
+      "id": "star-symbols",
+      "name": { "th": "สัญลักษณ์ดาว", "en": "Star Symbols" },
+      "file": "/assets/db/con-data/collections/star-symbols.json"
+    },
+    {
+      "id": "arrow-symbols",
+      "name": { "th": "สัญลักษณ์ลูกศร", "en": "Arrow Symbols" },
+      "file": "/assets/db/con-data/collections/arrow-symbols.json"
+    }
+  ]
+}

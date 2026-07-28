@@ -1,0 +1,33 @@
+{
+  "id": "currency-symbols",
+  "name": {
+    "th": "สัญลักษณ์สกุลเงิน",
+    "en": "Currency Symbols"
+  },
+  "description": {
+    "th": "รวมสัญลักษณ์สกุลเงินจากทั่วโลก ดอลลาร์ ยูโร เยน บาท และอื่นๆ",
+    "en": "Currency symbols from around the world — dollar, euro, yen, baht, and more."
+  },
+  "cover": {
+    "type": "auto",
+    "items": ["U+0024", "U+20AC", "U+00A5", "U+0E3F"]
+  },
+  "items": [
+    { "api": "U+0024", "text": "$", "name": { "th": "ดอลลาร์", "en": "Dollar Sign" } },
+    { "api": "U+20AC", "text": "€", "name": { "th": "ยูโร", "en": "Euro Sign" } },
+    { "api": "U+00A5", "text": "¥", "name": { "th": "เยน", "en": "Yen Sign" } },
+    { "api": "U+00A3", "text": "£", "name": { "th": "ปอนด์", "en": "Pound Sign" } },
+    { "api": "U+0E3F", "text": "฿", "name": { "th": "บาท", "en": "Baht Sign" } },
+    { "api": "U+20A9", "text": "₩", "name": { "th": "วอน", "en": "Won Sign" } },
+    { "api": "U+20B9", "text": "₹", "name": { "th": "รูปี", "en": "Indian Rupee" } },
+    { "api": "U+20BD", "text": "₽", "name": { "th": "รูเบิล", "en": "Russian Ruble" } },
+    { "api": "U+20B4", "text": "₴", "name": { "th": "ฮรีฟเนีย", "en": "Hryvnia" } },
+    { "api": "U+20AB", "text": "₫", "name": { "th": "ดอง", "en": "Dong Sign" } },
+    { "api": "U+20A8", "text": "₨", "name": { "th": "รูปีทั่วไป", "en": "Rupee Sign" } },
+    { "api": "U+20B1", "text": "₱", "name": { "th": "เปโซ", "en": "Peso Sign" } },
+    { "api": "U+20B2", "text": "₲", "name": { "th": "กวารานี", "en": "Guarani Sign" } },
+    { "api": "U+20B5", "text": "₵", "name": { "th": "เซดี", "en": "Cedi Sign" } },
+    { "api": "U+00A2", "text": "¢", "name": { "th": "เซนต์", "en": "Cent Sign" } },
+    { "api": "U+20BA", "text": "₺", "name": { "th": "ลีร์ตุรกี", "en": "Turkish Lira" } }
+  ]
+}

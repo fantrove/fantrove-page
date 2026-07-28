@@ -78,6 +78,7 @@ const ConDataRegistry = {
     symbol: 'copyable',
     unicode: 'copyable',
     fancy: 'copyable',
+    collections: 'collection',
   }),
   
   // =========================================================
@@ -129,23 +130,35 @@ const ConDataRegistry = {
   normalize: {
     
     // แปลง typeIndex ให้ใช้ key "categories" เสมอ (บางไฟล์อาจใช้ "category")
+    // v2.3: preserve kind field สำหรับ collection type
     typeIndex(raw) {
       if (!raw) return null;
-      return {
+      const result = {
         id: raw.id || '',
         name: raw.name || {},
         categories: raw.categories || raw.category || []
       };
+      // v2.3: preserve kind (e.g., 'collection') for proper pool classification
+      if (raw.kind) result.kind = raw.kind;
+      return result;
     },
     
     // แปลง dataFile ให้อยู่ในรูปแบบมาตรฐาน
+    // v2.3: รองรับ collection data — preserve description, cover, items fields
+    //   WHY: collection files มี description (i18n) และ cover (auto + items)
+    //   ซึ่งต้องส่งไปยัง FeedService/ContentService เพื่อสร้าง collection card
     dataFile(raw) {
       if (!raw) return null;
-      return {
+      const base = {
         id: raw.id || '',
         name: raw.name || {},
         data: Array.isArray(raw.data) ? raw.data : []
       };
+      // v2.3: preserve collection-specific fields
+      if (raw.description !== undefined) base.description = raw.description;
+      if (raw.cover !== undefined) base.cover = raw.cover;
+      if (Array.isArray(raw.items) && !Array.isArray(raw.data)) base.items = raw.items;
+      return base;
     },
     
     // แปลง item ให้ชัดเจน
@@ -181,7 +194,7 @@ const ConDataRegistry = {
   // อธิบายว่า query แต่ละประเภทคืออะไร (สำหรับ documentation/training)
   // =========================================================
   queryTypes: {
-    GET_ALL_TYPES: 'ดึงรายการ type ทั้งหมด (emoji, symbol, cards, ...)',
+    GET_ALL_TYPES: 'ดึงรายการ type ทั้งหมด (emoji, symbol, collections, ...)',
     GET_CATEGORIES: 'ดึงรายการ subcategory ของ type ที่ระบุ',
     GET_ITEMS: 'ดึงรายการ item ทั้งหมดใน subcategory',
     GET_ALL_ITEMS: 'ดึง item ทั้งหมดของ type ที่ระบุ (ทุก subcategory)',

@@ -18,6 +18,12 @@
       "th_label": "ข้อความแฟนซี",
       "jsonFile": "/assets/json/content/fancy.json",
       "url": "fancy"
+    },
+    {
+      "en_label": "Collections",
+      "th_label": "คอลเลกชัน",
+      "url": "collections",
+      "jsonFile": "/assets/json/content/collections.json"
     }
   ]
 }
