@@ -3,7 +3,7 @@
 //          No system-specific logic; any consumer can request data in any shape.
 // Used by: home.js, search-ui.js, copyNotification.js, and any future consumer
 
-// con-data-service.js  v2.2.0
+// con-data-service.js  v3.0.0
 // =========================================================
 // ระบบศูนย์กลางข้อมูล — Neutral Data Service
 //
@@ -252,6 +252,13 @@ const _loader = {
       const typeObjs = [];
       await Promise.all(
         typeResults.filter(Boolean).map(async ({ id: typeId, name: typeName, typeData }) => {
+          // v3.0: ตรวจว่า type นี้เป็น collection type หรือไม่
+          //   WHY: ถ้าเป็น collection → ใช้ collectionDataFile normalizer แทน dataFile
+          //   collection data files มี items (Unicode IDs) แทน data (items with api/text/name)
+          //   ต้องแปลง Unicode IDs → items ที่มี api/text/name ให้ feed ใช้ได้ทันที
+          const typeKind = kindMap[typeId] || typeData.kind || null;
+          const isCollection = ConDataRegistry.isCollectionType(typeId, typeKind);
+
           const loadedCats = await Promise.all(
             (typeData.categories || []).map(async (catEntry) => {
               try {
@@ -259,10 +266,23 @@ const _loader = {
                   ? ConDataRegistry.resolvePath(catEntry.file)
                   : ConDataRegistry.paths.subcategoryData(typeId, catEntry.id);
                 const raw = await _fetcher.fetch(filePath);
-                if (!ConDataRegistry.validate.dataFile(raw)) return null;
-                const normalized = ConDataRegistry.normalize.dataFile(raw);
-                // v2.3: preserve collection-specific fields (description, cover)
+
+                // v3.0: เลือก normalizer ตามประเภทของ type
+                //   collection → collectionDataFile (แปลง Unicode IDs → items)
+                //   copyable → dataFile (ใช้เหมือนเดิม)
+                let normalized;
+                if (isCollection) {
+                  if (!ConDataRegistry.validate.dataFile(raw) && !ConDataRegistry.validate.collectionDataFile(raw)) return null;
+                  // ใช้ collectionDataFile normalizer ที่แปลง Unicode IDs → items
+                  normalized = ConDataRegistry.normalize.collectionDataFile(raw);
+                } else {
+                  if (!ConDataRegistry.validate.dataFile(raw)) return null;
+                  normalized = ConDataRegistry.normalize.dataFile(raw);
+                }
+
+                // v2.3→v3.0: preserve collection-specific fields (description, cover, items)
                 //   WHY: FeedService needs description/cover to build collection cards
+                //   items (Unicode IDs) ถูกเก็บไว้สำหรับ cover preview + related algorithm
                 const catData = { id: catEntry.id, name: catEntry.name || normalized.name || {}, data: normalized.data };
                 if (normalized.description) catData.description = normalized.description;
                 if (normalized.cover) catData.cover = normalized.cover;
@@ -330,7 +350,7 @@ function _extractName(nameObj, lang) {
 // =========================================================
 const ConDataService = {
 
-  version: '2.2.0',
+  version: '3.0.0',
   registry: ConDataRegistry,
 
   // -------------------------------------------------------

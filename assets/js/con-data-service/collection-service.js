@@ -3,39 +3,32 @@
 //          แก่ทุกระบบ (discover, search, cards, static pages)
 // Used by: feed.js (collection segments), content.js (card rendering), search
 //
-// collection-service.js  v1.0.0
+// collection-service.js  v3.0.0
 // =========================================================
 // ระบบศูนย์กลางคอลเลกชัน — Collection Service
 //
+// v3.0.0 — รวมเข้ากับ ConDataService pipeline
+//   ตอนนี้ ConDataService จัดการการแปลง Unicode IDs → items ที่มี api/text/name
+//   ทำให้ CollectionService ไม่ต้องทำงานซ้ำ — ขอข้อมูลจาก ConDataService ได้เลย
+//
 // หลักการออกแบบ:
 //  - 1 collection = 1 card (auto-generated)
-//  - ข้อมูล collection มาจาก collections.json + subcategory files
-//  - Card แสดง: ชื่อ, คำอธิบาย, ภาพตัวอย่าง (auto-generated จาก cover.items)
-//  - ไม่ต้องสร้าง card ด้วยมือ — ทุกอย่าง derive จาก collection data
-//  - รองรับทั้ง feed rendering (ContentService) และ static page generation
+//  - ข้อมูล collection มาจาก ConDataService.getAssembled() โดยตรง
+//  - ไม่ต้องโหลดแยก — ข้อมูลไหลผ่าน pipeline เดียวกับ copyable data
+//  - ยืดหยุ่นเหมือน ConDataService — ระบบอื่นขอข้อมูลได้ทุกรูปแบบ
 //
 // Data flow:
 //   ConDataService.getAssembled() → CollectionService กรอง type=collection
 //   → แปลงเป็น card format ที่ ContentService._tplCard เข้าใจ
 //
-// Collection data model:
+// Collection data model (ใน assembled DB):
 //   {
 //     id: "cute-hearts",
 //     name: { th: "หัวใจน่ารัก", en: "Cute Hearts" },
 //     description: { th: "...", en: "..." },
 //     cover: { type: "auto", items: ["U+2764", "U+1FA77", ...] },
-//     items: [{ api, text, name }, ...]
-//   }
-//
-// Card output (สำหรับ ContentService._tplCard):
-//   {
-//     _type: "card",
-//     title: { th: "หัวใจน่ารัก", en: "Cute Hearts" },
-//     description: { th: "...", en: "..." },
-//     image: null,   // auto-generated thumbnail ในอนาคต
-//     coverPreview: "❤🩷♡💞",  // ตัวอักษรตัวอย่างจาก cover.items
-//     link: "/collections/cute-hearts",
-//     className: "collection-card",
+//     items: ["U+2764", "U+1FA77", ...],  // Unicode IDs ต้นฉบับ
+//     data: [{ api: "U+2764", text: "❤", name: {...} }, ...]  // แปลงแล้ว
 //   }
 // =========================================================
 
@@ -87,7 +80,7 @@
 
   const CollectionService = {
 
-    version: '1.0.0',
+    version: '3.0.0',
 
     // ── Initialization ──────────────────────────────────────────────────────
 

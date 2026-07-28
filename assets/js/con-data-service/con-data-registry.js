@@ -42,7 +42,7 @@ const ConDataRegistry = {
       }
     },
     
-    // Layer 3: {subcategory}.json
+    // Layer 3: {subcategory}.json (copyable type)
     // WHY: data items มี required fields (api, text, name) และ optional card fields
     //      optional fields ไม่กระทบ button rendering — ContentService ใช้ forceCard flag แทน
     dataFile: {
@@ -51,6 +51,21 @@ const ConDataRegistry = {
         required: ['api', 'text', 'name'],
         name: { required: ['en'] },
         optional: ['description', 'image', 'link', 'className']
+      }
+    },
+
+    // Layer 3: {collection-id}.json (collection type)
+    // WHY: collection data files มีโครงสร้างต่างจาก copyable — มี items (Unicode IDs)
+    //      แทนที่จะเป็น data (items with api/text/name) และมี cover + description
+    collectionDataFile: {
+      required: ['id', 'name', 'items'],
+      optional: ['description', 'cover'],
+      items: {
+        // Unicode IDs เช่น 'U+2764' หรือ text characters
+      },
+      cover: {
+        required: ['type', 'items'],
+        optional: ['layout', 'bgColor']
       }
     }
   },
@@ -111,9 +126,23 @@ const ConDataRegistry = {
         (Array.isArray(data.categories) || Array.isArray(data.category));
     },
     dataFile(data) {
-      return data &&
-        typeof data.id === 'string' &&
-        Array.isArray(data.data);
+      // v3.0: รองรับทั้ง copyable format (data[]) และ collection format (items[])
+      //   WHY: collection data files มี items แทน data — ต้อง validate ได้ทั้งสองรูปแบบ
+      if (!data || typeof data.id !== 'string') return false;
+      // Copyable format: has data array
+      if (Array.isArray(data.data)) return true;
+      // Collection format: has items array (Unicode IDs) + name
+      if (Array.isArray(data.items) && data.name && typeof data.name === 'object') return true;
+      return false;
+    },
+    // v3.0: collection-specific validator
+    //   WHY: แยกจาก dataFile เพื่อให้ตรวจสอบ collection-specific fields ได้ละเอียดขึ้น
+    //   ใช้เมื่อรู้ว่า type เป็น collection แล้ว
+    collectionDataFile(data) {
+      if (!data || typeof data.id !== 'string') return false;
+      if (!data.name || typeof data.name !== 'object') return false;
+      if (!Array.isArray(data.items)) return false;
+      return true;
     },
     item(item) {
       return item &&
@@ -144,9 +173,10 @@ const ConDataRegistry = {
     },
     
     // แปลง dataFile ให้อยู่ในรูปแบบมาตรฐาน
-    // v2.3: รองรับ collection data — preserve description, cover, items fields
-    //   WHY: collection files มี description (i18n) และ cover (auto + items)
-    //   ซึ่งต้องส่งไปยัง FeedService/ContentService เพื่อสร้าง collection card
+    // v3.0: รองรับทั้ง copyable format และ collection format
+    //   WHY: collection data files มี items (Unicode IDs) แทน data (items)
+    //   ต้องแปลง Unicode IDs → items ที่มี api/text/name ให้ feed ใช้ได้ทันที
+    //   เหมือนกับที่ copyable data ถูก normalize แล้วใช้ได้เลย
     dataFile(raw) {
       if (!raw) return null;
       const base = {
@@ -158,6 +188,38 @@ const ConDataRegistry = {
       if (raw.description !== undefined) base.description = raw.description;
       if (raw.cover !== undefined) base.cover = raw.cover;
       if (Array.isArray(raw.items) && !Array.isArray(raw.data)) base.items = raw.items;
+      return base;
+    },
+
+    // v3.0: Normalize collection data file — แปลง Unicode IDs → items ที่มี api/text/name
+    //   WHY: ทำให้ collection data ไหลผ่าน pipeline เดียวกับ copyable data ได้
+    //   FeedService ไม่ต้องรู้ว่าข้อมูลมาจาก collection หรือ copyable — ใช้ data[] ได้เลย
+    //   Unicode IDs เช่น "U+2764" จะถูกแปลงเป็น { api: "U+2764", text: "❤", name: {...} }
+    //   text ได้จาก String.fromCodePoint() — name ใช้ placeholder ก่อน แล้ว resolve ทีหลัง
+    collectionDataFile(raw) {
+      if (!raw) return null;
+      const base = {
+        id: raw.id || '',
+        name: raw.name || {},
+        data: []
+      };
+      // Preserve collection-specific fields
+      if (raw.description !== undefined) base.description = raw.description;
+      if (raw.cover !== undefined) base.cover = raw.cover;
+      if (Array.isArray(raw.items)) base.items = raw.items;
+      // แปลง Unicode IDs → items ที่มี api/text/name
+      //   WHY: ทำให้ FeedService/ContentService ใช้ data[] ได้เหมือน copyable
+      //   แต่ละ item จะมี api (Unicode ID), text (ตัวอักษร), name (placeholder)
+      if (Array.isArray(raw.items) && !Array.isArray(raw.data)) {
+        base.data = raw.items.map(unicodeId => {
+          const text = this._unicodeIdToText(unicodeId);
+          return {
+            api: unicodeId || '',
+            text: text || unicodeId || '',
+            name: { en: unicodeId || '' }  // placeholder — resolve ทีหลังผ่าน ConDataService.resolveItem
+          };
+        });
+      }
       return base;
     },
     
@@ -177,6 +239,18 @@ const ConDataRegistry = {
       if (raw.link !== undefined) base.link = raw.link;
       if (raw.className !== undefined) base.className = raw.className;
       return base;
+    },
+
+    // v3.0: แปลง Unicode ID → ตัวอักษร
+    //   WHY: collection items เป็น Unicode IDs เช่น "U+2764" → ต้องแปลงเป็น "❤"
+    //   ใช้ String.fromCodePoint() รองรับทั้ง BMP และ Supplementary Planes
+    _unicodeIdToText(unicodeId) {
+      if (!unicodeId || typeof unicodeId !== 'string') return '';
+      const match = unicodeId.match(/^U\+([0-9A-Fa-f]{4,6})$/);
+      if (!match) return unicodeId;  // ถ้าไม่ใช่รูปแบบ U+XXXX → คืนค่าเดิม
+      const codePoint = parseInt(match[1], 16);
+      if (isNaN(codePoint) || codePoint < 0 || codePoint > 0x10FFFF) return unicodeId;
+      try { return String.fromCodePoint(codePoint); } catch (e) { return unicodeId; }
     }
   },
   
@@ -202,8 +276,24 @@ const ConDataRegistry = {
     FIND_BY_TEXT: 'ค้นหา item จากตัวอักขระ เช่น 😀',
     SEARCH_BY_NAME: 'ค้นหา item จากชื่อ (multilingual)',
     GET_ASSEMBLED: 'ดึงฐานข้อมูลทั้งหมดแบบประกอบแล้ว (assembled)',
-    GET_CATEGORY_META: 'ดึงข้อมูล meta ของ subcategory (ไม่รวม item)'
-  }
+    GET_CATEGORY_META: 'ดึงข้อมูล meta ของ subcategory (ไม่รวม item)',
+    GET_COLLECTIONS: 'ดึงรายการ collections ทั้งหมด (เฉพาะ collection type)',
+    GET_COLLECTION_ITEMS: 'ดึง items ของ collection ที่ระบุ (แปลงจาก Unicode IDs)'
+  },
+
+  // =========================================================
+  // TYPE HELPERS
+  // ตรวจสอบประเภทของ type
+  // =========================================================
+
+  // v3.0: ตรวจสอบว่า type เป็น collection type หรือไม่
+  //   WHY: ใช้ตัดสินใจว่าจะใช้ normalizer แบบไหนตอน assembly
+  //   ตรวจจาก kind field หรือ id = 'collections'
+  isCollectionType(typeId, kind) {
+    if (kind === 'collection') return true;
+    if (typeId === 'collections') return true;
+    return false;
+  },
 };
 
 // Export

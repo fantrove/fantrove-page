@@ -280,10 +280,10 @@
       }
     },
 
-    // v2.3: Collect collection segments — each collection = 1 card segment
+    // v3.0: Collect collection segments — each collection = 1 card segment
     //   WHY: แยกจาก _collectTypeSegments เพราะ collection มี data model ต่างกัน
-    //   collection items มี api/text/name เหมือน copyable items
-    //   แต่ต้องแสดงเป็น card (ไม่ใช่ button) เพราะ 1 collection = 1 card
+    //   v3.0: ตอนนี้ ConDataService แปลง Unicode IDs → items ที่มี api/text/name แล้ว
+    //   ทำให้ cat.data มีข้อมูลที่ FeedService ใช้ได้ทันที (เหมือน copyable data)
     //   collection card แสดง: ชื่อ, คำอธิบาย, cover preview, จำนวน items
     _collectCollectionSegments(db) {
       // หา type ที่เป็น collection
@@ -296,18 +296,45 @@
       for (const cat of (collectionType.category || [])) {
         if (!cat.data?.length) continue;
 
+        // v3.0: สร้าง cover preview จาก cover.items (Unicode IDs) หรือ cat.data
+        //   WHY: cover.items เป็น Unicode IDs ที่ระบุไว้ใน collection data
+        //   ถ้ามี cover.items → แปลงเป็นตัวอักษรเพื่อแสดง preview
+        //   ถ้าไม่มี → ใช้ตัวอักษรจาก cat.data ตัวแรก 4 ตัว
+        let coverPreview = '';
+        if (cat.cover && Array.isArray(cat.cover.items) && cat.cover.items.length > 0) {
+          coverPreview = cat.cover.items
+            .slice(0, 4)
+            .map(id => this._unicodeIdToChar(id))
+            .filter(Boolean)
+            .join(' ');
+        } else {
+          // Fallback: ใช้ text จาก cat.data items ตัวแรก
+          coverPreview = cat.data
+            .slice(0, 4)
+            .map(item => item.text || '')
+            .filter(Boolean)
+            .join(' ');
+        }
+
         // สร้าง collection card item จาก category data
-        // collection card = 1 card ที่แสดงข้อมูลของ collection ทั้งหมด
+        // v3.0: รวม field ที่ ContentService._resolveItem ต้องการ
+        //   WHY: ทำให้ collection card แสดงผลได้ทันทีโดยไม่ต้องแปลงเพิ่ม
         const collectionCard = {
           _type:         'collection-card',
           id:            cat.id,
           name:          cat.name || {},
-          description:   cat.description || '',  // v2.3: ใช้ description จาก collection data
-          cover:         cat.cover || null,       // v2.3: ใช้ cover จาก collection data
-          items:         cat.data,
+          title:         cat.name || {},           // ContentService ใช้ title หรือ name
+          description:   cat.description || {},
+          cover:         cat.cover || null,
+          coverPreview:  coverPreview,              // ตัวอักษรตัวอย่างสำหรับ card
+          items:         cat.data,                  // items ที่แปลงจาก Unicode IDs แล้ว
           itemCount:     cat.data.length,
           typeId:        collectionType.id,
           typeName:      collectionType.name || {},
+          link:          '/collections/' + cat.id,  // link ไปหน้า collection
+          className:     'collection-card',         // CSS class สำหรับ card styling
+          _collectionId: cat.id,                    // ID สำหรับใช้ในระบบอื่น
+          _itemCount:    cat.data.length,           // จำนวน items ใน collection
         };
 
         // 1 collection = 1 segment containing 1 card
@@ -323,6 +350,20 @@
           items:         [collectionCard],  // card item ไม่ใช่ raw copyable items
         }));
       }
+    },
+
+    // v3.0: แปลง Unicode ID → ตัวอักษร (สำหรับ cover preview)
+    //   WHY: collection cover.items เป็น Unicode IDs เช่น "U+2764"
+    //   ต้องแปลงเป็นตัวอักษรจริงเพื่อแสดง preview บน card
+    _unicodeIdToChar(unicodeId) {
+      if (!unicodeId || typeof unicodeId !== 'string') return '';
+      // ถ้าไม่ใช่รูปแบบ U+XXXX → คืนค่าเดิม (อาจเป็นตัวอักษรอยู่แล้ว)
+      if (!unicodeId.startsWith('U+')) return unicodeId;
+      const match = unicodeId.match(/^U\+([0-9A-Fa-f]{4,6})$/);
+      if (!match) return unicodeId;
+      const codePoint = parseInt(match[1], 16);
+      if (isNaN(codePoint) || codePoint < 0 || codePoint > 0x10FFFF) return unicodeId;
+      try { return String.fromCodePoint(codePoint); } catch (e) { return unicodeId; }
     },
 
     // Pure function — no side effects, returns frozen segment objects
@@ -527,9 +568,10 @@
     _buildGroup(seg, lang) {
       if (!seg?.items?.length) return null;
 
-      // v2.3: ถ้า segment เป็น collection card → แสดงเป็น card พิเศษ
+      // v3.0: ถ้า segment เป็น collection card → แสดงเป็น card พิเศษ
       //   collection card มี _type='collection-card' และข้อมูลคอลเลกชัน
-      //   แสดง: ชื่อ, คำอธิบาย, cover preview (ตัวอักษรตัวอย่าง), จำนวน items
+      //   v3.0: ตอนนี้ collectionCard มี coverPreview และ link คำนวณไว้ล่วงหน้าแล้ว
+      //   จาก _collectCollectionSegments() — ใช้ได้ทันที ไม่ต้องคำนวณซ้ำ
       const isCollectionCard = seg.typeId === 'collections'
         || (seg.items[0] && seg.items[0]._type === 'collection-card');
 
@@ -537,34 +579,30 @@
         const col = seg.items[0]; // 1 collection = 1 card
         if (!col) return null;
 
-        // สร้าง cover preview จาก items ตัวแรก
-        //   v2.3: ถ้ามี cover.items → ใช้ตัวอักษรจาก cover items ก่อน
-        //   ถ้าไม่มี → ใช้ items ตัวแรก
-        let previewItems;
-        if (col.cover && Array.isArray(col.cover.items) && col.cover.items.length) {
-          // cover.items เป็น api codes เช่น ["U+2764", "U+1FA77", ...]
-          // ต้องแปลงเป็นตัวอักษร
-          previewItems = col.cover.items.slice(0, 4).map(apiCode => {
-            if (apiCode.startsWith('U+')) {
-              // แปลง api code เป็นตัวอักษร
-              const cleaned = apiCode.replace(/^U\+/i, '').replace(/\s+FE0F$/i, '');
-              try { return String.fromCodePoint(parseInt(cleaned, 16)); } catch (_) { return ''; }
-            }
-            // ถ้าเป็นตัวอักษรอยู่แล้ว → ใช้เลย
-            return apiCode;
-          }).filter(Boolean);
-        } else {
-          // ใช้ items ตัวแรก
-          previewItems = (col.items || []).slice(0, 4);
+        // v3.0: ใช้ coverPreview ที่คำนวณไว้ล่วงหน้าจาก _collectCollectionSegments
+        //   WHY: ไม่ต้องคำนวณซ้ำ — ลด code duplication + ประสิทธิภาพดีกว่า
+        //   Fallback: ถ้าไม่มี coverPreview → คำนวณจาก cover.items หรือ items
+        let coverPreview = col.coverPreview || '';
+        if (!coverPreview) {
+          let previewItems;
+          if (col.cover && Array.isArray(col.cover.items) && col.cover.items.length) {
+            previewItems = col.cover.items.slice(0, 4).map(apiCode => {
+              if (apiCode.startsWith('U+')) {
+                const cleaned = apiCode.replace(/^U\+/i, '').replace(/\s+FE0F$/i, '');
+                try { return String.fromCodePoint(parseInt(cleaned, 16)); } catch (_) { return ''; }
+              }
+              return apiCode;
+            }).filter(Boolean);
+          } else {
+            previewItems = (col.items || []).slice(0, 4);
+          }
+          coverPreview = previewItems
+            .map(item => typeof item === 'object' ? (item.text || '') : item)
+            .filter(Boolean)
+            .join(' ');
         }
-        const coverPreview = previewItems
-          .map(item => typeof item === 'object' ? (item.text || '') : item)
-          .filter(Boolean)
-          .join(' ');
 
         // สร้าง description จากข้อมูลที่มี
-        //   ถ้า collection มี description field (i18n) → ใช้
-        //   ถ้าไม่มี → สร้างจาก item count + type name
         const desc = col.description
           ? _resolveName(col.description, lang)
           : `${_resolveName(seg.typeName, lang)} · ${col.itemCount || (col.items || []).length} items`;
@@ -579,14 +617,14 @@
             },
             items: [{
               _type:         'card',
-              title:         col.name || {},
+              title:         col.name || col.title || {},
               description:   desc,
               image:         null,
               coverPreview:  coverPreview,
-              link:          `/collections/${seg.catId}`,
-              className:     'collection-card',
-              _collectionId: seg.catId,
-              _itemCount:    col.itemCount || (col.items || []).length,
+              link:          col.link || `/collections/${seg.catId}`,
+              className:     col.className || 'collection-card',
+              _collectionId: col._collectionId || seg.catId,
+              _itemCount:    col._itemCount || col.itemCount || (col.items || []).length,
             }],
           },
         };
