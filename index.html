@@ -6,69 +6,33 @@
   <script id="Cookiebot" src="https://consent.cookiebot.com/uc.js" data-cbid="16a70d79-a7a7-4b66-89da-afb49e453c67" data-blockingmode="auto" type="text/javascript"></script>
 
   <meta charset="UTF-8">
-  <script src="assets/js/lang-proxy.js?v=1.0.0-20250322"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!--
-    [FIX 2026-07-28]
-    ไฟล์นี้เป็น FALLBACK เท่านั้น — ปกติ production build ใช้ _redirects rule
-    `/ /en/home/ 200` ส่ง content ของ home page มาที่ URL `/` โดยตรง (URL rewrite)
-    ไฟล์ index.html นี้จะถูกใช้เฉพาะ:
-      1. dev mode (เปิดผ่าน Cloudflare Pages โดยไม่ build) — _redirects จะ
-         rewrite / ไปที่ /home/index.html อยู่แล้ว ไฟล์นี้จึงไม่ถูกเสิร์ฟที่ /
-      2. direct access ผ่าน /index.html โดยตรง — กรณีนี้ใช้ meta refresh
-         ส่งไป /home/ แบบ no-JS-friendly
-      3. เป็น catch-all 404 fallback ผ่าน _redirects `/* /index.html 200`
-         (dev) — ในกรณีนี้ควรแสดงเป็น 404 page
+    [FIX 2026-07-28 v2]
+    ไฟล์นี้เป็น CUSTOM 404 PAGE ของ Fantrove — ใช้สำหรับทุก URL ที่ไม่มี
+    หน้าจริง (รวมถึง /, /index.html, และ path อื่นๆ ที่ไม่ match กับ
+    _redirects rules ใดๆ)
 
-    SEO:
-      - canonical ชี้ไป /en/home/ (canonical URL ของหน้าแรกจริง)
-      - ลบ noindex เพื่อให้ Google เข้าใจว่าหน้านี้คือ duplicate ของ
-        /en/home/ ไม่ใช่ redirect → Google จะ index canonical URL
-      - meta refresh 0s สำหรับ user ที่เข้าตรง /index.html (no-JS fallback)
+    วิธีการทำงาน (production):
+      Cloudflare Pages _redirects rule สุดท้าย:
+        /* /index.html 404
+      จะส่ง HTTP 404 status พร้อม content ของ index.html นี้ออกไป
+      → browser ไม่ขึ้น default 404 page เอง
+      → ระบบเราควบคุม UX ของ 404 page ทั้งหมด
+      → Google ไม่ index หน้านี้ (เพราะ noindex + 404 status)
+      → ไม่ใช่ "Page with redirect" → แก้ปัญหา GSC indexing
+
+    ห้ามใส่:
+      - lang-proxy.js (จะทำให้เกิด JS redirect ซ้ำ → Google เห็นเป็น redirect)
+      - meta refresh (จะทำให้ Google มองเป็น redirect ด้วย)
+      - canonical / hreflang (เป็น 404 ไม่ควรมี canonical)
+      - "index, follow" (ต้องเป็น noindex เพราะเป็น 404)
   -->
 
-  <title>Fantrove — Emoji &amp; Symbols Hub | Copy with One Tap</title>
-  <meta name="description" content="Browse thousands of emojis, special characters and fancy text. Search, copy and use instantly — Fantrove (also Fantrove Verse). Free to use." />
-  <meta name="robots" content="index, follow" />
-  <meta name="author" content="Fantrove (Rowingsco, Nontakorn Nonsurat)" />
-
-  <!-- Canonical ชี้ไปหน้า home จริง (default lang) -->
-  <link rel="canonical" href="https://fantrove.pages.dev/en/home/" />
-
-  <!-- hreflang alternates -->
-  <link rel="alternate" hreflang="en" href="https://fantrove.pages.dev/en/home/" />
-  <link rel="alternate" hreflang="th" href="https://fantrove.pages.dev/th/home/" />
-  <link rel="alternate" hreflang="x-default" href="https://fantrove.pages.dev/en/home/" />
-
-  <!-- Open Graph -->
-  <meta property="og:site_name" content="Fantrove" />
-  <meta property="og:title" content="Fantrove — Emoji & Symbols Hub | Copy with One Tap" />
-  <meta property="og:description" content="Browse thousands of emojis, special characters and fancy text. Search, copy and use instantly — Fantrove (Fantrove Verse)." />
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://fantrove.pages.dev/" />
-  <meta property="og:image" content="https://fantrove.pages.dev/assets/images/OG/fantrove-hub-og.png" />
-  <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt" content="Fantrove — Emoji and Symbol Collection" />
-  <meta property="og:locale" content="en_US" />
-  <meta property="og:locale:alternate" content="th_TH" />
-
-  <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:site" content="@fantrove" />
-  <meta name="twitter:title" content="Fantrove — Emoji & Symbols Hub" />
-  <meta name="twitter:description" content="Browse thousands of emojis, special characters and fancy text. Search, copy and use instantly." />
-  <meta name="twitter:image" content="https://fantrove.pages.dev/assets/images/OG/fantrove-hub-og.png" />
-  <meta name="twitter:image:alt" content="Fantrove — Emoji and Symbol Collection" />
-
-  <!--
-    Meta refresh fallback (0s) — ใช้เฉพาะตอนที่ user เข้า /index.html ตรงๆ
-    โดยที่ _redirects rule ไม่ทำงาน (เช่น static file server อื่น).
-    Googlebot มอง meta refresh 0s เป็น redirect แต่ยัง index canonical URL
-    จาก <link rel="canonical"> ด้านบนได้ — ดีกว่า noindex + ไม่มีทางออก
-  -->
-  <meta http-equiv="refresh" content="0; url=/home/" />
+  <title>Page Not Found — Fantrove</title>
+  <meta name="description" content="The page you're looking for doesn't exist. Let's get you back to Fantrove.">
+  <meta name="robots" content="noindex, nofollow">
 
   <meta name="theme-color" content="#ffffff">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -82,7 +46,7 @@
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8233915433564101" crossorigin="anonymous"></script>
 
   <style>
-    /* Minimal landing styles — same look as old 404 but without "404" headline */
+    /* 404 page styles — ใช้ tokens สีหลัก */
     * { box-sizing:border-box; }
     body { margin:0; font-family:var(--fv-font-stack); background:var(--fv-surface-page); color:var(--fv-text-primary); }
 
@@ -96,12 +60,13 @@
       font-size:13px; font-weight:var(--fv-font-extrabold); letter-spacing:0.04em; margin-bottom:18px;
     }
 
+    /* h1 จริงสำหรับ 404 — เป็น visual heading */
     h1 {
-      font-size:48px; margin:0 0 14px; line-height:1.05;
+      font-size:68px; margin:0 0 10px; line-height:1;
       background:var(--fv-gradient-brand);
       filter:brightness(0.95) contrast(1.35) saturate(1.15);
       -webkit-background-clip:text; -webkit-text-fill-color:transparent;
-      letter-spacing:-0.04em;
+      letter-spacing:-0.05em;
     }
 
     h2 { margin:0 0 14px; font-size:24px; font-weight:var(--fv-font-extrabold); letter-spacing:-0.02em; color:#111827; }
@@ -126,32 +91,27 @@
     .note { margin-top:22px; font-size:13px; color:#9ca3af; }
 
     @media (max-width:480px) {
-      h1{font-size:38px;} h2{font-size:21px;} p{font-size:15px;}
+      h1{font-size:58px;} h2{font-size:21px;} p{font-size:15px;}
       .btn-primary, .btn-secondary{font-size:0.92em;padding:1.05em 1.85em;}
     }
   </style>
 </head>
 
 <body>
-  <noscript>
-    <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PJ397CLS" height="0" width="0" style="display:none;visibility:hidden"></iframe>
-    <!-- If meta refresh is disabled (e.g. no JS), provide a manual link -->
-    <p style="text-align:center;margin-top:2em;">
-      <a href="/home/">Continue to Fantrove Home</a>
-    </p>
-  </noscript>
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PJ397CLS" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
-  <div id="fv-app" class="fv-app" data-page="landing">
+  <div id="fv-app" class="fv-app" data-page="404">
     <div class="wrap">
       <div class="badge">Fantrove</div>
-      <h1>Emoji &amp; Symbols Hub</h1>
-      <h2>Browse, search and copy instantly</h2>
-      <p>Thousands of emojis, special characters and fancy text — free to use, no sign-up required. You should be redirected automatically; if not, tap the button below.</p>
+      <!-- h1 เป็น visual "404" — เหมาะสมสำหรับ error page -->
+      <h1>404</h1>
+      <h2>Oops! Lost your way?</h2>
+      <p>This page doesn't exist. Maybe it moved, or maybe the URL's off. Either way, let's get you somewhere better.</p>
       <div class="actions">
         <a wave href="/home" class="btn-primary">Take Me Home</a>
         <a wave href="/data/verse/discover/?type=symbols__&page=1" class="btn-secondary">Explore Fantrove</a>
       </div>
-      <div class="note">Fantrove — also known as Fantrove Verse.</div>
+      <div class="note">Something wrong? Try again later.</div>
     </div>
   </div>
 

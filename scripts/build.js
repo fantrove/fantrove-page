@@ -75,6 +75,10 @@ const CONFIG = {
     '.cloudflare',
     // Keep google verification file out of language processing
     'google6b646fa60e0f9f2f.html',
+    // [FIX 2026-07-28 v3] index.html ที่ root เป็น custom 404 page ของเรา
+    // (ใช้สำหรับ catch-all 404 ใน _redirects) → ห้ามแปลเป็นแต่ละภาษา
+    // ต้องคัดลอกไป dist/index.html ตรงๆ ผ่าน staticFiles ด้านล่าง
+    'index.html',
   ],
 
   /**
@@ -115,7 +119,11 @@ const CONFIG = {
     'google6b646fa60e0f9f2f.html',
     'console.css',
     'console.js',
-    'console.html'
+    'console.html',
+    // [FIX 2026-07-28 v3] index.html (root) เป็น custom 404 page ของระบบ
+    // ใช้สำหรับ catch-all 404 ใน _redirects: `/* /index.html 404`
+    // คัดลอกไป dist/index.html ตรงๆ (ไม่แปลภาษา)
+    'index.html',
   ],
 
   /**
@@ -357,23 +365,17 @@ async function build() {
 /**
  * สร้าง _redirects สำหรับ Cloudflare Pages (production build)
  *
- * โครงสร้างแยก root rewrite ออกจาก lang page rewrites ชัดเจน
- * (เหมือนโครงสร้างของ _redirects dev ที่ใช้อยู่)
+ * [FIX 2026-07-28 v3 — final]
  *
- * [FIX 2026-07-28] redirect targets ทั้งหมดต้อง "มี" trailing slash เสมอ
- * (เช่น `/en/home/` ไม่ใช่ `/en/home`) ต้องตรงกับ _deriveCanonicalPath()
- * ใน html-transformer.js และ ROOT_PAGE_PATH ใน generate-sitemap.js เป๊ะ
- *
- * [FIX 2026-07-28 v2] เปลี่ยน root + lang-root rules จาก 302 redirect
- * เป็น 200 rewrite (URL เดิม, content จากอีก path) เพื่อแก้ปัญหา GSC
- * "Page with redirect" ที่ทำให้ Google ไม่ index หน้า /, /en, /th
- * เพราะ Googlebot เจอ redirect chain (server 302 + lang-proxy.js JS
- * redirect) และทิ้งงาน indexing. ตอนนี้ใช้ rewrite 200 หมด → URL คงเดิม
- * ใน address bar แต่ได้ content ของ home page → Googlebot crawl ได้
- * ตรงๆ ไม่มี redirect. ในหน้ามี canonical ชี้ไป /{lang}/home/ อยู่แล้ว
- * → Google จะ index canonical URL ส่วน / เองจะถูกมองเป็น duplicate
- * (indexable แต่ canonical อยู่ที่อื่น) แทนที่จะเป็น "Page with redirect"
- * (ไม่ index) — ดีกว่ากันมาก
+ * การออกแบบใหม่:
+ *   - `/` และ `/index.html` ไม่ได้เป็น home page อีกต่อไป — มันคือ custom 404 page
+ *     ที่แสดงผลเมื่อ path ไม่ match กับ rule อื่น (catch-all 404)
+ *   - landing page ของเราคือ `/home/` (และ `/{lang}/home/`) เท่านั้น
+ *   - user ที่เข้า `/` จะเจอ 404 page พร้อม link ไป `/home/` (UX ปกติของ 404)
+ *   - ทุก path ที่ไม่มีจริง จะตอบ HTTP 404 + ส่ง custom 404 HTML ของเรา
+ *     (/index.html) → browser ไม่ขึ้น default 404 page เอง
+ *   - Google จะไม่ index `/` (เพราะ 404 status) แต่ไม่ใช่ "Page with redirect"
+ *     อีกต่อไป → แก้ปัญหา GSC indexing แบบถาวร
  *
  * ต้องแก้ 3 ไฟล์นี้พร้อมกันเสมอ ห้ามแก้ไฟล์เดียว:
  *   - scripts/lib/html-transformer.js (_deriveCanonicalPath)
@@ -398,14 +400,15 @@ function _generateRedirects(langs, defaultLang) {
 
   lines.push(
     '',
-    '# ── Root → default language home (REWRITE, not redirect) ───────────',
-    '# URL ใน address bar คงเดิม (/, /index.html) แต่ content มาจาก home page',
-    '# หน้า home มี canonical ชี้ไป /{defaultLang}/home/ อยู่แล้ว → Google',
-    '# จะ index canonical URL ไม่ใช่ / แต่ / ไม่ใช่ "Page with redirect"',
-    `/ /${defaultLang}/home/ 200`,
-    `/index.html /${defaultLang}/home/ 200`,
+    '# ── Static assets ───────────────────────────────────────────────────',
+    '/assets/*    /assets/:splat    200',
+    '/robots.txt  /robots.txt       200',
+    '/sitemap.xml /sitemap.xml      200',
+    '/favicon.ico /assets/images/fantrove-hub360.ico 200',
     '',
-    '# ── Language root → home (REWRITE, not redirect) ───────────────────',
+    '# ── Language root → home (REWRITE 200, URL คงเดิม) ───────────────────',
+    '# /en, /en/, /th, /th/ เป็น valid path ที่ตอบ 200 + ส่ง content ของ home',
+    '# หน้า home มี canonical ชี้ไป /{lang}/home/ อยู่แล้ว → Google index canonical',
   );
 
   for (const lang of langs) {
@@ -424,15 +427,12 @@ function _generateRedirects(langs, defaultLang) {
 
   lines.push(
     '',
-    '# ── Static assets ───────────────────────────────────────────────────',
-    '/assets/*    /assets/:splat    200',
-    '/robots.txt  /robots.txt       200',
-    '/sitemap.xml /sitemap.xml      200',
-    '/favicon.ico /assets/images/fantrove-hub360.ico 200',
-    '',
-    '# ── Fallback ─────────────────────────────────────────────────────────',
-    '# 404 status ส่ง home page content (ดีกว่าส่ง 404 page เปล่าๆ)',
-    `/* /${defaultLang}/home/ 404`,
+    '# ── Catch-all 404 ───────────────────────────────────────────────────',
+    '# ทุก path อื่น (รวมถึง /, /index.html, และ path ที่ไม่มีจริง) → ตอบ 404',
+    '# พร้อมส่ง custom 404 HTML ของเรา (/index.html)',
+    '# browser จะแสดง 404 page ของเรา ไม่ใช่ default 404 ของ browser เอง',
+    '# Google จะไม่ index / (เพราะ 404 status) แต่ไม่ใช่ "Page with redirect"',
+    '/* /index.html 404',
     '',
   );
 

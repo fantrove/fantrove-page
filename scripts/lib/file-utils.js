@@ -11,23 +11,27 @@ const path = require('path');
 /**
  * Recursively find all .html files under `dir`, excluding specified folders.
  *
- * [FIX 2026-07-28] แก้ bug ใน exclude check:
- *   เดิมใช้ `rel = fullPath` (absolute path) เทียบกับ `ex` (relative pattern
- *   เช่น 'dist') ทำให้ exclude ไม่ทำงานเลย เพราะ absolute path ไม่มีทาง
- *   `=== 'dist'` หรือ `startsWith('dist/')`. ผลที่ตามมา: build script สแกน
- *   HTML ใน `dist/` จากการ build ครั้งก่อน → ปรากฏใน sitemap เป็น
- *   `/en/dist/...` (รั่วเข้า sitemap จริงใน production)
+ * [FIX 2026-07-28 v3] แก้ bug ใน exclude check ให้ถูกต้องแบบถาวร:
  *
- *   วิธีแก้: เทียบ `entry` (ชื่อ directory ตรงๆ) กับแต่ละ exclude pattern
- *   แทน และเพิ่มเทียบ relative path (เทียบกับ root `dir`) ด้วยเพื่อรองรับ
- *   exclude pattern แบบ path prefix เช่น 'scripts/hooks'
+ *   ปัญหาเดิม (ครั้งที่ 1): exclude patterns เทียบกับ absolute path → ไม่ match
+ *   ปัญหาที่แก้ (ครั้งที่ 2): เทียบ entry name (เช่น 'index.html') → ลบทุก
+ *     index.html ในทุกระดับ ไม่ใช่แค่ root
  *
- * @param {string}   dir      — root directory to search
- * @param {string[]} exclude  — directory names / path prefixes to skip
- * @param {string[]} [files]  — accumulator (internal)
+ *   วิธีแก้ที่ถูกต้อง (ครั้งที่ 3): track original root directory แยกจาก
+ *   current directory ใน recursion แล้วเทียบ exclude patterns กับ relative
+ *   path จาก original root เท่านั้น → 'index.html' จะ match เฉพาะไฟล์
+ *   index.html ที่ root ไม่ใช่ /home/index.html หรือ /search/index.html
+ *
+ * @param {string}   dir       — current directory to search (recursion)
+ * @param {string[]} exclude   — path patterns relative to original root to skip
+ * @param {string[]} [files]   — accumulator (internal)
+ * @param {string}   [rootDir] — original root directory (internal, for relative path)
  * @returns {string[]} absolute or relative file paths
  */
-function findHtmlFiles(dir, exclude = [], files = []) {
+function findHtmlFiles(dir, exclude = [], files = [], rootDir = null) {
+  // Track original root on first call (when rootDir is null)
+  if (rootDir === null) rootDir = dir;
+
   let entries;
   try {
     entries = fs.readdirSync(dir);
@@ -37,19 +41,15 @@ function findHtmlFiles(dir, exclude = [], files = []) {
 
   for (const entry of entries) {
     const fullPath = path.join(dir, entry);
-    // relative path from the ORIGINAL root (passed in as `dir` on first call)
-    // — แต่ recursion ส่ง fullPath เข้ามา จึงต้องใช้ entry สำหรับ top-level
-    //   exclude check และ relative path สำหรับ nested exclude check
-    const relFromRoot = path.relative(dir, fullPath).replace(/\\/g, '/');
+    // relative path from the ORIGINAL root (not current dir)
+    const relFromRoot = path.relative(rootDir, fullPath).replace(/\\/g, '/');
 
-    // Skip excluded paths — แก้ bug ใหม่: เทียบทั้ง entry name และ relFromRoot
+    // Skip excluded paths — เทียบ relFromRoot กับแต่ละ exclude pattern
     const isExcluded = exclude.some(ex => {
       if (!ex) return false;
-      // 1) exact match on entry name (e.g. ex='dist', entry='dist')
-      if (entry === ex) return true;
-      // 2) exact match on relative path from root (e.g. ex='scripts/hooks')
+      // exact match on relative path from root
       if (relFromRoot === ex) return true;
-      // 3) relFromRoot starts with ex + '/' (e.g. ex='scripts', rel='scripts/hooks')
+      // path prefix match (e.g. ex='scripts', rel='scripts/hooks/file.html')
       if (relFromRoot.startsWith(ex + '/')) return true;
       return false;
     });
@@ -61,7 +61,8 @@ function findHtmlFiles(dir, exclude = [], files = []) {
     try { stat = fs.statSync(fullPath); } catch { continue; }
 
     if (stat.isDirectory()) {
-      findHtmlFiles(fullPath, exclude, files);
+      // Pass rootDir down through recursion
+      findHtmlFiles(fullPath, exclude, files, rootDir);
     } else if (entry.endsWith('.html')) {
       files.push(fullPath.replace(/\\/g, '/'));
     }

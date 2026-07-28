@@ -136,30 +136,6 @@
     const navType     = getNavType();
 
     // ─────────────────────────────────────────────────────────────────────────
-    // CASE 0: Root path (/) หรือ /index.html → ห้าม redirect
-    // ─────────────────────────────────────────────────────────────────────────
-    // [FIX 2026-07-28] ปัญหาเดิม: lang-proxy จะ redirect / ไป /{en|th}/ ทันที
-    // เมื่อ _redirects (Cloudflare) ใช้ rewrite 200 ส่ง home content มาที่ URL /
-    // อยู่แล้ว การ redirect ซ้ำโดย lang-proxy จะทำให้ URL เปลี่ยนจาก / เป็น
-    // /en/ ใน address bar → Googlebot เจอ JS redirect → ทำให้ GSC ขึ้น
-    // "Page with redirect" และไม่ index หน้า /
-    //
-    // วิธีแก้: ข้าม redirect ทั้งหมดสำหรับ root path → ปล่อยให้ server rewrite
-    // ส่ง content มาแสดงที่ URL / โดยตรง. URL คงเดิม, content ถูกต้อง, ไม่มี
-    // redirect → Googlebot crawl ได้ตรงๆ
-    //
-    // ยกเว้น: เมื่อ user กด Back/Forward หรือ Reload และมี storedLang ที่
-    // ต่างจาก default → ยังอนุญาตให้ redirect ได้ (เพราะ user intent ชัดเจน)
-    if (currentPath === '/' || currentPath === '/index.html') {
-      // sync storedLang ลง localStorage เผื่อ user มี preference อยู่แล้ว
-      // (ไม่ redirect เพราะเราต้องการให้ / ตอบ 200 ตรงๆ)
-      if (urlLang) {
-        try { localStorage.setItem(LS_KEY, urlLang); } catch (e) {}
-      }
-      return; // ห้าม redirect root
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
     // CASE 1: URL มี prefix ภาษา (/en/... หรือ /th/...)
     // ─────────────────────────────────────────────────────────────────────────
     if (urlLang) {
