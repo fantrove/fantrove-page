@@ -115,6 +115,8 @@
     </div>
   </div>
 
+  <!-- 404 page: เติม prefix ภาษาในลิงก์ทุกปุ่ม + footer ที่โหลดมาทีหลัง -->
+  <script>(function(){var SUP=['en','th'],LSK='selectedLang',DEF='en';function gl(){try{var s=localStorage.getItem(LSK);if(SUP.indexOf(s)>=0)return s}catch(e){}try{var m=location.pathname.match(/^\/(en|th)(\/|$)/);if(m)return m[1]}catch(e){}try{var b=navigator.languages||[navigator.language||''];for(var i=0;i<b.length;i++){var c=b[i].split('-')[0];if(SUP.indexOf(c)>=0)return c}}catch(e){}return DEF}function pf(h,l){if(/^\/(en|th)(\/|$)/.test(h))return h;return'/'+l+(h==='/'?'':h)}function ul(root,l){var a=root.querySelectorAll('a[href]');for(var i=0;i<a.length;i++){var h=a[i].getAttribute('href');if(h&&h.charAt(0)==='/'&&!/^\/(assets|static|api|_next|favicon|robots|sitemap)\b/i.test(h)){a[i].setAttribute('href',pf(h,l))}}}var lang=gl();ul(document,lang);new MutationObserver(function(ml){for(var i=0;i<ml.length;i++){for(var j=0;j<ml[i].addedNodes.length;j++){var n=ml[i].addedNodes[j];if(n.nodeType===1)ul(n,lang)}}}).observe(document.body,{childList:true,subtree:true})})();</script>
   <script src="/assets/js/lang-core.js?v=1.0.0"></script>
   <script src="/assets/js/language.js?v=1.0.0-20250322"></script>
   <script defer src="/assets/js/footer-template.js?v=1.0.0-20250322"></script>
