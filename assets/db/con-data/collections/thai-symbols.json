@@ -1,0 +1,34 @@
+{
+  "id": "thai-symbols",
+  "name": {
+    "th": "สัญลักษณ์ไทย",
+    "en": "Thai Symbols"
+  },
+  "description": {
+    "th": "รวมสัญลักษณ์และอักขระพิเศษภาษาไทยที่ใช้บ่อย",
+    "en": "A collection of Thai symbols and special characters commonly used."
+  },
+  "cover": {
+    "type": "auto",
+    "items": [
+      "U+0E01",
+      "U+0E02",
+      "U+0E3F",
+      "U+0E4D"
+    ]
+  },
+  "items": [
+    "U+0E01",
+    "U+0E02",
+    "U+0E3F",
+    "U+0E4D",
+    "U+0E48",
+    "U+0E49",
+    "U+0E4A",
+    "U+0E4B",
+    "U+0E4C",
+    "U+0E47",
+    "U+0E4E",
+    "U+0E4F"
+  ]
+}

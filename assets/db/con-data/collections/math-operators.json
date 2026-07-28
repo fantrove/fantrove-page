@@ -5,33 +5,42 @@
     "en": "Math Operators"
   },
   "description": {
-    "th": "รวมสัญลักษณ์คณิตศาสตร์และตัวดำเนินการที่ใช้บ่อย",
-    "en": "Commonly used mathematical operators and symbols."
+    "th": "รวมสัญลักษณ์ทางคณิตศาสตร์และตัวดำเนินการสำหรับการเขียนสูตร",
+    "en": "A collection of mathematical symbols and operators for writing formulas."
   },
   "cover": {
     "type": "auto",
-    "items": ["U+2212", "U+00D7", "U+00F7", "U+221A"]
+    "items": [
+      "U+00D7",
+      "U+00F7",
+      "U+2212",
+      "U+221A"
+    ]
   },
   "items": [
-    { "api": "U+2212", "text": "−", "name": { "th": "ลบ", "en": "Minus Sign" } },
-    { "api": "U+00D7", "text": "×", "name": { "th": "คูณ", "en": "Multiplication Sign" } },
-    { "api": "U+00F7", "text": "÷", "name": { "th": "หาร", "en": "Division Sign" } },
-    { "api": "U+221A", "text": "√", "name": { "th": "รากที่สอง", "en": "Square Root" } },
-    { "api": "U+00B1", "text": "±", "name": { "th": "บวกลบ", "en": "Plus-Minus" } },
-    { "api": "U+2260", "text": "≠", "name": { "th": "ไม่เท่ากับ", "en": "Not Equal" } },
-    { "api": "U+2264", "text": "≤", "name": { "th": "น้อยกว่าหรือเท่ากับ", "en": "Less Than or Equal" } },
-    { "api": "U+2265", "text": "≥", "name": { "th": "มากกว่าหรือเท่ากับ", "en": "Greater Than or Equal" } },
-    { "api": "U+2248", "text": "≈", "name": { "th": "ประมาณ", "en": "Almost Equal" } },
-    { "api": "U+221E", "text": "∞", "name": { "th": "อนันต์", "en": "Infinity" } },
-    { "api": "U+222B", "text": "∫", "name": { "th": "อินทิกรัล", "en": "Integral" } },
-    { "api": "U+2211", "text": "∑", "name": { "th": "ซิกมา", "en": "Summation" } },
-    { "api": "U+220F", "text": "∏", "name": { "th": "ผลคูณ", "en": "Product" } },
-    { "api": "U+2206", "text": "∆", "name": { "th": "เดลต้า", "en": "Increment" } },
-    { "api": "U+2202", "text": "∂", "name": { "th": "อนุพันธ์ย่อย", "en": "Partial Differential" } },
-    { "api": "U+2261", "text": "≡", "name": { "th": "เท่ากันโดยนิยาม", "en": "Identical To" } },
-    { "api": "U+2234", "text": "∴", "name": { "th": "ดังนั้น", "en": "Therefore" } },
-    { "api": "U+2235", "text": "∵", "name": { "th": "เพราะว่า", "en": "Because" } },
-    { "api": "U+226A", "text": "≪", "name": { "th": "น้อยกว่ามาก", "en": "Much Less Than" } },
-    { "api": "U+226B", "text": "≫", "name": { "th": "มากกว่ามาก", "en": "Much Greater Than" } }
+    "U+00D7",
+    "U+00F7",
+    "U+2212",
+    "U+221A",
+    "U+00B1",
+    "U+2260",
+    "U+2264",
+    "U+2265",
+    "U+221E",
+    "U+2248",
+    "U+2261",
+    "U+2200",
+    "U+2203",
+    "U+2229",
+    "U+222A",
+    "U+2282",
+    "U+2283",
+    "U+2208",
+    "U+2205",
+    "U+2234",
+    "U+2235",
+    "U+2227",
+    "U+2228",
+    "U+00AC"
   ]
 }
