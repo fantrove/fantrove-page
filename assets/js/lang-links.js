@@ -43,6 +43,20 @@
   // ถ้าเป็น localhost → ออกทันที ไม่ทำอะไรทั้งสิ้น ไม่มี prefix ใดๆ
   if (isLocalDev()) return;
   // ==================== END BYPASS ====================
+
+  // ==================== AUTO-PREFIX DISABLED (v3.1) ====================
+  // Google Search Console ฟังว่าเป็น "Page with redirect" เพราะระบบนี้บังคับ
+  // เติม prefix ภาษาในลิงก์ทั้งหน้าอัตโนมัติ + intercept การคลิก → location.replace()
+  // → Googlebot มองเป็น redirect → ไม่สามารถจัดทำดัชนีได้
+  //
+  // แก้ไข: ปิดระบบ auto-prefix ทั้งหมด
+  //   - Built pages มี prefix ในลิงก์อยู่แล้ว (html-transformer step 8)
+  //   - _redirects ของ Cloudflare Pages จัดการ routing โดย rewrite (200) ไม่ใช่ redirect
+  //   - การเปลี่ยนภาษาด้วยตนเอง (selectLanguage) ยังทำ URL redirect ได้ตามปกติ
+  //
+  // ย้ำ: แก้แค่ระบบอัตโนมัติ ไม่แก้ระบบที่ user เลือกภาษาเอง
+  return;
+  // ==================== END AUTO-PREFIX DISABLED ====================
   
   const SUPPORTED_LANGS = ['en', 'th'];
   const DEFAULT_LANG = 'en';

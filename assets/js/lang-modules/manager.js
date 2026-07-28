@@ -121,10 +121,11 @@
     
     /**
      * ตั้งค่าภาษาเริ่มต้น (full mode เท่านั้น)
+     * [FIX v3.1] ลบ automatic URL prefix update — ปล่อยให้ URL เป็นเช่นที่เป็น
      * @private
      */
     async _handleInitialLanguage() {
-      const { State, DetectorService, URLService, UIService, LoaderService, TranslatorService } = M;
+      const { State, DetectorService, UIService, LoaderService, TranslatorService } = M;
       
       TranslatorService.storeOriginalContent();
       
@@ -135,11 +136,10 @@
       const decision = DetectorService.resolveCurrentLang();
       State.selectedLang = decision.lang;
       
-      if (!DetectorService.isLocalDev()) {
-        if (decision.source === 'storage' || decision.source === 'browser') {
-          URLService.updateURLForLanguage(State.selectedLang);
-        }
-      }
+      // [FIX v3.1] ลบ automatic URL prefix forcing
+      // URLService.updateURLForLanguage() เป็น no-op แล้ว แต่เอาโค้ดออกทั้ง block
+      // เพื่อไม่ให้มี automatic URL modification ในจุดใดๆ
+      // เหตุผล: Googlebot มองเป็น redirect → GSC "Page with redirect"
       
       if (decision.source === 'url') {
         try { localStorage.setItem(M.CONFIG.LS_KEY, State.selectedLang); } catch (e) {}
@@ -148,7 +148,7 @@
       UIService.showButtonTextForLang(State.selectedLang);
       
       if (State.selectedLang !== 'en' || LoaderService.getEnSource() === 'json') {
-        await this.updatePageLanguage(State.selectedLang, false);
+        await this.updatePageLanguage(State.selectedLang);
       }
     },
     
@@ -165,7 +165,7 @@
      * @param {string} language
      */
     async selectLanguage(language) {
-      const { CONFIG, State, URLService, UIService } = M;
+      const { CONFIG, State, DetectorService, UIService } = M;
       
       if (!State.languagesConfig[language]) {
         console.warn(`[LanguageManager] ไม่รองรับภาษา: ${language}`);
@@ -198,8 +198,24 @@
       State._userExplicitLang = language;
       State.lastSelectedLang  = State.selectedLang;
       
-      URLService.updateURLForLanguage(language);
-      await this.updatePageLanguage(language, false);
+      // [FIX v3.1] Manual URL update — เปลี่ยน URL เมื่อ user เลือกภาษาเอง
+      // URLService ถูกปิดเป็น no-op แล้ว → เรียกเองที่นี่แทน
+      // เป็นการกระทำโดย user (ไม่ใช่อัตโนมัติ) → อนุญาต
+      if (!DetectorService.isLocalDev()) {
+        try {
+          const currentPath = location.pathname;
+          const currentLangPrefix = currentPath.match(/^\/(en|th)(\/|$)/);
+          let newPath;
+          if (currentLangPrefix) {
+            newPath = currentPath.replace(/^\/(en|th)(\/|$)/, '/' + language + '$2');
+          } else {
+            newPath = '/' + language + (currentPath === '/' ? '' : currentPath);
+          }
+          history.replaceState({ lang: language, ts: Date.now() }, '', newPath + location.search + location.hash);
+        } catch (e) {}
+      }
+      
+      await this.updatePageLanguage(language);
       await UIService.closeLanguagePopup();
     },
     
@@ -209,8 +225,8 @@
      * อัพเดทภาษาของทั้งหน้าด้วย JS translation
      * v5.0: เพิ่ม FvLang.setLang() → dispatch fv:langchange
      */
-    async updatePageLanguage(language, shouldUpdateURL = true) {
-      const { State, DetectorService, URLService, LoaderService, TranslatorService, UIService } = M;
+    async updatePageLanguage(language) {
+      const { State, DetectorService, LoaderService, TranslatorService, UIService } = M;
       
       if (State.isUpdatingLanguage) return;
       
@@ -218,9 +234,9 @@
         State.isUpdatingLanguage = true;
         State.lastSelectedLang   = State.selectedLang;
         
-        if (shouldUpdateURL && !DetectorService.isLocalDev()) {
-          URLService.updateURLForLanguage(language);
-        }
+        // [FIX v3.1] ลบ automatic URL prefix update
+        // URLService.updateURLForLanguage() เป็น no-op แล้ว
+        // การเปลี่ยน URL ทำเฉพาะใน selectLanguage() (user เลือกภาษาเอง)
         
         try { localStorage.setItem(M.CONFIG.LS_KEY, language); } catch (e) {}
         

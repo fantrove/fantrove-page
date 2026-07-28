@@ -25,11 +25,11 @@
  *   - lang-proxy.js      URL มี prefix แล้ว ไม่ต้อง redirect อีก
  *   - lang-sync.js       ไม่มี multi-tab sync ที่ต้องทำเพิ่ม
  *   - lang-coordinator.js setting page เท่านั้น, ไม่จำเป็น
+ *   - lang-links.js      [v3.1] ปิด auto-prefix แล้ว, built pages มี prefix อยู่แล้ว
  *
  *  Scripts ที่ยังคงอยู่ (ทำงานใน static mode):
  *   - lang-core.js       → central language API (ใหม่ v5.0)
  *   - language.js        → static mode: UI dropdown + redirect
- *   - lang-links.js      → prefix links ตามภาษาปัจจุบัน
  *   - ทุก script อื่น    → ไม่แตะ
  */
 

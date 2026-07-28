@@ -88,16 +88,19 @@ const CONFIG = {
    *  - lang-proxy.js      → URL มี prefix แล้ว ไม่ต้อง redirect
    *  - lang-sync.js       → ไม่มี tab sync ที่ต้องทำเพิ่ม
    *  - lang-coordinator.js → setting page เท่านั้น
-   *
-   * language.js และ lang-links.js → ยังคงอยู่ (ทำงาน static mode)
+   *  - lang-links.js       → [v3.1] ปิด auto-prefix แล้ว ไม่จำเป็นบน built pages
+   *                         built pages มี prefix ในลิงก์อยู่แล้ว (html-transformer)
    *
    * [PATCH v2] เปลี่ยนชื่อจาก langScriptPatterns → removeScriptPatterns
    *            เพื่อ sync กับ html-transformer.js v2
+   *
+   * [PATCH v3.1] เพิ่ม lang-links.js — ปิด auto-prefix สำหรับ GSC fix
    */
   removeScriptPatterns: [
     'lang-proxy.js',
     'lang-sync.js',
     'lang-coordinator.js',
+    'lang-links.js',
   ],
 
   /**

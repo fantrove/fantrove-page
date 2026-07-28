@@ -58,14 +58,8 @@
     /**
      * จัดการ BFCache Restoration
      *
-     * ปัญหา: modern browser เก็บหน้าไว้ใน bfcache เมื่อ user กด Back/Forward
-     *        → browser restore JS state เดิมของหน้านั้นทั้งหมด
-     *        → lang-proxy.js ไม่รัน (ไม่มี page reload)
-     *        → selectedLang อาจเป็นค่าเก่า แต่ localStorage อาจถูกเปลี่ยนไปแล้ว
-     *          โดยหน้าอื่นที่ user ไปเปลี่ยนภาษา
-     *
-     * การแก้: event.persisted=true บอกว่าหน้านี้มาจาก bfcache
-     *         → อ่าน localStorage ใหม่ แล้ว reconcile กับ state ปัจจุบัน
+     * [FIX v3.1] ลบ automatic URL update — เปลี่ยนเฉพาะ content
+     * URLService.updateURLForLanguage() เป็น no-op แล้ว
      *
      * @private
      */
@@ -76,7 +70,7 @@
         if (M.DetectorService.isLocalDev()) return;
         
         try {
-          const { State, DetectorService, URLService } = M;
+          const { State, DetectorService } = M;
           const storedLang = DetectorService.getLangFromStorage();
           if (!storedLang) return;
           
@@ -84,13 +78,11 @@
             // localStorage บอกภาษาต่างจาก JS state ที่ restore กลับมา
             // → user เปลี่ยนภาษาในหน้าอื่นระหว่างที่ออกจากหน้านี้
             State._userExplicitLang = storedLang;
-            M.LanguageManager.updatePageLanguage(storedLang, true).catch(e => {
+            M.LanguageManager.updatePageLanguage(storedLang).catch(e => {
               console.error('[NavigationService/pageshow] language sync error:', e);
             });
-          } else {
-            // ภาษาตรงกันแล้ว แต่ URL อาจมี prefix เก่า → fix URL เฉยๆ
-            URLService.updateURLForLanguage(storedLang);
           }
+          // [FIX v3.1] ลบ URLService.updateURLForLanguage(storedLang) — no longer auto-update URL
         } catch (e) {
           console.error('[NavigationService/pageshow] handler error:', e);
         }
@@ -113,7 +105,7 @@
     _setupPopstate() {
       window.addEventListener('popstate', async (event) => {
         try {
-          const { State, DetectorService, URLService } = M;
+          const { State, DetectorService } = M;
           
           if (DetectorService.isLocalDev()) return;
           
@@ -121,22 +113,21 @@
           
           if (preferredLang) {
             if (preferredLang !== State.selectedLang) {
-              await M.LanguageManager.updatePageLanguage(preferredLang, true);
-            } else {
-              URLService.updateURLForLanguage(preferredLang);
+              await M.LanguageManager.updatePageLanguage(preferredLang);
             }
+            // [FIX v3.1] ลบ URLService.updateURLForLanguage(preferredLang) — no longer auto-update URL
             return;
           }
           
           // Fallback: ไม่มี user preference → ดูจาก history state หรือ URL
           if (event.state && event.state.lang && event.state.lang !== State.selectedLang) {
-            await M.LanguageManager.updatePageLanguage(event.state.lang, false);
+            await M.LanguageManager.updatePageLanguage(event.state.lang);
             return;
           }
           
           const urlLang = DetectorService.getLangFromURL();
           if (urlLang && urlLang !== State.selectedLang) {
-            await M.LanguageManager.updatePageLanguage(urlLang, false);
+            await M.LanguageManager.updatePageLanguage(urlLang);
             try { localStorage.setItem(M.CONFIG.LS_KEY, urlLang); } catch (e) {}
           }
           
@@ -156,17 +147,13 @@
       window.addEventListener('storage', (e) => {
         if (e.key !== M.CONFIG.LS_KEY) return;
         
-        const { State, DetectorService, URLService } = M;
+        const { State, DetectorService } = M;
         const newLang = e.newValue;
-        const urlLang = DetectorService.getLangFromURL();
         
-        // ถ้า URL ไม่ตรงกับภาษาใหม่ ให้ fix URL (production only)
-        if (!DetectorService.isLocalDev() && urlLang && urlLang !== newLang) {
-          URLService.updateURLForLanguage(newLang);
-        }
+        // [FIX v3.1] ลบ URLService.updateURLForLanguage(newLang) — no longer auto-update URL
         
         if (newLang && newLang !== State.selectedLang) {
-          M.LanguageManager.updatePageLanguage(newLang, false).catch(() => {});
+          M.LanguageManager.updatePageLanguage(newLang).catch(() => {});
         }
       });
     },
@@ -181,19 +168,17 @@
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState !== 'visible') return;
         
-        const { State, DetectorService, URLService } = M;
+        const { State, DetectorService } = M;
         if (DetectorService.isLocalDev()) return;
         
         const preferredLang = State._userExplicitLang || DetectorService.getLangFromStorage();
         if (preferredLang && preferredLang !== State.selectedLang) {
-          M.LanguageManager.updatePageLanguage(preferredLang, true).catch(() => {});
+          M.LanguageManager.updatePageLanguage(preferredLang).catch(() => {});
           return;
         }
         
-        const urlLang = DetectorService.getLangFromURL();
-        if (urlLang && urlLang !== State.selectedLang) {
-          M.LanguageManager.updatePageLanguage(urlLang, false).catch(() => {});
-        }
+        // [FIX v3.1] ลบ automatic URL update — no longer auto-fix URL prefix
+        // ถ้าภาษาตรงกันแล้ว ไม่ต้องทำอะไร
       });
     },
     
@@ -210,16 +195,10 @@
         if (!lang || lang === M.State.selectedLang) return;
         if (url && url === location.href) return; // ตัวเองส่งมา ไม่ต้องทำ
         
-        const { DetectorService, URLService } = M;
+        // [FIX v3.1] ลบ URLService.updateURLForLanguage(lang) — no longer auto-update URL
+        // เปลี่ยน content ได้ แต่ URL ต้องเป็น user เลือกเองเท่านั้น
         
-        if (!DetectorService.isLocalDev()) {
-          const currentUrlLang = DetectorService.getLangFromURL();
-          if (currentUrlLang && currentUrlLang !== lang) {
-            URLService.updateURLForLanguage(lang);
-          }
-        }
-        
-        M.LanguageManager.updatePageLanguage(lang, DetectorService.isLocalDev() ? false : true)
+        M.LanguageManager.updatePageLanguage(lang)
           .catch(() => {});
       } catch (e) {}
     },

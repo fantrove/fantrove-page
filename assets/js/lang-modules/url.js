@@ -18,38 +18,24 @@
      * แก้ URL ให้มี language prefix ที่ถูกต้อง โดยไม่ reload หน้า
      * ใช้ replaceState — ไม่เพิ่ม history entry
      *
-     * localhost → ไม่ทำอะไรเลย
+     * [FIX v3.1] เปลี่ยนเป็น no-op — ปิดระบบบังคับเพิ่ม prefix อัตโนมัติ
+     *
+     * เหตุผล: Google Search Console ฟังว่าเป็น "Page with redirect" เพราะระบบ
+     *   อัตโนมัติเติม prefix ภาษาผ่าน replaceState → Googlebot มองเป็น redirect
+     *   → ไม่สามารถจัดทำดัชนีได้
+     *
+     * สิ่งที่ยังคงอยู่:
+     *   - การเปลี่ยนภาษาด้วยตนเอง (selectLanguage) จะเปลี่ยน URL โดยตรง
+     *     ผ่าน replaceState ใน selectLanguage() แทน ไม่ผ่าน URLService
+     *   - Built pages มี prefix ในลิงก์อยู่แล้ว (html-transformer)
+     *   - _redirects ของ Cloudflare Pages จัดการ routing โดย rewrite (200)
      *
      * @param {string} lang
      */
     updateURLForLanguage(lang) {
-      const { DetectorService } = M;
-      
-      // localhost ไม่ยุ่งกับ URL เด็ดขาด
-      if (DetectorService.isLocalDev()) return;
-      
-      try {
-        const currentPath = location.pathname;
-        const currentLang = DetectorService.getLangFromURL();
-        
-        // ถ้า URL ตรงกับภาษาที่เลือกแล้ว ไม่ต้องทำอะไร
-        if (currentLang === lang) return;
-        
-        let newPath;
-        if (currentLang) {
-          // แทนที่ prefix เดิม /en/ → /th/
-          newPath = currentPath.replace(/^\/(en|th)(\/|$)/, '/' + lang + '$2');
-        } else {
-          // เพิ่ม prefix ใหม่
-          newPath = '/' + lang + (currentPath === '/' ? '' : currentPath);
-        }
-        
-        const newURL = newPath + location.search + location.hash;
-        history.replaceState({ lang, ts: Date.now() }, '', newURL);
-        
-      } catch (e) {
-        console.error('[URLService] Error updating URL:', e);
-      }
+      // [FIX v3.1] No-op — automatic URL prefix forcing disabled for GSC
+      // Manual language switching handles URL change directly in selectLanguage()
+      return;
     },
   };
   

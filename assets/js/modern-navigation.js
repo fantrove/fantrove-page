@@ -475,17 +475,14 @@
     }
 
     async syncAllToStoredLang() {
+      // [FIX v3.1] Only update labels, NOT hrefs — automatic prefix update disabled
+      // Link hrefs stay as-is (built pages already have correct prefix).
+      // Labels are still synced so navigation items show correct language text.
       try {
         const storedLang = this._readStoredLang() || this.defaultLang;
         const items = this.navRenderer.getItems();
         items.forEach(it => {
-          try {
-            const base = it.dataset.baseUrl || it.dataset.goUrl || it.dataset.link;
-            if (!base) return;
-            if (it.dataset.isExternal === 'true') return;
-            const newHref = this.navPrefixManager.addPrefix(base, storedLang);
-            this.navRenderer.updateHref(it, newHref);
-          } catch (e) {}
+          // [FIX v3.1] ลบ updateHref — ไม่แก้ href อัตโนมัติ
           try {
             const cfgList = this.configLoader._cached && this.configLoader._cached.navigation ? this.configLoader._cached.navigation : [];
             const cfg = cfgList.find(n => (n.url === (it.dataset.link || '')) || (n.go_url === (it.dataset.goUrl || '')));
@@ -499,72 +496,18 @@
     }
 
     _updateLinksIn(root) {
-      try {
-        const anchors = root.querySelectorAll ? root.querySelectorAll('a[href]') : [];
-        const storedLang = this._readStoredLang() || this.defaultLang;
-        const SKIP_PREFIXES = ['/assets/', '/static/', '/api/', '/_next/', '/favicon.ico', '/robots.txt', '/sitemap.xml'];
-        anchors.forEach(a => {
-          try {
-            const raw = a.getAttribute('href') || '';
-            if (/^(mailto:|tel:|javascript:|#)/i.test(raw)) return;
-            const url = new URL(raw, location.origin);
-            if (url.origin !== location.origin) return;
-            for (const p of SKIP_PREFIXES) if (url.pathname.startsWith(p)) return;
-            if (this.navPrefixManager.hasPrefix(url.pathname)) {
-              const parsed = this.navPrefixManager.parse(url.pathname);
-              if (parsed.hasLangPrefix && parsed.lang !== storedLang) {
-                const newHref = this.navPrefixManager.addPrefix(parsed.cleanPath, storedLang) + url.search + url.hash;
-                a.setAttribute('href', newHref);
-              }
-              return;
-            }
-            if (!this.isDevMode) {
-              const newHref = this.navPrefixManager.addPrefix(url.pathname, storedLang) + url.search + url.hash;
-              a.setAttribute('href', newHref);
-            }
-          } catch (e) {}
-        });
-      } catch (e) {}
+      // [FIX v3.1] Disabled — automatic link prefix update causes GSC "Page with redirect"
+      // Built pages already have prefixed links from html-transformer step 8.
+      // No need to modify hrefs dynamically.
+      return;
     }
 
     _onClick(ev) {
-      try {
-        const anchor = ev.target && ev.target.closest ? ev.target.closest('a[href]') : null;
-        if (!anchor) return;
-        const raw = anchor.getAttribute('href') || '';
-        if (/^(mailto:|tel:|javascript:|#)/i.test(raw)) return;
-        const url = new URL(raw, location.origin);
-        if (url.origin !== location.origin) return;
-        const path = url.pathname || '/';
-        const SKIP_PREFIXES = ['/assets/', '/static/', '/api/', '/_next/', '/favicon.ico', '/robots.txt', '/sitemap.xml'];
-        for (const p of SKIP_PREFIXES) if (path.startsWith(p)) return;
-        const storedLang = this._readStoredLang() || this.defaultLang;
-        const parsed = this.navPrefixManager.parse(path);
-        if (parsed.hasLangPrefix && parsed.lang !== storedLang) {
-          ev.preventDefault();
-          try {
-            const targetUrl = this.navPrefixManager.addPrefix(parsed.cleanPath, storedLang) + url.search + url.hash;
-            window.location.assign(targetUrl);
-            return;
-          } catch (e) {}
-        }
-        if (!parsed.hasLangPrefix && !this.isDevMode) {
-          ev.preventDefault();
-          try {
-            const key = path + (url.search || '');
-            const rawMap = sessionStorage.getItem('fv-nav-lang-map') || '{}';
-            const map = safeJSONParse(rawMap, {});
-            map[key] = { lang: storedLang, ts: NOW(), evidence: 'click' };
-            sessionStorage.setItem('fv-nav-lang-map', JSON.stringify(map));
-          } catch (e) {}
-          (async () => {
-            const done = await this._attemptCandidates(path, ev);
-            if (!done) {
-              try { window.location.assign(anchor.href); } catch (e) { window.location.href = anchor.href; }
-            }
-          })();
-        }
-      } catch (e) {}
+      // [FIX v3.1] Disabled — automatic click interception for prefix causes GSC redirect
+      // Let browser handle link navigation normally without prefix modification.
+      // Built pages already have correct language prefix in hrefs.
+      // Manual language switching via selectLanguage() still works.
+      return;
     }
 
     async _attemptCandidates(destPath, originalEvent) {
