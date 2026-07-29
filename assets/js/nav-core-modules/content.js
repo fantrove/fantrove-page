@@ -78,7 +78,32 @@
 .ure-btn-row--mid  {border-radius:0!important;padding:2px 5px!important;}
 .ure-btn-row--last {border-radius:0 0 25px 25px!important;padding:0 5px 1rem!important;margin:0 0 40px!important;}
 
+/* ── Responsive Card Grid (Spotify/Netflix style) ──────────────────────
+   v3.2: Grid layout for vertical card containers
+   - auto-fill + minmax = responsive columns without media queries
+   - Cards stretch to fill cell width naturally
+   - Collection cards get wider minmax for premium 168px+ cards
+   ────────────────────────────────────────────────────────────────────── */
+.card-content-container{
+  display:grid!important;
+  grid-template-columns:repeat(auto-fill,minmax(160px,1fr))!important;
+  gap:12px!important;
+  margin:0 0 40px!important;
+  padding:1rem 5px!important;
+  background:var(--fv-surface-page);
+  border-radius:25px;
+  contain:layout style;
+}
+.card-content-container .card{width:100%!important;}
+.card-content-container.has-collection-cards{
+  grid-template-columns:repeat(auto-fill,minmax(200px,1fr))!important;
+  gap:14px!important;
+}
+
+/* ── Horizontal card scroll (overrides grid) ────────────────────────── */
 .card-content-container--h{
+  display:flex!important;
+  grid-template-columns:none!important;
   flex-wrap:nowrap!important;
   overflow-x:auto;
   justify-content:flex-start!important;
@@ -89,7 +114,7 @@
   touch-action:pan-x;
 }
 .card-content-container--h::-webkit-scrollbar{display:none;}
-.card-content-container--h .card{flex-shrink:0;width:160px;}
+.card-content-container--h .card{flex-shrink:0;width:160px!important;}
 
 .card-cover-preview{
   display:flex;
@@ -879,7 +904,10 @@
         ? 'card-content-container has-collection-cards'
         : 'card-content-container';
       let html = `<div class="cm-group"><div class="${containerClass}">`;
-      if (item.header) html += this._tplHeader(item.header, lang);
+      // v3.2: suppress header for collection card groups — redundant
+      //   collection card already has title + description in the card itself
+      //   header from feed would duplicate the collection name
+      if (item.header && !hasCollectionCards) html += this._tplHeader(item.header, lang);
       for (const c of item.items) html += this._tplCard(c, lang);
       return html + '</div></div>';
     },

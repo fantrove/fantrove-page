@@ -1,7 +1,8 @@
 main { margin-top:30px; margin-bottom:80px; contain: layout style; }
 
 /* v3: เพิ่ม contain ให้ content container — จำกัด reflow scope */
-#content-loading { contain: layout style; }
+/* v3.2: overflow:hidden + contain ป้องกัน cards ลอยขึ้น header area */
+#content-loading { contain: layout style; overflow: hidden; }
 
 .button-sub {
   margin:0; padding:11px 13px;
@@ -52,9 +53,11 @@ main { margin-top:30px; margin-bottom:80px; contain: layout style; }
   /* [แก้ไขจุดนี้] คลายล็อกชิ้นส่วนการ์ดเล็กน้อย เปลี่ยนจาก strict เป็น layout style */
   /* ช่วยให้ JavaScript สามารถอ่านพิกเซล ข้อมูลความสูง และสั่งงานการคลิก/ซ่อนการ์ดได้ตามปกติ */
   contain: layout style; 
-  transition: opacity 200ms ease;
+  /* v3.2: Premium :active — scale like nav core buttons, no hover */
+  transition: transform 100ms ease-out;
 }
-:where(.card:active) { opacity:0.55; }
+/* v3.2: NO hover — only :active state (scale 0.97, like nav core buttons) */
+:where(.card:active) { transform: scale(0.97); }
 
 /* v3.1: <a> card styling — เมื่อ card เป็น <a> แทน <div> */
 /*   WHY: card ที่มี link ตอนนี้เป็น <a> ตาม semantic HTML */
@@ -82,9 +85,8 @@ a.card {
   -webkit-tap-highlight-color:transparent;
   user-select:none;
   overflow:hidden;
-  transition: transform 150ms var(--fv-ease-standard),
-              box-shadow 150ms var(--fv-ease-standard),
-              border-color 150ms var(--fv-ease-standard);
+  /* v3.2: NO hover — only :active (scale 0.97) */
+  transition: transform 100ms ease-out;
 }
 
 /* v3.1: <a> collection card — reset <a> defaults */
@@ -100,9 +102,9 @@ a.card.collection-card {
   transform: scale(0.97);
   border-color: rgba(0, 206, 176, 0.51);
   box-shadow: var(--fv-shadow-teal);
-  transition: transform 100ms ease-out,
-              box-shadow 100ms ease-out,
-              border-color 100ms ease-out;
+  transition: transform 80ms ease-out,
+              box-shadow 80ms ease-out,
+              border-color 80ms ease-out;
 }
 
 /* Collection card cover — CSS gradient background with emoji overlay */
@@ -215,38 +217,47 @@ a.card.collection-card {
   contain: layout style;
 }
 
+/* ── Responsive Card Grid (Spotify/Netflix style) ──────────────────────
+   v3.2: Grid layout for vertical card containers
+   - auto-fill + minmax = responsive columns without media queries
+   - Cards stretch to fill cell width naturally (width:100%)
+   - Collection cards get wider minmax for premium 168px+ cards
+   - contain:layout style prevents cards from escaping parent bounds
+   ────────────────────────────────────────────────────────────────────── */
 .card-content-container {
   display: grid !important;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important; 
-  justify-items: center !important;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
   margin:0 0 40px!important; padding:1rem 5px!important;
-  background:var(--fv-surface-page); 
+  background:var(--fv-surface-page);
   border-radius:25px;                   /* 25px — เหมือนเดิม */
   gap:12px!important;
-  
+
   /* [จุดสำคัญ] ปล่อยให้เป็น layout style เพื่อให้สคริปต์ Filter หรือสลับแท็บเมนู สามารถค้นหาอินเด็กซ์ของการ์ดได้ */
   contain: layout style;
 }
 
-/* Collection card grid — wider min-width for premium 168px cards */
+/* Cards fill grid cell width naturally — Spotify/Netflix pattern */
+.card-content-container .card { width: 100% !important; }
+
+/* Collection card grid — wider min-width for premium 200px+ cards */
 .card-content-container.has-collection-cards {
-  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)) !important;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important;
   gap:14px!important;
 }
 
 .hdr-fade { animation: none !important; }
 
 @media (max-width:600px) {
-  .card-content-container { 
+  .card-content-container {
     grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)) !important;
-    gap:8px; 
+    gap:8px!important;
   }
   .card-content-container.has-collection-cards {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important;
-    gap:10px;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
+    gap:10px!important;
   }
-  .card { width: 145px; height: 210px; }
-  :where(.card.collection-card) { width: 150px; height: 218px; }
+  .card { height: 210px; }
+  :where(.card.collection-card) { width: 100%!important; height: 218px; }
   .collection-card .card-cover-preview { min-height:92px; height:92px; font-size:1.7rem; }
 }
 @media (max-width:450px) {

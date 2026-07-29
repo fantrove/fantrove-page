@@ -344,6 +344,36 @@ async function build() {
     }
   }
 
+  // ── 8. Build collection pages using scripts/build-collections.js ──────────
+  // v3.2: Integrated into main build pipeline — runs automatically
+  if (DRY_RUN) {
+    console.log('\n[collections] (dry-run) Would build collection pages using scripts/build-collections.js');
+  } else {
+    try {
+      console.log('\n[collections] Building collection pages...');
+      const { buildCollections } = require('./build-collections');
+      const result = await buildCollections();
+      if (result && result.totalErrors > 0) {
+        console.warn('[collections] Completed with ' + result.totalErrors + ' error(s)');
+        totalErrors += result.totalErrors;
+      }
+    } catch (e) {
+      console.warn('[collections] Build failed (continuing):', e && e.message ? e.message : e);
+      // Fallback: try spawnSync if require fails
+      try {
+        const res = spawnSync('node', ['scripts/build-collections.js'], { encoding: 'utf8' });
+        if (res.status !== 0) {
+          console.warn('[collections] Generator exited with status', res.status);
+          if (res.stderr) console.warn(res.stderr.trim());
+        } else {
+          if (res.stdout) console.log(res.stdout.trim());
+        }
+      } catch (e2) {
+        console.warn('[collections] Spawn also failed:', e2 && e2.message ? e2.message : e2);
+      }
+    }
+  }
+
   // ── Summary ────────────────────────────────────────────────────────────
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
   console.log('');

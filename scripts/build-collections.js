@@ -29,11 +29,29 @@
 const fs   = require('fs');
 const path = require('path');
 
+// ── CLI flags ───────────────────────────────────────────────────────
+// [v3.2] Moved before CONFIG so srcDir getter can reference args
+const args    = process.argv.slice(2);
+const DRY_RUN = args.includes('--dry-run');
+const VERBOSE = args.includes('--verbose');
+
 // ── Configuration ───────────────────────────────────────────────────
 
+/**
+ * Resolve project root directory.
+ * v3.2: Auto-detect from script location — works from any cwd.
+ *   - If --srcDir is passed via CLI, use that.
+ *   - Otherwise, derive from __dirname (scripts/ → project root).
+ */
+const _autoRoot = path.resolve(__dirname, '..');
+
 const CONFIG = {
-  /** Source root */
-  srcDir: '.',
+  /** Source root (auto-detected or overridden via --srcDir) */
+  get srcDir() {
+    const srcArg = args.find(a => a.startsWith('--srcDir='));
+    if (srcArg) return srcArg.split('=')[1];
+    return _autoRoot;
+  },
 
   /** Build output directory */
   distDir: 'dist',
@@ -69,27 +87,26 @@ const CONFIG = {
   excludeDirs: ['cards', 'collections'],
 };
 
-// ── CLI flags ───────────────────────────────────────────────────────
-
-const args    = process.argv.slice(2);
-const DRY_RUN = args.includes('--dry-run');
-const VERBOSE = args.includes('--verbose');
-
 // ── Main ────────────────────────────────────────────────────────────
 
 async function buildCollections() {
   const startTime = Date.now();
   console.log('');
   console.log('╔════════════════════════════════════════════╗');
-  console.log('║   Collection Page Builder v1.0             ║');
+  console.log('║   Collection Page Builder v3.2             ║');
   if (DRY_RUN) console.log('║   ⚠  DRY RUN — no files written            ║');
   console.log('╚════════════════════════════════════════════╝');
   console.log('');
 
+  // v3.2: Resolve all paths relative to srcDir
+  const srcDir = CONFIG.srcDir;
+  console.log('[collections] Source dir: ' + srcDir);
+
   // 1. Load collections index
-  const collectionsIndex = loadJsonFile(CONFIG.collectionsIndexPath);
+  const collectionsIndexPath = path.resolve(srcDir, CONFIG.collectionsIndexPath);
+  const collectionsIndex = loadJsonFile(collectionsIndexPath);
   if (!collectionsIndex) {
-    console.error('[collections] ✗ Cannot load collections.json');
+    console.error('[collections] ✗ Cannot load collections.json from: ' + collectionsIndexPath);
     process.exit(1);
   }
 
@@ -98,46 +115,57 @@ async function buildCollections() {
 
   // 2. Load each collection data
   const collections = [];
+  const collectionsDataDir = path.resolve(srcDir, CONFIG.collectionsDataDir);
   for (const cat of categories) {
     const filePath = cat.file
       ? (cat.file.startsWith('/') ? cat.file.slice(1) : cat.file)
-      : path.join(CONFIG.collectionsDataDir, cat.id + '.json');
+      : path.join(collectionsDataDir, cat.id + '.json');
 
     const data = loadJsonFile(filePath);
     if (data) {
       collections.push(data);
       console.log('  ✓ ' + data.id + ' (' + (data.items ? data.items.length : 0) + ' items)');
     } else {
-      console.warn('  ✗ ' + cat.id + ' — failed to load');
+      console.warn('  ✗ ' + cat.id + ' — failed to load from: ' + filePath);
     }
   }
 
   if (!collections.length) {
     console.warn('[collections] ⚠ No collections loaded — nothing to build');
-    return;
+    return { totalPages: 0, totalErrors: 0 };
   }
 
   // 3. Load language config
-  const dbJson = loadJsonFile(CONFIG.dbJsonPath);
+  const dbJsonPath = path.resolve(srcDir, CONFIG.dbJsonPath);
+  const dbJson = loadJsonFile(dbJsonPath);
   const langs = dbJson ? Object.keys(dbJson) : CONFIG.supportedLangs;
   console.log('\n[collections] Languages: ' + langs.join(', '));
 
   // 4. Load translations
   const translations = {};
   for (const lang of langs) {
-    const filePath = CONFIG.translationPath(lang);
+    const filePath = path.resolve(srcDir, CONFIG.translationPath(lang));
     translations[lang] = loadJsonFile(filePath) || {};
   }
 
   // 5. Load template
-  const templateHtml = fs.readFileSync(CONFIG.templatePath, 'utf8');
+  const templatePath = path.resolve(srcDir, CONFIG.templatePath);
+  if (!fs.existsSync(templatePath)) {
+    console.error('[collections] ✗ Template not found: ' + templatePath);
+    process.exit(1);
+  }
+  const templateHtml = fs.readFileSync(templatePath, 'utf8');
   console.log('[collections] Template loaded (' + templateHtml.length + ' chars)');
 
   // 6. Build item resolver (offline — reads con-data JSON files)
-  const itemResolver = buildItemResolver();
+  const conDataDir = path.resolve(srcDir, CONFIG.conDataDir);
+  const itemResolver = buildItemResolver(conDataDir, srcDir);
   console.log('[collections] Item resolver built (' + itemResolver.size + ' items indexed)');
 
-  // 7. Generate pages
+  // 7. Resolve distDir relative to srcDir
+  const distDir = path.resolve(srcDir, CONFIG.distDir);
+
+  // 8. Generate pages
   let totalPages = 0;
   let totalErrors = 0;
 
@@ -146,7 +174,7 @@ async function buildCollections() {
       try {
         const html = generateCollectionPage(col, lang, langs, templateHtml, translations, itemResolver, collections);
 
-        const outPath = path.join(CONFIG.distDir, lang, 'collections', col.id, 'index.html');
+        const outPath = path.join(distDir, lang, 'collections', col.id, 'index.html');
         if (!DRY_RUN) {
           writeFile(outPath, html);
         }
@@ -172,6 +200,8 @@ async function buildCollections() {
   }
   console.log('  ' + totalPages + ' page(s) × ' + langs.length + ' language(s) in ' + elapsed + 's');
   console.log('─────────────────────────────────────────');
+
+  return { totalPages, totalErrors };
 }
 
 // ── Item Resolver (offline) ──────────────────────────────────────────
@@ -179,11 +209,13 @@ async function buildCollections() {
 /**
  * สร้าง Map<api, item> จาก con-data JSON files ทั้งหมด
  * ใช้สำหรับ resolve Unicode IDs → characters + names ที่ build time
+ * v3.2: Accept conDataDir and srcDir as parameters
+ * @param {string} conDataDir  Absolute path to con-data directory
+ * @param {string} srcDir      Absolute path to project root
  * @returns {Map<string, Object>}
  */
-function buildItemResolver() {
+function buildItemResolver(conDataDir, srcDir) {
   const resolver = new Map();
-  const conDataDir = CONFIG.conDataDir;
 
   // อ่าน index.json เพื่อหา type files
   const indexPath = path.join(conDataDir, 'index.json');
@@ -191,8 +223,12 @@ function buildItemResolver() {
   if (!indexData || !indexData.categories) return resolver;
 
   for (const catEntry of indexData.categories) {
+    // [FIX v3.2] แก้บั๊ก: cat.file → catEntry.file (typo ที่ทำให้ resolver ไม่ทำงาน)
+    // v3.2: Resolve absolute paths (/assets/...) against srcDir, relative against conDataDir
     const typeFilePath = catEntry.file
-      ? (catEntry.file.startsWith('/') ? cat.file.slice(1) : catEntry.file)
+      ? (catEntry.file.startsWith('/')
+        ? path.join(srcDir, catEntry.file.slice(1))
+        : path.resolve(conDataDir, catEntry.file))
       : path.join(conDataDir, catEntry.id + '.json');
 
     const typeData = loadJsonFile(typeFilePath);
@@ -201,7 +237,9 @@ function buildItemResolver() {
     const categories = typeData.categories || typeData.category || [];
     for (const subCat of categories) {
       const subFilePath = subCat.file
-        ? (subCat.file.startsWith('/') ? subCat.file.slice(1) : subCat.file)
+        ? (subCat.file.startsWith('/')
+          ? path.join(srcDir, subCat.file.slice(1))
+          : path.resolve(conDataDir, subCat.file))
         : path.join(conDataDir, catEntry.id, subCat.id + '.json');
 
       const subData = loadJsonFile(subFilePath);
@@ -533,9 +571,9 @@ function escapeAttr(str) {
 
 function loadJsonFile(filePath) {
   try {
-    const absPath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
-    if (!fs.existsSync(absPath)) return null;
-    const content = fs.readFileSync(absPath, 'utf8');
+    // v3.2: Use absolute path directly — caller already resolved via path.resolve()
+    if (!fs.existsSync(filePath)) return null;
+    const content = fs.readFileSync(filePath, 'utf8');
     return JSON.parse(content);
   } catch (e) {
     if (VERBOSE) console.warn('[load] Failed to load: ' + filePath, e.message);
@@ -551,10 +589,16 @@ function writeFile(filePath, content) {
   fs.writeFileSync(filePath, content, 'utf8');
 }
 
-// ── Run ──────────────────────────────────────────────────────────────
+// ── Export for integration with build.js ──────────────────────────────
+// v3.2: Export buildCollections so it can be called from the main build
+module.exports = { buildCollections, CONFIG };
 
-buildCollections().catch(function (err) {
-  console.error('\n[collections] ✗ Fatal error:', err.message);
-  if (VERBOSE) console.error(err.stack);
-  process.exit(1);
-});
+// ── Run standalone ──────────────────────────────────────────────────
+// Only run when executed directly (not when required by build.js)
+if (require.main === module) {
+  buildCollections().catch(function (err) {
+    console.error('\n[collections] ✗ Fatal error:', err.message);
+    if (VERBOSE) console.error(err.stack);
+    process.exit(1);
+  });
+}

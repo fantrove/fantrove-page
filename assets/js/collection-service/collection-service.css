@@ -193,15 +193,19 @@
   border-radius: var(--fv-radius-sm, 17px);
   background: var(--fv-surface-subtle, #f8faff);
   cursor: pointer;
-  transition: transform 150ms var(--fv-ease-standard, cubic-bezier(0.4, 0, 0.2, 1)),
-              background-color 150ms var(--fv-ease-standard, cubic-bezier(0.4, 0, 0.2, 1));
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  touch-action: manipulation;
   min-height: 80px;
+  /* v3.2: NO hover — only :active state */
+  transition: transform 100ms ease-out;
 }
 
-/* v3.1: NO hover — only :active state */
+/* v3.2: NO hover — only :active state (scale 0.95) */
 .collection-item:active {
   transform: scale(0.95);
   background: var(--fv-surface-card, #ffffff);
+  transition: transform 80ms ease-out;
 }
 
 .collection-item-char {
@@ -243,16 +247,27 @@
 }
 
 .collection-related-card {
-  border-radius: var(--fv-radius-md, 27px);
-  background: var(--fv-surface-subtle, #f8faff);
+  border-radius: var(--fv-radius-lg, 37px);
+  background: var(--fv-surface-page, #ffffff);
   overflow: hidden;
   cursor: pointer;
-  transition: transform 150ms var(--fv-ease-standard, cubic-bezier(0.4, 0, 0.2, 1));
+  border: 1px solid var(--fv-border-teal, rgba(0, 206, 176, 0.25));
+  box-shadow: var(--fv-shadow-sm, 0 2px 8px rgba(6, 20, 24, 0.04));
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  touch-action: manipulation;
+  /* v3.2: NO hover — only :active state */
+  transition: transform 100ms ease-out;
 }
 
-/* v3.1: NO hover — only :active state */
+/* v3.2: NO hover — only :active state (scale 0.97) */
 .collection-related-card:active {
   transform: scale(0.97);
+  border-color: rgba(0, 206, 176, 0.51);
+  box-shadow: var(--fv-shadow-teal, 0 4px 24px rgba(19, 180, 127, 0.12));
+  transition: transform 80ms ease-out,
+              box-shadow 80ms ease-out,
+              border-color 80ms ease-out;
 }
 
 .collection-related-card-cover {
@@ -280,26 +295,45 @@
 }
 
 /* ── Collection Card (เล็ก ใช้ในระบบอื่น) ──────────────────────── */
+/* v3.2: Premium collection card — Spotify/Netflix inspired
+   - NO hover effects, only :active state (scale 0.97)
+   - Clean design, teal accent, auto-generated thumbnails
+   ────────────────────────────────────────────────────────────────── */
 
 .collection-card {
-  border-radius: var(--fv-radius-md, 27px);
-  background: var(--fv-surface-subtle, #f8faff);
+  border-radius: var(--fv-radius-lg, 37px);
+  background: var(--fv-surface-page, #ffffff);
   overflow: hidden;
   cursor: pointer;
-  transition: transform 150ms var(--fv-ease-standard, cubic-bezier(0.4, 0, 0.2, 1)),
-              background-color 150ms var(--fv-ease-standard, cubic-bezier(0.4, 0, 0.2, 1));
+  border: 1px solid var(--fv-border-teal, rgba(0, 206, 176, 0.25));
+  box-shadow: var(--fv-shadow-sm, 0 2px 8px rgba(6, 20, 24, 0.04));
   display: flex;
   flex-direction: column;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  touch-action: manipulation;
+  /* v3.2: NO hover — only :active state */
+  transition: transform 100ms ease-out;
 }
 
-/* v3.1: NO hover effects — only :active state (ตาม design spec) */
+/* v3.2: NO hover effects — only :active state (scale 0.97) */
 .collection-card:active {
   transform: scale(0.97);
+  border-color: rgba(0, 206, 176, 0.51);
+  box-shadow: var(--fv-shadow-teal, 0 4px 24px rgba(19, 180, 127, 0.12));
+  transition: transform 80ms ease-out,
+              box-shadow 80ms ease-out,
+              border-color 80ms ease-out;
 }
 
 .collection-card-cover {
   aspect-ratio: 16 / 9;
   overflow: hidden;
+  /* Premium gradient background — teal/cyan brand colors */
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(0,206,176,0.12) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 50%, rgba(14,176,213,0.10) 0%, transparent 50%),
+    linear-gradient(145deg, rgba(248,255,253,1) 0%, rgba(242,248,255,1) 100%);
 }
 
 .collection-card-info {
@@ -310,13 +344,16 @@
 .collection-card-name {
   font-size: var(--fv-font-size-sm, 0.875rem);
   font-weight: var(--fv-font-weight-semibold, 600);
-  color: var(--fv-text-primary, #0f2629);
+  color: var(--fv-text-heading, #152a2f);
   margin-bottom: var(--fv-space-1, 0.25rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .collection-card-desc {
   font-size: var(--fv-font-size-xs, 0.75rem);
-  color: var(--fv-text-faint, #8ea1b8);
+  color: var(--fv-text-muted, #6d8590);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
