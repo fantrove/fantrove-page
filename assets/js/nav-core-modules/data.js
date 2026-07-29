@@ -401,8 +401,32 @@
       const url  = svc.registry.paths.subcategoryData(typeId, categoryId);
       const raw  = await this._performFetch(url);
 
-      if (!raw || !Array.isArray(raw.data)) {
+      // v2.3: รองรับทั้ง copyable format (data[]) และ collection format (items[])
+      //   WHY: collection data files มี items (Unicode IDs) แทน data (items)
+      //   ต้อง normalize ให้เป็น data[] ก่อนใช้งาน
+      const isCollectionFormat = raw && Array.isArray(raw.items) && !Array.isArray(raw.data);
+      const isCopyableFormat  = raw && Array.isArray(raw.data);
+
+      if (!raw || (!isCopyableFormat && !isCollectionFormat)) {
         throw new Error(`fetchCategoryDirect: invalid data at ${url}`);
+      }
+
+      // Normalize collection format → copyable-like format
+      let normalized = raw;
+      if (isCollectionFormat) {
+        const registry = svc.registry || window.ConDataRegistry;
+        normalized = registry?.normalize?.collectionDataFile?.(raw) || raw;
+        // Fallback: แปลง items เป็น data เองถ้า registry ไม่พร้อม
+        if (!Array.isArray(normalized.data) && Array.isArray(raw.items)) {
+          normalized.data = raw.items.map(unicodeId => {
+            let text = unicodeId;
+            try {
+              const match = unicodeId.match(/^U\+([0-9A-Fa-f]{4,6})$/);
+              if (match) text = String.fromCodePoint(parseInt(match[1], 16));
+            } catch (_) {}
+            return { api: unicodeId, text, name: { en: unicodeId } };
+          });
+        }
       }
 
       const getName = (nameObj) => {
@@ -418,7 +442,14 @@
         className:  'auto-category-header',
       };
 
-      const result = { id: raw.id || categoryId, name: raw.name || {}, data: raw.data, header };
+      const result = { id: raw.id || categoryId, name: raw.name || {}, data: normalized.data || [], header };
+
+      // v2.3: preserve collection-specific fields (cover, description, items)
+      //   WHY: paginator needs cover items for card preview + description for card text
+      if (raw.description) result.description = raw.description;
+      if (raw.cover) result.cover = raw.cover;
+      if (Array.isArray(raw.items)) result.items = raw.items;
+
       this.setCache(cacheKey, result);
       return result;
     },

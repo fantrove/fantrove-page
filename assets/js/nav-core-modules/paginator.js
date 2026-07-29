@@ -154,6 +154,10 @@
      *   ก่อนหน้านี้: แบ่ง category ใหญ่เป็น chunk 20 items ทำให้เกิดช่องว่างระหว่าง chunk
      *   ตอนนี้: โหลด category เต็ม ๆ ในครั้งเดียว → content-visibility: auto จัดการ render
      *
+     * v2.3: รองรับ collection types — เมื่อ source เป็น 'collections' และ layout เป็น 'card'
+     *   จะสร้าง collection cards จาก category metadata โดยตรง (ไม่ fetch items ข้างใน)
+     *   แต่ละ collection = 1 card → แสดงเป็น grid ของ collection cards
+     *
      * @param {string} lang
      * @param {number} [n]  number of categories to load (default PAGE_SIZE)
      * @returns {Promise<{groups: Array, hasMore: boolean}>}
@@ -161,6 +165,14 @@
     async loadNextPage(lang, n = PC.PAGE_SIZE) {
       const st = this._states.values().next().value;
       if (!st) return { groups: [], hasMore: false };
+
+      // v2.3: Collection path — สร้าง collection cards จาก category metadata
+      //   WHY: collections แสดงเป็น card grid (1 card = 1 collection)
+      //        ไม่เหมือน copyable types ที่แสดง items ข้างใน category
+      //        ต้อง fetch category data เพื่อดึง cover items + description
+      if (this._isCollectionSource(st) && st.layout === 'card') {
+        return this._loadCollectionCards(st, lang, n);
+      }
 
       const groups = [];
 
@@ -192,6 +204,145 @@
       st.hasMore = st.catCursor < st.categories.length;
 
       return { groups, hasMore: st.hasMore };
+    },
+
+    /**
+     * Check if source is a collection type
+     * @param {object} st  paginator state
+     * @returns {boolean}
+     */
+    _isCollectionSource(st) {
+      return st.source === 'collections' || st.source === 'collection';
+    },
+
+    /**
+     * v2.3: Load collection cards — สร้าง card สำหรับแต่ละ collection
+     *   แต่ละ collection = 1 card → แสดงเป็น grid ของ collection cards
+     *   ต้อง fetch category data เพื่อดึง cover items + description
+     *
+     * WHY แยกจาก loadNextPage: collection cards มีโครงสร้างต่างจาก copyable items
+     *   - collection card มาจาก category metadata (name, description, cover)
+     *   - copyable items มาจาก data[] ข้างใน category
+     *   - ผสมกันไม่ได้ → ต้องแยก path
+     *
+     * @param {object} st    paginator state
+     * @param {string} lang
+     * @param {number} n     number of collections to load
+     * @returns {Promise<{groups: Array, hasMore: boolean}>}
+     */
+    async _loadCollectionCards(st, lang, n) {
+      const groups = [];
+      const cardItems = [];
+
+      for (let i = 0; i < n; i++) {
+        if (!st.hasMore) break;
+        if (st.catCursor >= st.categories.length) {
+          st.hasMore = false;
+          break;
+        }
+
+        const cat = st.categories[st.catCursor];
+        const cardItem = await this._buildCollectionCard(st, cat, lang);
+        if (cardItem) {
+          cardItems.push(cardItem);
+        }
+        st.catCursor++;
+      }
+
+      // รวม collection cards ทั้งหมดเป็น 1 group
+      if (cardItems.length) {
+        groups.push({
+          group: {
+            type: 'card',
+            header: {
+              title: st.source === 'collections'
+                ? (lang === 'th' ? 'คอลเลกชัน' : 'Collections')
+                : st.source,
+              description: '',
+              className: 'auto-category-header',
+            },
+            items: cardItems,
+          },
+        });
+      }
+
+      st.hasMore = st.catCursor < st.categories.length;
+      return { groups, hasMore: st.hasMore };
+    },
+
+    /**
+     * v2.3: Build a collection card from category metadata
+     *   Fetches the collection data file to get cover items + description
+     *   Returns a card object for ContentService._tplCard
+     *
+     * @param {object} st    paginator state
+     * @param {object} cat   category descriptor {id, name}
+     * @param {string} lang
+     * @returns {Promise<object|null>}  card object or null
+     */
+    async _buildCollectionCard(st, cat, lang) {
+      try {
+        // Fetch collection data ผ่าน fetchCategoryDirect เพื่อดึง cover + description
+        const result = await M.DataService.fetchCategoryDirect('collections', cat.id);
+        const data = result.data || [];
+        const cover = result.cover || null;
+        const description = result.description || null;
+
+        // สร้าง cover preview จาก cover items หรือ data items ตัวแรก
+        let coverPreview = '';
+        if (cover && Array.isArray(cover.items) && cover.items.length) {
+          coverPreview = cover.items.slice(0, 4).map(item => {
+            if (item.startsWith('U+')) return this._codePointToText(item);
+            return item;
+          }).join(' ');
+        } else if (data.length) {
+          coverPreview = data.slice(0, 4).map(d => d.text || '').filter(Boolean).join(' ');
+        }
+
+        // resolve i18n name
+        const title = this._resolveName(cat.name, lang);
+        const desc = description
+          ? this._resolveName(description, lang)
+          : `${data.length} items`;
+
+        return {
+          _type:         'card',
+          image:         null,
+          title:         title || cat.id,
+          description:   desc,
+          link:          `/collections/${cat.id}`,
+          className:     'collection-card',
+          coverPreview:  coverPreview,
+          _collectionId: cat.id,
+          _itemCount:    data.length,
+        };
+      } catch (err) {
+        console.warn('[Paginator] _buildCollectionCard failed:', cat.id, err.message);
+        return null;
+      }
+    },
+
+    /**
+     * v2.3: Convert Unicode code point to text character
+     *   e.g., "U+2764" → "❤"
+     */
+    _codePointToText(apiCode) {
+      if (!apiCode || typeof apiCode !== 'string') return '';
+      const cleaned = apiCode.replace(/^U\+/i, '');
+      const parts = cleaned.split(/\s+/);
+      try {
+        return parts.map(p => String.fromCodePoint(parseInt(p, 16))).join('');
+      } catch (_) {
+        return '';
+      }
+    },
+
+    /**
+     * v2.3: Resolve i18n name object → string
+     */
+    _resolveName(nameObj, lang) {
+      if (!nameObj || typeof nameObj !== 'object') return String(nameObj || '');
+      return nameObj[lang] || nameObj.en || nameObj.th || Object.values(nameObj)[0] || '';
     },
 
     /**

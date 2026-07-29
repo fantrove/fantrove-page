@@ -95,22 +95,14 @@
   display:flex;
   align-items:center;
   justify-content:center;
-  font-size:2.5rem;
+  font-size:2rem;
   line-height:1.2;
   min-height:80px;
   padding:0.75rem;
   background:var(--fv-surface-card,#f0f7f4);
   border-radius:12px 12px 0 0;
-  letter-spacing:0.3rem;
+  letter-spacing:0.25rem;
   contain:layout style;
-}
-
-.collection-card{
-  cursor:pointer;
-  transition:transform 150ms ease;
-}
-.collection-card:hover{
-  transform:translateY(-2px);
 }`;
     document.head.appendChild(s);
   }
@@ -481,8 +473,12 @@
         if (sess !== _sess) return;
 
         // ── First page ─────────────────────────────────────────────────────────
+        // v2.3: สำหรับ collections → โหลดทั้งหมดในครั้งเดียว (เพราะจำนวนน้อย + ต้องแสดงเป็น grid เดียว)
+        //   สำหรับ copyable types → ใช้ FIRST_PAGE_SIZE แบบ dynamic เหมือนเดิม
+        const isCollectionSource = sourceDesc.source === 'collections' || sourceDesc.source === 'collection';
+        const firstPageSize = isCollectionSource ? 50 : M.SourcePaginator.FIRST_PAGE_SIZE;
         const { groups: firstGroups, hasMore } =
-          await M.SourcePaginator.loadNextPage(lang, M.SourcePaginator.FIRST_PAGE_SIZE);
+          await M.SourcePaginator.loadNextPage(lang, firstPageSize);
         if (sess !== _sess) return;
 
         if (firstGroups.length) {
@@ -877,7 +873,12 @@
     },
 
     _tplCardGroup(item, lang) {
-      let html = `<div class="cm-group"><div class="card-content-container">`;
+      // v2.3: detect collection cards and add has-collection-cards class for proper grid
+      const hasCollectionCards = item.items && item.items.some(c => c.className === 'collection-card');
+      const containerClass = hasCollectionCards
+        ? 'card-content-container has-collection-cards'
+        : 'card-content-container';
+      let html = `<div class="cm-group"><div class="${containerClass}">`;
       if (item.header) html += this._tplHeader(item.header, lang);
       for (const c of item.items) html += this._tplCard(c, lang);
       return html + '</div></div>';
@@ -913,11 +914,30 @@
       // v2.3: รองรับ collection card — แสดง cover preview แทนรูปภาพ
       //   collection card มี coverPreview (ตัวอักษรตัวอย่าง) แทน image
       //   ถ้าไม่มี image และมี coverPreview → แสดง cover preview
+      const isCollection = item.className === 'collection-card';
       const coverPreview = item.coverPreview
         ? `<div class="card-cover-preview">${_esc(item.coverPreview)}</div>`
         : '';
 
       const visualContent = img || coverPreview;
+
+      // v2.3: Collection card premium template
+      //   - Item count badge (pill badge with teal accent)
+      //   - Better typography for long names (single-line ellipsis)
+      //   - Description as secondary text
+      if (isCollection) {
+        const itemCount = item._itemCount
+          ? `<span class="card-item-count">${item._itemCount} items</span>`
+          : '';
+        return (
+          `<div class="card${cls}"${link}>${visualContent}` +
+          `<div class="card-content">` +
+            `<div class="card-title">${_esc(_txt(item.title, lang))}</div>` +
+            `<div class="card-description">${_esc(_txt(item.description, lang))}</div>` +
+            `${itemCount}` +
+          `</div></div>`
+        );
+      }
 
       return (
         `<div class="card${cls}"${link}>${visualContent}` +

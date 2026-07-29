@@ -56,6 +56,102 @@ main { margin-top:30px; margin-bottom:80px; contain: layout style; }
 }
 :where(.card:active) { opacity:0.55; }
 
+/* ── Collection Card Premium Design ──────────────────────────────────────────
+   v2.3: Premium collection card matching nav core button aesthetic
+   - NO hover effects, only :active state (like nav core buttons)
+   - Teal accent colors, clean design, pill/rounded shapes
+   - CSS gradient cover with arranged emoji characters
+   - Handle long collection names with proper truncation
+   ────────────────────────────────────────────────────────────────────────── */
+
+:where(.card.collection-card) {
+  width:168px; height:232px;
+  border-radius:var(--fv-radius-lg);     /* 37px — premium rounded */
+  border:1px solid var(--fv-border-teal);
+  background:var(--fv-surface-page);
+  box-shadow: var(--fv-shadow-sm);
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;
+  overflow:hidden;
+  transition: transform 150ms var(--fv-ease-standard),
+              box-shadow 150ms var(--fv-ease-standard),
+              border-color 150ms var(--fv-ease-standard);
+}
+
+:where(.card.collection-card:active) {
+  transform: scale(0.97);
+  border-color: rgba(0, 206, 176, 0.51);
+  box-shadow: var(--fv-shadow-teal);
+  transition: transform 100ms ease-out,
+              box-shadow 100ms ease-out,
+              border-color 100ms ease-out;
+}
+
+/* Collection card cover — CSS gradient background with emoji overlay */
+.collection-card .card-cover-preview {
+  display:flex; align-items:center; justify-content:center;
+  min-height:108px; height:108px;
+  padding:var(--fv-space-3);
+  border-radius:var(--fv-radius-lg) var(--fv-radius-lg) 0 0;
+  letter-spacing:0.25rem;
+  font-size:2rem; line-height:1.2;
+  contain:layout style;
+  /* Premium gradient background — teal/cyan brand colors */
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(0,206,176,0.12) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 50%, rgba(14,176,213,0.10) 0%, transparent 50%),
+    linear-gradient(145deg, rgba(248,255,253,1) 0%, rgba(242,248,255,1) 100%);
+  /* Subtle inner border at bottom of cover */
+  box-shadow: inset 0 -1px 0 rgba(0,206,176,0.06);
+}
+
+/* Collection card content area */
+.collection-card .card-content {
+  padding:var(--fv-space-3) var(--fv-space-4);
+  display:flex; flex-direction:column; overflow:hidden;
+  flex:1;
+  gap:2px;
+}
+
+/* Collection card title — premium typography */
+.collection-card .card-title {
+  font-size:0.8125rem;                      /* 13px */
+  font-weight:var(--fv-font-semibold);
+  color:var(--fv-text-heading);
+  line-height:var(--fv-leading-tight);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  max-width:100%;
+}
+
+/* Collection card description — muted secondary text */
+.collection-card .card-description {
+  font-size:0.6875rem;                      /* 11px */
+  color:var(--fv-text-muted);
+  line-height:var(--fv-leading-normal);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  max-width:100%;
+}
+
+/* Collection card item count badge */
+.collection-card .card-item-count {
+  display:inline-flex; align-items:center; justify-content:center;
+  margin-top:auto;
+  padding:2px 8px;
+  border-radius:var(--fv-radius-pill);
+  font-size:0.625rem;                       /* 10px */
+  font-weight:var(--fv-font-medium);
+  color:var(--fv-brand-teal-light);
+  background:var(--fv-surface-teal-hover);
+  border:1px solid rgba(0,206,176,0.15);
+  width:fit-content;
+  letter-spacing:0.02em;
+}
+
 .card-image  { 
   width:100%; height:110px; 
   object-fit:cover; display:block; 
@@ -115,6 +211,12 @@ main { margin-top:30px; margin-bottom:80px; contain: layout style; }
   contain: layout style;
 }
 
+/* Collection card grid — wider min-width for premium 168px cards */
+.card-content-container.has-collection-cards {
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)) !important;
+  gap:14px!important;
+}
+
 .hdr-fade { animation: none !important; }
 
 @media (max-width:600px) {
@@ -122,7 +224,13 @@ main { margin-top:30px; margin-bottom:80px; contain: layout style; }
     grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)) !important;
     gap:8px; 
   }
+  .card-content-container.has-collection-cards {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important;
+    gap:10px;
+  }
   .card { width: 145px; height: 210px; }
+  :where(.card.collection-card) { width: 150px; height: 218px; }
+  .collection-card .card-cover-preview { min-height:92px; height:92px; font-size:1.7rem; }
 }
 @media (max-width:450px) {
   .container { padding-left:0.7rem; padding-right:0.7rem; border-radius:var(--fv-radius-md); }
