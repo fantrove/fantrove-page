@@ -56,6 +56,14 @@ main { margin-top:30px; margin-bottom:80px; contain: layout style; }
 }
 :where(.card:active) { opacity:0.55; }
 
+/* v3.1: <a> card styling — เมื่อ card เป็น <a> แทน <div> */
+/*   WHY: card ที่มี link ตอนนี้เป็น <a> ตาม semantic HTML */
+/*   ต้อง reset default <a> styles + ให้ color inherit */
+a.card {
+  text-decoration: none;
+  color: inherit;
+}
+
 /* ── Collection Card Premium Design ──────────────────────────────────────────
    v2.3: Premium collection card matching nav core button aesthetic
    - NO hover effects, only :active state (like nav core buttons)
@@ -77,6 +85,15 @@ main { margin-top:30px; margin-bottom:80px; contain: layout style; }
   transition: transform 150ms var(--fv-ease-standard),
               box-shadow 150ms var(--fv-ease-standard),
               border-color 150ms var(--fv-ease-standard);
+}
+
+/* v3.1: <a> collection card — reset <a> defaults */
+a.card.collection-card {
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
 }
 
 :where(.card.collection-card:active) {

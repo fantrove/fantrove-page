@@ -607,14 +607,13 @@
           ? _resolveName(col.description, lang)
           : `${_resolveName(seg.typeName, lang)} · ${col.itemCount || (col.items || []).length} items`;
 
+        // v3.1: ไม่มี header สำหรับ collection card segment — redundant
+        //   WHY: card มี title + description อยู่แล้ว → header ซ้ำซ้อน
+        //   ใน feed แสดง collection card โดยตรง ไม่มีแถบส่วนหัว
         return {
           group: {
             type:   'card',
-            header: {
-              title:       _resolveName(seg.catName,  lang),
-              description: _resolveName(seg.typeName, lang),
-              className:   'auto-category-header collection-header',
-            },
+            header: null,  // ไม่มี header — card แสดงผลโดยตรง
             items: [{
               _type:         'card',
               title:         col.name || col.title || {},

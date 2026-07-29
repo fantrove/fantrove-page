@@ -198,8 +198,9 @@
   min-height: 80px;
 }
 
-.collection-item:hover {
-  transform: scale(1.05);
+/* v3.1: NO hover — only :active state */
+.collection-item:active {
+  transform: scale(0.95);
   background: var(--fv-surface-card, #ffffff);
 }
 
@@ -249,8 +250,9 @@
   transition: transform 150ms var(--fv-ease-standard, cubic-bezier(0.4, 0, 0.2, 1));
 }
 
-.collection-related-card:hover {
-  transform: scale(1.02);
+/* v3.1: NO hover — only :active state */
+.collection-related-card:active {
+  transform: scale(0.97);
 }
 
 .collection-related-card-cover {
@@ -290,9 +292,9 @@
   flex-direction: column;
 }
 
-.collection-card:hover {
-  transform: scale(1.02);
-  background: var(--fv-surface-card, #ffffff);
+/* v3.1: NO hover effects — only :active state (ตาม design spec) */
+.collection-card:active {
+  transform: scale(0.97);
 }
 
 .collection-card-cover {

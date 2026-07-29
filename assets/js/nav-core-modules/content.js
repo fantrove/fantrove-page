@@ -828,7 +828,7 @@
     //   ตรงนี้ใช้เป็น fallback สำหรับ item เดี่ยวที่ไม่มี group context
     // v2.3: เพิ่มการตรวจ _type='collection-card' สำหรับ collection card
     _isCard: item =>
-      item.type === 'card' || item.group?.type === 'card' || item._type === 'collection-card' || (!!item.image && !item.api),
+      item.type === 'card' || item.group?.type === 'card' || item._type === 'card' || item._type === 'collection-card' || (!!item.image && !item.api),
 
     // ── Emit ──────────────────────────────────────────────────────────────────────
 
@@ -906,7 +906,7 @@
 
     _tplCard(item, lang) {
       const cls  = item.className ? ` ${_esc(item.className)}` : '';
-      const link = item.link ? ` data-link="${_esc(item.link)}"` : '';
+      const isCollection = item.className === 'collection-card';
       const img  = item.image
         ? `<img class="card-image" src="${_esc(item.image)}" loading="lazy" decoding="async" fetchpriority="low" alt="${_esc(_txt(item.imageAlt, lang))}">`
         : '';
@@ -914,12 +914,24 @@
       // v2.3: รองรับ collection card — แสดง cover preview แทนรูปภาพ
       //   collection card มี coverPreview (ตัวอักษรตัวอย่าง) แทน image
       //   ถ้าไม่มี image และมี coverPreview → แสดง cover preview
-      const isCollection = item.className === 'collection-card';
       const coverPreview = item.coverPreview
         ? `<div class="card-cover-preview">${_esc(item.coverPreview)}</div>`
         : '';
 
       const visualContent = img || coverPreview;
+
+      // v3.1: เปลี่ยน card จาก <div> เป็น <a> เพื่อ navigation ที่ถูกต้อง
+      //   WHY: card ที่มี link ควรเป็น <a> ตาม semantic HTML
+      //   - collection card → <a href="/collections/xxx"> (internal navigation)
+      //   - external card → <a href="https://..." target="_blank" rel="noopener">
+      //   - ไม่มี link → <div> (non-navigable card)
+      const hasLink = !!item.link;
+      const tag = hasLink ? 'a' : 'div';
+      const hrefAttr = hasLink
+        ? (isCollection
+          ? ` href="${_esc(item.link)}"`  // internal link
+          : ` href="${_esc(item.link)}" target="_blank" rel="noopener noreferrer"`)
+        : '';
 
       // v2.3: Collection card premium template
       //   - Item count badge (pill badge with teal accent)
@@ -930,21 +942,21 @@
           ? `<span class="card-item-count">${item._itemCount} items</span>`
           : '';
         return (
-          `<div class="card${cls}"${link}>${visualContent}` +
+          `<${tag} class="card${cls}"${hrefAttr}>${visualContent}` +
           `<div class="card-content">` +
             `<div class="card-title">${_esc(_txt(item.title, lang))}</div>` +
             `<div class="card-description">${_esc(_txt(item.description, lang))}</div>` +
             `${itemCount}` +
-          `</div></div>`
+          `</div></${tag}>`
         );
       }
 
       return (
-        `<div class="card${cls}"${link}>${visualContent}` +
+        `<${tag} class="card${cls}"${hrefAttr}>${visualContent}` +
         `<div class="card-content">` +
           `<div class="card-title">${_esc(_txt(item.title, lang))}</div>` +
           `<div class="card-description">${_esc(_txt(item.description, lang))}</div>` +
-        `</div></div>`
+        `</div></${tag}>`
       );
     },
 
@@ -963,22 +975,29 @@
         } catch (err) { console.warn('[Content] copy failed:', err); }
         return;
       }
-      const card = e.target.closest('.card[data-link]');
+      // v3.1: รองรับทั้ง <a> card (ใหม่) และ <div> card เก่า (backward compat)
+      //   WHY: card ตอนนี้เป็น <a href="..."> แล้ว ไม่ใช่ <div data-link="...">
+      //   - <a class="card collection-card" href="/collections/xxx"> → SPA navigation
+      //   - <a class="card" href="https://..." target="_blank"> → ให้ browser จัดการ (เปิดแท็บใหม่)
+      //   - <div class="card" data-link="..."> → legacy fallback (รองรับ cache เก่า)
+      const card = e.target.closest('a.card[href], .card[data-link]');
       if (card) {
-        // v2.3: ถ้าเป็น collection card → นำทางไปหน้าคอลเลกชัน (SPA navigation)
-        //   ถ้าไม่ใช่ → เปิดลิงก์ภายนอก (เหมือนเดิม)
         const isCollection = card.classList.contains('collection-card');
-        if (isCollection && card.dataset.link) {
-          // SPA navigation ไปหน้าคอลเลกชัน
+        const link = card.getAttribute('href') || card.dataset.link || '';
+        if (isCollection && link) {
+          // v3.1: ป้องกัน default <a> navigation → ใช้ SPA navigation แทน
+          e.preventDefault();
           try {
-            M.RouterService?.navigateTo?.(card.dataset.link) ||
-            (window.location.href = card.dataset.link);
+            M.RouterService?.navigateTo?.(link) ||
+            (window.location.href = link);
           } catch (_) {
-            window.location.href = card.dataset.link;
+            window.location.href = link;
           }
-        } else {
-          window.open(card.dataset.link, '_blank', 'noopener,noreferrer');
+        } else if (link && !card.hasAttribute('href')) {
+          // Legacy <div data-link="..."> → เปิดลิงก์ภายนอก
+          window.open(link, '_blank', 'noopener,noreferrer');
         }
+        // สำหรับ <a target="_blank"> → browser จัดการเอง (ไม่ต้อง preventDefault)
       }
     },
 
