@@ -125,22 +125,24 @@
   contain:layout style;
 }
 
-/* ── Collection Container (Spotify/Netflix/YouTube style) ──────────────
-   v4.0: 1 collection = 1 container
-   - Section header with collection name + item count
-   - Horizontal scroll preview row of items (subset of collection)
-   - "View All" button linking to full collection page
+/* ── Collection Container ──────────────────────────────────────────────
+   v5.0: Matches nav core discovery system pattern
+   - Same layout as .button-content-container (grid, rounded, surface-page)
+   - Items match .button-content size/shape (60px, 27px radius)
+   - Background & text color from v4 design (user preference)
+   - Border & active: similar to nav core but slightly improved
+   - "View All" button matches .button-sub style
    ────────────────────────────────────────────────────────────────────── */
 .collection-container{
-  margin:0 0 36px!important;
-  padding:1rem 0.75rem!important;
+  margin:0 0 40px!important;
+  padding:1rem 5px!important;
   background:var(--fv-surface-page);
-  border-radius:var(--fv-radius-lg,37px);
+  border-radius:25px;
   contain:layout style;
 }
 .collection-container-header{
-  margin-bottom:0.75rem;
-  padding:0 0.25rem;
+  padding:10px;
+  width:100%;
 }
 .collection-container-title-row{
   display:flex;
@@ -149,9 +151,9 @@
   flex-wrap:wrap;
 }
 .collection-container-name{
-  font-size:var(--fv-text-lg,1.125rem);
+  font-size:1.2rem;
   font-weight:var(--fv-font-semibold,600);
-  color:var(--fv-text-heading,#152a2f);
+  color:#464646;
   margin:0;
   line-height:1.3;
 }
@@ -161,62 +163,72 @@
   font-weight:var(--fv-font-medium,500);
 }
 .collection-container-desc{
-  font-size:var(--fv-text-sm,0.875rem);
-  color:var(--fv-text-secondary,#52638A);
-  margin:0.25rem 0 0;
-  line-height:1.4;
+  margin:0.5rem 0 0;
+  font-size:1rem;
+  color:#494E59;
+  line-height:1.6;
   overflow:hidden;
   text-overflow:ellipsis;
   white-space:nowrap;
   max-width:100%;
 }
 .collection-container-items{
-  display:flex;
-  flex-wrap:wrap;
-  gap:5px;
-  padding:0.25rem 0;
+  display:grid!important;
+  grid-template-columns:repeat(auto-fill,minmax(100px,1fr))!important;
+  gap:5px!important;
+  margin:0!important;
+  padding:1rem 5px!important;
+  background:var(--fv-surface-page);
+  border-radius:25px;
   contain:layout style;
 }
 .collection-container-item{
-  display:flex;
+  box-sizing:border-box;
+  width:auto!important;
+  min-width:60px;
+  max-width:100%;
+  padding:13px 17px!important;
+  height:60px;
+  min-height:60px;
+  display:inline-flex;
   align-items:center;
   justify-content:center;
-  min-width:52px;
-  min-height:52px;
-  padding:0.5rem;
-  border-radius:var(--fv-radius-sm,17px);
-  background:var(--fv-surface-subtle,#f8faff);
-  border:1px solid transparent;
-  cursor:pointer;
-  -webkit-tap-highlight-color:transparent;
-  user-select:none;
-  touch-action:manipulation;
-  font-size:1.4rem;
+  border-radius:27px;
+  font-size:21px;
   line-height:1;
-  transition:background 120ms ease-out;
+  background:var(--fv-surface-subtle,#f8faff);
+  color:var(--fv-brand-teal-light,#00CEB0);
+  border:1px solid var(--fv-border-teal,rgba(0,206,176,0.25));
+  cursor:pointer;
+  text-align:center;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+  user-select:none;
+  transition:opacity 200ms ease;
 }
 .collection-container-item:active{
-  background:var(--fv-surface-card,#ffffff);
-  border-color:var(--fv-border-teal,rgba(0,206,176,0.25));
+  opacity:0.55;
 }
 .collection-container-view-all{
   display:inline-flex;
   align-items:center;
   gap:0.3rem;
-  margin-top:0.75rem;
-  padding:0.4rem 1rem;
-  font-size:var(--fv-text-sm,0.875rem);
+  margin:0 0 0 10px;
+  padding:11px 13px;
+  font-size:0.9em;
   font-weight:var(--fv-font-semibold,600);
-  color:var(--fv-brand-teal-light,#00CEB0);
+  color:var(--fv-text-secondary,#52638A);
   text-decoration:none;
   border-radius:var(--fv-radius-pill,999px);
-  border:1px solid var(--fv-border-teal,rgba(0,206,176,0.25));
-  background:transparent;
-  transition:background 150ms ease-out,color 150ms ease-out,border-color 150ms ease-out;
+  border:1px solid transparent;
+  background:var(--fv-surface-page);
   -webkit-tap-highlight-color:transparent;
   touch-action:manipulation;
+  user-select:none;
+  transition:background 200ms ease,border-color 200ms ease,color 200ms ease;
 }
 .collection-container-view-all:active{
+  color:var(--fv-brand-teal-light,#00CEB0);
   background:var(--fv-surface-teal-hover,rgba(248,255,253,1));
   border-color:rgba(0,206,176,0.51);
 }`;
@@ -1041,15 +1053,17 @@
       return html + '</div></div>';
     },
 
-    // v4.0: Collection container — Spotify/Netflix/YouTube inspired
+    // v5.0: Collection container — matches nav core discovery system pattern
     //   Each collection = 1 container showing:
-    //   - Section header (collection name + description)
-    //   - Preview items in a horizontal scroll row (subset of collection items)
-    //   - "View All" button linking to the full collection page
+    //   - Section header (group-header style, matching nav core)
+    //   - Preview items in a grid (same layout as .button-content-container)
+    //   - Items styled like .button-content (same size, border-radius, layout)
+    //   - "View All" button matching .button-sub style
+    //   - Background & text colors from v4 design (user preference)
     //
-    //   WHY container pattern: Major platforms (Spotify, Netflix, YouTube, Apple Music)
-    //   display collections/playlists/categories as containers with a preview row
-    //   and a "See All" / "View All" link. This is the standard UX pattern.
+    //   WHY: Collection containers should look consistent with the nav core
+    //   discovery system, not a completely different design. Items use the same
+    //   grid layout, same button size/shape, same visual language.
     //
     //   Cards are kept as reusable components for other pages (e.g., collection detail pages)
     _tplCollectionContainer(item, lang) {
