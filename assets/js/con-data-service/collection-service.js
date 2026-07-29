@@ -211,7 +211,7 @@
         description:   collection.description || desc,
         image:         null,  // อนาคต: auto-generated thumbnail
         coverPreview:  coverPreview,
-        link:          `${COLLECTIONS_BASE_PATH}/${collection.id}`,
+        link:          `${COLLECTIONS_BASE_PATH}/${collection.id}/`,
         className:     COLLECTION_CARD_CLASS,
         // เก็บ raw data สำหรับใช้ในระบบอื่น
         _collectionId: collection.id,
@@ -221,23 +221,42 @@
 
     /**
      * Convert a collection to a feed segment for FeedService.
-     * Each collection = 1 segment containing 1 card (the collection card itself).
+     * v4.0: Each collection = 1 container segment (not card).
+     *   Container shows: name, description, preview items, "View All" link
+     *   WHY: Container pattern is the standard UX for collections on major platforms
+     *     (Spotify, Netflix, YouTube, Apple Music)
      *
      * @param {object} collection — collection data from cache
      * @returns {object} — segment object for FeedService
      */
     toFeedSegment(collection) {
       if (!collection) return null;
+
+      // Build preview items (subset for display in container)
+      const previewItems = (collection.items || []).slice(0, 8);
+
       return Object.freeze({
         id:            `collections:${collection.id}:0`,
-        groupType:     'card',
+        groupType:     'collection-container',
         typeId:        COLLECTION_TYPE_ID,
         typeName:      collection.typeName || {},
         catId:         collection.id,
         catName:       collection.name || {},
-        catTotalItems: 1,  // 1 collection = 1 card
+        catTotalItems: collection.itemCount || (collection.items || []).length,
         chunkIndex:    0,
-        items:         [collection],  // ส่ง raw collection data — FeedService._buildGroup จะจัดการ
+        items:         [{
+          _type:             'collection-container',
+          id:                collection.id,
+          name:              collection.name || {},
+          title:             collection.name || {},
+          description:       collection.description || {},
+          items:             collection.items || [],
+          previewItems:      previewItems,
+          itemCount:         collection.itemCount || (collection.items || []).length,
+          link:              `${COLLECTIONS_BASE_PATH}/${collection.id}/`,
+          _collectionId:     collection.id,
+          _itemCount:        collection.itemCount || (collection.items || []).length,
+        }],
       });
     },
 

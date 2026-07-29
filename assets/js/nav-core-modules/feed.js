@@ -280,11 +280,15 @@
       }
     },
 
-    // v3.0: Collect collection segments — each collection = 1 card segment
+    // v4.0: Collect collection segments — each collection = 1 container segment
     //   WHY: แยกจาก _collectTypeSegments เพราะ collection มี data model ต่างกัน
-    //   v3.0: ตอนนี้ ConDataService แปลง Unicode IDs → items ที่มี api/text/name แล้ว
-    //   ทำให้ cat.data มีข้อมูลที่ FeedService ใช้ได้ทันที (เหมือน copyable data)
-    //   collection card แสดง: ชื่อ, คำอธิบาย, cover preview, จำนวน items
+    //   v4.0: Container pattern — Spotify/Netflix/YouTube inspired:
+    //     1 collection = 1 container that shows:
+    //     - Collection name as section header
+    //     - Preview items (subset, horizontal scroll)
+    //     - "View All" button → navigates to collection page
+    //   Container shows partial content → click "View All" to see full collection
+    //   This is how major platforms display collections/playlists/categories
     _collectCollectionSegments(db) {
       // หา type ที่เป็น collection
       const collectionType = (db?.type || []).find(t =>
@@ -292,62 +296,44 @@
       );
       if (!collectionType) return;
 
-      // แต่ละ category ใน collection type = 1 collection = 1 card segment
+      // แต่ละ category ใน collection type = 1 collection = 1 container segment
       for (const cat of (collectionType.category || [])) {
         if (!cat.data?.length) continue;
 
-        // v3.0: สร้าง cover preview จาก cover.items (Unicode IDs) หรือ cat.data
-        //   WHY: cover.items เป็น Unicode IDs ที่ระบุไว้ใน collection data
-        //   ถ้ามี cover.items → แปลงเป็นตัวอักษรเพื่อแสดง preview
-        //   ถ้าไม่มี → ใช้ตัวอักษรจาก cat.data ตัวแรก 4 ตัว
-        let coverPreview = '';
-        if (cat.cover && Array.isArray(cat.cover.items) && cat.cover.items.length > 0) {
-          coverPreview = cat.cover.items
-            .slice(0, 4)
-            .map(id => this._unicodeIdToChar(id))
-            .filter(Boolean)
-            .join(' ');
-        } else {
-          // Fallback: ใช้ text จาก cat.data items ตัวแรก
-          coverPreview = cat.data
-            .slice(0, 4)
-            .map(item => item.text || '')
-            .filter(Boolean)
-            .join(' ');
-        }
-
-        // สร้าง collection card item จาก category data
-        // v3.0: รวม field ที่ ContentService._resolveItem ต้องการ
-        //   WHY: ทำให้ collection card แสดงผลได้ทันทีโดยไม่ต้องแปลงเพิ่ม
-        const collectionCard = {
-          _type:         'collection-card',
-          id:            cat.id,
-          name:          cat.name || {},
-          title:         cat.name || {},           // ContentService ใช้ title หรือ name
-          description:   cat.description || {},
-          cover:         cat.cover || null,
-          coverPreview:  coverPreview,              // ตัวอักษรตัวอย่างสำหรับ card
-          items:         cat.data,                  // items ที่แปลงจาก Unicode IDs แล้ว
-          itemCount:     cat.data.length,
-          typeId:        collectionType.id,
-          typeName:      collectionType.name || {},
-          link:          '/collections/' + cat.id,  // link ไปหน้า collection
-          className:     'collection-card',         // CSS class สำหรับ card styling
-          _collectionId: cat.id,                    // ID สำหรับใช้ในระบบอื่น
-          _itemCount:    cat.data.length,           // จำนวน items ใน collection
+        // v4.0: Build container data — include collection metadata + preview items + link
+        //   WHY: Container needs: name, description, preview items, link to full page
+        //   Preview items are a subset (max 8) displayed in a horizontal scroll row
+        //   "View All" button navigates to the dedicated collection page
+        const collectionContainer = {
+          _type:             'collection-container',
+          id:                cat.id,
+          name:              cat.name || {},
+          title:             cat.name || {},
+          description:       cat.description || {},
+          cover:             cat.cover || null,
+          items:             cat.data,              // full items list (container decides preview subset)
+          previewItems:      cat.data.slice(0, 8),  // subset for preview display
+          itemCount:         cat.data.length,
+          typeId:            collectionType.id,
+          typeName:          collectionType.name || {},
+          link:              '/collections/' + cat.id + '/',
+          _collectionId:     cat.id,
+          _itemCount:        cat.data.length,
         };
 
-        // 1 collection = 1 segment containing 1 card
+        // 1 collection = 1 container segment (groupType: 'collection-container')
+        // WHY: not 'card' — container has different rendering logic than individual cards
+        //   ContentService._tpl handles 'collection-container' type specially
         this._cardSegs.push(Object.freeze({
           id:            `collections:${cat.id}:0`,
-          groupType:     'card',
+          groupType:     'collection-container',
           typeId:        collectionType.id,
           typeName:      collectionType.name || {},
           catId:         cat.id,
           catName:       cat.name || {},
-          catTotalItems: 1,  // 1 collection = 1 card
+          catTotalItems: cat.data.length,
           chunkIndex:    0,
-          items:         [collectionCard],  // card item ไม่ใช่ raw copyable items
+          items:         [collectionContainer],
         }));
       }
     },
@@ -567,6 +553,25 @@
 
     _buildGroup(seg, lang) {
       if (!seg?.items?.length) return null;
+
+      // v4.0: ถ้า segment เป็น collection-container → แสดงเป็น container (Spotify/Netflix style)
+      //   Container แสดง: ชื่อ, คำอธิบาย, preview items (subset), "View All" button
+      //   ต่างจาก card — container มี header + items row + action button
+      const isCollectionContainer = seg.groupType === 'collection-container'
+        || (seg.items[0] && seg.items[0]._type === 'collection-container');
+
+      if (isCollectionContainer) {
+        const col = seg.items[0]; // 1 collection = 1 container
+        if (!col) return null;
+
+        return {
+          group: {
+            type:   'collection-container',
+            header: null,
+            items:  [col], // pass full container data to _tplCollectionContainer
+          },
+        };
+      }
 
       // v3.0: ถ้า segment เป็น collection card → แสดงเป็น card พิเศษ
       //   collection card มี _type='collection-card' และข้อมูลคอลเลกชัน

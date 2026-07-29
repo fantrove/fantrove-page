@@ -197,15 +197,14 @@
   user-select: none;
   touch-action: manipulation;
   min-height: 80px;
-  /* v3.2: NO hover — only :active state */
-  transition: transform 100ms ease-out;
+  /* v4.0: NO hover, NO scale-down */
+  transition: background 100ms ease-out;
 }
 
-/* v3.2: NO hover — only :active state (scale 0.95) */
+/* v4.0: Subtle active state — no scale-down */
 .collection-item:active {
-  transform: scale(0.95);
   background: var(--fv-surface-card, #ffffff);
-  transition: transform 80ms ease-out;
+  transition: background 80ms ease-out;
 }
 
 .collection-item-char {
@@ -252,21 +251,19 @@
   overflow: hidden;
   cursor: pointer;
   border: 1px solid var(--fv-border-teal, rgba(0, 206, 176, 0.25));
-  box-shadow: var(--fv-shadow-sm, 0 2px 8px rgba(6, 20, 24, 0.04));
+  box-shadow: 0 1px 4px rgba(6, 20, 24, 0.03);
   -webkit-tap-highlight-color: transparent;
   user-select: none;
   touch-action: manipulation;
-  /* v3.2: NO hover — only :active state */
-  transition: transform 100ms ease-out;
+  /* v4.0: NO hover, NO scale-down */
+  transition: border-color 100ms ease-out;
 }
 
-/* v3.2: NO hover — only :active state (scale 0.97) */
+/* v4.0: Subtle active state — no scale-down, subtle shadow */
 .collection-related-card:active {
-  transform: scale(0.97);
   border-color: rgba(0, 206, 176, 0.51);
-  box-shadow: var(--fv-shadow-teal, 0 4px 24px rgba(19, 180, 127, 0.12));
-  transition: transform 80ms ease-out,
-              box-shadow 80ms ease-out,
+  box-shadow: 0 1px 4px rgba(6, 20, 24, 0.06);
+  transition: box-shadow 80ms ease-out,
               border-color 80ms ease-out;
 }
 
@@ -306,23 +303,21 @@
   overflow: hidden;
   cursor: pointer;
   border: 1px solid var(--fv-border-teal, rgba(0, 206, 176, 0.25));
-  box-shadow: var(--fv-shadow-sm, 0 2px 8px rgba(6, 20, 24, 0.04));
+  box-shadow: 0 1px 4px rgba(6, 20, 24, 0.03);
   display: flex;
   flex-direction: column;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
   touch-action: manipulation;
-  /* v3.2: NO hover — only :active state */
-  transition: transform 100ms ease-out;
+  /* v4.0: NO hover, NO scale-down */
+  transition: border-color 100ms ease-out;
 }
 
-/* v3.2: NO hover effects — only :active state (scale 0.97) */
+/* v4.0: Subtle active state — no scale-down, minimal shadow */
 .collection-card:active {
-  transform: scale(0.97);
   border-color: rgba(0, 206, 176, 0.51);
-  box-shadow: var(--fv-shadow-teal, 0 4px 24px rgba(19, 180, 127, 0.12));
-  transition: transform 80ms ease-out,
-              box-shadow 80ms ease-out,
+  box-shadow: 0 1px 4px rgba(6, 20, 24, 0.06);
+  transition: box-shadow 80ms ease-out,
               border-color 80ms ease-out;
 }
 

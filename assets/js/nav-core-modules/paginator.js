@@ -310,7 +310,7 @@
           image:         null,
           title:         title || cat.id,
           description:   desc,
-          link:          `/collections/${cat.id}`,
+          link:          `/collections/${cat.id}/`,
           className:     'collection-card',
           coverPreview:  coverPreview,
           _collectionId: cat.id,

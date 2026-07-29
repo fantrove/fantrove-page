@@ -78,12 +78,7 @@
 .ure-btn-row--mid  {border-radius:0!important;padding:2px 5px!important;}
 .ure-btn-row--last {border-radius:0 0 25px 25px!important;padding:0 5px 1rem!important;margin:0 0 40px!important;}
 
-/* ── Responsive Card Grid (Spotify/Netflix style) ──────────────────────
-   v3.2: Grid layout for vertical card containers
-   - auto-fill + minmax = responsive columns without media queries
-   - Cards stretch to fill cell width naturally
-   - Collection cards get wider minmax for premium 168px+ cards
-   ────────────────────────────────────────────────────────────────────── */
+/* ── Responsive Card Grid ────────────────────────────────────────────── */
 .card-content-container{
   display:grid!important;
   grid-template-columns:repeat(auto-fill,minmax(160px,1fr))!important;
@@ -128,6 +123,102 @@
   border-radius:12px 12px 0 0;
   letter-spacing:0.25rem;
   contain:layout style;
+}
+
+/* ── Collection Container (Spotify/Netflix/YouTube style) ──────────────
+   v4.0: 1 collection = 1 container
+   - Section header with collection name + item count
+   - Horizontal scroll preview row of items (subset of collection)
+   - "View All" button linking to full collection page
+   ────────────────────────────────────────────────────────────────────── */
+.collection-container{
+  margin:0 0 36px!important;
+  padding:1rem 0.75rem!important;
+  background:var(--fv-surface-page);
+  border-radius:var(--fv-radius-lg,37px);
+  contain:layout style;
+}
+.collection-container-header{
+  margin-bottom:0.75rem;
+  padding:0 0.25rem;
+}
+.collection-container-title-row{
+  display:flex;
+  align-items:baseline;
+  gap:0.5rem;
+  flex-wrap:wrap;
+}
+.collection-container-name{
+  font-size:var(--fv-text-lg,1.125rem);
+  font-weight:var(--fv-font-semibold,600);
+  color:var(--fv-text-heading,#152a2f);
+  margin:0;
+  line-height:1.3;
+}
+.collection-container-count{
+  font-size:var(--fv-text-xs,0.75rem);
+  color:var(--fv-text-faint,#8ea1b8);
+  font-weight:var(--fv-font-medium,500);
+}
+.collection-container-desc{
+  font-size:var(--fv-text-sm,0.875rem);
+  color:var(--fv-text-secondary,#52638A);
+  margin:0.25rem 0 0;
+  line-height:1.4;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  max-width:100%;
+}
+.collection-container-items{
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+  padding:0.25rem 0;
+  contain:layout style;
+}
+.collection-container-item{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-width:52px;
+  min-height:52px;
+  padding:0.5rem;
+  border-radius:var(--fv-radius-sm,17px);
+  background:var(--fv-surface-subtle,#f8faff);
+  border:1px solid transparent;
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;
+  touch-action:manipulation;
+  font-size:1.4rem;
+  line-height:1;
+  transition:background 120ms ease-out;
+}
+.collection-container-item:active{
+  background:var(--fv-surface-card,#ffffff);
+  border-color:var(--fv-border-teal,rgba(0,206,176,0.25));
+}
+.collection-container-view-all{
+  display:inline-flex;
+  align-items:center;
+  gap:0.3rem;
+  margin-top:0.75rem;
+  padding:0.4rem 1rem;
+  font-size:var(--fv-text-sm,0.875rem);
+  font-weight:var(--fv-font-semibold,600);
+  color:var(--fv-brand-teal-light,#00CEB0);
+  text-decoration:none;
+  border-radius:var(--fv-radius-pill,999px);
+  border:1px solid var(--fv-border-teal,rgba(0,206,176,0.25));
+  background:transparent;
+  transition:background 150ms ease-out,color 150ms ease-out,border-color 150ms ease-out;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+}
+.collection-container-view-all:active{
+  background:var(--fv-surface-teal-hover,rgba(248,255,253,1));
+  border-color:rgba(0,206,176,0.51);
 }`;
     document.head.appendChild(s);
   }
@@ -782,8 +873,23 @@
     },
 
     async _resolveGroup(cfg, lang) {
+      // v4.0: collection-container type — Spotify/Netflix style container
+      const isCollectionContainer = cfg.type === 'collection-container';
       const isCard  = cfg.type === 'card';
       const isHoriz = isCard && cfg.layout === 'horizontal';
+
+      // v4.0: collection-container — pass through items directly (no resolveItem)
+      //   WHY: container items are already resolved by ConDataService
+      //   Container has its own rendering logic (_tplCollectionContainer)
+      if (isCollectionContainer && Array.isArray(cfg.items)) {
+        // Resolve items — for container, items are already resolved
+        const items = [];
+        for (const item of cfg.items) {
+          const ri = await this._resolveItem(item, lang, true);
+          if (ri) items.push(ri);
+        }
+        return { _ureType: 'collection-container', header: cfg.header || null, items };
+      }
 
       const _fetchItems = async (data) =>
         (await Promise.all(data.map(d => this._resolveItem(d, lang, isCard)))).filter(Boolean);
@@ -813,6 +919,21 @@
         // v2.3: รองรับ collection card — ถ้า item เป็น collection card ให้ส่งต่อทุก field
         //   collection card มี title, description, coverPreview, link, className
         //   ไม่ต้องแปลง — ส่งตรงไปที่ _tplCard
+        if (item._type === 'collection-container') {
+          return {
+            _type:             'collection-container',
+            id:                item.id          || null,
+            name:              item.name         || item.title,
+            title:             item.title        || item.name,
+            description:       item.description,
+            link:              item.link         || null,
+            items:             item.items        || [],
+            previewItems:      item.previewItems || (item.items || []).slice(0, 8),
+            itemCount:         item._itemCount   || (item.items || []).length,
+            _collectionId:     item._collectionId || item.id,
+          };
+        }
+
         if (item._type === 'collection-card' || item.className === 'collection-card') {
           return {
             _type:         'card',
@@ -853,12 +974,12 @@
     //   ตรงนี้ใช้เป็น fallback สำหรับ item เดี่ยวที่ไม่มี group context
     // v2.3: เพิ่มการตรวจ _type='collection-card' สำหรับ collection card
     _isCard: item =>
-      item.type === 'card' || item.group?.type === 'card' || item._type === 'card' || item._type === 'collection-card' || (!!item.image && !item.api),
+      item.type === 'card' || item.group?.type === 'card' || item._type === 'card' || item._type === 'collection-card' || item._type === 'collection-container' || (!!item.image && !item.api),
 
     // ── Emit ──────────────────────────────────────────────────────────────────────
 
     _emit(group, k, out) {
-      if (group._ureType === 'card-group' || group._ureType === 'card-group-h') {
+      if (group._ureType === 'card-group' || group._ureType === 'card-group-h' || group._ureType === 'collection-container') {
         out.push({ ...group, _ureKey: `k${k.v++}` });
         return;
       }
@@ -883,9 +1004,10 @@
 
     _tpl(item, lang) {
       switch (item._ureType) {
-        case 'card-group':   return this._tplCardGroup(item, lang);
-        case 'card-group-h': return this._tplCardGroupH(item, lang);
-        default:             return this._tplBtnRow(item, lang);
+        case 'card-group':             return this._tplCardGroup(item, lang);
+        case 'card-group-h':           return this._tplCardGroupH(item, lang);
+        case 'collection-container':   return this._tplCollectionContainer(item, lang);
+        default:                       return this._tplBtnRow(item, lang);
       }
     },
 
@@ -917,6 +1039,69 @@
       if (item.header) html += this._tplHeader(item.header, lang);
       for (const c of item.items) html += this._tplCard(c, lang);
       return html + '</div></div>';
+    },
+
+    // v4.0: Collection container — Spotify/Netflix/YouTube inspired
+    //   Each collection = 1 container showing:
+    //   - Section header (collection name + description)
+    //   - Preview items in a horizontal scroll row (subset of collection items)
+    //   - "View All" button linking to the full collection page
+    //
+    //   WHY container pattern: Major platforms (Spotify, Netflix, YouTube, Apple Music)
+    //   display collections/playlists/categories as containers with a preview row
+    //   and a "See All" / "View All" link. This is the standard UX pattern.
+    //
+    //   Cards are kept as reusable components for other pages (e.g., collection detail pages)
+    _tplCollectionContainer(item, lang) {
+      const containerData = item.items && item.items[0];
+      if (!containerData) return '';
+
+      const name = _txt(containerData.title || containerData.name, lang);
+      const desc = _txt(containerData.description, lang);
+      const link = containerData.link || '';
+      const previewItems = containerData.previewItems || (containerData.items || []).slice(0, 8);
+      const totalCount = containerData.itemCount || (containerData.items || []).length;
+
+      // i18n for "View All" button
+      const lang2 = localStorage.getItem('selectedLang') || 'en';
+      const viewAllText = lang2 === 'th' ? 'ดูทั้งหมด' : 'View All';
+      const itemCountText = totalCount + (lang2 === 'th' ? ' รายการ' : ' items');
+
+      let html = '<div class="cm-group">';
+      html += '<div class="collection-container">';
+
+      // ── Header row: name + item count + "View All" link ──
+      html += '<div class="collection-container-header">';
+      html += '<div class="collection-container-title-row">';
+      html += '<h2 class="collection-container-name">' + _esc(name) + '</h2>';
+      html += '<span class="collection-container-count">' + _esc(itemCountText) + '</span>';
+      html += '</div>';
+      if (desc) {
+        html += '<p class="collection-container-desc">' + _esc(desc) + '</p>';
+      }
+      html += '</div>';
+
+      // ── Preview items row (horizontal scroll) ──
+      html += '<div class="collection-container-items">';
+      for (const previewItem of previewItems) {
+        const text = previewItem.text || '';
+        const api = previewItem.api || '';
+        if (!text) continue;
+        html += '<button class="collection-container-item" data-text="' + _esc(text) + '" data-api="' + _esc(api) + '">';
+        html += _esc(text);
+        html += '</button>';
+      }
+      html += '</div>';
+
+      // ── "View All" button ──
+      if (link) {
+        html += '<a class="collection-container-view-all" href="' + _esc(link) + '">';
+        html += _esc(viewAllText);
+        html += '</a>';
+      }
+
+      html += '</div></div>';
+      return html;
     },
 
     _tplHeader(cfg, lang) {
@@ -991,7 +1176,7 @@
     // ── Click delegation ────────────────────────────────────────────────────────────
 
     _onClick(e) {
-      const btn = e.target.closest('.button-content');
+      const btn = e.target.closest('.button-content, .collection-container-item');
       if (btn) {
         try {
           window.unifiedCopyToClipboard?.({
@@ -1005,27 +1190,36 @@
       }
       // v3.1: รองรับทั้ง <a> card (ใหม่) และ <div> card เก่า (backward compat)
       //   WHY: card ตอนนี้เป็น <a href="..."> แล้ว ไม่ใช่ <div data-link="...">
-      //   - <a class="card collection-card" href="/collections/xxx"> → SPA navigation
+      //   - <a class="card collection-card" href="/collections/xxx"> → direct navigation
       //   - <a class="card" href="https://..." target="_blank"> → ให้ browser จัดการ (เปิดแท็บใหม่)
       //   - <div class="card" data-link="..."> → legacy fallback (รองรับ cache เก่า)
+      //
+      //   v4.0: Collection links now use direct navigation (window.location.href)
+      //   instead of RouterService.navigateTo() because:
+      //   - Collection pages are separate static HTML pages at /collections/{id}/
+      //   - RouterService expects ?type=xxx format (SPA routing)
+      //   - Direct navigation works reliably for all collection URLs
       const card = e.target.closest('a.card[href], .card[data-link]');
       if (card) {
         const isCollection = card.classList.contains('collection-card');
         const link = card.getAttribute('href') || card.dataset.link || '';
-        if (isCollection && link) {
-          // v3.1: ป้องกัน default <a> navigation → ใช้ SPA navigation แทน
+        if (link) {
           e.preventDefault();
-          try {
-            M.RouterService?.navigateTo?.(link) ||
-            (window.location.href = link);
-          } catch (_) {
-            window.location.href = link;
-          }
-        } else if (link && !card.hasAttribute('href')) {
-          // Legacy <div data-link="..."> → เปิดลิงก์ภายนอก
-          window.open(link, '_blank', 'noopener,noreferrer');
+          // Direct navigation — works for all collection links
+          window.location.href = link;
         }
         // สำหรับ <a target="_blank"> → browser จัดการเอง (ไม่ต้อง preventDefault)
+      }
+
+      // v4.0: "View All" button in collection container
+      const viewAllBtn = e.target.closest('a.collection-container-view-all[href]');
+      if (viewAllBtn) {
+        const link = viewAllBtn.getAttribute('href') || '';
+        if (link) {
+          e.preventDefault();
+          // Direct navigation to collection page
+          window.location.href = link;
+        }
       }
     },
 
