@@ -246,12 +246,12 @@
 }
 
 .collection-related-card {
-  border-radius: var(--fv-radius-lg, 37px);
+  border-radius: var(--r-card, 30px);
   background: var(--fv-surface-page, #ffffff);
   overflow: hidden;
   cursor: pointer;
   border: 1px solid var(--fv-border-teal, rgba(0, 206, 176, 0.25));
-  box-shadow: 0 1px 4px rgba(6, 20, 24, 0.03);
+  box-shadow: 0 1px 3px rgba(6, 20, 24, 0.03);
   -webkit-tap-highlight-color: transparent;
   user-select: none;
   touch-action: manipulation;
@@ -259,12 +259,10 @@
   transition: border-color 100ms ease-out;
 }
 
-/* v4.0: Subtle active state — no scale-down, subtle shadow */
+/* v4.0: Subtle active state — no scale-down, border accent only */
 .collection-related-card:active {
   border-color: rgba(0, 206, 176, 0.51);
-  box-shadow: 0 1px 4px rgba(6, 20, 24, 0.06);
-  transition: box-shadow 80ms ease-out,
-              border-color 80ms ease-out;
+  transition: border-color 80ms ease-out;
 }
 
 .collection-related-card-cover {
@@ -291,19 +289,20 @@
   white-space: nowrap;
 }
 
-/* ── Collection Card (เล็ก ใช้ในระบบอื่น) ──────────────────────── */
-/* v3.2: Premium collection card — Spotify/Netflix inspired
-   - NO hover effects, only :active state (scale 0.97)
-   - Clean design, teal accent, auto-generated thumbnails
-   ────────────────────────────────────────────────────────────────── */
+/* ── Collection Card (compact, reusable) ──────────────────────────────── */
+/* v4.0: Reverted to original compact size — matches .card base
+   - Same border-radius as .card (30px via --r-card)
+   - Minimal shadow, no scale-down on active
+   - Teal accent border, gradient cover
+   ────────────────────────────────────────────────────────────────────── */
 
 .collection-card {
-  border-radius: var(--fv-radius-lg, 37px);
+  border-radius: var(--r-card, 30px);
   background: var(--fv-surface-page, #ffffff);
   overflow: hidden;
   cursor: pointer;
   border: 1px solid var(--fv-border-teal, rgba(0, 206, 176, 0.25));
-  box-shadow: 0 1px 4px rgba(6, 20, 24, 0.03);
+  box-shadow: 0 1px 3px rgba(6, 20, 24, 0.03);
   display: flex;
   flex-direction: column;
   -webkit-tap-highlight-color: transparent;
@@ -313,12 +312,10 @@
   transition: border-color 100ms ease-out;
 }
 
-/* v4.0: Subtle active state — no scale-down, minimal shadow */
+/* v4.0: Subtle active state — no scale-down, border accent only */
 .collection-card:active {
   border-color: rgba(0, 206, 176, 0.51);
-  box-shadow: 0 1px 4px rgba(6, 20, 24, 0.06);
-  transition: box-shadow 80ms ease-out,
-              border-color 80ms ease-out;
+  transition: border-color 80ms ease-out;
 }
 
 .collection-card-cover {

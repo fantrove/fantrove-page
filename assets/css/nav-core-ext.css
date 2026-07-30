@@ -67,26 +67,25 @@ a.card {
   color: inherit;
 }
 
-/* ── Collection Card Premium Design ──────────────────────────────────────────
-   v2.3: Premium collection card matching nav core button aesthetic
-   - NO hover effects, only :active state (like nav core buttons)
-   - Teal accent colors, clean design, pill/rounded shapes
-   - CSS gradient cover with arranged emoji characters
-   - Handle long collection names with proper truncation
+/* ── Collection Card ────────────────────────────────────────────────────
+   v4.0: Reverted to original compact size — same as regular .card
+   - Same width/height/border-radius as .card (160×222px, 30px radius)
+   - Minimal shadow, no scale-down on active
+   - Keep teal accent border and gradient cover
    ────────────────────────────────────────────────────────────────────────── */
 
 :where(.card.collection-card) {
-  width:168px; height:232px;
-  border-radius:var(--fv-radius-lg);     /* 37px — premium rounded */
+  width:160px; height:222px;
+  border-radius:var(--r-card);            /* 30px — same as .card */
   border:1px solid var(--fv-border-teal);
   background:var(--fv-surface-page);
-  box-shadow: var(--fv-shadow-sm);
+  box-shadow: 0 1px 3px rgba(6,20,24,0.03);
   cursor:pointer;
   -webkit-tap-highlight-color:transparent;
   user-select:none;
   overflow:hidden;
-  /* v3.2: NO hover — only :active (scale 0.97) */
-  transition: transform 100ms ease-out;
+  /* v4.0: NO hover, NO scale-down — subtle border transition only */
+  transition: border-color 100ms ease-out;
 }
 
 /* v3.1: <a> collection card — reset <a> defaults */
@@ -98,21 +97,18 @@ a.card.collection-card {
   align-items: stretch;
 }
 
+/* v4.0: Subtle active — no scale-down, just border accent */
 :where(.card.collection-card:active) {
-  transform: scale(0.97);
   border-color: rgba(0, 206, 176, 0.51);
-  box-shadow: var(--fv-shadow-teal);
-  transition: transform 80ms ease-out,
-              box-shadow 80ms ease-out,
-              border-color 80ms ease-out;
+  transition: border-color 80ms ease-out;
 }
 
 /* Collection card cover — CSS gradient background with emoji overlay */
 .collection-card .card-cover-preview {
   display:flex; align-items:center; justify-content:center;
-  min-height:108px; height:108px;
+  min-height:80px; height:80px;
   padding:var(--fv-space-3);
-  border-radius:var(--fv-radius-lg) var(--fv-radius-lg) 0 0;
+  border-radius:var(--r-card) var(--r-card) 0 0;
   letter-spacing:0.25rem;
   font-size:2rem; line-height:1.2;
   contain:layout style;
@@ -239,10 +235,10 @@ a.card.collection-card {
 /* Cards fill grid cell width naturally — Spotify/Netflix pattern */
 .card-content-container .card { width: 100% !important; }
 
-/* Collection card grid — wider min-width for premium 200px+ cards */
+/* Collection card grid — same min-width as regular cards */
 .card-content-container.has-collection-cards {
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important;
-  gap:14px!important;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
+  gap:12px!important;
 }
 
 .hdr-fade { animation: none !important; }
@@ -253,12 +249,12 @@ a.card.collection-card {
     gap:8px!important;
   }
   .card-content-container.has-collection-cards {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
-    gap:10px!important;
+    grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)) !important;
+    gap:8px!important;
   }
   .card { height: 210px; }
-  :where(.card.collection-card) { width: 100%!important; height: 218px; }
-  .collection-card .card-cover-preview { min-height:92px; height:92px; font-size:1.7rem; }
+  :where(.card.collection-card) { width: 100%!important; height: 210px; }
+  .collection-card .card-cover-preview { min-height:70px; height:70px; font-size:1.7rem; }
 }
 @media (max-width:450px) {
   .container { padding-left:0.7rem; padding-right:0.7rem; border-radius:var(--fv-radius-md); }
