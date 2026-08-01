@@ -20,18 +20,18 @@
   <link rel="stylesheet" href="/assets/css/tokens.css">
 
   <!-- 2. CSS -->
-  <link rel="preload" href="/assets/css/loading.css?v=1.0.0-20250322" as="style" onload="this.rel='stylesheet'" />
-  <noscript><link rel="stylesheet" href="/assets/css/loading.css?v=1.0.0-20250322" /></noscript>
-  <link rel="preload" href="/assets/css/nav-core.css?v=1.0.0-20250322" as="style" onload="this.rel='stylesheet'" />
-  <noscript><link rel="stylesheet" href="/assets/css/nav-core.css?v=1.0.0-20250322" /></noscript>
+  <link rel="preload" href="/assets/css/loading.css?v=2.2.4-202608010221" as="style" onload="this.rel='stylesheet'" />
+  <noscript><link rel="stylesheet" href="/assets/css/loading.css?v=2.2.4-202608010221" /></noscript>
+  <link rel="preload" href="/assets/css/nav-core.css?v=2.2.4-202608010221" as="style" onload="this.rel='stylesheet'" />
+  <noscript><link rel="stylesheet" href="/assets/css/nav-core.css?v=2.2.4-202608010221" /></noscript>
   <link rel="preload" href="/assets/css/nav-core-ext.css" as="style" onload="this.rel='stylesheet'" />
   <noscript><link rel="stylesheet" href="/assets/css/nav-core-ext.css" /></noscript>
-  <link rel="stylesheet" href="/assets/css/bg.css?v=1.0.0-20250322" media="print" onload="this.media='all'" />
-  <noscript><link rel="stylesheet" href="/assets/css/bg.css?v=1.0.0-20250322" /></noscript>
-  <link rel="stylesheet" href="/assets/css/back-to-top.css?v=1.0.0-20250322">
+  <link rel="stylesheet" href="/assets/css/bg.css?v=2.2.4-202608010221" media="print" onload="this.media='all'" />
+  <noscript><link rel="stylesheet" href="/assets/css/bg.css?v=2.2.4-202608010221" /></noscript>
+  <link rel="stylesheet" href="/assets/css/back-to-top.css?v=2.2.4-202608010221">
 
   <style>
-    html { background:#fff; }
+    html { background: var(--fv-surface-page, #F4F8FE); }
     body { margin:0; opacity:1; }
     html, body { overscroll-behavior-y:none; -webkit-overflow-scrolling:touch; }
     header { min-height:90px; contain:layout style; }
@@ -65,7 +65,7 @@
       align-items: center;
       justify-content: center;
       gap: 22px;
-      background: var(--fv-surface-page, #ffffff);
+      background: var(--fv-surface-page, #F4F8FE);
       contain: layout style;
       transform: translateZ(0);
       font-family: var(--fv-font-stack, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
@@ -257,26 +257,26 @@
 
   </div><!-- /#fv-app -->
 
-  <script src="/assets/js/lang-proxy.js?v=1.0.0-20250322"></script>
-  <script src="/assets/js/lang-sync.js?v=1.0.0-20250322"></script>
-  <script src="/assets/js/lang-core.js?v=1.0.0"></script>
-  <script src="/assets/js/language.js?v=1.0.0-20250322"></script>
-  <script defer src="/assets/js/popup.js?v=1.0.0-20250322"></script>
-  <script defer src="/assets/js/version-core.js?v=1.0.0-20250322"></script>
-  <script type="module" src="/assets/js/con-data-service/con-data-service.js?v=1.0.0-20250322"></script>
+  <script src="/assets/js/lang-proxy.js?v=2.2.4-202608010221"></script>
+  <script src="/assets/js/lang-sync.js?v=2.2.4-202608010221"></script>
+  <script src="/assets/js/lang-core.js?v=2.2.4-202608010221"></script>
+  <script src="/assets/js/language.js?v=2.2.4-202608010221"></script>
+  <script defer src="/assets/js/popup.js?v=2.2.4-202608010221"></script>
+  <script defer src="/assets/js/version-core.js?v=2.2.4-202608010221"></script>
+  <script type="module" src="/assets/js/con-data-service/con-data-service.js?v=2.2.4-202608010221"></script>
 
   <!-- URE: Universal Render Engine — loaded before nav-core so ContentService can use it -->
-  <script defer src="/assets/js/ure/ure.js?v=1.0.0-20250322"></script>
+  <script defer src="/assets/js/ure/ure.js?v=2.2.4-202608010221"></script>
 
   <!-- FVL: FantroveVerse Loader — loaded before nav-core so LoadingService proxy can use it immediately -->
-  <script defer src="/assets/js/loading-system/fvl.js?v=1.0.0"></script>
+  <script defer src="/assets/js/loading-system/fvl.js?v=2.2.4-202608010221"></script>
 
-  <script defer src="/assets/js/nav-core.js?v=1.0.0-20250322"></script>
-  <script defer src="/assets/js/footer-template.js?v=1.0.0-20250322"></script>
-  <script defer src="/assets/js/modern-navigation.js?v=1.0.0-20250322"></script>
-  <script defer src="/assets/js/back-to-top.js?v=1.0.0-20250322"></script>
-  <script defer src="/assets/js/copyNotification.js?v=1.0.0-20250322"></script>
-  <script defer src="/assets/js/lang-links.js?v=1.0.0-20250322"></script>
-  <script defer src="/assets/js/fantrove-console-bridge.js?v=1.0.0-20250322"></script>
+  <script defer src="/assets/js/nav-core.js?v=2.2.4-202608010221"></script>
+  <script defer src="/assets/js/footer-template.js?v=2.2.4-202608010221"></script>
+  <script defer src="/assets/js/modern-navigation.js?v=2.2.4-202608010221"></script>
+  <script defer src="/assets/js/back-to-top.js?v=2.2.4-202608010221"></script>
+  <script defer src="/assets/js/copyNotification.js?v=2.2.4-202608010221"></script>
+  <script defer src="/assets/js/lang-links.js?v=2.2.4-202608010221"></script>
+  <script defer src="/assets/js/fantrove-console-bridge.js?v=2.2.4-202608010221"></script>
 </body>
 </html>

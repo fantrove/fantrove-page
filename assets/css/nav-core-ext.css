@@ -4,43 +4,54 @@ main { margin-top:30px; margin-bottom:80px; contain: layout style; }
 /* v3.2: overflow:hidden + contain ป้องกัน cards ลอยขึ้น header area */
 #content-loading { contain: layout style; overflow: hidden; }
 
+/* v2.0 — Discovery Refresh: tab buttons rest on a soft pastel-blue field.
+   Text is now graphite, not teal — calmer on the eye while still legible.
+   Active state lifts to a brighter tint with a soft pastel-blue ring. */
 .button-sub {
   margin:0; padding:11px 13px;
-  background:var(--fv-surface-page); color:var(--fv-text-secondary);
-  border:1px solid transparent; border-radius:var(--fv-radius-pill);
+  background:var(--fv-surface-button-rest); color:var(--fv-text-secondary);
+  border:1px solid var(--fv-border-pastel); border-radius:var(--fv-radius-pill);
   font-size:0.9em; cursor:pointer;
   -webkit-tap-highlight-color:transparent; user-select:none;
   touch-action:manipulation;
   transition: background 200ms ease, border-color 200ms ease, color 200ms ease;
 }
-.button-sub:active, .button-sub.active { color:var(--fv-brand-teal-light); }
+.button-sub:active { color:var(--fv-text-primary); background:var(--fv-surface-button-active); }
 .button-sub.active {
-  background:var(--fv-surface-teal-hover);
-  border-color:rgba(0,206,176,0.51);
+  color:var(--fv-text-primary);
+  background:var(--fv-surface-button-active);
+  border-color:var(--fv-border-pastel-strong);
 }
 
 .hi { padding:0 10px; }
 .hj {
-  border-radius:var(--fv-radius-xl);    /* 40px — เหมือนเดิม */
-  background:var(--fv-surface-page);
-  box-shadow: inset 0 0 1px 1px rgba(166, 187, 211, 0.14);
+  border-radius:var(--fv-radius-xl);
+  background:var(--fv-surface-card-tinted);
+  box-shadow: inset 0 0 0 1px var(--fv-border-pastel);
 }
 
 #sub-nav { contain: layout style; }
 
+/* v2.0 — Discovery Refresh: copy/character buttons rest on a brighter tinted
+   white that lifts off the pastel-blue page. Text is graphite. Border is a
+   soft pastel-blue hairline so cards don't feel harsh. */
 :where(.button-content) {
   box-sizing:border-box; width:auto!important; min-width:60px; max-width:100%;
   padding:13px 17px!important; margin:8px 0; height:60px; min-height:60px;
   display:inline-flex; align-items:center; justify-content:center;
-  border-radius:var(--r-btn);           /* 27px — เหมือนเดิม */
+  border-radius:var(--r-btn);
   font-size:21px; line-height:1;
-  background:var(--fv-surface-page); color:var(--fv-brand-teal-light);
-  border:1px solid var(--c-teal-border);
+  background:var(--fv-surface-card); color:var(--fv-text-primary);
+  border:1px solid var(--fv-border-pastel);
   cursor:pointer; text-align:center;
   -webkit-tap-highlight-color:transparent; touch-action:manipulation;
-  transition: opacity 200ms ease;
+  transition: background 180ms ease, border-color 180ms ease, transform 100ms ease-out;
 }
-:where(.button-content:active) { opacity:0.55; }
+:where(.button-content:active) {
+  background:var(--fv-surface-button-active);
+  border-color:var(--fv-border-pastel-strong);
+  transform:scale(0.97);
+}
 
 :where(.card) {
   display:flex; flex-direction:column; align-items:stretch;
@@ -68,24 +79,51 @@ a.card {
 }
 
 /* ── Collection Card ────────────────────────────────────────────────────
-   v4.0: Reverted to original compact size — same as regular .card
-   - Same width/height/border-radius as .card (160×222px, 30px radius)
-   - Minimal shadow, no scale-down on active
-   - Keep teal accent border and gradient cover
+   v5.0 Discovery Refresh:
+   - Compact size identical to .card (160×222px, 30px radius)
+   - Pastel-blue accent border + a subtle "Collection" chip overlay so users
+     immediately see this card is a collection (not a regular item)
+   - Cover area keeps the gradient but is recoloured to the new pastel palette
    ────────────────────────────────────────────────────────────────────────── */
 
 :where(.card.collection-card) {
   width:160px; height:222px;
-  border-radius:var(--r-card);            /* 30px — same as .card */
-  border:1px solid var(--fv-border-teal);
-  background:var(--fv-surface-page);
-  box-shadow: 0 1px 3px rgba(6,20,24,0.03);
+  border-radius:var(--r-card);
+  border:1px solid var(--fv-border-pastel-strong);
+  background:var(--fv-surface-card);
+  box-shadow: 0 1px 3px rgba(43,48,56,0.04);
   cursor:pointer;
   -webkit-tap-highlight-color:transparent;
   user-select:none;
   overflow:hidden;
-  /* v4.0: NO hover, NO scale-down — subtle border transition only */
-  transition: border-color 100ms ease-out;
+  position:relative;
+  transition: border-color 120ms ease-out, box-shadow 120ms ease-out;
+}
+
+/* "Collection" chip — a small badge top-left of the cover area that
+   explicitly labels the card so users know what they're looking at. */
+.collection-card .card-collection-chip {
+  position:absolute;
+  top:8px; left:8px;
+  z-index:2;
+  display:inline-flex; align-items:center; gap:4px;
+  padding:3px 9px;
+  border-radius:var(--fv-radius-pill);
+  font-size:0.625rem;
+  font-weight:var(--fv-font-semibold);
+  letter-spacing:0.04em;
+  color:var(--fv-text-primary);
+  background:rgba(255,255,255,0.92);
+  border:1px solid var(--fv-border-pastel);
+  backdrop-filter:blur(4px);
+  -webkit-backdrop-filter:blur(4px);
+  pointer-events:none;
+}
+.collection-card .card-collection-chip::before {
+  content:'';
+  width:6px; height:6px; border-radius:50%;
+  background:var(--fv-brand-teal-light);
+  flex-shrink:0;
 }
 
 /* v3.1: <a> collection card — reset <a> defaults */
@@ -103,7 +141,7 @@ a.card.collection-card {
   transition: border-color 80ms ease-out;
 }
 
-/* Collection card cover — CSS gradient background with emoji overlay */
+/* Collection card cover — pastel-blue gradient with emoji overlay */
 .collection-card .card-cover-preview {
   display:flex; align-items:center; justify-content:center;
   min-height:80px; height:80px;
@@ -112,13 +150,12 @@ a.card.collection-card {
   letter-spacing:0.25rem;
   font-size:2rem; line-height:1.2;
   contain:layout style;
-  /* Premium gradient background — teal/cyan brand colors */
+  /* v2.0 Discovery Refresh: pastel-blue gradient replaces teal wash */
   background:
-    radial-gradient(ellipse at 20% 50%, rgba(0,206,176,0.12) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 50%, rgba(14,176,213,0.10) 0%, transparent 50%),
-    linear-gradient(145deg, rgba(248,255,253,1) 0%, rgba(242,248,255,1) 100%);
-  /* Subtle inner border at bottom of cover */
-  box-shadow: inset 0 -1px 0 rgba(0,206,176,0.06);
+    radial-gradient(ellipse at 20% 50%, rgba(111,155,214,0.16) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 50%, rgba(167,197,234,0.14) 0%, transparent 50%),
+    linear-gradient(145deg, #EAF1FA 0%, #DCE8F7 100%);
+  box-shadow: inset 0 -1px 0 rgba(111,155,214,0.08);
 }
 
 /* Collection card content area */
@@ -152,17 +189,17 @@ a.card.collection-card {
   max-width:100%;
 }
 
-/* Collection card item count badge */
+/* Collection card item count badge — pastel-blue pill */
 .collection-card .card-item-count {
   display:inline-flex; align-items:center; justify-content:center;
   margin-top:auto;
   padding:2px 8px;
   border-radius:var(--fv-radius-pill);
-  font-size:0.625rem;                       /* 10px */
+  font-size:0.625rem;
   font-weight:var(--fv-font-medium);
-  color:var(--fv-brand-teal-light);
-  background:var(--fv-surface-teal-hover);
-  border:1px solid rgba(0,206,176,0.15);
+  color:var(--fv-text-secondary);
+  background:var(--fv-surface-button-rest);
+  border:1px solid var(--fv-border-pastel);
   width:fit-content;
   letter-spacing:0.02em;
 }
@@ -235,7 +272,8 @@ a.card.collection-card {
 /* Cards fill grid cell width naturally — Spotify/Netflix pattern */
 .card-content-container .card { width: 100% !important; }
 
-/* Collection card grid — same min-width as regular cards */
+/* Collection card grid — same min-width as regular cards so they
+   stay compact and don't blow up larger than neighbouring cards. */
 .card-content-container.has-collection-cards {
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
   gap:12px!important;

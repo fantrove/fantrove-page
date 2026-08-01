@@ -33,7 +33,7 @@
   <link rel="stylesheet" href="/assets/css/collection.css">
 
   <style>
-    html { background:#fff; }
+    html { background: var(--fv-surface-page, #F4F8FE); }
     body { margin:0; opacity:1; }
     html, body { overscroll-behavior-y:none; -webkit-overflow-scrolling:touch; }
     .fv-sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;}
@@ -56,6 +56,7 @@
 
     <!-- ═══ Header Section ═══ -->
     <header class="collection-header" id="collectionHeader">
+      <span class="collection-eyebrow" id="collectionEyebrow" data-translate="collection_eyebrow">Collection</span>
       <h2 class="collection-name" id="collectionName" data-translate="collection_name">Collection Name</h2>
       <p class="collection-description" id="collectionDescription" data-translate="collection_desc">Collection description goes here.</p>
       <p class="collection-item-count" id="collectionItemCount" data-translate="collection_count">0 items</p>

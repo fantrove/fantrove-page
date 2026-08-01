@@ -60,38 +60,35 @@
     //   (3-4 button types × 20-50 categories, 2-3 card types × 5-20 categories)
     //   cards appear roughly every 3-4 segments on average.
 
-    CARD_BASE_BOOST:  2.5,   // card-type segments score multiplier
-    CARD_SLOT_BOOST:  1.6,   // extra multiplier when filling a card-priority slot
-    NOVELTY_BASE:     2.0,   // novelty bonus: bonus = NOVELTY_BASE / (timesShown + 1)
-    SIZE_NORM_EXP:    0.65,  // log₂(catSize)^EXP — dampens large-category dominance
-    CHUNK_DECAY:      0.40,  // per-chunk score decay: chunk k → score × (1-DECAY)^k
-    JITTER:           0.28,  // ±28% seeded random factor — prevents deterministic lock-in
+    CARD_BASE_BOOST:  2.2,   // card-type segments score multiplier (v3.0: was 2.5)
+    CARD_SLOT_BOOST:  1.7,   // extra multiplier when filling a card-priority slot (v3.0: was 1.6)
+    NOVELTY_BASE:     2.6,   // novelty bonus: bonus = NOVELTY_BASE / (timesShown + 1) (v3.0: was 2.0)
+    SIZE_NORM_EXP:    0.72,  // log₂(catSize)^EXP — slightly stronger dampening on big categories (v3.0: was 0.65)
+    CHUNK_DECAY:      0.45,  // per-chunk score decay: chunk k → score × (1-DECAY)^k (v3.0: was 0.40)
+    JITTER:           0.34,  // ±34% seeded random factor — wider variety per session (v3.0: was 0.28)
 
-    // ── Diversity windows ────────────────────────────────────────────────────
-    DIV_WINDOW:       6,     // track last N catIds emitted
-    DIV_PENALTY:      0.07,  // score multiplier for most-recently-seen catId (harshest)
-    TYPE_WIN:         4,     // track last N groupTypes (button/card)
-    TYPE_PENALTY:     0.22,  // multiplier when same-type streak fills entire TYPE_WIN
+    // ── Diversity windows (v3.0: widened + harsher penalties) ────────────────
+    DIV_WINDOW:       8,     // track last N catIds emitted (v3.0: was 6)
+    DIV_PENALTY:      0.05,  // score multiplier for most-recently-seen catId (v3.0: was 0.07 — harsher)
+    TYPE_WIN:         5,     // track last N groupTypes (button/card) (v3.0: was 4)
+    TYPE_PENALTY:     0.18,  // multiplier when same-type streak fills entire TYPE_WIN (v3.0: was 0.22)
 
     // ── Card slot injection ──────────────────────────────────────────────────
-    // WHY guaranteed slots: scoring alone may not surface cards early enough
-    //   when there are many more button segments than card segments.
-    //   Slot reservation ensures cards appear in prime viewport positions.
-    COLD_CARD_COUNT:  2,     // first N slots are always card-priority (cold-start)
-    CARD_SLOT_EVERY:  4,     // after cold slots: every Nth slot is card-priority
+    // v3.0: cold-start cards bumped to 3 + slot-every 3 so the first viewport
+    //   always mixes cards/containers with button rows. Old 2/4 sometimes left
+    //   the first viewport as all-button content, which felt monotonous.
+    COLD_CARD_COUNT:  3,     // first N slots are always card-priority (v3.0: was 2)
+    CARD_SLOT_EVERY:  3,     // after cold slots: every Nth slot is card-priority (v3.0: was 4)
 
     // ── Soft-reset cycles ────────────────────────────────────────────────────
-    // WHY soft (not hard) reset: hard reset = user sees exact same sequence.
-    //   Soft reset decays show counts (partial memory) + new seed (new jitter) =
-    //   content feels fresh while still prioritising truly-unseen categories first.
-    SOFT_RESET_DECAY: 0.50,  // show-count multiplier on soft reset
-    MAX_SOFT_RESETS:  5,     // total resets before feed signals exhaustion
+    SOFT_RESET_DECAY: 0.45,  // show-count multiplier on soft reset (v3.0: was 0.50 — decays faster)
+    MAX_SOFT_RESETS:  6,     // total resets before feed signals exhaustion (v3.0: was 5)
 
     // ── Selection ────────────────────────────────────────────────────────────
-    // WHY top-K not pure top-1: pure top-1 is deterministic after scoring.
-    //   Top-K with weight-proportional sampling = controlled stochasticity.
-    //   High-scored items are still likely chosen — just not guaranteed.
-    TOP_K:            3,
+    // v3.0: TOP_K widened from 3 to 4 so two equally-scored segments both
+    //   have a realistic chance. Reduces the "I keep seeing the same category
+    //   first" feeling when scores are close.
+    TOP_K:            4,
   });
 
   // ── FeedService v2 — Universal Explore Feed ─────────────────────────────────
@@ -391,8 +388,12 @@
     _score(seg, isCardSlot) {
       let s = 100;
 
-      // 1. Card boost
-      if (seg.groupType === 'card') {
+      // 1. Card boost — also applies to collection-containers so they get the
+      //    same cold-start / slot-priority treatment as cards. Without this,
+      //    the cold-card slots at the top of the feed could be filled by
+      //    regular button segments when only collection-containers exist in
+      //    the card pool, defeating the discovery goal.
+      if (seg.groupType === 'card' || seg.groupType === 'collection-container') {
         s *= FC.CARD_BASE_BOOST;
         if (isCardSlot) s *= FC.CARD_SLOT_BOOST;
       }
@@ -415,9 +416,13 @@
         s *= FC.DIV_PENALTY + recency * (1 - FC.DIV_PENALTY);
       }
 
-      // 6. Type variety — penalise if last TYPE_WIN emissions all same groupType
-      const typeWin = this._recentTypes.slice(-FC.TYPE_WIN);
-      if (typeWin.length >= FC.TYPE_WIN && typeWin.every(t => t === seg.groupType)) {
+      // 6. Type variety — penalise if last TYPE_WIN emissions all same groupType.
+      //    v3.0: collection-containers count as 'card' for variety purposes so a
+      //    long streak of "container → button → container → button" doesn't slip
+      //    through the streak filter and start feeling mechanical.
+      const segTypeForVariety = seg.groupType === 'collection-container' ? 'card' : seg.groupType;
+      const typeWin = this._recentTypes.map(t => t === 'collection-container' ? 'card' : t).slice(-FC.TYPE_WIN);
+      if (typeWin.length >= FC.TYPE_WIN && typeWin.every(t => t === segTypeForVariety)) {
         s *= FC.TYPE_PENALTY;
       }
 

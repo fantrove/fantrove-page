@@ -14,7 +14,7 @@
   position: relative;
   border-radius: var(--fv-radius-lg, 37px);
   overflow: hidden;
-  background: linear-gradient(135deg, var(--fv-brand-teal-light, #13b47f), var(--fv-brand-cyan-light, #0eb0d5));
+  background: linear-gradient(135deg, var(--fv-pastel-blue-200, #D9E6F8), var(--fv-pastel-blue-400, #A7C5EA));
   min-height: 120px;
   max-height: 200px;
   aspect-ratio: 16 / 9;
@@ -110,8 +110,8 @@
 
 .cover-char {
   font-size: clamp(2rem, 4vw, 3.5rem);
-  color: var(--fv-surface-page, #ffffff);
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  color: var(--fv-text-primary, #2b3038);
+  text-shadow: 0 2px 8px rgba(255, 255, 255, 0.4);
   animation: coverFadeIn 0.4s var(--fv-ease-spring, cubic-bezier(0.5, 0, 0, 1.5)) both;
   animation-delay: calc(var(--cover-char-index, 0) * 60ms);
   user-select: none;
@@ -152,26 +152,53 @@
 .collection-header {
   text-align: center;
   margin-bottom: var(--fv-space-8, 2rem);
+  position: relative;
+}
+
+/* Collection page "Collection" eyebrow label — makes it unambiguous that
+   this is a collection page (addresses the discoverability concern). */
+.collection-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--fv-radius-pill, 999px);
+  font-size: 0.6875rem;
+  font-weight: var(--fv-font-semibold, 600);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fv-text-secondary, #5b6573);
+  background: var(--fv-surface-button-rest, #EEF4FC);
+  border: 1px solid var(--fv-border-pastel, rgba(111,155,214,0.20));
+  margin-bottom: var(--fv-space-3, 0.75rem);
+}
+.collection-eyebrow::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--fv-brand-teal-light, #00CEB0);
 }
 
 .collection-name {
-  font-size: var(--fv-font-size-xl, 1.75rem);
-  font-weight: var(--fv-font-weight-bold, 700);
-  color: var(--fv-text-primary, #0f2629);
-  margin: var(--fv-space-4, 1rem) 0 var(--fv-space-2, 0.5rem);
+  font-size: var(--fv-text-3xl, 1.875rem);
+  font-weight: var(--fv-font-bold, 700);
+  color: var(--fv-text-heading, #34404c);
+  margin: var(--fv-space-3, 0.75rem) 0 var(--fv-space-2, 0.5rem);
+  line-height: 1.2;
 }
 
 .collection-description {
-  font-size: var(--fv-font-size-md, 1rem);
-  color: var(--fv-text-secondary, #3c4043);
+  font-size: var(--fv-text-base, 1rem);
+  color: var(--fv-text-secondary, #5b6573);
   line-height: 1.6;
   max-width: 600px;
   margin: 0 auto var(--fv-space-2, 0.5rem);
 }
 
 .collection-item-count {
-  font-size: var(--fv-font-size-sm, 0.875rem);
-  color: var(--fv-text-faint, #8ea1b8);
+  font-size: var(--fv-text-sm, 0.875rem);
+  color: var(--fv-text-faint, #98a2b1);
   margin-bottom: var(--fv-space-6, 1.5rem);
 }
 
@@ -182,6 +209,10 @@
   grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
   gap: var(--fv-space-2, 0.5rem);
   margin-bottom: var(--fv-space-10, 2.5rem);
+  background: var(--fv-surface-card-tinted, #F8FBFE);
+  border: 1px solid var(--fv-border-pastel, rgba(111,155,214,0.20));
+  border-radius: var(--fv-radius-md, 27px);
+  padding: var(--fv-space-4, 1rem);
 }
 
 .collection-item {
@@ -191,31 +222,33 @@
   justify-content: center;
   padding: var(--fv-space-3, 0.75rem);
   border-radius: var(--fv-radius-sm, 17px);
-  background: var(--fv-surface-subtle, #f8faff);
+  background: var(--fv-surface-card, #FFFFFF);
+  border: 1px solid var(--fv-border-pastel, rgba(111,155,214,0.20));
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
   touch-action: manipulation;
   min-height: 80px;
-  /* v4.0: NO hover, NO scale-down */
-  transition: background 100ms ease-out;
+  transition: background 100ms ease-out, border-color 100ms ease-out, transform 100ms ease-out;
 }
 
-/* v4.0: Subtle active state — no scale-down */
+/* v2.0: Subtle active state */
 .collection-item:active {
-  background: var(--fv-surface-card, #ffffff);
-  transition: background 80ms ease-out;
+  background: var(--fv-surface-button-active, #DCE8F7);
+  border-color: var(--fv-border-pastel-strong, rgba(111,155,214,0.45));
+  transform: scale(0.97);
 }
 
 .collection-item-char {
   font-size: clamp(1.5rem, 3vw, 2.5rem);
   line-height: 1;
   user-select: none;
+  color: var(--fv-text-primary, #2b3038);
 }
 
 .collection-item-name {
-  font-size: var(--fv-font-size-xs, 0.75rem);
-  color: var(--fv-text-secondary, #3c4043);
+  font-size: var(--fv-text-xs, 0.75rem);
+  color: var(--fv-text-muted, #7a8492);
   margin-top: var(--fv-space-1, 0.25rem);
   text-align: center;
   overflow: hidden;
@@ -229,13 +262,13 @@
 .collection-related {
   margin-top: var(--fv-space-10, 2.5rem);
   padding-top: var(--fv-space-8, 2rem);
-  border-top: 1px solid var(--fv-border-subtle, rgba(0, 0, 0, 0.06));
+  border-top: 1px solid var(--fv-border-pastel, rgba(111,155,214,0.20));
 }
 
 .collection-related-title {
-  font-size: var(--fv-font-size-lg, 1.25rem);
-  font-weight: var(--fv-font-weight-semibold, 600);
-  color: var(--fv-text-primary, #0f2629);
+  font-size: var(--fv-text-xl, 1.25rem);
+  font-weight: var(--fv-font-semibold, 600);
+  color: var(--fv-text-heading, #34404c);
   margin-bottom: var(--fv-space-6, 1.5rem);
 }
 
@@ -247,22 +280,21 @@
 
 .collection-related-card {
   border-radius: var(--r-card, 30px);
-  background: var(--fv-surface-page, #ffffff);
+  background: var(--fv-surface-card, #ffffff);
   overflow: hidden;
   cursor: pointer;
-  border: 1px solid var(--fv-border-teal, rgba(0, 206, 176, 0.25));
-  box-shadow: 0 1px 3px rgba(6, 20, 24, 0.03);
+  border: 1px solid var(--fv-border-pastel-strong, rgba(111,155,214,0.45));
+  box-shadow: 0 1px 3px rgba(43,48,56,0.04);
   -webkit-tap-highlight-color: transparent;
   user-select: none;
   touch-action: manipulation;
-  /* v4.0: NO hover, NO scale-down */
-  transition: border-color 100ms ease-out;
+  transition: border-color 100ms ease-out, transform 100ms ease-out;
 }
 
-/* v4.0: Subtle active state — no scale-down, border accent only */
+/* v2.0: Subtle active state */
 .collection-related-card:active {
-  border-color: rgba(0, 206, 176, 0.51);
-  transition: border-color 80ms ease-out;
+  border-color: var(--fv-border-pastel-strong, rgba(111,155,214,0.45));
+  transform: scale(0.98);
 }
 
 .collection-related-card-cover {
@@ -275,57 +307,52 @@
 }
 
 .collection-related-card-name {
-  font-size: var(--fv-font-size-sm, 0.875rem);
+  font-size: var(--fv-text-sm, 0.875rem);
   font-weight: var(--fv-font-weight-semibold, 600);
-  color: var(--fv-text-primary, #0f2629);
+  color: var(--fv-text-heading, #34404c);
   margin-bottom: var(--fv-space-1, 0.25rem);
 }
 
 .collection-related-card-desc {
-  font-size: var(--fv-font-size-xs, 0.75rem);
-  color: var(--fv-text-faint, #8ea1b8);
+  font-size: var(--fv-text-xs, 0.75rem);
+  color: var(--fv-text-muted, #7a8492);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 /* ── Collection Card (compact, reusable) ──────────────────────────────── */
-/* v4.0: Reverted to original compact size — matches .card base
-   - Same border-radius as .card (30px via --r-card)
-   - Minimal shadow, no scale-down on active
-   - Teal accent border, gradient cover
-   ────────────────────────────────────────────────────────────────────── */
+/* v5.0 Discovery Refresh: collection card matches feed cards exactly. */
 
 .collection-card {
   border-radius: var(--r-card, 30px);
-  background: var(--fv-surface-page, #ffffff);
+  background: var(--fv-surface-card, #ffffff);
   overflow: hidden;
   cursor: pointer;
-  border: 1px solid var(--fv-border-teal, rgba(0, 206, 176, 0.25));
-  box-shadow: 0 1px 3px rgba(6, 20, 24, 0.03);
+  border: 1px solid var(--fv-border-pastel-strong, rgba(111,155,214,0.45));
+  box-shadow: 0 1px 3px rgba(43,48,56,0.04);
   display: flex;
   flex-direction: column;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
   touch-action: manipulation;
-  /* v4.0: NO hover, NO scale-down */
-  transition: border-color 100ms ease-out;
+  transition: border-color 100ms ease-out, transform 100ms ease-out;
 }
 
-/* v4.0: Subtle active state — no scale-down, border accent only */
+/* v2.0: Subtle active state */
 .collection-card:active {
-  border-color: rgba(0, 206, 176, 0.51);
-  transition: border-color 80ms ease-out;
+  border-color: var(--fv-border-pastel-strong, rgba(111,155,214,0.45));
+  transform: scale(0.98);
 }
 
 .collection-card-cover {
   aspect-ratio: 16 / 9;
   overflow: hidden;
-  /* Premium gradient background — teal/cyan brand colors */
+  /* v2.0 Discovery Refresh: pastel-blue gradient */
   background:
-    radial-gradient(ellipse at 20% 50%, rgba(0,206,176,0.12) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 50%, rgba(14,176,213,0.10) 0%, transparent 50%),
-    linear-gradient(145deg, rgba(248,255,253,1) 0%, rgba(242,248,255,1) 100%);
+    radial-gradient(ellipse at 20% 50%, rgba(111,155,214,0.16) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 50%, rgba(167,197,234,0.14) 0%, transparent 50%),
+    linear-gradient(145deg, #EAF1FA 0%, #DCE8F7 100%);
 }
 
 .collection-card-info {
@@ -334,9 +361,9 @@
 }
 
 .collection-card-name {
-  font-size: var(--fv-font-size-sm, 0.875rem);
+  font-size: var(--fv-text-sm, 0.875rem);
   font-weight: var(--fv-font-weight-semibold, 600);
-  color: var(--fv-text-heading, #152a2f);
+  color: var(--fv-text-heading, #34404c);
   margin-bottom: var(--fv-space-1, 0.25rem);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -344,8 +371,8 @@
 }
 
 .collection-card-desc {
-  font-size: var(--fv-font-size-xs, 0.75rem);
-  color: var(--fv-text-muted, #6d8590);
+  font-size: var(--fv-text-xs, 0.75rem);
+  color: var(--fv-text-muted, #7a8492);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -362,13 +389,19 @@
   display: inline-flex;
   align-items: center;
   gap: var(--fv-space-2, 0.5rem);
-  font-size: var(--fv-font-size-sm, 0.875rem);
-  color: var(--fv-brand-teal-light, #13b47f);
+  font-size: var(--fv-text-sm, 0.875rem);
+  color: var(--fv-text-secondary, #5b6573);
   text-decoration: none;
   font-weight: var(--fv-font-weight-semibold, 600);
-  transition: color 150ms var(--fv-ease-standard, cubic-bezier(0.4, 0, 0.2, 1));
+  padding: 8px 14px;
+  border-radius: var(--fv-radius-pill, 999px);
+  background: var(--fv-surface-button-rest, #EEF4FC);
+  border: 1px solid var(--fv-border-pastel, rgba(111,155,214,0.20));
+  transition: background 150ms var(--fv-ease-standard, cubic-bezier(0.4, 0, 0.2, 1)),
+              border-color 150ms var(--fv-ease-standard, cubic-bezier(0.4, 0, 0.2, 1));
 }
 
 .collection-back a:hover {
-  color: var(--fv-brand-teal, #11b47f);
+  background: var(--fv-surface-button-active, #DCE8F7);
+  border-color: var(--fv-border-pastel-strong, rgba(111,155,214,0.45));
 }

@@ -85,14 +85,15 @@
   gap:12px!important;
   margin:0 0 40px!important;
   padding:1rem 5px!important;
-  background:var(--fv-surface-page);
+  background:var(--fv-surface-card-tinted, #F8FBFE);
+  border:1px solid var(--fv-border-pastel, rgba(111,155,214,0.20));
   border-radius:25px;
   contain:layout style;
 }
 .card-content-container .card{width:100%!important;}
 .card-content-container.has-collection-cards{
-  grid-template-columns:repeat(auto-fill,minmax(200px,1fr))!important;
-  gap:14px!important;
+  grid-template-columns:repeat(auto-fill,minmax(160px,1fr))!important;
+  gap:12px!important;
 }
 
 /* ── Horizontal card scroll (overrides grid) ────────────────────────── */
@@ -126,23 +127,45 @@
 }
 
 /* ── Collection Container ──────────────────────────────────────────────
-   v6.0: Uses nav core system classes directly — no custom item CSS
-   - Container wrapper + header only (custom CSS)
-   - Items grid uses .button-content-container (nav core class)
-   - Items use .button-content (nav core class) — same as discovery page
-   - "View All" button uses .button-sub style
+   v7.0 Discovery Refresh: redesigned header so users immediately see this
+   is a collection, not just another content row.
+   - "Collection" eyebrow chip sits above the title
+   - Title typography is heavier and darker (graphite, not teal)
+   - Container rests on a tinted pastel-blue field that lifts off the page
+   - Items still use the same .button-content class for visual consistency
    ────────────────────────────────────────────────────────────────────── */
 .collection-container{
   margin:0 0 40px!important;
   padding:0!important;
-  background:var(--fv-surface-page);
+  background:var(--fv-surface-card-tinted, #F8FBFE);
+  border:1px solid var(--fv-border-pastel, rgba(111,155,214,0.20));
   border-radius:25px;
   contain:layout style;
   overflow:hidden;
 }
 .collection-container-header{
-  padding:10px;
+  padding:14px 16px 6px;
   width:100%;
+}
+.collection-container-eyebrow{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:3px 9px;
+  border-radius:var(--fv-radius-pill, 999px);
+  font-size:0.625rem;
+  font-weight:var(--fv-font-semibold, 600);
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:var(--fv-text-secondary, #5b6573);
+  background:var(--fv-surface-button-rest, #EEF4FC);
+  border:1px solid var(--fv-border-pastel, rgba(111,155,214,0.20));
+  margin-bottom:6px;
+}
+.collection-container-eyebrow::before{
+  content:'';
+  width:5px; height:5px; border-radius:50%;
+  background:var(--fv-brand-teal-light, #00CEB0);
 }
 .collection-container-title-row{
   display:flex;
@@ -152,20 +175,20 @@
 }
 .collection-container-name{
   font-size:1.2rem;
-  font-weight:var(--fv-font-semibold,600);
-  color:#464646;
+  font-weight:var(--fv-font-bold, 700);
+  color:var(--fv-text-heading, #34404c);
   margin:0;
   line-height:1.3;
 }
 .collection-container-count{
-  font-size:var(--fv-text-xs,0.75rem);
-  color:var(--fv-text-faint,#8ea1b8);
-  font-weight:var(--fv-font-medium,500);
+  font-size:var(--fv-text-xs, 0.75rem);
+  color:var(--fv-text-muted, #7a8492);
+  font-weight:var(--fv-font-medium, 500);
 }
 .collection-container-desc{
-  margin:0.5rem 0 0;
-  font-size:1rem;
-  color:#494E59;
+  margin:0.4rem 0 0;
+  font-size:0.95rem;
+  color:var(--fv-text-secondary, #5b6573);
   line-height:1.6;
   overflow:hidden;
   text-overflow:ellipsis;
@@ -176,24 +199,25 @@
   display:inline-flex;
   align-items:center;
   gap:0.3rem;
-  margin:0 0 0 10px;
-  padding:11px 13px;
-  font-size:0.9em;
-  font-weight:var(--fv-font-semibold,600);
-  color:var(--fv-text-secondary,#52638A);
+  margin:0 12px 12px;
+  padding:8px 14px;
+  font-size:0.85em;
+  font-weight:var(--fv-font-semibold, 600);
+  color:var(--fv-text-secondary, #5b6573);
   text-decoration:none;
-  border-radius:var(--fv-radius-pill,999px);
-  border:1px solid transparent;
-  background:var(--fv-surface-page);
+  border-radius:var(--fv-radius-pill, 999px);
+  border:1px solid var(--fv-border-pastel, rgba(111,155,214,0.20));
+  background:var(--fv-surface-card, #FFFFFF);
   -webkit-tap-highlight-color:transparent;
   touch-action:manipulation;
   user-select:none;
-  transition:background 200ms ease,border-color 200ms ease,color 200ms ease;
+  transition:background 200ms ease,border-color 200ms ease,color 200ms ease, transform 100ms ease-out;
 }
 .collection-container-view-all:active{
-  color:var(--fv-brand-teal-light,#00CEB0);
-  background:var(--fv-surface-teal-hover,rgba(248,255,253,1));
-  border-color:rgba(0,206,176,0.51);
+  color:var(--fv-text-primary, #2b3038);
+  background:var(--fv-surface-button-active, #DCE8F7);
+  border-color:var(--fv-border-pastel-strong, rgba(111,155,214,0.45));
+  transform:scale(0.97);
 }`;
     document.head.appendChild(s);
   }
@@ -1016,17 +1040,12 @@
       return html + '</div></div>';
     },
 
-    // v6.0: Collection container — uses nav core classes directly
-    //   - Items use .button-content-container + .button-content (nav core classes)
-    //   - No custom item CSS — identical to discovery page buttons
-    //   - Header matches .group-header style
-    //   - "View All" button matches .button-sub style
-    //
-    //   WHY: Collection containers should use the SAME classes as the nav core
-    //   discovery system, not a separate custom design. This ensures visual
-    //   consistency and avoids duplicating CSS.
-    //
-    //   Cards are kept as reusable components for other pages (e.g., collection detail pages)
+    // v7.0: Collection container — Discovery Refresh
+    //   - Adds an explicit "Collection" eyebrow chip above the title so users
+    //     immediately know this row is a collection, not a regular content row.
+    //   - Title typography is heavier and graphite-colored (matches pastel theme).
+    //   - Items use the same .button-content class as the rest of the feed.
+    //   - "View All" button matches the new pastel button style.
     _tplCollectionContainer(item, lang) {
       const containerData = item.items && item.items[0];
       if (!containerData) return '';
@@ -1037,16 +1056,18 @@
       const previewItems = containerData.previewItems || (containerData.items || []).slice(0, 8);
       const totalCount = containerData.itemCount || (containerData.items || []).length;
 
-      // i18n for "View All" button
+      // i18n for the eyebrow chip + "View All" button
       const lang2 = localStorage.getItem('selectedLang') || 'en';
+      const eyebrowText = lang2 === 'th' ? 'คอลเลกชัน' : 'Collection';
       const viewAllText = lang2 === 'th' ? 'ดูทั้งหมด' : 'View All';
       const itemCountText = totalCount + (lang2 === 'th' ? ' รายการ' : ' items');
 
       let html = '<div class="cm-group">';
       html += '<div class="collection-container">';
 
-      // ── Header row: name + item count ── (matches .group-header)
+      // ── Header row: eyebrow chip + name + item count + description ──
       html += '<div class="collection-container-header">';
+      html += '<span class="collection-container-eyebrow">' + _esc(eyebrowText) + '</span>';
       html += '<div class="collection-container-title-row">';
       html += '<h2 class="collection-container-name">' + _esc(name) + '</h2>';
       html += '<span class="collection-container-count">' + _esc(itemCountText) + '</span>';
@@ -1122,16 +1143,21 @@
           : ` href="${_esc(item.link)}" target="_blank" rel="noopener noreferrer"`)
         : '';
 
-      // v2.3: Collection card premium template
-      //   - Item count badge (pill badge with teal accent)
+      // v5.0 Discovery Refresh: Collection card premium template
+      //   - "Collection" chip overlay on the cover so users immediately see
+      //     this is a collection card, not a regular item card.
+      //   - Item count badge (pill badge with pastel-blue tint)
       //   - Better typography for long names (single-line ellipsis)
       //   - Description as secondary text
       if (isCollection) {
+        const lang2 = localStorage.getItem('selectedLang') || 'en';
+        const chipText = lang2 === 'th' ? 'คอลเลกชัน' : 'Collection';
+        const chip = `<span class="card-collection-chip">${_esc(chipText)}</span>`;
         const itemCount = item._itemCount
           ? `<span class="card-item-count">${item._itemCount} items</span>`
           : '';
         return (
-          `<${tag} class="card${cls}"${hrefAttr}>${visualContent}` +
+          `<${tag} class="card${cls}"${hrefAttr}>${chip}${visualContent}` +
           `<div class="card-content">` +
             `<div class="card-title">${_esc(_txt(item.title, lang))}</div>` +
             `<div class="card-description">${_esc(_txt(item.description, lang))}</div>` +

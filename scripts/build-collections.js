@@ -310,6 +310,14 @@ function generateCollectionPage(collection, lang, langs, templateHtml, translati
     'id="collectionName">' + escapeHtml(name)
   );
 
+  // Replace collection eyebrow label ("Collection" / "คอลเลกชัน")
+  //   v2.0 Discovery Refresh — makes it explicit that this is a collection page.
+  var eyebrowText = (lang === 'th') ? 'คอลเลกชัน' : 'Collection';
+  html = html.replace(
+    /id="collectionEyebrow"[^>]*>[^<]*/,
+    'id="collectionEyebrow">' + escapeHtml(eyebrowText)
+  );
+
   // Replace collection description
   html = html.replace(
     /id="collectionDescription"[^>]*>[^<]*/,
