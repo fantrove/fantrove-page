@@ -5,10 +5,7 @@
    ═══════════════════════════════════════════════════════════════ */
 
 :root {
-  /* Brand Colors — v2.0 Discovery Refresh
-     Kept teal as the platform accent, but softened the saturation so it no
-     longer reads as "green" on a white field. The accent is now used as a
-     secondary cue; the dominant color is the soft blue surface below. */
+  /* Brand Colors */
   --fv-brand-teal: #13b47f;
   --fv-brand-teal-light: #00CEB0;
   --fv-brand-teal-dark: #0a9273;
@@ -18,50 +15,46 @@
   --fv-brand-purple-dark: #9B6EFF;
   --fv-brand-green-vivid: #11C291;
   --fv-brand-green-bright: #18E4A1;
-
-  /* Discovery pastel-blue accent — primary surface for tab/button content */
-  --fv-pastel-blue-50:  #F4F8FE;
-  --fv-pastel-blue-100: #E8F0FB;
-  --fv-pastel-blue-200: #D9E6F8;
-  --fv-pastel-blue-300: #C5DAF2;
-  --fv-pastel-blue-400: #A7C5EA;
-  --fv-pastel-blue-500: #6F9BD6;
-  --fv-pastel-blue-600: #4D7AB8;
-
-  /* Text Colors — v2.0 softer grayscale, less green cast
-     Old text was tinted toward teal (#0f2629 read as dark green-black).
-     New values are neutral graphite — still high contrast against the
-     pastel-blue surface, but the eye no longer reads "green". */
-  --fv-text-primary: #2b3038;
-  --fv-text-heading: #34404c;
-  --fv-text-body: #444b56;
-  --fv-text-secondary: #5b6573;
-  --fv-text-muted: #7a8492;
-  --fv-text-faint: #98a2b1;
+  
+  /* Text Colors */
+  --fv-text-primary: #0f2629;
+  --fv-text-heading: #152a2f;
+  --fv-text-body: #2f5157;
+  --fv-text-secondary: #52638A;
+  --fv-text-muted: #6d8590;
+  --fv-text-faint: #8ea1b8;
   --fv-text-inverse: #ffffff;
+  
+  /* Surface / Background */
+  --fv-surface-page: #ffffff;
+  --fv-surface-card: #ffffff;
+  --fv-surface-card-alpha: rgba(255, 255, 255, 0.94);
+  --fv-surface-subtle: #f8faff;
+  --fv-surface-soft: #f6f7fb;
+  --fv-surface-teal-hover: rgba(248, 255, 253, 1);
 
-  /* Surface / Background — v2.0 pastel-blue base
-     Page is now a soft pastel blue (the requested "calm + cool" look).
-     Cards and content containers stay on a brighter tinted white so they
-     still "lift" off the page background without harsh borders. */
-  --fv-surface-page: #F4F8FE;
-  --fv-surface-card: #FFFFFF;
-  --fv-surface-card-alpha: rgba(255, 255, 255, 0.96);
-  --fv-surface-subtle: #EAF1FA;
-  --fv-surface-soft: #EEF3FB;
-  --fv-surface-teal-hover: #E8F0FB;
-  --fv-surface-button-rest: #EEF4FC;
-  --fv-surface-button-active: #DCE8F7;
-  --fv-surface-card-tinted: #F8FBFE;
+  /* ── Content button palette (Discovery Refresh) ───────────────────────
+     Scoped to .button-content ONLY. Does NOT touch any global surface,
+     text, or border tokens — the rest of the site keeps its original
+     white background + teal-tinted text.
+
+     Why a separate palette: the user wanted softer pastel-blue buttons
+     and graphite text *only* on the inline content buttons (the emoji
+     / symbol / collection-preview buttons), not on nav tabs, copy chips,
+     or page surfaces. Keeping these as isolated tokens means future
+     tweaks to button styling never cascade into the rest of the UI. */
+  --fv-btn-bg:           #EAF1FB;   /* soft pastel-blue button fill */
+  --fv-btn-bg-active:    #D8E5F6;   /* slightly deeper tint on press  */
+  --fv-btn-text:         #2c3340;   /* graphite text (calmer than teal) */
+  --fv-btn-border:       rgba(111, 155, 214, 0.22);
+  --fv-btn-border-active:rgba(111, 155, 214, 0.45);
 
   /* Border */
-  --fv-border-default: rgba(111, 155, 214, 0.10);
-  --fv-border-subtle: rgba(43, 48, 56, 0.08);
+  --fv-border-default: rgba(14, 176, 213, 0.06);
+  --fv-border-subtle: rgba(0, 0, 0, 0.07);
   --fv-border-teal: rgba(0, 206, 176, 0.25);
   --fv-border-teal-strong: rgba(0, 206, 176, 0.80);
-  --fv-border-pastel: rgba(111, 155, 214, 0.20);
-  --fv-border-pastel-strong: rgba(111, 155, 214, 0.45);
-  --fv-border-focus-ring: rgba(111, 155, 214, 0.28);
+  --fv-border-focus-ring: rgba(19, 180, 127, 0.16);
   
   /* Gradients */
   --fv-gradient-brand:
