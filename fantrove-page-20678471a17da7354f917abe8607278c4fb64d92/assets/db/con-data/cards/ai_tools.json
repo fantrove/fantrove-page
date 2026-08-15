@@ -1,0 +1,25 @@
+{
+  "id": "ai_tools",
+  "name": {
+    "th": "เครื่องมือ AI",
+    "en": "AI Tools"
+  },
+  "data": [
+    {
+      "api": "card-openai",
+      "text": "OpenAI",
+      "name":        { "th": "โอเพ่นเอไอ",  "en": "OpenAI" },
+      "description": { "th": "ผู้สร้าง ChatGPT และ GPT-4 เครื่องมือ AI ชั้นนำของโลก", "en": "Creator of ChatGPT and GPT-4, a leading AI research company." },
+      "image":       "/assets/images/cards/openai.png",
+      "link":        "https://openai.com"
+    },
+    {
+      "api": "card-anthropic",
+      "text": "Anthropic",
+      "name":        { "th": "แอนโทรปิก", "en": "Anthropic" },
+      "description": { "th": "ผู้สร้าง Claude AI เน้นความปลอดภัยของ AI เป็นหลัก", "en": "Creator of Claude AI, focused on AI safety research." },
+      "image":       "/assets/images/cards/anthropic.png",
+      "link":        "https://anthropic.com"
+    }
+  ]
+}

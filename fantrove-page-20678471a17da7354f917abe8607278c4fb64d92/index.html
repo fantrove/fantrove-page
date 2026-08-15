@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- GTM, Cookiebot, GA4 — เหมือนเดิม -->
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-PJ397CLS');</script>
+  <script id="Cookiebot" src="https://consent.cookiebot.com/uc.js" data-cbid="16a70d79-a7a7-4b66-89da-afb49e453c67" data-blockingmode="auto" type="text/javascript"></script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!--
+    [FIX 2026-07-28 v2]
+    ไฟล์นี้เป็น CUSTOM 404 PAGE ของ Fantrove — ใช้สำหรับทุก URL ที่ไม่มี
+    หน้าจริง (รวมถึง /, /index.html, และ path อื่นๆ ที่ไม่ match กับ
+    _redirects rules ใดๆ)
+
+    วิธีการทำงาน (production):
+      Cloudflare Pages _redirects rule สุดท้าย:
+        /* /index.html 404
+      จะส่ง HTTP 404 status พร้อม content ของ index.html นี้ออกไป
+      → browser ไม่ขึ้น default 404 page เอง
+      → ระบบเราควบคุม UX ของ 404 page ทั้งหมด
+      → Google ไม่ index หน้านี้ (เพราะ noindex + 404 status)
+      → ไม่ใช่ "Page with redirect" → แก้ปัญหา GSC indexing
+
+    ห้ามใส่:
+      - lang-proxy.js (จะทำให้เกิด JS redirect ซ้ำ → Google เห็นเป็น redirect)
+      - meta refresh (จะทำให้ Google มองเป็น redirect ด้วย)
+      - canonical / hreflang (เป็น 404 ไม่ควรมี canonical)
+      - "index, follow" (ต้องเป็น noindex เพราะเป็น 404)
+  -->
+
+  <title>Page Not Found — Fantrove</title>
+  <meta name="description" content="The page you're looking for doesn't exist. Let's get you back to Fantrove.">
+  <meta name="robots" content="noindex, nofollow">
+
+  <meta name="theme-color" content="#ffffff">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+  <link rel="icon" type="image/x-icon" href="/assets/images/fantrove-verse360.ico">
+
+  <!-- 1. Tokens -->
+  <link rel="preload" href="/assets/css/tokens.css" as="style">
+  <link rel="stylesheet" href="/assets/css/tokens.css">
+
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8233915433564101" crossorigin="anonymous"></script>
+
+  <style>
+    /* 404 page styles — ใช้ tokens สีหลัก */
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:var(--fv-font-stack); background:var(--fv-surface-page); color:var(--fv-text-primary); }
+
+    .fv-app { min-height:100svh; display:flex; align-items:center; justify-content:center; text-align:center; padding:28px; }
+    .wrap { max-width:640px; width:100%; }
+
+    .badge {
+      display:inline-flex; align-items:center; justify-content:center; gap:0.35em;
+      padding:0.45em 1em; border-radius:var(--fv-radius-pill);
+      background:rgba(0,255,184,0.1); color:var(--fv-brand-teal-light);
+      font-size:13px; font-weight:var(--fv-font-extrabold); letter-spacing:0.04em; margin-bottom:18px;
+    }
+
+    /* h1 จริงสำหรับ 404 — เป็น visual heading */
+    h1 {
+      font-size:68px; margin:0 0 10px; line-height:1;
+      background:var(--fv-gradient-brand);
+      filter:brightness(0.95) contrast(1.35) saturate(1.15);
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+      letter-spacing:-0.05em;
+    }
+
+    h2 { margin:0 0 14px; font-size:24px; font-weight:var(--fv-font-extrabold); letter-spacing:-0.02em; color:#111827; }
+    p  { margin:0 auto 26px; color:var(--fv-text-muted); font-size:16px; line-height:1.65; max-width:520px; }
+
+    .actions { display:flex; gap:14px; justify-content:center; flex-wrap:wrap; }
+
+    .btn-primary, .btn-secondary {
+      display:inline-flex; align-items:center; justify-content:center; gap:0.45em;
+      -webkit-tap-highlight-color:transparent; font-family:inherit;
+      font-weight:var(--fv-font-bold); font-size:0.95em; letter-spacing:0.015em;
+      padding:1.15em 2em; border-radius:var(--fv-radius-pill);
+      text-decoration:none; line-height:1; vertical-align:middle;
+      cursor:pointer; user-select:none;
+      transition:background var(--fv-transition-normal), color var(--fv-transition-fast), border-color var(--fv-transition-normal);
+    }
+    .btn-primary  { background:rgba(255,255,255,1); color:#2CEBC2; border:1.5px solid rgba(0,255,184,0.45); }
+    .btn-primary:hover  { background:rgba(234,255,249,1); }
+    .btn-secondary { background:transparent; color:var(--fv-text-muted); border:1.5px solid rgba(203,213,225,0.8); }
+    .btn-secondary:hover { background:rgba(241,245,249,0.9); }
+
+    .note { margin-top:22px; font-size:13px; color:#9ca3af; }
+
+    @media (max-width:480px) {
+      h1{font-size:58px;} h2{font-size:21px;} p{font-size:15px;}
+      .btn-primary, .btn-secondary{font-size:0.92em;padding:1.05em 1.85em;}
+    }
+  </style>
+</head>
+
+<body>
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PJ397CLS" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+
+  <div id="fv-app" class="fv-app" data-page="404">
+    <div class="wrap">
+      <div class="badge">Fantrove</div>
+      <!-- h1 เป็น visual "404" — เหมาะสมสำหรับ error page -->
+      <h1>404</h1>
+      <h2>Oops! Lost your way?</h2>
+      <p>This page doesn't exist. Maybe it moved, or maybe the URL's off. Either way, let's get you somewhere better.</p>
+      <div class="actions">
+        <a wave href="/home" class="btn-primary">Take Me Home</a>
+        <a wave href="/data/verse/discover/?type=symbols__&page=1" class="btn-secondary">Explore Fantrove</a>
+      </div>
+      <div class="note">Something wrong? Try again later.</div>
+    </div>
+  </div>
+
+  <script src="/assets/js/lang-core.js?v=1.0.0"></script>
+  <script src="/assets/js/language.js?v=1.0.0-20250322"></script>
+  <script defer src="/assets/js/footer-template.js?v=1.0.0-20250322"></script>
+  <script defer src="/assets/js/lang-links.js?v=1.0.0-20250322"></script>
+  <script src="/fantrove-console-bridge.js?v=1.0.0-20250322"></script>
+</body>
+</html>

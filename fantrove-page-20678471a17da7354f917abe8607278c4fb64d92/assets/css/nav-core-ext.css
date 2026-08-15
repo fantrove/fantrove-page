@@ -1,0 +1,140 @@
+main { margin-top:30px; margin-bottom:80px; contain: layout style; }
+
+/* v3: เพิ่ม contain ให้ content container — จำกัด reflow scope */
+#content-loading { contain: layout style; }
+
+.button-sub {
+  margin:0; padding:11px 13px;
+  background:var(--fv-surface-page); color:var(--fv-text-secondary);
+  border:1px solid transparent; border-radius:var(--fv-radius-pill);
+  font-size:0.9em; cursor:pointer;
+  -webkit-tap-highlight-color:transparent; user-select:none;
+  touch-action:manipulation;
+  transition: background 200ms ease, border-color 200ms ease, color 200ms ease;
+}
+.button-sub:active, .button-sub.active { color:var(--fv-brand-teal-light); }
+.button-sub.active {
+  background:var(--fv-surface-teal-hover);
+  border-color:rgba(0,206,176,0.51);
+}
+
+.hi { padding:0 10px; }
+.hj {
+  border-radius:var(--fv-radius-xl);    /* 40px — เหมือนเดิม */
+  background:var(--fv-surface-page);
+  box-shadow: inset 0 0 1px 1px rgba(166, 187, 211, 0.14);
+}
+
+#sub-nav { contain: layout style; }
+
+:where(.button-content) {
+  box-sizing:border-box; width:auto!important; min-width:60px; max-width:100%;
+  padding:13px 17px!important; margin:8px 0; height:60px; min-height:60px;
+  display:inline-flex; align-items:center; justify-content:center;
+  border-radius:var(--r-btn);           /* 27px — เหมือนเดิม */
+  font-size:21px; line-height:1;
+  background:var(--fv-surface-page); color:var(--fv-brand-teal-light);
+  border:1px solid var(--c-teal-border);
+  cursor:pointer; text-align:center;
+  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+  transition: opacity 200ms ease;
+}
+:where(.button-content:active) { opacity:0.55; }
+
+:where(.card) {
+  display:flex; flex-direction:column; align-items:stretch;
+  width:160px; height:222px; 
+  border-radius:var(--r-card);          /* 30px — เหมือนเดิม */
+  overflow:hidden;
+  background:var(--fv-surface-page); border:1px solid var(--c-teal-border);
+  touch-action:manipulation;
+  
+  /* [แก้ไขจุดนี้] คลายล็อกชิ้นส่วนการ์ดเล็กน้อย เปลี่ยนจาก strict เป็น layout style */
+  /* ช่วยให้ JavaScript สามารถอ่านพิกเซล ข้อมูลความสูง และสั่งงานการคลิก/ซ่อนการ์ดได้ตามปกติ */
+  contain: layout style; 
+  transition: opacity 200ms ease;
+}
+:where(.card:active) { opacity:0.55; }
+
+.card-image  { 
+  width:100%; height:110px; 
+  object-fit:cover; display:block; 
+  image-rendering: -webkit-optimize-contrast; 
+}
+.card-content { padding:12px; display:flex; flex-direction:column; overflow:hidden; }
+
+.card-title {
+  font-size:13px; font-weight:var(--fv-font-bold);
+  color:var(--c-heading);               /* #494E59 — เหมือนเดิม */
+  margin-bottom:4px; line-height:1.5; overflow:hidden;
+  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2;
+}
+.card-description {
+  font-size:11.3px; color:var(--c-body); line-height:1.6; overflow:hidden;
+  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3;
+}
+
+#main-buttons-container, #sub-buttons-container {
+  display:flex !important; overflow-x:auto !important; white-space:nowrap;
+  scrollbar-width:none; -ms-overflow-style:none;
+  overscroll-behavior-x:contain; touch-action:pan-x; -webkit-overflow-scrolling:touch;
+  contain: layout style;
+}
+#main-buttons-container { gap:8px; padding:4px; }
+#sub-buttons-container  { gap:0; padding:6px; border-radius:25px; } /* 25px — เหมือนเดิม */
+#main-buttons-container::-webkit-scrollbar,
+#sub-buttons-container::-webkit-scrollbar  { display:none; }
+
+.group-header       { padding:10px; width:100%; }
+.group-header-text  { font-size:1.2rem; font-weight:var(--fv-font-semibold); color:#464646; }
+.group-header-description { margin:0.5rem 0 0; font-size:1rem; color:var(--c-heading); } /* #494E59 — เหมือนเดิม */
+
+/* ปรับ Grid ให้รองรับมิติที่สอดคล้องกับพฤติกรรมเดิมของ JavaScript */
+.button-content-container {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)) !important;
+  margin:0 0 40px!important; padding:1rem 5px!important;
+  background:var(--fv-surface-page); 
+  border-radius:25px;                   /* 25px — เหมือนเดิม */
+  gap:5px!important;
+  
+  /* ปรับเป็นละเว้นการกักบริเวณแบบหักดิบ ปล่อยให้สคริปต์กรองปุ่มเข้าออกทำงานได้ */
+  contain: layout style;
+}
+
+.card-content-container {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important; 
+  justify-items: center !important;
+  margin:0 0 40px!important; padding:1rem 5px!important;
+  background:var(--fv-surface-page); 
+  border-radius:25px;                   /* 25px — เหมือนเดิม */
+  gap:12px!important;
+  
+  /* [จุดสำคัญ] ปล่อยให้เป็น layout style เพื่อให้สคริปต์ Filter หรือสลับแท็บเมนู สามารถค้นหาอินเด็กซ์ของการ์ดได้ */
+  contain: layout style;
+}
+
+.hdr-fade { animation: none !important; }
+
+@media (max-width:600px) {
+  .card-content-container { 
+    grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)) !important;
+    gap:8px; 
+  }
+  .card { width: 145px; height: 210px; }
+}
+@media (max-width:450px) {
+  .container { padding-left:0.7rem; padding-right:0.7rem; border-radius:var(--fv-radius-md); }
+}
+
+::-webkit-scrollbar       { height:7px; width:7px; background:var(--fv-surface-soft); border-radius:6px; }
+::-webkit-scrollbar-thumb { background:#e0e7f2; border-radius:6px; }
+::-webkit-scrollbar-thumb:hover { background:#c8d0e7; }
+
+.img-d1 { padding:0 30px; }
+.img-d1 img { width:100%; border-radius:var(--fv-radius-md); }
+
+@media (prefers-reduced-motion:reduce) {
+  :where(.button-content), :where(.card) { transition: none; }
+}

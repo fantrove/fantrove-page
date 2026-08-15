@@ -1,0 +1,23 @@
+{
+  "mainButtons": [
+    {
+      "en_label": "Symbols",
+      "th_label": "สัญลักษณ์",
+      "isDefault": true,
+      "jsonFile": "/assets/json/content/symbols.json",
+      "url": "symbols"
+    },
+    {
+      "en_label": "Emojis",
+      "th_label": "อีโมจิ",
+      "jsonFile": "/assets/json/content/emojis-page1.json",
+      "url": "emojis"
+    },
+    {
+      "en_label": "Fancy Text",
+      "th_label": "ข้อความแฟนซี",
+      "jsonFile": "/assets/json/content/fancy.json",
+      "url": "fancy"
+    }
+  ]
+}
