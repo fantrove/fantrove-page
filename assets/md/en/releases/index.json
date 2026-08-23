@@ -1,6 +1,11 @@
 {
   "versions": [
     {
+      "version": "2.2.4",
+      "date": "2026-07-16T23:26:48.893Z",
+      "hasDetails": true
+    },
+    {
       "version": "2.2.3",
       "date": "2026-07-16T23:26:26.000Z",
       "hasDetails": true
@@ -31,5 +36,5 @@
       "hasDetails": true
     }
   ],
-  "updatedAt": "2026-07-16T23:26:48.893Z"
+  "updatedAt": "2026-08-23T07:18:47.421Z"
 }
