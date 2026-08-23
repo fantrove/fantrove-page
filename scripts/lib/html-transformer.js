@@ -119,7 +119,9 @@ function transformHtml(html, lang, translations, srcFilePath, dbJson = {}) {
     const $el = $(el);
     const href = $el.attr('href') || '';
     if (_isInternalPath(href) && !_hasLangPrefix(href) && _shouldPrefix(href)) {
-      $el.attr('href', `/${lang}${href.startsWith('/') ? href : '/' + href}`);
+      const prefixed = `/${lang}${href.startsWith('/') ? href : '/' + href}`;
+      // [FIX 2026-07-28] เติม trailing slash กันโดน Cloudflare 308 redirect เอง
+      $el.attr('href', _ensureTrailingSlash(prefixed));
     }
   });
 
@@ -178,7 +180,9 @@ function _injectFooter($, lang, translations) {
     const $el  = $footer(el);
     const href = $el.attr('href') || '';
     if (_isInternalPath(href) && !_hasLangPrefix(href) && _shouldPrefix(href)) {
-      $el.attr('href', `/${lang}${href.startsWith('/') ? href : '/' + href}`);
+      const prefixed = `/${lang}${href.startsWith('/') ? href : '/' + href}`;
+      // [FIX 2026-07-28] เติม trailing slash กันโดน Cloudflare 308 redirect เอง
+      $el.attr('href', _ensureTrailingSlash(prefixed));
     }
   });
 
@@ -344,13 +348,46 @@ function _escHtml(str) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
+/**
+ * [FIX 2026-07-28] เปลี่ยนกลับมาใช้ trailing slash เสมอ (เดิมตัดทิ้ง)
+ *
+ * เหตุผล: หน้าทุกหน้าถูก build เป็น dist/{lang}/{path}/index.html (โครงสร้าง
+ * แบบ directory) และ Cloudflare Pages "บังคับ" ให้ URL ที่ชี้ไป directory index
+ * ต้องมี trailing slash เสมอ — ถ้า request มาแบบไม่มี slash (เช่น /en/home)
+ * Cloudflare จะยิง 308 redirect ไป /en/home/ โดยอัตโนมัติ (ทำงานอยู่ใน asset
+ * server ของ Cloudflare เอง ไม่เกี่ยวกับ _redirects rule ที่เราตั้งไว้)
+ *
+ * ตัวแปลก่อนหน้านี้ตัด trailing slash ทิ้งเพื่อแก้ปัญหา "Alternate page with
+ * proper canonical tag" (canonical กับ sitemap ไม่ตรงกัน) — แต่กลายเป็นทำให้
+ * canonical URL ทุกหน้าโดน Cloudflare redirect เอง (GSC ขึ้น "Page with
+ * redirect" แทน) เพราะ URL ที่ประกาศเป็น canonical ไม่ใช่ URL จริงที่ server
+ * ตอบ 200 ตรงๆ
+ *
+ * ทางแก้ที่ยั่งยืนกว่า (โดยไม่ต้องเปลี่ยนโครงสร้าง output เป็น flat .html):
+ * ใช้ trailing slash ให้ตรงกับพฤติกรรมจริงของ Cloudflare Pages ทุกจุด —
+ * ดู scripts/generate-sitemap.js และ scripts/build.js (_generateRedirects)
+ * ที่ต้องแก้คู่กัน ห้ามแก้ไฟล์นี้ไฟล์เดียว
+ */
 function _deriveCanonicalPath(srcFilePath) {
   if (!srcFilePath) return null;
   let p = srcFilePath.replace(/\\/g, '/').replace(/^\.\//, '');
   p = p.replace(/index\.html$/, '').replace(/\.html$/, '/');
   if (!p.startsWith('/')) p = '/' + p;
-  if (p.length > 1) p = p.replace(/\/$/, '');
-  return p || '/';
+  if (!p.endsWith('/')) p += '/';
+  return p;
+}
+
+/**
+ * เติม trailing slash ให้ internal path (ก่อน query string / hash ถ้ามี)
+ * ข้าม path ที่ลงท้ายด้วยนามสกุลไฟล์ (เช่น .ico, .json) เพราะไม่ใช่ directory index
+ */
+function _ensureTrailingSlash(href) {
+  const m = /^([^?#]*)([?#].*)?$/.exec(href);
+  let pathPart = m[1];
+  const suffix = m[2] || '';
+  if (/\.[a-zA-Z0-9]+$/.test(pathPart)) return href; // เป็นไฟล์ (มีนามสกุล) ไม่ต้องเติม
+  if (!pathPart.endsWith('/')) pathPart += '/';
+  return pathPart + suffix;
 }
 
 function _isInternalPath(href) {

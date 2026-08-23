@@ -463,6 +463,31 @@ Carousels บนมือถือใช้ CSS scroll-snap แทน JavaScript
 }
 ```
 
+### 5.8.1 Search Page Sticky Layout (Google-like, v6.1+)
+
+หน้า search ใช้ sticky layout แบบ Google — มีเพียง **กรอบค้นหา + พื้นหลังแถบนำทาง** ที่ stick อยู่กับหน้าจอ ส่วน **แถบฟิลเตอร์ (type + category)** จะเลื่อนไปพร้อมกับเนื้อหาของหน้า การออกแบบนี้ทำให้หน้า feeling กระทัดรัดและ focus ไปที่การค้นหา ไม่ใช่การกรอง
+
+```html
+<!-- STICKY: เฉพาะ search box + nav bar background -->
+<div id="search-sticky">
+  <header class="search-header" role="banner">
+    <form id="searchForm">…</form>
+  </header>
+</div>
+
+<!-- NON-STICKY: filter pills อยู่นอก #search-sticky → เลื่อนตามหน้า -->
+<nav class="search-filters-panel" aria-label="Search filters">
+  <div id="typeFilter"     class="filter-pills-row"                 role="group" aria-label="Type filter"></div>
+  <div id="categoryFilter" class="filter-pills-row filter-pills-row--cat" role="group" aria-label="Category filter"></div>
+</nav>
+```
+
+กฎที่ต้องถือ:
+1. **`#search-sticky` มีเฉพาะ `header.search-header`** ที่บรรจุ `form#searchForm` เท่านั้น — ห้ามย้าย filter pills กลับเข้ามาในนี้ ไม่งั้นจะกลับไป stick อีก
+2. **ห้ามมี toggle button** สำหรับซ่อน/แสดง category bar — category pills ต้องแสดงทันทีที่มี categories ให้เลือก (CSS rule `.filter-pills-row--cat:empty { display:none }` จะ collapse row อัตโนมัติเมื่อไม่มี categories)
+3. **Filter pills ต้องไม่ stick** — ทั้ง type และ category rows ต้องอยู่ใน normal document flow และ scroll ไปพร้อมกับเนื้อหา
+4. **Inline sticky script** จัดการเฉพาะ show/hide-on-scroll ของ `#search-sticky` เท่านั้น — ไม่มี `_closeCatBar` / `_updateCatBarHeight` / `cat-open` class อีกต่อไป
+
 ### 5.9 Tap Highlight Removal
 
 Fantrove ลบ tap highlight ของ Android ออกเพื่อความสะอาด:
@@ -1100,8 +1125,11 @@ Fantrove ใช้ ARIA อย่างครอบคลุม:
 <!-- Search results (announce to screen readers) -->
 <main id="searchResults" role="main" aria-live="polite" aria-label="Search results" tabindex="0">
 
-<!-- Filter toggle -->
-<button aria-expanded="false" aria-controls="filterCatWrap">Filters</button>
+<!-- Search filter pills (always visible, non-sticky — scrolls with page) -->
+<nav class="search-filters-panel" aria-label="Search filters">
+  <div id="typeFilter"  class="filter-pills-row"                 role="group" aria-label="Type filter"></div>
+  <div id="categoryFilter" class="filter-pills-row filter-pills-row--cat" role="group" aria-label="Category filter"></div>
+</nav>
 
 <!-- FAQ -->
 <input type="checkbox" id="faq1" class="faq-toggle" hidden />

@@ -6,12 +6,33 @@
   <script id="Cookiebot" src="https://consent.cookiebot.com/uc.js" data-cbid="16a70d79-a7a7-4b66-89da-afb49e453c67" data-blockingmode="auto" type="text/javascript"></script>
 
   <meta charset="UTF-8">
-  <script src="assets/js/lang-proxy.js?v=1.0.0-20250322"></script>
-  <script src="assets/js/lang-sync.js?v=1.0.0-20250322"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!--
+    [FIX 2026-07-28 v2]
+    ไฟล์นี้เป็น CUSTOM 404 PAGE ของ Fantrove — ใช้สำหรับทุก URL ที่ไม่มี
+    หน้าจริง (รวมถึง /, /index.html, และ path อื่นๆ ที่ไม่ match กับ
+    _redirects rules ใดๆ)
+
+    วิธีการทำงาน (production):
+      Cloudflare Pages _redirects rule สุดท้าย:
+        /* /index.html 404
+      จะส่ง HTTP 404 status พร้อม content ของ index.html นี้ออกไป
+      → browser ไม่ขึ้น default 404 page เอง
+      → ระบบเราควบคุม UX ของ 404 page ทั้งหมด
+      → Google ไม่ index หน้านี้ (เพราะ noindex + 404 status)
+      → ไม่ใช่ "Page with redirect" → แก้ปัญหา GSC indexing
+
+    ห้ามใส่:
+      - lang-proxy.js (จะทำให้เกิด JS redirect ซ้ำ → Google เห็นเป็น redirect)
+      - meta refresh (จะทำให้ Google มองเป็น redirect ด้วย)
+      - canonical / hreflang (เป็น 404 ไม่ควรมี canonical)
+      - "index, follow" (ต้องเป็น noindex เพราะเป็น 404)
+  -->
+
   <title>Page Not Found — Fantrove</title>
   <meta name="description" content="The page you're looking for doesn't exist. Let's get you back to Fantrove.">
-  <meta name="robots" content="noindex">
+  <meta name="robots" content="noindex, nofollow">
 
   <meta name="theme-color" content="#ffffff">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -25,7 +46,7 @@
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8233915433564101" crossorigin="anonymous"></script>
 
   <style>
-    /* 404 page styles — เหมือนเดิม แต่ใช้ tokens สีหลัก */
+    /* 404 page styles — ใช้ tokens สีหลัก */
     * { box-sizing:border-box; }
     body { margin:0; font-family:var(--fv-font-stack); background:var(--fv-surface-page); color:var(--fv-text-primary); }
 

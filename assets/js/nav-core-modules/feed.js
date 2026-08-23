@@ -11,7 +11,16 @@
 //            - Hacker News ranking: time-decay inspiration for chunk-index penalty
 //            - Mulberry32 PRNG: Bernstein & Schindler (2020) — passes PractRand 256GB
 //
+// v2.1 — Per-user persistent feed (discovery focus):
+//          - Seed is now persisted in localStorage via FeedCache (TTL 30 min)
+//          - Different users → different seeds → different feed orders
+//          - Same user within TTL → same feed (feels "delivered", not regenerated)
+//          - After TTL → new seed → fresh feed rotation
+//          - Feed state (emitted IDs, show counts) also persisted → resume scrolling
+//            exactly where left off, even after closing the tab
+//
 // Used by: content.js (renderFeed → loadNextPage)
+// Depends: feed-cache.js (Phase 2 — must load before this in Phase 3)
 
 // @ts-check
 (function (M) {
@@ -112,8 +121,29 @@
     _rng:           null,
     _seed:          0,
 
+    // ── Emission tracking (v2.1) ──────────────────────────────────────────────
+    // WHY emittedIds: lets us rebuild unseenPool accurately on restore from
+    //   FeedCache without storing the full segment objects (which would be too
+    //   large for localStorage). We store just the seg.id values in order,
+    //   then on restore, remove those segments from the unseenPool.
+    _emittedIds:    null,  // string[] — ordered list of emitted seg.id
+
     // ── Public: reset ──────────────────────────────────────────────────────────
 
+    /**
+     * Reset feed state.
+     *
+     * v2.1: Seed is now sourced from FeedCache — persists across page loads
+     *   within the TTL window (default 30 min, configurable via CONFIG).
+     *   This means:
+     *     - Different users → different seeds → different feed orders
+     *     - Same user within TTL → same seed → same feed order
+     *     - After TTL → FeedCache generates a new seed → fresh feed
+     *
+     *   If FeedCache is unavailable (older build, module load failure),
+     *   falls back to the original Date.now() ^ Math.random() behavior —
+     *   the feed still works, just doesn't persist across sessions.
+     */
     reset() {
       this._isInitialized = false;
       this._buttonSegs    = [];
@@ -126,9 +156,24 @@
       this._catShowCounts = new Map();
       this._recentCats    = [];
       this._recentTypes   = [];
-      // WHY mix Date.now() + Math.random(): prevents same seed on rapid re-navigation
-      this._seed = (Date.now() ^ (Math.random() * 0x100000000 | 0)) >>> 0;
-      this._rng  = _mulberry32(this._seed);
+      this._emittedIds    = [];
+
+      // v2.1: clear any pending lightweight restore — reset() means start fresh,
+      //   so a stale _pendingRestore from a previous tryRestoreFromCache() call
+      //   must not leak into the new feed cycle
+      this._pendingRestore = null;
+
+      // v2.1: persistent per-user seed via FeedCache
+      // WHY: see module header — gives users a stable feed within TTL while
+      //   still being different per browser
+      const ttlMs = M.CONFIG?.ALL_BUTTON?.FEED_SEED_TTL;
+      if (M.FeedCache && typeof M.FeedCache.getOrCreateSeed === 'function') {
+        this._seed = M.FeedCache.getOrCreateSeed(ttlMs);
+      } else {
+        // Fallback: original behavior (graceful degradation)
+        this._seed = (Date.now() ^ (Math.random() * 0x100000000 | 0)) >>> 0;
+      }
+      this._rng = _mulberry32(this._seed);
     },
 
     // ── Initialization ────────────────────────────────────────────────────────
@@ -139,8 +184,36 @@
       const db = await M.DataService.loadApiDatabase();
       this._dbRef = db;
       this._buildPools(db);
-      this._unseenPool    = this._masterPool.slice();
+      this._unseenPool = this._masterPool.slice();
       this._isInitialized = true;
+
+      // ── v2.1: Apply pending lightweight restore (from FeedCache) ────────────
+      //   หลัง build pools จาก DB แล้ว ถ้ามี pendingRestore ให้ apply state
+      //   และตัด emitted IDs ออกจาก unseenPool เพื่อ resume ที่เดิม
+      if (this._pendingRestore) {
+        const pr = this._pendingRestore;
+        this._pendingRestore = null;
+
+        this._softResets    = pr.softResets || 0;
+        this._isExhausted   = pr.isExhausted || false;
+        this._slotIndex     = pr.slotIndex || 0;
+        this._catShowCounts = new Map(pr.catShowCounts || []);
+        this._recentCats    = pr.recentCats.slice();
+        this._recentTypes   = pr.recentTypes.slice();
+        this._emittedIds    = pr.emittedIds.slice();
+
+        // ตัด emitted IDs ออกจาก unseenPool
+        if (pr.emittedIds.length && this._unseenPool.length) {
+          const emitted = new Set(pr.emittedIds);
+          this._unseenPool = this._unseenPool.filter(seg => !emitted.has(seg.id));
+        }
+
+        // ถ้า unseenPool ว่างแล้ว แต่ยังไม่ exhausted → trigger softReset
+        if (!this._unseenPool.length && !this._isExhausted
+            && this._softResets < FC.MAX_SOFT_RESETS) {
+          this._softReset();
+        }
+      }
     },
 
     async _resolveCopyableIds() {
@@ -324,6 +397,9 @@
       this._recentTypes.push(seg.groupType);
       if (this._recentTypes.length > FC.TYPE_WIN + 2) this._recentTypes.shift();
 
+      // v2.1: track emitted segment IDs for cache restore
+      if (this._emittedIds) this._emittedIds.push(seg.id);
+
       this._slotIndex++;
     },
 
@@ -347,6 +423,12 @@
       // Clear diversity windows — new cycle starts without prejudice
       this._recentCats  = [];
       this._recentTypes = [];
+
+      // v2.1: Clear emittedIds — new cycle means all segments are eligible again
+      //   (with decayed novelty scores). Without this, restore would over-filter
+      //   segments that were emitted in previous cycles but should be allowed
+      //   to reappear in the new cycle.
+      this._emittedIds = [];
 
       // Replenish pool with all segments
       this._unseenPool = this._masterPool.slice();
@@ -400,8 +482,17 @@
       };
     },
 
-    /** Called on language change — headers must re-resolve with new lang */
-    invalidate() { this.reset(); },
+    /**
+     * Called on language change — headers must re-resolve with new lang.
+     *
+     * v2.1: state ใน FeedCache เป็น language-agnostic (เก็บแค่ IDs + counts
+     *   ไม่เก็บ header text) จึงไม่จำเป็นต้อง clear ทิ้ง เมื่อเปลี่ยนภาษา
+     *   แค่ reset in-memory state เพื่อ re-render จากต้นด้วยภาษาใหม่
+     *   แต่ localStorage state ยังอยู่ → ครั้งถัดไป resume ได้ที่เดิม
+     */
+    invalidate() {
+      this.reset();
+    },
 
     // ── State save/restore (for RouteCache — X-style preservation) ────────────
     //
@@ -415,7 +506,9 @@
     //     (restore จะ re-resolve ผ่าน _ensureInit ถ้ายังไม่ initialized)
 
     /**
-     * Snapshot state ปัจจุบัน — ใช้บันทึกลง RouteCache
+     * Snapshot state ปัจจุบัน — ใช้บันทึกลง RouteCache หรือ FeedCache
+     * v2.1: เพิ่ม emittedIds เพื่อให้ restore จาก FeedCache สามารถ rebuild
+     *   unseenPool ได้ถูกต้องโดยไม่ต้องเก็บ full segment objects
      * @returns {object|null}
      */
     snapshot() {
@@ -434,16 +527,50 @@
         recentCats:    this._recentCats ? this._recentCats.slice() : [],
         recentTypes:   this._recentTypes ? this._recentTypes.slice() : [],
         seed:          this._seed,
+        // v2.1: ordered list of emitted segment IDs — lets us rebuild unseenPool
+        //   accurately on restore without persisting the full segments
+        emittedIds:    this._emittedIds ? this._emittedIds.slice() : [],
       };
     },
 
     /**
-     * Restore state จาก snapshot — ใช้ตอนกลับมาหน้า feed จาก RouteCache
+     * Restore state จาก snapshot — ใช้ตอนกลับมาหน้า feed จาก RouteCache หรือ FeedCache
+     *
+     * v2.1: รองรับ lightweight snapshot จาก FeedCache ที่มีแค่ emittedIds
+     *   (ไม่มี buttonSegs/cardSegs/masterPool/unseenPool)
+     *   ถ้าเป็น lightweight snapshot → จะ rebuild pools จาก DB แล้วตัด emitted IDs ออก
+     *
      * @param {object} snap
      */
     restore(snap) {
-      if (!snap || !snap.isInitialized) {
-        // snapshot ไม่ valid → reset เพื่อเริ่มใหม่
+      if (!snap) {
+        this.reset();
+        return;
+      }
+
+      // ── v2.1: Lightweight restore path (from FeedCache) ────────────────────
+      //   snap มีแค่ emittedIds + state (no segment arrays) → เป็น cache hit
+      //   เราต้อง rebuild pools จาก DB ก่อน แล้วค่อยตัด emitted IDs ออก
+      const isLightweight = !snap.isInitialized && !Array.isArray(snap.masterPool)
+        && Array.isArray(snap.emittedIds);
+
+      if (isLightweight) {
+        this.reset(); // ตั้งค่า seed + state เริ่มต้น
+        // บันทึก state ที่จะ restore ทับหลัง _ensureInit
+        this._pendingRestore = {
+          softResets:    snap.softResets || 0,
+          isExhausted:   !!snap.isExhausted,
+          slotIndex:     snap.slotIndex || 0,
+          catShowCounts: Array.isArray(snap.catShowCounts) ? snap.catShowCounts : [],
+          recentCats:    Array.isArray(snap.recentCats) ? snap.recentCats.slice() : [],
+          recentTypes:   Array.isArray(snap.recentTypes) ? snap.recentTypes.slice() : [],
+          emittedIds:    snap.emittedIds.slice(),
+        };
+        return;
+      }
+
+      // ── Full restore path (from RouteCache) ────────────────────────────────
+      if (!snap.isInitialized) {
         this.reset();
         return;
       }
@@ -461,6 +588,7 @@
       this._catShowCounts = new Map(Array.isArray(snap.catShowCounts) ? snap.catShowCounts : []);
       this._recentCats    = Array.isArray(snap.recentCats) ? snap.recentCats.slice() : [];
       this._recentTypes   = Array.isArray(snap.recentTypes) ? snap.recentTypes.slice() : [];
+      this._emittedIds    = Array.isArray(snap.emittedIds) ? snap.emittedIds.slice() : [];
 
       // Recreate _rng from saved seed (function ไม่ serialize ได้)
       this._seed = snap.seed || ((Date.now() ^ (Math.random() * 0x100000000 | 0)) >>> 0);
@@ -479,6 +607,74 @@
      */
     canResume() {
       return this._isInitialized && this._masterPool.length > 0;
+    },
+
+    // ── v2.1: FeedCache integration ────────────────────────────────────────────
+
+    /**
+     * ลอง restore state จาก FeedCache (localStorage).
+     * ใช้เป็น cache-first path ใน content.js renderFeed ก่อนเรียก reset
+     *
+     * @param {number} [ttlMs] TTL — default ใช้ CONFIG.ALL_BUTTON.FEED_SEED_TTL
+     * @returns {boolean} true ถ้า restore สำเร็จ (state ถูก queue ไว้ใน _pendingRestore
+     *                   และจะถูก apply ใน _ensureInit ครั้งถัดไป)
+     */
+    tryRestoreFromCache(ttlMs) {
+      if (!M.FeedCache || typeof M.FeedCache.loadFeedState !== 'function') return false;
+
+      const ttl = (typeof ttlMs === 'number' && ttlMs > 0)
+        ? ttlMs
+        : (M.CONFIG?.ALL_BUTTON?.FEED_SEED_TTL);
+
+      const cached = M.FeedCache.loadFeedState(ttl);
+      if (!cached) return false;
+
+      // ตั้ง seed ให้ตรงกับ cache ก่อน (สำคัญ — seed ต้องตรงจึงจะ reproduce ลำดับเดิมได้)
+      this._seed = (cached.seed || 0) >>> 0;
+      this._rng  = _mulberry32(this._seed);
+
+      // queue restore — จะ apply หลัง _ensureInit สร้าง pools เสร็จ
+      this._pendingRestore = {
+        softResets:    cached.softResets || 0,
+        isExhausted:   !!cached.isExhausted,
+        slotIndex:     cached.slotIndex || 0,
+        catShowCounts: Array.isArray(cached.catShowCounts) ? cached.catShowCounts : [],
+        recentCats:    Array.isArray(cached.recentCats) ? cached.recentCats.slice() : [],
+        recentTypes:   Array.isArray(cached.recentTypes) ? cached.recentTypes.slice() : [],
+        emittedIds:    Array.isArray(cached.emittedIds) ? cached.emittedIds.slice() : [],
+      };
+
+      // reset flag ให้ _ensureInit ทำงาน
+      this._isInitialized = false;
+      this._buttonSegs    = [];
+      this._cardSegs      = [];
+      this._masterPool    = [];
+      this._unseenPool    = [];
+
+      return true;
+    },
+
+    /**
+     * บันทึก state ปัจจุบันลง FeedCache (localStorage) — เรียกหลัง loadNextPage
+     *   เพื่อให้ครั้งถัดไป resume ได้จากจุดเดิม
+     */
+    saveToCache() {
+      if (!M.FeedCache || typeof M.FeedCache.saveFeedState !== 'function') return;
+      if (!this._isInitialized) return;
+      try {
+        M.FeedCache.saveFeedState({
+          seed:          this._seed,
+          softResets:    this._softResets,
+          isExhausted:   this._isExhausted,
+          slotIndex:     this._slotIndex,
+          catShowCounts: this._catShowCounts ? Array.from(this._catShowCounts.entries()) : [],
+          recentCats:    this._recentCats ? this._recentCats.slice() : [],
+          recentTypes:   this._recentTypes ? this._recentTypes.slice() : [],
+          emittedIds:    this._emittedIds ? this._emittedIds.slice() : [],
+        });
+      } catch (_) {
+        // swallow — saving to cache is best-effort, never block feed rendering
+      }
     },
   };
 

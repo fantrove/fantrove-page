@@ -6,6 +6,16 @@
 #          (including /sitemap.xml, /robots.txt, /assets/*) and serves the
 #          404 page's HTML for everything — including to search engine bots.
 # Used by: Cloudflare Pages build system (only when build output = repo root)
+#
+# [FIX 2026-07-28 v2]
+#   - / และ /index.html ไม่ได้เป็น home page อีกต่อไป — มันคือ custom 404 page
+#     ที่แสดงผลเมื่อ path ไม่ match กับ rule อื่น (catch-all 404)
+#   - landing page ของเราคือ /home/ เท่านั้น — user ที่เข้า / จะเจอ 404 page
+#     พร้อม link ไป /home/ (UX ปกติของหน้า 404)
+#   - ทุก path ที่ไม่มีจริง จะตอบ HTTP 404 + ส่ง /index.html (custom 404 HTML)
+#     ของเรา → browser ไม่ขึ้น default 404 page เอง
+#   - Google จะไม่ index / (เพราะ 404 status) แต่ไม่ใช่ "Page with redirect"
+#     อีกต่อไป → แก้ปัญหา GSC indexing แบบถาวร
 
 # ── Static files (passthrough) ─────────────────────────────────────────────
 /assets/* /assets/:splat 200
@@ -14,10 +24,25 @@
 /favicon.ico /assets/images/fantrove-verse360.ico 200
 /sw.js /sw.js 200
 
+# ── Home page (served at /home/ path) ──────────────────────────────────────
+# /home/ เป็น landing page จริงของเรา — ตอบ 200 OK
+/home/* /home/:splat 200
+
+# ── Language root → home (REWRITE, not redirect) ───────────────────────────
+# /en, /en/, /th, /th/ ตอบ 200 + ส่ง content ของ home page ของภาษานั้น
+# URL คงเดิมใน address bar (เป็น valid path ที่ใช้งานได้)
+/en  /home/index.html 200
+/en/ /home/index.html 200
+/th  /home/index.html 200
+/th/ /home/index.html 200
+
 # ── Explicitly route language pages ────────────────────────────────────────
+# ลบ prefix ภาษาออก แล้วส่งต่อไปยัง static file ที่อยู่จริง
 /en/* /:splat 200
 /th/* /:splat 200
 
-# Fallback: any unknown path → serve index.html with 200 (rewrite, not redirect)
-# Must be LAST — see Purpose note above.
-/* /index.html 200
+# ── Catch-all 404 ─────────────────────────────────────────────────────────
+# ทุก path อื่น (รวมถึง /, /index.html, และ path ที่ไม่มีจริง) → ตอบ 404
+# พร้อมส่ง custom 404 HTML ของเรา (/index.html)
+# browser จะแสดง 404 page ของเรา ไม่ใช่ default 404 ของ browser เอง
+/* /index.html 404

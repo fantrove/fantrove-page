@@ -248,6 +248,12 @@
      *   • ถ้าไม่มี cache → render ใหม่จากศูนย์ (เหมือน v1)
      *   • router.js จะเรียก saveActiveRoute() ก่อน navigate ออก → state ถูกเก็บใน RouteCache
      *
+     * v2.1 — per-user persistent feed (discovery focus):
+     *   • ก่อนเริ่ม reset → ลอง restore จาก FeedCache (localStorage) ก่อน
+     *   • ถ้า hit → ใช้ seed + state เดิม → feed "จัดส่ง" ครั้งก่อนยังอยู่, resume ที่เดิม
+     *   • ถ้า miss → reset → FeedCache.getOrCreateSeed() ให้ seed (อาจเป็น seed เดิมถ้ายังใน TTL)
+     *   • หลัง loadNextPage แต่ละครั้ง → บันทึก state ลง FeedCache เพื่อใช้ครั้งถัดไป
+     *
      * ทำไมไม่ใช้ URE:
      *   URE mount ครั้งเดียว ถ้าจะ append ต้องรู้ internal API
      *   feed ใช้ IntersectionObserver + DOM append แทน
@@ -302,10 +308,24 @@
         return;
       }
 
-      // ── v1 path: ไม่มี cache → render ใหม่จากศูนย์ ─────────────────────────
-      // WHY reset ก่อน clearContent: FeedService.reset() ต้องเรียกก่อน
-      //   เพื่อให้ _ensureInit() ใน loadNextPage() สร้าง segments ใหม่ได้ถูกต้อง
-      M.FeedService.reset();
+      // ── v1 path: ไม่มี RouteCache → render ใหม่ ──────────────────────────
+      // v2.1: ลอง restore จาก FeedCache ก่อนที่จะ reset
+      //   - cache hit → ใช้ seed + state เดิม → "deliver feed ครั้งก่อน", resume ที่เดิม
+      //   - cache miss → reset → FeedCache.getOrCreateSeed() อาจให้ seed เดิม (TTL) หรือใหม่
+      //
+      // WHY tryRestoreFromCache ก่อน reset:
+      //   tryRestoreFromCache อ่าน seed จาก localStorage และ queue state ไว้
+      //   ถ้าเรียก reset() หลังจากนั้น _pendingRestore จะหาย → feed เริ่มใหม่
+      //   ต้องเรียก reset() เฉพาะตอน cache miss เท่านั้น
+      const ttlMs = M.CONFIG?.ALL_BUTTON?.FEED_SEED_TTL;
+      const feedCacheHit = M.FeedService?.tryRestoreFromCache?.(ttlMs) === true;
+
+      if (!feedCacheHit) {
+        // WHY reset ก่อน clearContent: FeedService.reset() ต้องเรียกก่อน
+        //   เพื่อให้ _ensureInit() ใน loadNextPage() สร้าง segments ใหม่ได้ถูกต้อง
+        M.FeedService.reset();
+      }
+
       await this.clearContent();
       const sess = _sess;
 
@@ -326,6 +346,10 @@
         if (firstGroups.length) {
           await this._appendFeedGroups(ctr, firstGroups, lang, null);
         }
+
+        // v2.1: บันทึก state ลง FeedCache หลัง first page render เสร็จ
+        //   → ครั้งถัดไป (ภายใน TTL) resume ได้จากจุดนี้
+        try { M.FeedService?.saveToCache?.(); } catch (_) {}
 
         // v3: ซ่อน loading หลัง content แสดงผลแล้วเท่านั้น
         // WHY: ถ้าซ่อนก่อน render → ผู้ใช้เห็นหน้าว่าง 180ms+ (blank flash)
@@ -582,6 +606,10 @@
           if (groups.length) {
             await this._appendFeedGroups(ctr, groups, lang, sentinel);
           }
+
+          // v2.1: บันทึก state ลง FeedCache หลังแต่ละ page load
+          //   → resume ได้จากจุดล่าสุดแม้ปิดแท็บแล้วกลับมา
+          try { M.FeedService?.saveToCache?.(); } catch (_) {}
 
           if (!hasMore) {
             // ครบ MAX_ROUNDS แล้ว — หยุด observe, ลบ sentinel
@@ -904,6 +932,10 @@
         // hasMore: ถ้า FeedService ยังไม่ exhausted → ยังโหลดได้
         partial.hasMore = !!(M.FeedService?._isExhausted === false
                              && M.FeedService?._unseenPool?.length > 0);
+        // v2.1: บันทึก state ลง FeedCache ด้วย — สำหรับ cross-session resume
+        //   RouteCache ใช้ได้แค่ใน session เดียวกัน (TTL 5 นาที)
+        //   FeedCache เก็บใน localStorage → ใช้ข้าม session ได้ (TTL 30 นาที)
+        try { M.FeedService?.saveToCache?.(); } catch (_) {}
       } else if (_activeRouteKind === 'lazy') {
         partial.paginatorState = M.SourcePaginator?.snapshot?.() || null;
         partial.hasMore = !!(partial.paginatorState?.hasMore);

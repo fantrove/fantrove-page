@@ -11,38 +11,63 @@ const path = require('path');
 /**
  * Recursively find all .html files under `dir`, excluding specified folders.
  *
- * @param {string}   dir      — root directory to search
- * @param {string[]} exclude  — directory names / path prefixes to skip
- * @param {string[]} [files]  — accumulator (internal)
+ * [FIX 2026-07-28 v3] แก้ bug ใน exclude check ให้ถูกต้องแบบถาวร:
+ *
+ *   ปัญหาเดิม (ครั้งที่ 1): exclude patterns เทียบกับ absolute path → ไม่ match
+ *   ปัญหาที่แก้ (ครั้งที่ 2): เทียบ entry name (เช่น 'index.html') → ลบทุก
+ *     index.html ในทุกระดับ ไม่ใช่แค่ root
+ *
+ *   วิธีแก้ที่ถูกต้อง (ครั้งที่ 3): track original root directory แยกจาก
+ *   current directory ใน recursion แล้วเทียบ exclude patterns กับ relative
+ *   path จาก original root เท่านั้น → 'index.html' จะ match เฉพาะไฟล์
+ *   index.html ที่ root ไม่ใช่ /home/index.html หรือ /search/index.html
+ *
+ * @param {string}   dir       — current directory to search (recursion)
+ * @param {string[]} exclude   — path patterns relative to original root to skip
+ * @param {string[]} [files]   — accumulator (internal)
+ * @param {string}   [rootDir] — original root directory (internal, for relative path)
  * @returns {string[]} absolute or relative file paths
  */
-function findHtmlFiles(dir, exclude = [], files = []) {
+function findHtmlFiles(dir, exclude = [], files = [], rootDir = null) {
+  // Track original root on first call (when rootDir is null)
+  if (rootDir === null) rootDir = dir;
+
   let entries;
   try {
     entries = fs.readdirSync(dir);
   } catch (e) {
     return files;
   }
-  
+
   for (const entry of entries) {
     const fullPath = path.join(dir, entry);
-    const rel = fullPath.replace(/\\/g, '/').replace(/^\.\//, '');
-    
-    // Skip excluded paths
-    if (exclude.some(ex => rel === ex || rel.startsWith(ex + '/'))) continue;
+    // relative path from the ORIGINAL root (not current dir)
+    const relFromRoot = path.relative(rootDir, fullPath).replace(/\\/g, '/');
+
+    // Skip excluded paths — เทียบ relFromRoot กับแต่ละ exclude pattern
+    const isExcluded = exclude.some(ex => {
+      if (!ex) return false;
+      // exact match on relative path from root
+      if (relFromRoot === ex) return true;
+      // path prefix match (e.g. ex='scripts', rel='scripts/hooks/file.html')
+      if (relFromRoot.startsWith(ex + '/')) return true;
+      return false;
+    });
+    if (isExcluded) continue;
     // Skip hidden directories
     if (entry.startsWith('.')) continue;
-    
+
     let stat;
     try { stat = fs.statSync(fullPath); } catch { continue; }
-    
+
     if (stat.isDirectory()) {
-      findHtmlFiles(fullPath, exclude, files);
+      // Pass rootDir down through recursion
+      findHtmlFiles(fullPath, exclude, files, rootDir);
     } else if (entry.endsWith('.html')) {
       files.push(fullPath.replace(/\\/g, '/'));
     }
   }
-  
+
   return files;
 }
 

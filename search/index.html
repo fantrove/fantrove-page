@@ -1,4 +1,21 @@
 <!DOCTYPE html>
+<!--
+  search-v3.html — Example page using the new unified search system (v3.0).
+
+  This is a reference implementation showing how to migrate from the legacy
+  2-script setup (search-engine.js + search-ui.js) to the new 1-script setup
+  (search-system/search.js).
+
+  DIFFERENCE FROM search/index.html (legacy):
+    • Removed: <script defer src="/assets/js/render-engine.js"> (dead reference)
+    • Removed: <script defer src="/assets/js/search-engine.js">
+    • Removed: <script defer src="/assets/js/search-ui.js">
+    • Added:   <script defer src="/assets/js/search-system/search.js">
+    • URE script order preserved (must load before search-system/search.js)
+
+  The rest of the HTML (DOM structure, CSS, sticky header script) is
+  identical to the legacy search/index.html — no other changes needed.
+-->
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -17,7 +34,7 @@
   <link rel="preload" href="/assets/css/tokens.css" as="style">
   <link rel="stylesheet" href="/assets/css/tokens.css">
 
-  <!-- 2. CSS -->
+  <!-- 2. CSS (legacy CSS kept — search-system.css is auto-injected by search.js) -->
   <link rel="preload" href="/assets/css/search.css?v=1.0.0-20250322" as="style" onload="this.rel='stylesheet'" />
   <noscript><link rel="stylesheet" href="/assets/css/search.css?v=1.0.0-20250322" /></noscript>
   <link rel="preload" href="/assets/css/bg.css?v=1.0.0-20250322" as="style" onload="this.rel='stylesheet'" />
@@ -25,10 +42,6 @@
   <link rel="stylesheet" href="/assets/css/search-compact-overrides.css?v=1.0.0-20250322" />
   <link rel="stylesheet" href="/assets/css/back-to-top.css?v=1.0.0-20250322">
 
-  <!--
-    PERF: Preload the 5 search-module phases so the browser starts fetching them
-    before search-ui.js even runs. With HTTP/2 these all download in parallel.
-  -->
   <link rel="modulepreload" href="/assets/js/con-data-service/con-data-registry.js?v=1.0.0-20250322" />
   <link rel="modulepreload" href="/assets/js/con-data-service/con-data-service.js?v=1.0.0-20250322" />
 </head>
@@ -40,6 +53,17 @@
 
   <div id="fv-app" class="fv-app" data-page="search">
 
+    <!--
+      STICKY HEADER (Google-like)
+      ──────────────────────────────────────────────────────────────
+      Only the search box + nav bar background sticks to the screen.
+      Filter pills (type + category) live OUTSIDE #search-sticky so
+      they scroll with the page — matching Google's search UX where
+      the filter row scrolls away under the sticky search bar.
+
+      Category filter is always visible when categories exist; the
+      old show/hide toggle arrow has been removed entirely.
+    -->
     <div id="search-sticky">
       <header class="search-header" role="banner">
         <form id="searchForm" autocomplete="off" role="search" aria-label="Fantrove Search">
@@ -57,28 +81,21 @@
               autocomplete="off" spellcheck="false" />
           </div>
         </form>
-
-        <nav class="search-filters-panel" aria-label="Search filters">
-          <div class="filter-row-wrapper">
-            <div id="typeFilter" class="filter-pills-row" role="group" aria-label="Type filter"></div>
-            <div class="filter-row-end">
-              <button class="filter-cat-toggle" id="filterCatToggle" type="button"
-                      aria-label="Show/hide categories" aria-expanded="false" aria-controls="filterCatWrap">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M6 9l6 6 6-6"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-        </nav>
       </header>
-
-      <div class="filter-cat-wrap" id="filterCatWrap" aria-hidden="true">
-        <div id="categoryFilter" class="filter-pills-row filter-pills-row--cat" role="group" aria-label="Category filter"></div>
-      </div>
     </div>
 
-    <div id="cat-spacer"></div>
+    <!--
+      FILTER PILLS (non-sticky — scrolls with the page)
+      ──────────────────────────────────────────────────────────────
+      Sits directly under the sticky header. Both rows are horizontally
+      scrollable on narrow viewports. The category row auto-collapses
+      (display:none) when empty via the `.filter-pills-row--cat:empty`
+      CSS rule in search-compact-overrides.css.
+    -->
+    <nav class="search-filters-panel" aria-label="Search filters">
+      <div id="typeFilter" class="filter-pills-row" role="group" aria-label="Type filter"></div>
+      <div id="categoryFilter" class="filter-pills-row filter-pills-row--cat" role="group" aria-label="Category filter"></div>
+    </nav>
 
     <div class="search-main-layout">
       <main id="searchResults" role="main" aria-live="polite" aria-label="Search results" tabindex="0"></main>
@@ -87,21 +104,18 @@
   </div><!-- /#fv-app -->
 
   <!--
-    PERF CHANGE: con-data-service modules are type="module" → deferred by spec.
-    render-engine, search-engine, ure, search-ui: were blocking the HTML parser.
-    Adding defer means:
-      • HTML parses fully → user sees input field immediately, can start typing
-      • Scripts execute in document order after parse (order is preserved with defer)
-      • search-ui.js still finds window.SearchEngine + window.URE ready
-        because they execute before it (earlier in document order)
+    v3.0 SCRIPT LOADING — only 1 search script instead of 2.
+
+    con-data-service modules are type="module" → deferred by spec.
+    URE must execute before search-system/search.js (same defer order = document order).
+    search-system/search.js auto-loads its 13 modules + injects search-system.css.
   -->
   <script type="module" src="/assets/js/con-data-service/con-data-registry.js?v=1.0.0-20250322"></script>
   <script type="module" src="/assets/js/con-data-service/con-data-service.js?v=1.0.0-20250322"></script>
-  <script defer src="/assets/js/render-engine.js?v=1.0.0-20250322"></script>
-  <script defer src="/assets/js/search-engine.js?v=1.0.0-20250322"></script>
-  <!-- URE must execute before search-ui.js (same defer order = document order) -->
+  <!-- URE must execute before search-system/search.js (same defer order = document order) -->
   <script defer src="/assets/js/ure/ure.js?v=1.0.0-20250322"></script>
-  <script defer src="/assets/js/search-ui.js?v=1.0.0-20250322"></script>
+  <!-- v3.0: Single unified entry point (replaces search-engine.js + search-ui.js) -->
+  <script defer src="/assets/js/search-system/search.js?v=1.0.0-20250322"></script>
   <script defer src="/assets/js/copyNotification.js?v=1.0.0-20250322"></script>
   <script defer src="/assets/js/modern-navigation.js?v=1.0.0-20250322"></script>
   <script defer src="/assets/js/back-to-top.js?v=1.0.0-20250322"></script>
@@ -111,38 +125,62 @@
   <script src="/fantrove-console-bridge.js?v=1.0.0-20250322"></script>
   <script defer src="/assets/js/footer-template.js?v=1.0.0-20250322"></script>
 
-  <!-- Sticky header behavior — inline, runs immediately, no deps -->
+  <!--
+    Sticky header behavior — inline, runs immediately, no deps
+    ──────────────────────────────────────────────────────────────
+    v7 — Filter pills are now outside #search-sticky (Google-like).
+    This script only manages the show/hide-on-scroll behavior of the
+    sticky search bar itself. The old category-toggle logic
+    (filterCatToggle / _closeCatBar / _updateCatBarHeight / cat-spacer)
+    has been removed — category pills are always visible in normal flow.
+  -->
   <script>
   (function(){
     'use strict';
-    var sticky=document.getElementById('search-sticky');
-    var btn=document.getElementById('filterCatToggle');
-    var wrap=document.getElementById('filterCatWrap');
-    var spacer=document.getElementById('cat-spacer');
-    var OVERLAP=0,_visible=true,_touching=false,_lastY=0,_catOpen=false,_raf=null,_touchStartY=0;
-    function _hide(){sticky.style.transform='translateZ(0) translateY(-100%)';sticky.style.pointerEvents='none';_visible=false;}
-    function _show(){sticky.style.transform='translateZ(0) translateY(0%)';sticky.style.pointerEvents='';_visible=true;}
-    window._showStickyHeader=function(){if(!_visible&&sticky)_show();};
-    if(sticky){sticky.style.transition='transform 0.22s cubic-bezier(0.33,1,0.68,1)';_lastY=window.scrollY;}
-    document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'&&sticky){requestAnimationFrame(function(){_lastY=window.scrollY;_touchStartY=window.scrollY;});}},{passive:true});
-    window.addEventListener('touchstart',function(){_touching=true;_lastY=window.scrollY;_touchStartY=window.scrollY;},{passive:true});
-    window.addEventListener('touchend',function(){_touching=false;},{passive:true});
-    window.addEventListener('scroll',function(){if(_raf)return;_raf=requestAnimationFrame(function(){_raf=null;var y=window.scrollY,delta=y-_lastY;_lastY=y;if(delta===0)return;if(y<=40){if(!_visible)_show();return;}if(_touching){if(delta>5&&_visible&&(y-_touchStartY)>30)_hide();else if(delta<-15&&!_visible&&(_touchStartY-y)>30)_show();}});},{passive:true});
-    if(btn&&wrap){
-      btn.addEventListener('click',function(){
-        if(!_visible)_show();_catOpen=!_catOpen;
-        wrap.style.willChange='transform, opacity';
-        wrap.classList.toggle('open',_catOpen);btn.classList.toggle('active',_catOpen);
-        if(sticky)sticky.classList.toggle('cat-open',_catOpen);
-        btn.setAttribute('aria-expanded',_catOpen?'true':'false');
-        wrap.setAttribute('aria-hidden',_catOpen?'false':'true');
-        var h=_catOpen?Math.max(0,wrap.offsetHeight-OVERLAP):0;
-        if(spacer)spacer.style.height=h+'px';
-        wrap.addEventListener('transitionend',function onEnd(e){if(e.target!==wrap)return;wrap.removeEventListener('transitionend',onEnd);wrap.style.willChange='';},{once:true,passive:true});
-      },{passive:true});
+    var sticky = document.getElementById('search-sticky');
+    if (!sticky) return;
+    var _visible = true, _touching = false, _lastY = 0, _raf = null, _touchStartY = 0;
+
+    function _hide() {
+      sticky.style.transform = 'translateZ(0) translateY(-100%)';
+      sticky.style.pointerEvents = 'none';
+      _visible = false;
     }
-    window._updateCatBarHeight=function(){if(!_catOpen||!wrap||!spacer)return;spacer.style.height=Math.max(0,wrap.offsetHeight-OVERLAP)+'px';};
-    window._closeCatBar=function(){_catOpen=false;if(spacer)spacer.style.height='0px';if(wrap){wrap.style.willChange='';}if(sticky)sticky.classList.remove('cat-open');if(btn){btn.classList.remove('active');btn.setAttribute('aria-expanded','false');}};
+    function _show() {
+      sticky.style.transform = 'translateZ(0) translateY(0%)';
+      sticky.style.pointerEvents = '';
+      _visible = true;
+    }
+    window._showStickyHeader = function() { if (!_visible) _show(); };
+
+    sticky.style.transition = 'transform 0.22s cubic-bezier(0.33,1,0.68,1)';
+    _lastY = window.scrollY;
+
+    document.addEventListener('visibilitychange', function() {
+      if (document.visibilityState === 'visible') {
+        requestAnimationFrame(function() { _lastY = window.scrollY; _touchStartY = window.scrollY; });
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchstart', function() {
+      _touching = true; _lastY = window.scrollY; _touchStartY = window.scrollY;
+    }, { passive: true });
+    window.addEventListener('touchend',  function() { _touching = false; }, { passive: true });
+
+    window.addEventListener('scroll', function() {
+      if (_raf) return;
+      _raf = requestAnimationFrame(function() {
+        _raf = null;
+        var y = window.scrollY, delta = y - _lastY;
+        _lastY = y;
+        if (delta === 0) return;
+        if (y <= 40) { if (!_visible) _show(); return; }
+        if (_touching) {
+          if (delta > 5 && _visible && (y - _touchStartY) > 30) _hide();
+          else if (delta < -15 && !_visible && (_touchStartY - y) > 30) _show();
+        }
+      });
+    }, { passive: true });
   })();
   </script>
 </body>

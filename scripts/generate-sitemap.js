@@ -4,10 +4,13 @@
 // Path:    scripts/generate-sitemap.js
 // Purpose: Generate sitemap.xml with hreflang alternates for every discovered
 //          HTML file. URL path format MUST match _deriveCanonicalPath() in
-//          scripts/lib/html-transformer.js (no trailing slash) — otherwise
-//          sitemap <loc> entries contradict each page's own canonical tag,
-//          which Google Search Console flags as
-//          "Alternate page with proper canonical tag" (non-indexed).
+//          scripts/lib/html-transformer.js (WITH trailing slash) — otherwise
+//          sitemap <loc> entries point to a URL that Cloudflare Pages 308-
+//          redirects (directory/index.html requires trailing slash), which
+//          Google Search Console flags as "Page with redirect" (non-indexed).
+//          [FIX 2026-07-28] เดิม path นี้ตัด trailing slash ทิ้ง (แก้ปัญหาคนละ
+//          เคสตอนนั้น) แต่กลายเป็นชี้ไป URL ที่ Cloudflare redirect เอง — ดู
+//          WHY-comment เต็มใน html-transformer.js._deriveCanonicalPath()
 // Used by: npm run generate-sitemap ; npm run postbuild (after `npm run build`)
 
 /**
@@ -30,8 +33,9 @@ const { findHtmlFiles, loadDbJson } = require('./lib/file-utils');
 const ROOT = path.resolve(__dirname, '..');
 
 // Path that root index.html (/) maps to. Must match the home page's own
-// canonical path exactly — see _deriveCanonicalPath() in html-transformer.js.
-const ROOT_PAGE_PATH = '/home';
+// canonical path exactly (WITH trailing slash) — see _deriveCanonicalPath()
+// in html-transformer.js.
+const ROOT_PAGE_PATH = '/home/';
 
 const CONFIG = {
   srcDir: ROOT,
@@ -52,6 +56,12 @@ function buildUrlEntries(htmlFiles, langs) {
   const entries = [];
   const today = new Date().toISOString().slice(0, 10);
 
+  // [FIX 2026-07-28 v3] ไม่เพิ่ม root URL '/' เข้า sitemap อีกต่อไป
+  // เหตุผล: / ตอบ HTTP 404 ใน _redirects (catch-all 404) — Google ไม่ควร
+  // crawl และไม่ควร index URL นี้. การใส่ URL 404 ใน sitemap จะทำให้
+  // GSC ขึ้น "Error" แทน. landing page จริงคือ /{lang}/home/ ที่มีอยู่แล้ว
+  // ใน entries ด้านล่าง
+
   for (const file of htmlFiles) {
     // compute relative path from root
     let rel = path.relative(CONFIG.srcDir, file).replace(/\\/g, '/');
@@ -66,24 +76,26 @@ function buildUrlEntries(htmlFiles, langs) {
     }
 
     if (!rel.startsWith('/')) rel = '/' + rel;
-    // ต้อง match กับ _deriveCanonicalPath() ใน html-transformer.js เป๊ะ
-    // (ตัด trailing slash ทิ้ง) ไม่งั้น sitemap ชี้ไปคนละ URL กับ canonical tag จริง
-    rel = rel === '/' ? ROOT_PAGE_PATH : rel.replace(/\/$/, '');
-    const pathNoSlash = rel || ROOT_PAGE_PATH;
+    // [FIX 2026-07-28] เก็บ trailing slash ไว้ (ห้ามตัดทิ้ง) ให้ match กับ
+    // _deriveCanonicalPath() ใน html-transformer.js เป๊ะ — ไม่งั้น sitemap
+    // ชี้ไป URL ที่ Cloudflare Pages เองจะ 308 redirect (เพราะ output เป็น
+    // directory/index.html ซึ่งบังคับต้องมี / ปิดท้ายเสมอ)
+    rel = rel === '/' ? ROOT_PAGE_PATH : rel;
+    const pagePath = rel || ROOT_PAGE_PATH;
 
     const alternates = langs.map(l => {
       // ensure double slash not created
       return {
         lang: l,
-        href: `${CONFIG.baseUrl}/${l}${pathNoSlash.startsWith('/') ? pathNoSlash : '/' + pathNoSlash}`
+        href: `${CONFIG.baseUrl}/${l}${pagePath.startsWith('/') ? pagePath : '/' + pagePath}`
       };
     });
 
     entries.push({
-      loc: `${CONFIG.baseUrl}/${langs[0]}${pathNoSlash}`, // default loc points to first lang
+      loc: `${CONFIG.baseUrl}/${langs[0]}${pagePath}`, // default loc points to first lang
       lastmod: today,
       changefreq: 'weekly',
-      priority: pathNoSlash === ROOT_PAGE_PATH ? '1.0' : '0.6',
+      priority: pagePath === ROOT_PAGE_PATH ? '1.0' : '0.6',
       alternates
     });
   }
@@ -134,7 +146,11 @@ function main() {
     process.exit(1);
   }
 
-  const htmlFiles = findHtmlFiles(CONFIG.srcDir, ['dist', 'node_modules', '.git', 'scripts', '.cloudflare']);
+  // [FIX 2026-07-28] sync exclude list กับ build.js เพื่อไม่ให้ google verification
+  // file รั่วเข้า sitemap (มันคือ google site verification file ไม่ใช่ content page)
+  // [FIX 2026-07-28 v3] เพิ่ม 'index.html' เข้า exclude list เพราะมันคือ custom 404
+  // page ที่ใช้สำหรับ catch-all 404 — ไม่ควรอยู่ใน sitemap (เป็น 404 ไม่ใช่ content page)
+  const htmlFiles = findHtmlFiles(CONFIG.srcDir, ['dist', 'node_modules', '.git', 'scripts', '.cloudflare', 'google6b646fa60e0f9f2f.html', 'index.html']);
   console.log(`[sitemap] Found ${htmlFiles.length} HTML files`);
 
   const entries = buildUrlEntries(htmlFiles, langs);

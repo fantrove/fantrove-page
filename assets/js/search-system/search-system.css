@@ -1,0 +1,288 @@
+/* ════════════════════════════════════════════════════════════════════════
+ *  search-system.css
+ *  Supplemental styles for the unified search system (search-system/).
+ *
+ *  Loaded by search-system/search.js when the entry point boots.
+ *  These styles are ADDITIVE to the legacy /assets/css/search.css and
+ *  /assets/css/search-compact-overrides.css — they do not replace them.
+ *
+ *  Scope:
+ *    • Suggestion source badges (type / category indicators)
+ *    • Discovery section (v4.0 — related content after primary results)
+ *    • Compact empty-state styling (v4.0 — friendlier, smaller message)
+ *
+ *  Why a separate file:
+ *    The legacy search CSS is shared across built HTML pages and is
+ *    outside the scope of this refactor. Keeping new styles here keeps
+ *    the search-system/ folder self-contained and makes the diff
+ *    reviewable in isolation.
+ *
+ *  Design language:
+ *    Discovery section uses the same card grid as primary results
+ *    (.sc / .scc / .scb classes from search.css) so users see a
+ *    consistent visual language across both lists. The only new
+ *    styles are the section header (title + hint) and the empty-state
+ *    compact message.
+ * ════════════════════════════════════════════════════════════════════════ */
+
+/* ── Suggestion badges ────────────────────────────────────────────────────
+ * Small inline labels that appear at the end of a suggestion row to
+ * indicate the source: "Type" or "Category". Item-name matches render
+ * without a badge (the default).
+ *
+ * Layout: the suggestion item is a flex row (.suggestion-body takes
+ * flex:1). The badge sits at the end with shrink:0 so long suggestion
+ * text wraps inside .suggestion-body and never pushes the badge off-screen.
+ * ───────────────────────────────────────────────────────────────────────── */
+
+.suggestion-badge {
+  flex-shrink: 0;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  line-height: 1.4;
+  white-space: nowrap;
+  user-select: none;
+  /* Subtle, neutral default — overridden by --type / --category modifiers */
+  background: rgba(103, 115, 135, 0.10);
+  color: var(--fv-text-secondary, #52638A);
+}
+
+.suggestion-badge--type {
+  /* Teal tint — matches the Fantrove brand accent */
+  background: rgba(19, 180, 127, 0.12);
+  color: #0f7a55;
+}
+
+.suggestion-badge--category {
+  /* Blue tint — distinct from type badge */
+  background: rgba(14, 95, 153, 0.10);
+  color: #1a5276;
+}
+
+/* Dark-mode adjustments — Fantrove uses light theme by default but the
+ * tokens flip on prefers-color-scheme. Make sure badges stay readable. */
+@media (prefers-color-scheme: dark) {
+  .suggestion-badge {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.65);
+  }
+  .suggestion-badge--type {
+    background: rgba(19, 180, 127, 0.18);
+    color: #6ce0b1;
+  }
+  .suggestion-badge--category {
+    background: rgba(96, 165, 250, 0.16);
+    color: #93c5fd;
+  }
+}
+
+/* Compact screens (≤ 480px) — slightly smaller badge to save horizontal
+ * space for the suggestion text on narrow phones. */
+@media (max-width: 480px) {
+  .suggestion-badge {
+    font-size: 0.62rem;
+    padding: 2px 6px;
+    border-radius: 5px;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+ *  Discovery section (v4.0)
+ * ════════════════════════════════════════════════════════════════════════
+ *
+ *  The discovery section lives as a sibling of #searchResults inside the
+ *  same scroll container. It contains:
+ *
+ *    <section class="discovery-section" id="searchDiscovery">
+ *      <div class="discovery-header">
+ *        <h2 class="discovery-title">You might also like</h2>
+ *        <p class="discovery-hint">Scroll down for more</p>
+ *      </div>
+ *      <div class="discovery-list">
+ *        <!-- URE renders .sc cards here, same as primary results -->
+ *      </div>
+ *    </section>
+ *
+ *  Visual hierarchy:
+ *    • Section sits below primary results with comfortable breathing room.
+ *    • Header is left-aligned, smaller than the page H1, but larger than
+ *      card titles so users notice the transition from "your results"
+ *      to "more to explore".
+ *    • Hint is small and muted — it tells the user there's more content
+ *      below without competing with the title.
+ *    • Card grid inherits from .sc styles in search.css so discovery
+ *      cards look identical to primary result cards.
+ * ───────────────────────────────────────────────────────────────────────── */
+
+.discovery-section {
+  /* Comfortable top padding separates discovery from primary results.
+   * Bottom padding matches the page's standard bottom spacing. */
+  padding: 32px 0 48px;
+  /* Use the same max-width as the primary results container so cards
+   * align across both sections. The page wrapper handles the actual
+   * horizontal constraint — this is just defensive. */
+  width: 100%;
+  /* Discovery is hidden by default and shown by DiscoveryService when
+   * it has items to display. display:none is set inline by the service
+   * when there's nothing to show, so we don't need to set it here. */
+}
+
+.discovery-header {
+  /* Match the horizontal padding of the results grid so the header
+   * text aligns with the cards below it. We use the same padding values
+   * as .search-results-wrapper in search.css for consistency. */
+  padding: 0 16px;
+  margin-bottom: 16px;
+  /* Slight visual separation from primary results above — a thin top
+   * border in a muted colour signals "new section" without being heavy. */
+  border-top: 1px solid rgba(103, 115, 135, 0.12);
+  padding-top: 24px;
+}
+
+.discovery-title {
+  /* h2 sizing — larger than card titles (.sct) but smaller than page h1.
+   * Use the page's font stack so it matches the rest of the UI. */
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 0 0 4px;
+  color: var(--fv-text-primary, #1f2937);
+  /* Disable browser default h2 margins — we control spacing ourselves. */
+  padding: 0;
+}
+
+.discovery-hint {
+  /* Small muted helper text below the title. Tells the user there's
+   * more content to scroll through without being intrusive. */
+  font-size: 0.85rem;
+  font-weight: 400;
+  line-height: 1.4;
+  margin: 0;
+  color: var(--fv-text-secondary, #6b7280);
+}
+
+.discovery-list {
+  /* The URE mount target. URE creates its own internal DOM structure
+   * (.vs-container etc.) so we don't need to add layout here — just
+   * make sure the container takes up the full width of its parent. */
+  width: 100%;
+  /* Match the horizontal padding of .discovery-header so cards align
+   * with the header text. */
+  padding: 0 16px;
+  /* URE handles its own internal scrolling — discovery-list itself
+   * should not scroll. It just grows to fit its content. */
+  box-sizing: border-box;
+}
+
+/* Dark-mode adjustments for discovery section. */
+@media (prefers-color-scheme: dark) {
+  .discovery-title {
+    color: rgba(255, 255, 255, 0.92);
+  }
+  .discovery-hint {
+    color: rgba(255, 255, 255, 0.55);
+  }
+  .discovery-header {
+    border-top-color: rgba(255, 255, 255, 0.08);
+  }
+}
+
+/* Compact screens (≤ 480px) — slightly smaller header to save vertical
+ * space on phones. The card grid already adapts via search.css. */
+@media (max-width: 480px) {
+  .discovery-section {
+    padding: 24px 0 32px;
+  }
+  .discovery-header {
+    padding: 0 12px;
+    padding-top: 20px;
+    margin-bottom: 12px;
+  }
+  .discovery-title {
+    font-size: 1.05rem;
+  }
+  .discovery-hint {
+    font-size: 0.8rem;
+  }
+  .discovery-list {
+    padding: 0 12px;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+ *  Compact empty-state (v4.0)
+ * ════════════════════════════════════════════════════════════════════════
+ *
+ *  The old empty state (.no-result) was a large, prominent message
+ *  that took up significant vertical space. The user asked for a
+ *  smaller, friendlier message that says "no results, but here's
+ *  other stuff to explore" — and lets DiscoveryService handle the
+ *  actual exploration list below.
+ *
+ *  The new .no-result--compact modifier shrinks the message and adds
+ *  a hint line. The discovery section below provides the actual
+ *  content to explore.
+ * ───────────────────────────────────────────────────────────────────────── */
+
+.no-result--compact {
+  /* Smaller padding than the legacy .no-result — we don't need to
+   * fill the screen because the discovery section below provides
+   * content to explore. */
+  padding: 24px 16px 16px;
+  text-align: center;
+  /* Use flex column so title + hint stack vertically with consistent
+   * spacing regardless of font size. */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.no-result__title {
+  /* Friendlier than the old "ไม่พบข้อมูลที่ตรงหรือใกล้เคียง" — shorter,
+   * less alarming, more conversational. */
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 0;
+  color: var(--fv-text-primary, #1f2937);
+}
+
+.no-result__hint {
+  /* Small muted helper that tells the user what to do next. */
+  font-size: 0.85rem;
+  font-weight: 400;
+  line-height: 1.4;
+  margin: 0;
+  color: var(--fv-text-secondary, #6b7280);
+}
+
+/* Dark-mode adjustments for compact empty-state. */
+@media (prefers-color-scheme: dark) {
+  .no-result__title {
+    color: rgba(255, 255, 255, 0.88);
+  }
+  .no-result__hint {
+    color: rgba(255, 255, 255, 0.55);
+  }
+}
+
+/* Compact screens (≤ 480px) — slightly smaller empty-state text. */
+@media (max-width: 480px) {
+  .no-result--compact {
+    padding: 20px 12px 12px;
+  }
+  .no-result__title {
+    font-size: 0.95rem;
+  }
+  .no-result__hint {
+    font-size: 0.8rem;
+  }
+}

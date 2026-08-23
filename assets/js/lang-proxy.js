@@ -1,18 +1,41 @@
 /**
- * lang-proxy.js v2.2 - Smart Language Prefix Proxy
+ * lang-proxy.js v3.0 - Passive Language Prefix Sync (NO Auto-Redirect)
  *
  * ทำงาน: ก่อน DOM โหลด (ใส่ใน <head>)
- * หน้าที่:
+ * หน้าที่ (v3.0):
  * - ถ้าเป็น localhost → ปิดตัวเองทันที ไม่ทำอะไรเลย
- * - ถ้า URL มี prefix /en/ หรือ /th/ → ผ่าน + sync ลง localStorage
- * - ถ้า URL ไม่มี prefix → redirect ไปหน้าที่มี prefix ทันที
+ * - ถ้า URL มี prefix /en/ หรือ /th/ → sync ลง localStorage เท่านั้น
+ * - ถ้า URL ไม่มี prefix → ไม่ทำอะไรเลย (ปล่อยให้หน้าโหลดตามปกติ)
  *
- * การเปลี่ยนแปลงใน v2.2:
- * - เพิ่ม getNavType() เพื่อแยก back_forward / reload / navigate
- * - CASE 1 (URL มี prefix):
- *     back_forward / reload  → ยึด storedLang เสมอ (user เพิ่งเปลี่ยนภาษา)
- *     navigate               → trust URL, อัพเดท localStorage ให้ตรงกับ urlLang
- *                              (user พิมพ์ URL เองหรือเปิด link จากที่อื่น)
+ * ════════════════════════════════════════════════════════════════════════
+ * การเปลี่ยนแปลง v3.0 (FIX GSC "Page with redirect"):
+ * ════════════════════════════════════════════════════════════════════════
+ *
+ *  ปัญหา: v2.2 มีการ redirect อัตโนมัติ 3 จุด ทำให้ Google Search Console
+ *         ฟักว่าเป็น "Page with redirect" และไม่สามารถจัดทำดัชนีได้
+ *
+ *  การแก้ไข:
+ *   1. ยกเลิก CASE 2 (URL ไม่มี prefix → redirect ไป URL ที่มี prefix)
+ *      เหตุผล: เป็นการเปลี่ยนเส้นทางอัตโนมัติ — Googlebot มองเป็น redirect
+ *   2. ยกเลิก CASE 1 back_forward/reload override
+ *      (URL มี prefix แต่ storedLang ขัดแย้ง → redirect ไป URL ของ storedLang)
+ *      เหตุผล: เป็นการเปลี่ยนเส้นทางอัตโนมัติเช่นกัน
+ *   3. ยกเลิก error fallback redirect (ใน catch block)
+ *      เหตุผล: แม้จะ error ก็ไม่ควร redirect เพื่อกัน Google มองเป็น redirect
+ *
+ *  สิ่งที่ยังคงอยู่ (ไม่ถูกแก้):
+ *   - sync localStorage เมื่อ URL มี prefix (ไม่ใช่ redirect, ไม่มีผลต่อ Google)
+ *   - การเปลี่ยนภาษาด้วยตนเองผ่านปุ่มเลือกภาษา (manager.js → selectLanguage)
+ *     ยังคงทำการ redirect ผ่าน location.replace() ตามปกติ
+ *     → เป็นการกระทำโดยตรงของ user ไม่ใช่อัตโนมัติ
+ *
+ *  หมายเหตุ:
+ *   - ใน production built pages ไฟล์นี้จะถูกลบออกจาก HTML โดย build.js
+ *     (removeScriptPatterns: ['lang-proxy.js']) → ไม่ทำงานอยู่แล้ว
+ *   - แต่เก็บการแก้ไขนี้ไว้เพื่อ:
+ *     a) ป้องกันปัญหาในอนาคตหาก build config เปลี่ยน
+ *     b) แก้ปัญหาใน dev mode หรือการ deploy โดยไม่ผ่าน build
+ *     c) ตรงกับคำขอของ user: "ยกเลิกระบบที่บังคับให้เพิ่ม prefix อัตโนมัติ"
  */
 
 (function() {
@@ -40,40 +63,6 @@
   // ==================== END BYPASS ====================
 
   /**
-   * อ่านประเภทของ navigation ที่พาเรามาถึงหน้านี้
-   *
-   * 'navigate'     → พิมพ์ URL เอง / คลิก link / เปิด bookmark
-   * 'back_forward' → กด Back หรือ Forward
-   * 'reload'       → กด Refresh / Ctrl+R
-   * 'prerender'    → browser pre-render (ปฏิบัติเหมือน navigate)
-   *
-   * ใช้ Navigation Timing API Level 2 เป็น primary
-   * fallback ไปที่ deprecated performance.navigation.type
-   */
-  function getNavType() {
-    try {
-      const entries = performance.getEntriesByType('navigation');
-      if (entries && entries.length > 0 && entries[0].type) {
-        return entries[0].type; // 'navigate' | 'reload' | 'back_forward' | 'prerender'
-      }
-    } catch (e) { /* ไม่รองรับ */ }
-
-    try {
-      // fallback: Navigation Timing Level 1 (deprecated แต่ยังใช้ได้บาง browser)
-      if (performance && performance.navigation) {
-        switch (performance.navigation.type) {
-          case 0: return 'navigate';
-          case 1: return 'reload';
-          case 2: return 'back_forward';
-          default: return 'navigate';
-        }
-      }
-    } catch (e) { /* ไม่รองรับ */ }
-
-    return 'navigate'; // safe default
-  }
-
-  /**
    * อ่านภาษาจาก URL path
    */
   function getLangFromPath(path) {
@@ -81,144 +70,64 @@
     return m ? m[1] : null;
   }
 
-  /**
-   * อ่านภาษาจาก localStorage
-   */
-  function getLangFromStorage() {
-    try {
-      const stored = localStorage.getItem(LS_KEY);
-      return SUPPORTED_LANGS.includes(stored) ? stored : null;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  /**
-   * Detect ภาษาจาก browser
-   */
-  function detectBrowserLang() {
-    try {
-      const langs = navigator.languages || [navigator.language || navigator.userLanguage];
-      for (const lang of langs) {
-        const code = lang.split('-')[0];
-        if (SUPPORTED_LANGS.includes(code)) return code;
-      }
-    } catch (e) {}
-    return DEFAULT_LANG;
-  }
-
-  /**
-   * สร้าง reload marker สำหรับ coordination
-   */
-  function setReloadMarker(source) {
-    try {
-      const id = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9);
-      const marker = { id, ts: Date.now(), source: source || 'proxy' };
-      sessionStorage.setItem('fv-forcereload', JSON.stringify(marker));
-      return marker;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  function setInflight(id) {
-    try {
-      if (id) sessionStorage.setItem('fv-reload-inflight', id);
-    } catch (e) {}
-  }
-
-  // ==================== MAIN LOGIC ====================
+  // ==================== MAIN LOGIC (v3.0 — Passive Sync Only) ====================
 
   try {
     const currentPath = location.pathname;
-    const urlLang     = getLangFromPath(currentPath);
-    const storedLang  = getLangFromStorage();
-    const navType     = getNavType();
+    const urlLang = getLangFromPath(currentPath);
 
     // ─────────────────────────────────────────────────────────────────────────
-    // CASE 1: URL มี prefix ภาษา (/en/... หรือ /th/...)
+    // URL มี prefix ภาษา (/en/... หรือ /th/...)
+    // → sync ลง localStorage เท่านั้น
+    // → ไม่ redirect ไม่ว่ากรณีใดๆ (แม้ storedLang จะขัดแย้งกับ urlLang)
+    //
+    // [FIX v3.0] ยกเลิก back_forward/reload override ที่เคย redirect
+    //   เหตุผล: เป็นการเปลี่ยนเส้นทางอัตโนมัติ — Googlebot มองเป็น redirect
+    //   ตอนนี้ยึด URL เป็นหลักเสมอ (user เจอ URL นี้มา ก็ใช้ URL นี้)
+    //   localStorage จะถูก sync ให้ตรงกับ URL แทน
     // ─────────────────────────────────────────────────────────────────────────
     if (urlLang) {
-
-      if (storedLang && storedLang !== urlLang) {
-        // มี conflict ระหว่าง URL กับ stored preference → ตัดสินจาก navType
-
-        if (navType === 'back_forward' || navType === 'reload') {
-          // ────────────────────────────────────────────────────────────────────
-          // กด Back/Forward หรือ Refresh:
-          //   user เพิ่งเปลี่ยนภาษาในหน้าอื่น → ยึด storedLang เสมอ
-          //   URL เก่าคือหน้าเก่า ไม่ใช่ intent ปัจจุบันของ user
-          // ────────────────────────────────────────────────────────────────────
-          const newPath = currentPath.replace(/^\/(en|th)(\/|$)/, '/' + storedLang + '$2');
-          const newURL  = newPath + location.search + location.hash;
-          const marker  = setReloadMarker('proxy-back-override');
-          if (marker) setInflight(marker.id);
-          location.replace(newURL);
-          return;
-        }
-
-        // navType === 'navigate' (หรือ 'prerender'):
-        // ────────────────────────────────────────────────────────────────────
-        // User พิมพ์ URL เอง / เปิด bookmark / คลิกจาก link ภายนอก:
-        //   ถือว่า user มี intent ชัดเจนว่าต้องการหน้าภาษา urlLang
-        //   → trust URL, อัพเดท localStorage ให้ตรงกับ URL
-        //   ไม่ redirect เพราะ user ตั้งใจมาหน้านี้
-        // ────────────────────────────────────────────────────────────────────
-        try {
-          localStorage.setItem(LS_KEY, urlLang);
-        } catch (e) {}
-
-        // บันทึก nav-lang map ตามปกติ แล้วปล่อยให้หน้าโหลด
-        try {
-          const key = currentPath + (location.search || '');
-          const map = JSON.parse(sessionStorage.getItem('fv-nav-lang-map') || '{}');
-          map[key] = { lang: urlLang, ts: Date.now(), source: 'url-navigate' };
-          sessionStorage.setItem('fv-nav-lang-map', JSON.stringify(map));
-        } catch (e) {}
-
-        return;
-      }
-
-      // storedLang ตรงกับ urlLang แล้ว (หรือยังไม่มี stored preference)
-      // → sync ลง localStorage แล้วปล่อยให้หน้าโหลดตามปกติ
       try {
+        // sync localStorage ให้ตรงกับ URL (เพื่อความสอดคล้องข้าม tabs)
         localStorage.setItem(LS_KEY, urlLang);
 
+        // บันทึก nav-lang map ตามปกติ (ใช้โดย navigation.js สำหรับ sync)
         const key = currentPath + (location.search || '');
         const map = JSON.parse(sessionStorage.getItem('fv-nav-lang-map') || '{}');
         map[key] = { lang: urlLang, ts: Date.now(), source: 'url-prefix' };
         sessionStorage.setItem('fv-nav-lang-map', JSON.stringify(map));
       } catch (e) {}
 
+      // ปล่อยให้หน้าโหลดต่อ — ไม่ redirect
       return;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // CASE 2: URL ไม่มี prefix → redirect ไปหน้าที่มี prefix ทันที
+    // URL ไม่มี prefix ภาษา
+    // → ไม่ทำอะไรเลย ปล่อยให้หน้าโหลดตามปกติ
+    //
+    // [FIX v3.0] ยกเลิก CASE 2 ที่เคย redirect ไป URL ที่มี prefix
+    //   เหตุผล: เป็นการเปลี่ยนเส้นทางอัตโนมัติ — Googlebot มองเป็น redirect
+    //          ทำให้ GSC ขึ้น "Page with redirect" และไม่สามารถจัดทำดัชนีได้
+    //
+    //   ผลกระทบ:
+    //   - URL ที่ไม่มี prefix จะถูกจัดการโดย _redirects ของ Cloudflare Pages
+    //     (อาจเป็น 404 หรือ rewrite ตาม config — ไม่ใช่ redirect ของ JS)
+    //   - หน้าเว็บที่ build แล้ว (มี /en/ และ /th/) ยังคงทำงานปกติ
+    //   - การเปลี่ยนภาษาด้วยตนเองผ่านปุ่มเลือกภาษายังคงทำงานปกติ
+    //     (ผ่าน manager.js → selectLanguage → location.replace)
     // ─────────────────────────────────────────────────────────────────────────
-
-    // ตัดสินว่าจะ redirect ไปภาษาไหน
-    // Priority: localStorage (user choice) > browser detection
-    let targetLang = storedLang;
-    if (!targetLang) {
-      targetLang = detectBrowserLang();
-    }
-
-    let newPath = '/' + targetLang;
-    if (currentPath && currentPath !== '/') {
-      newPath = '/' + targetLang + currentPath;
-    }
-
-    const newURL = newPath + location.search + location.hash;
-    const marker = setReloadMarker('proxy-redirect');
-    if (marker) setInflight(marker.id);
-
-    location.replace(newURL);
+    return;
 
   } catch (err) {
-    console.error('lang-proxy error:', err);
-    try {
-      location.replace('/' + DEFAULT_LANG + '/');
-    } catch (e) {}
+    // ─────────────────────────────────────────────────────────────────────────
+    // [FIX v3.0] Error fallback — ไม่ redirect แม้จะ error
+    //
+    //   ก่อนหน้านี้: catch block จะ redirect ไป /en/ (DEFAULT_LANG)
+    //   ปัญหา: เป็นการ redirect อัตโนมัติ — Googlebot มองเป็น redirect
+    //   ตอนนี้: ปล่อยให้หน้าโหลดตามปกติแม้จะ error
+    // ─────────────────────────────────────────────────────────────────────────
+    // (intentionally empty — silent fail, no redirect)
+    return;
   }
 })();
